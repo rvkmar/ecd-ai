@@ -253,6 +253,17 @@ router.post("/:id/submit", async (req, res) => {
   const session = db.sessions.find(s => s.id === id && !s.isCompleted);
   if (!session) return res.status(404).json({ error: "Session not found or already completed" });
 
+  // D60: a persisted stop is the authority that nothing more will be
+  // presented. Accepting another response after that would keep updating
+  // posteriors (and the report classification) while next-task still
+  // returns the frozen stop record -- two sources of truth.
+  if (session.stopped && typeof session.stopped === "object" && !Array.isArray(session.stopped)) {
+    return res.status(409).json({
+      error: "Session has already met a stopping rule; no further responses are accepted.",
+      stopped: session.stopped,
+    });
+  }
+
   if (!session.taskIds.includes(taskId)) {
     return res.status(400).json({ error: `Task ${taskId} not part of this session` });
   }

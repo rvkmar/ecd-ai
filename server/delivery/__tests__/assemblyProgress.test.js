@@ -157,6 +157,63 @@ describe("resolveAssemblyProgress", () => {
     expect(result).toEqual([]);
   });
 
+  it("D60 P0: a draft sibling does not make the unique governing model disappear", () => {
+    // The revision case: operational AM in production, author opens a draft
+    // replacement for the same Competency Model. Before D60 this was
+    // candidates.length !== 1 → omit, which silently killed targetsMet.
+    const result = resolveAssemblyProgress(
+      [posterior({ precision: 0.3 })],
+      {
+        assemblyModels: [
+          assemblyModel({ id: "am-live", status: "operational" }),
+          assemblyModel({ id: "am-draft", status: "draft" }),
+        ],
+      }
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].assemblyModelId).toBe("am-live");
+    expect(result[0].stoppingCriterionMet).toBe(true);
+  });
+
+  it("D60 P0: an archived predecessor does not veto its confirmed replacement", () => {
+    const result = resolveAssemblyProgress(
+      [posterior({ precision: 0.3 })],
+      {
+        assemblyModels: [
+          assemblyModel({ id: "am-old", status: "archived" }),
+          assemblyModel({ id: "am-new", status: "confirmed" }),
+        ],
+      }
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].assemblyModelId).toBe("am-new");
+  });
+
+  it("two confirmed models for the same Competency Model are still refused", () => {
+    const result = resolveAssemblyProgress(
+      [posterior()],
+      {
+        assemblyModels: [
+          assemblyModel({ id: "am1", status: "confirmed" }),
+          assemblyModel({ id: "am2", status: "confirmed" }),
+        ],
+      }
+    );
+    expect(result).toEqual([]);
+  });
+
+  it("a caller-supplied governing model wins even when two confirmed models exist", () => {
+    const preferred = assemblyModel({ id: "am1", status: "confirmed" });
+    const result = resolveAssemblyProgress(
+      [posterior({ precision: 0.3 })],
+      { assemblyModels: [preferred, assemblyModel({ id: "am2", status: "confirmed" })] },
+      { assemblyModel: preferred }
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].assemblyModelId).toBe("am1");
+    expect(result[0].stoppingCriterionMet).toBe(true);
+  });
+
   it("omits an SMV the matched Assembly Model doesn't target", () => {
     const am = assemblyModel({ targetsBySMV: [{ smvId: "smv-other", requiredSEM: 0.4 }] });
     const result = resolveAssemblyProgress([posterior()], { assemblyModels: [am] });
