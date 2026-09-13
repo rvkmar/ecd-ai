@@ -51,13 +51,23 @@ services:
   # Private compose-network service. Prefer expose, not host ports -- the
   # same lesson mongo already learned. A local override may publish 4000
   # for debugging; the browser must still never call this service (no CORS).
+  #
+  # Default path: pull rvkmar/r-backend:latest (R packages already installed).
+  # Bind-mount repo app so D61+ plumber routes win over the image copy.
+  # Do not `docker compose build r-backend` unless you want a derived overlay
+  # (see r-backend/Dockerfile). No container_name here so a local override
+  # that sets `container_name: r-backend` wins; hostname is the service name.
   r-backend:
-    build:
-      context: ./r-backend
-    container_name: ecd-r-backend
+    image: rvkmar/r-backend:latest
+    # Optional overlay only -- uncomment to bake ./r-backend/app into a local
+    # image. Leave commented so `compose up` never rebuilds R packages.
+    # build:
+    #   context: ./r-backend
     command: Rscript /home/app/start.R
     environment:
       - R_SERVICE_TOKEN=${R_SERVICE_TOKEN:-}
+    volumes:
+      - ./r-backend/app:/home/app
     expose:
       - "4000"
     restart: always

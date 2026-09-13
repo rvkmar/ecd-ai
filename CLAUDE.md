@@ -40,10 +40,10 @@ refuses to start without one ≥32 chars — see `server/config/jwt.js`), `DB_MO
 
 ### Docker
 
-`docker-compose.yml` defines `node` + `mongo` + `nginx` (mongo not published to the host — add a
-port mapping in the gitignored `docker-compose.override.yml` for local GUI inspection). An
-`r-backend` service is defined but commented out; the R IRT service is not currently wired into
-the app (see AIG/R section below).
+`docker-compose.yml` defines `node` + `mongo` + `nginx` + `r-backend` (mongo not published to the host — add a
+port mapping in a local `docker-compose.override.yml` for GUI inspection). `r-backend` pulls
+`rvkmar/r-backend:latest` and bind-mounts `./r-backend/app`; do not `docker compose build r-backend`
+as the default path (see AIG/R section below).
 
 ## Architecture
 
@@ -132,9 +132,8 @@ rather than calling `fetch`/`apiFetch` directly from components.
 `server/aig/` generates items programmatically from templates (`ITEM_MODEL_REGISTRY` in
 `server/aig/index.js`); its routes (`server/routes/aigRoutes.js`) are currently **unmounted** in
 `server/index.js` — AIG generation is out of scope for the current pass. The R/plumber IRT service
-(`r-backend/`) is likewise defined in `docker-compose.yml` but commented out and not currently
-wired to the node backend. Don't assume either is live without checking whether it's been
-re-enabled.
+is a private compose service: `image: rvkmar/r-backend:latest`, `expose: 4000`,
+`R_BACKEND_URL=http://r-backend:4000`. AIG remains unmounted; do not assume AIG is live.
 
 ### Bulk/staged import
 

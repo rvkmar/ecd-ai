@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Compose `r-backend` pulls `rvkmar/r-backend:latest` (R packages already
+  installed) and bind-mounts `./r-backend/app` so repo plumber routes win.
+  The Posit/rocker from-scratch Dockerfile is a thin overlay only; do not
+  `docker compose build r-backend` as the default path.
+
 ### Added
 
 - D61–D63: the R psychometrics service is a private compose service again

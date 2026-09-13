@@ -16,13 +16,13 @@ Do not confuse with `claude/day61-staff-session-operate-and-assignment.md` (a D5
 
 ### D61 — R service scaffold
 
-- `r-backend/Dockerfile` — `rocker/r-ver:4.4.2`, dated Posit snapshot `2025-01-15`, installs `mirt` / `GDINA` / `TAM` / `difR` / `plumber` / `jsonlite`.
+- `r-backend/Dockerfile` — originally `rocker/r-ver:4.4.2` + dated Posit snapshot `2025-01-15`. **Compose default is now `image: rvkmar/r-backend:latest`** (packages already installed); the Dockerfile is a thin `FROM rvkmar/r-backend:latest` overlay only. `install-packages.R` is optional/orphan.
 - `start.R` sources `api.R` then `api$run(...)`. `api.R` does **not** call `$run()` and does **not** set CORS. ASCII comments only (no BOM, no fancy dashes).
 - `/health` reports running package versions. `/irt/parallel-status` no longer calls `futures(drop=FALSE)` (that was the 500).
 - `scoring.R` is neutralized and not sourced. `/score` and `/irt/estimate` are not mounted.
 - Main compose uses `expose`, not host `ports`. A local override may still publish `4000:4000`.
 
-`renv.lock` was **not** committed: a restore-able lockfile needs hashes from a successful image build. The RSPM snapshot date in the Dockerfile is the pin until someone builds the image and snapshots.
+`renv.lock` was **not** committed. Package versions come from the published image (`/health`); do not treat a local Posit rebuild as the pin.
 
 ### D62 — `calibrationJobs` seven-artefact contract
 
@@ -59,17 +59,21 @@ A non-converged run is stored on the job (`status: succeeded`, `converged: false
 - **D64** — LSAT7 through the full pipeline in CI.
 - **D65** — calibration console UI (hooks shipped; no screen).
 - **D66 / D67** — DINA and CTT endpoints return contract-shaped 501.
-- `renv.lock` snapshot after the first successful image build.
+- `renv.lock` is still absent; `/health` on `rvkmar/r-backend:latest` is the version record.
 - Response-matrix size limit / sparse encoding / multi-tenancy (architecture doc §12) — not decided.
 
 ## Verify on Docker
 
-Rebuild so node picks up `R_BACKEND_URL` and r-backend is built from `./r-backend` (not `rvkmar/r-backend:latest`):
+Pull the published psychometric image (packages already installed) and start the stack. Compose bind-mounts `./r-backend/app` over `/home/app` so D61+ plumber routes win over whatever is baked in the image. Do **not** run `docker compose build r-backend` as the default path.
 
 ```bash
-docker compose build r-backend node
+docker compose pull r-backend
 docker compose up -d
 ```
+
+A local `docker-compose.override.yml` may publish `4000:4000` and set `container_name: r-backend`. Main compose omits `container_name` so that override wins. Node still reaches the service as `http://r-backend:4000` (compose service name).
+
+Optional overlay only: uncomment `build:` in `docker-compose.yml`, then `docker compose build r-backend`, to bake current `app/` onto `FROM rvkmar/r-backend:latest`. Not required for `compose up`.
 
 Health (from the node container, or from the host if the override publishes 4000):
 
