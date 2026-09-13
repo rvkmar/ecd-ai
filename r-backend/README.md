@@ -44,6 +44,8 @@ install. It is not required for compose up.
 `app/tests/fixtures/lsat7-frequency-table.json` is the published Bock &
 Lieberman (1970) LSAT section-7 matrix: 32 response patterns that expand
 to 1000 examinees × 5 items (`mirt::LSAT7` via `expand.table()`). Node
-expands it in `server/r/lsat7Fixture.js` and posts the ADR 0002 request
-to `POST /calibrate/irt`. The 7 is the section number, not the item
-count.
+ships the same table at `server/r/fixtures/lsat7-frequency-table.json`
+(the compose node image does not include `r-backend/`), expands it in
+`server/r/lsat7Fixture.js`, and posts the ADR 0002 request to
+`POST /calibrate/irt`. A drift test keeps the two copies equal. The 7
+is the section number, not the item count.

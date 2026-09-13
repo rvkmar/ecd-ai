@@ -22,14 +22,14 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../../config/jwt.js";
 import { processJobById } from "../calibrationWorker.js";
 import { postCalibration, getRHealth } from "../rClient.js";
-import { applyNamedCalibrationFixture } from "../lsat7Fixture.js";
+import { applyNamedCalibrationFixture, LSAT7_FREQUENCY_TABLE_PATH } from "../lsat7Fixture.js";
 import { validateCalibrationRequest, CALIBRATION_CONTRACT_VERSION } from "../calibrationContract.js";
 
 const tokenFor = (role) =>
   jwt.sign({ username: `${role}1`, role }, JWT_SECRET, { expiresIn: "1h" });
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const LSAT7_TABLE_PATH = path.resolve(
+const LSAT7_R_TABLE_PATH = path.resolve(
   here,
   "../../../r-backend/app/tests/fixtures/lsat7-frequency-table.json"
 );
@@ -72,7 +72,7 @@ function seedDb() {
 }
 
 function lsat7Table() {
-  return JSON.parse(fs.readFileSync(LSAT7_TABLE_PATH, "utf8"));
+  return JSON.parse(fs.readFileSync(LSAT7_FREQUENCY_TABLE_PATH, "utf8"));
 }
 
 function itemCorrectCounts(data, itemIds) {
@@ -107,6 +107,30 @@ beforeEach(() => {
 });
 
 describe("LSAT7 fixture is the published matrix", () => {
+  it("ships the frequency table next to the Node module (no r-backend checkout)", () => {
+    // Dockerfile.node copies only server/ + src/utils. A path that walks
+    // out to r-backend/app/tests/fixtures would 500 with ENOENT in the
+    // compose node image even though this test checkout has both trees.
+    const moduleDir = path.dirname(fileURLToPath(new URL("../lsat7Fixture.js", import.meta.url)));
+    const shipped = path.resolve(moduleDir, "fixtures", "lsat7-frequency-table.json");
+    expect(path.resolve(LSAT7_FREQUENCY_TABLE_PATH)).toBe(shipped);
+    expect(fs.existsSync(LSAT7_FREQUENCY_TABLE_PATH)).toBe(true);
+    expect(LSAT7_FREQUENCY_TABLE_PATH.replace(/\\/g, "/")).toMatch(
+      /\/server\/r\/fixtures\/lsat7-frequency-table\.json$/
+    );
+    expect(LSAT7_FREQUENCY_TABLE_PATH.replace(/\\/g, "/")).not.toMatch(/\/r-backend\//);
+    expect(() => applyNamedCalibrationFixture({ fixture: "lsat7" })).not.toThrow();
+  });
+
+  it.skipIf(!fs.existsSync(LSAT7_R_TABLE_PATH))(
+    "does not drift from the R-side published table when both files exist",
+    () => {
+      const nodeTable = JSON.parse(fs.readFileSync(LSAT7_FREQUENCY_TABLE_PATH, "utf8"));
+      const rTable = JSON.parse(fs.readFileSync(LSAT7_R_TABLE_PATH, "utf8"));
+      expect(nodeTable).toEqual(rTable);
+    }
+  );
+
   it("expands to 1000 persons × 5 items with Bock & Lieberman counts", () => {
     const table = lsat7Table();
     const expanded = applyNamedCalibrationFixture({ fixture: "lsat7" });

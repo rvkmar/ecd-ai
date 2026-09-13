@@ -15,10 +15,12 @@ dichotomous items** (Bock & Lieberman 1970). The 7 is the section number, not th
 item count. A 1000×7 matrix would not be this dataset; this unit uses the published
 5-item matrix.
 
-Source of truth: `r-backend/app/tests/fixtures/lsat7-frequency-table.json` — 32
-response patterns + frequencies (`psych::bock.table` column `Ob7`, the same table
-`expand.table(mirt::LSAT7)` expands). Published correct-counts that the fixture
-test pins:
+Published table: `server/r/fixtures/lsat7-frequency-table.json` (what Node
+loads — the compose node image does not ship `r-backend/`) and the R-side
+twin `r-backend/app/tests/fixtures/lsat7-frequency-table.json`. 32 response
+patterns + frequencies (`psych::bock.table` column `Ob7`, the same table
+`expand.table(mirt::LSAT7)` expands). A drift test keeps the two copies
+equal. Published correct-counts that the fixture test pins:
 
 | Item.1 | Item.2 | Item.3 | Item.4 | Item.5 |
 |---|---|---|---|---|
