@@ -17,7 +17,7 @@ import { fileURLToPath } from "url";
 import { CALIBRATION_CONTRACT_VERSION } from "./calibrationContract.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export const LSAT7_FREQUENCY_TABLE_PATH = path.resolve(
+const LSAT7_FREQUENCY_TABLE_PATH = path.resolve(
   here,
   "fixtures/lsat7-frequency-table.json"
 );
