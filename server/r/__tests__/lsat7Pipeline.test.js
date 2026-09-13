@@ -22,19 +22,21 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../../config/jwt.js";
 import { processJobById } from "../calibrationWorker.js";
 import { postCalibration, getRHealth } from "../rClient.js";
-import {
-  loadLsat7FrequencyTable,
-  expandLsat7Responses,
-  lsat7CalibrationRequest,
-  lsat7JobEnqueueBody,
-  lsat7ItemCorrectCounts,
-  lsat7ContractStubResponse,
-  LSAT7_SEED,
-} from "../lsat7Fixture.js";
-import { validateCalibrationRequest } from "../calibrationContract.js";
+import { applyNamedCalibrationFixture } from "../lsat7Fixture.js";
+import { validateCalibrationRequest, CALIBRATION_CONTRACT_VERSION } from "../calibrationContract.js";
 
 const tokenFor = (role) =>
   jwt.sign({ username: `${role}1`, role }, JWT_SECRET, { expiresIn: "1h" });
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const LSAT7_TABLE_PATH = path.resolve(
+  here,
+  "../../../r-backend/app/tests/fixtures/lsat7-frequency-table.json"
+);
+const LSAT7_SAMPLE_PATH = path.resolve(
+  here,
+  "../../../samples/sample-calibration-job-irt-lsat7.json"
+);
 
 const dbState = { current: {} };
 vi.mock("../../../src/utils/db-server.js", () => ({
@@ -69,56 +71,88 @@ function seedDb() {
   };
 }
 
+function lsat7Table() {
+  return JSON.parse(fs.readFileSync(LSAT7_TABLE_PATH, "utf8"));
+}
+
+function itemCorrectCounts(data, itemIds) {
+  const counts = {};
+  itemIds.forEach((id, col) => {
+    counts[id] = data.reduce((sum, row) => sum + Number(row[col] === 1), 0);
+  });
+  return counts;
+}
+
+function contractStubResponse(jobId, itemIds) {
+  const parameters = {};
+  for (const id of itemIds) {
+    parameters[id] = { a: 1, b: 0, c: 0 };
+  }
+  return {
+    contractVersion: CALIBRATION_CONTRACT_VERSION,
+    jobId,
+    converged: true,
+    packageVersion: "contract-stub (not mirt)",
+    sampleSize: 1000,
+    calibratedAt: "2026-09-13T00:00:00Z",
+    parameters,
+    diagnostics: {
+      note: "D64 contract-path stub. Not a psychometric result. Live R owns LSAT7 estimates.",
+    },
+  };
+}
+
 beforeEach(() => {
   seedDb();
 });
 
 describe("LSAT7 fixture is the published matrix", () => {
   it("expands to 1000 persons × 5 items with Bock & Lieberman counts", () => {
-    const table = loadLsat7FrequencyTable();
-    const data = expandLsat7Responses();
+    const table = lsat7Table();
+    const expanded = applyNamedCalibrationFixture({ fixture: "lsat7" });
+    const data = expanded.request.responseMatrix.data;
     const freqSum = table.patterns.reduce((sum, p) => sum + p.freq, 0);
 
     expect(table.itemIds).toEqual(["Item.1", "Item.2", "Item.3", "Item.4", "Item.5"]);
     expect(freqSum).toBe(1000);
     expect(data).toHaveLength(1000);
     expect(data.every((row) => row.length === 5)).toBe(true);
-
-    const counts = lsat7ItemCorrectCounts(data);
-    expect(counts).toEqual(table.source.publishedItemCorrectCounts);
-    expect(Object.values(counts).reduce((a, b) => a + b, 0) / 1000).toBeCloseTo(
-      table.source.publishedMeanTotalScore,
-      3
-    );
+    expect(itemCorrectCounts(data, table.itemIds)).toEqual(table.source.publishedItemCorrectCounts);
+    expect(
+      Object.values(table.source.publishedItemCorrectCounts).reduce((a, b) => a + b, 0) / 1000
+    ).toBeCloseTo(table.source.publishedMeanTotalScore, 3);
   });
 
   it("builds an ADR 0002 IRT request the contract accepts", () => {
-    const body = lsat7CalibrationRequest();
+    const body = applyNamedCalibrationFixture({ fixture: "lsat7" }).request;
     expect(validateCalibrationRequest(body)).toEqual([]);
     expect(body.model.subtype).toBe("2PL");
     expect(body.responseMatrix.personIds).toHaveLength(1000);
-    expect(body.options.seed).toBe(LSAT7_SEED);
+    expect(body.options.seed).toBe(20261120);
   });
 
   it("keeps the committed sample job body in lockstep with the fixture", () => {
-    const here = path.dirname(fileURLToPath(import.meta.url));
-    const samplePath = path.resolve(here, "../../../samples/sample-calibration-job-irt-lsat7.json");
-    const sample = JSON.parse(fs.readFileSync(samplePath, "utf8"));
-    const expected = lsat7JobEnqueueBody();
+    const sample = JSON.parse(fs.readFileSync(LSAT7_SAMPLE_PATH, "utf8"));
+    const expected = applyNamedCalibrationFixture({ fixture: "lsat7" }).request;
     expect(sample.kind).toBe("irt-parameters");
-    expect(sample.request.responseMatrix.data).toEqual(expected.request.responseMatrix.data);
-    expect(sample.request.model.itemIds).toEqual(expected.request.model.itemIds);
-    expect(sample.request.options.seed).toBe(LSAT7_SEED);
+    expect(sample.request.responseMatrix.data).toEqual(expected.responseMatrix.data);
+    expect(sample.request.model.itemIds).toEqual(expected.model.itemIds);
+    expect(sample.request.options.seed).toBe(20261120);
   });
 });
 
 describe("LSAT7 contract-path pipeline (always runs)", () => {
-  it("enqueues, processes, succeeds with converged: true, and ingests calibrationJobId", async () => {
+  it("enqueues via fixture: lsat7, processes, succeeds, and ingests calibrationJobId", async () => {
     const app = await jobsApp();
     const enqueue = await request(app)
       .post("/api/calibrationJobs/")
       .set("Authorization", `Bearer ${tokenFor("admin")}`)
-      .send(lsat7JobEnqueueBody({ evidenceModelId: "em1", statisticalModelId: "sm1" }));
+      .send({
+        kind: "irt-parameters",
+        fixture: "lsat7",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+      });
 
     expect(enqueue.status).toBe(201);
     expect(enqueue.body.status).toBe("queued");
@@ -132,7 +166,7 @@ describe("LSAT7 contract-path pipeline (always runs)", () => {
     ]);
 
     const jobId = enqueue.body.id;
-    const stub = lsat7ContractStubResponse(jobId, enqueue.body.request.model.itemIds);
+    const stub = contractStubResponse(jobId, enqueue.body.request.model.itemIds);
     const processed = await processJobById(jobId, {
       client: { postCalibration: async () => ({ ok: true, status: 200, json: stub, text: "" }) },
     });
@@ -166,6 +200,21 @@ describe("LSAT7 contract-path pipeline (always runs)", () => {
     expect(dbState.current.calibrationJobs[0].ingestedParameterSetId).toBe(ps.parameterSetId);
     expect(dbState.current.questions[0].metadata).toEqual({});
   });
+
+  it("refuses an unknown named fixture", async () => {
+    const app = await jobsApp();
+    const res = await request(app)
+      .post("/api/calibrationJobs/")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send({
+        kind: "irt-parameters",
+        fixture: "not-a-dataset",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Unknown calibration fixture/);
+  });
 });
 
 const live = Boolean(process.env.R_BACKEND_URL);
@@ -181,7 +230,12 @@ describe.skipIf(!live)("LSAT7 live R pipeline", () => {
     const enqueue = await request(app)
       .post("/api/calibrationJobs/")
       .set("Authorization", `Bearer ${tokenFor("admin")}`)
-      .send(lsat7JobEnqueueBody({ evidenceModelId: "em1", statisticalModelId: "sm1" }));
+      .send({
+        kind: "irt-parameters",
+        fixture: "lsat7",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+      });
     expect(enqueue.status).toBe(201);
 
     const jobId = enqueue.body.id;

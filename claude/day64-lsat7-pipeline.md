@@ -27,7 +27,9 @@ test pins:
 ## What shipped
 
 - `server/r/lsat7Fixture.js` expands the table into an ADR 0002 IRT-2PL request
-  (`seed` 20261120) and a `calibrationJobs` enqueue body.
+  (`seed` 20261120). `POST /api/calibrationJobs` accepts `{ fixture: "lsat7" }`
+  and fills `request.model` / `responseMatrix` / `options.seed`. That is the
+  production caller (the dead-export guard does not count tests).
 - `samples/sample-calibration-job-irt-lsat7.json` — curl-ready POST body (fill
   `evidenceModelId` / `statisticalModelId`). A drift test keeps it equal to the
   fixture expansion.
@@ -73,10 +75,12 @@ Enqueue by hand (admin token):
 ## Honest remaining gap
 
 This environment has no Docker and no R, so the **live** mirt run was not
-executed here. The contract-path tests were. CI is the place the live
-acceptance is supposed to run. If `docker pull rvkmar/r-backend:latest`
-fails on GitHub (private image or Hub rate limit), `lsat7-pipeline` fails
-honestly — it does not skip or invent estimates.
+executed here. The contract-path tests were (`npx vitest run` — **1293
+passed / 1 skipped** / 81 files; the skip is the live describe). CI is
+the place the live acceptance is supposed to run. If
+`docker pull rvkmar/r-backend:latest` fails on GitHub (private image or
+Hub rate limit), `lsat7-pipeline` fails honestly — it does not skip or
+invent estimates.
 
 Live D62 restart recovery and the D65 console are still open.
 

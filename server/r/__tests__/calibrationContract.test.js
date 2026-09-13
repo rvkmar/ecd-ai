@@ -52,8 +52,8 @@ describe("request envelope", () => {
   });
 
   it("accepts the committed LSAT7 request (D64)", async () => {
-    const { lsat7CalibrationRequest } = await import("../lsat7Fixture.js");
-    expect(validateCalibrationRequest(lsat7CalibrationRequest())).toEqual([]);
+    const { applyNamedCalibrationFixture } = await import("../lsat7Fixture.js");
+    expect(validateCalibrationRequest(applyNamedCalibrationFixture({ fixture: "lsat7" }).request)).toEqual([]);
   });
 });
 

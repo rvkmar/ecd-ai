@@ -16,6 +16,10 @@ import {
 import { ingestCalibrationJob, ingestRefusal } from "../r/calibrationIngest.js";
 import { kickQueue, processJobById } from "../r/calibrationWorker.js";
 import { isDeclaredJobKind } from "../r/calibrationContract.js";
+import {
+  applyNamedCalibrationFixture,
+  CALIBRATION_NAMED_FIXTURES,
+} from "../r/lsat7Fixture.js";
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -64,18 +68,31 @@ router.post("/", canAuthor, (req, res) => {
   const now = new Date().toISOString();
   const id = genId();
 
+  let incoming;
+  try {
+    incoming = applyNamedCalibrationFixture(req.body);
+  } catch (err) {
+    if (err?.code === "UNKNOWN_CALIBRATION_FIXTURE") {
+      return res.status(400).json({
+        error: err.message,
+        details: [`fixture must be one of: ${CALIBRATION_NAMED_FIXTURES.join(", ")}`],
+      });
+    }
+    throw err;
+  }
+
   const request = {
-    ...(req.body?.request || {}),
-    contractVersion: req.body?.request?.contractVersion || CALIBRATION_CONTRACT_VERSION,
+    ...(incoming?.request || {}),
+    contractVersion: incoming?.request?.contractVersion || CALIBRATION_CONTRACT_VERSION,
     jobId: id,
   };
 
   const record = {
     id,
-    kind: req.body?.kind,
+    kind: incoming?.kind ?? req.body?.kind,
     status: "queued",
-    evidenceModelId: req.body?.evidenceModelId,
-    statisticalModelId: req.body?.statisticalModelId,
+    evidenceModelId: incoming?.evidenceModelId ?? req.body?.evidenceModelId,
+    statisticalModelId: incoming?.statisticalModelId ?? req.body?.statisticalModelId,
     requestedBy: req.user?.username || req.body?.requestedBy || "unknown",
     requestedAt: now,
     startedAt: null,
