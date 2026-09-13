@@ -18,13 +18,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D61–D63** — R scaffold, job queue, ADR 0002. Compose default **`rvkmar/r-backend:latest`** + `./r-backend/app` mount. Live `/health` verified 2026-09-13. Handoffs: `claude/day61-63-r-calibration-scaffold.md`, `claude/day61-63-live-r-health.md`. Not the D50 leftover `day61-staff-session-operate-and-assignment.md`. |
-| Next queued | Calendar **D64** — LSAT7 through the full pipeline. **D65** is the calibration console (hooks exist, no UI). |
+| Last completed unit | **D64** — LSAT7 through the full calibration pipeline in CI. Fixture is published `mirt::LSAT7` (section 7: 1000×5). Always-run contract path in `npm test`; live mirt path when `R_BACKEND_URL` is set / CI job `lsat7-pipeline`. Handoff: `claude/day64-lsat7-pipeline.md`. |
+| Next queued | Calendar **D65** — calibration console (hooks exist, no UI). |
 | Block | W13 — R Plumber service and the calibration job queue |
-| Block gate | Administrator can start, watch, inspect and ingest a calibration without a shell (D65). LSAT7 in CI (D64). |
-| Gate status | D61 live `/health` met. D62/D63 met in tests; live enqueue/ingest still open. D64–D65 remain. |
+| Block gate | Administrator can start, watch, inspect and ingest a calibration without a shell (D65). ~~LSAT7 in CI (D64).~~ |
+| Gate status | D61 live `/health` met. D62/D63 met in tests. **D64 live CI green** (`lsat7-pipeline` + `build-and-test`): enqueue → mirt 1.47 → `converged: true` → ingest. D65 remains. |
 | HEAD at D60 | `bdc88dc` |
-| HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` (gitignore). Close docs on this commit. |
+| HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` / `85b43fa` (live `/health` close). |
+| HEAD at D64 | this branch (see PR) |
 
 ## Session log
 
@@ -40,6 +41,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-13 | D61–D63 | 2 | R Plumber scaffold (`/health` versions, compose re-enabled, scoring neutralized). `calibrationJobs` seven-artefact queue. ADR 0002 contract both sides; ingest refuses `converged: false`. `/submit` no longer calls R. |
 | 2026-09-13 | ops | — | Compose `r-backend` uses published `rvkmar/r-backend:latest` + `./r-backend/app` mount. Do not `docker compose build r-backend` as the default path. |
 | 2026-09-13 | close | — | Live D61 `/health` on `:4000` (R 4.6.1, mirt 1.47, …). Suite 1287/1287, build green, tree clean at `edea9f5`. `/admin` → login; seed `admin123` is not the live password. Enqueue/ingest not walked. |
+| 2026-09-13 | D64 | 1, alone | LSAT7 fixture (1000×5, Bock & Lieberman) + `{ fixture: "lsat7" }` enqueue. Always-run path uses a labeled contract stub. CI starts `rvkmar/r-backend:latest` + app mount for the live mirt run. Suite 1293 passed / 1 skipped (live describe). D65 not started. |
 
 ## Compression debt
 
@@ -51,7 +53,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D58 | Live diagnostic-session ending screen not walked at first close | Walked later 2026-09-13 on `s1789288381307` | D58 | **closed** |
 | D57 | Author UI said accuracy was unevaluated | Folded into D58 | D58 | **closed** |
 | D59 | Live report-surface browser walk skipped | Component + route tests; no running TLS stack this session | D71 | open |
-| D62/D63 | Live enqueue → process → ingest against running R | Admin token / D65 console; `/health` only this close | D65 | open |
+| D62/D63 | Live enqueue → process → ingest against running R | Admin token / D65 console; `/health` only that close | D64 CI + D65 | D64 covers scripted LSAT7 in CI; console still D65 |
+| D64 | Live mirt LSAT7 not executed in the authoring environment (no Docker/R here) | CI job `lsat7-pipeline` is the acceptance | this PR's CI | **closed** — live job green (`mirt 1.47`, `converged: true`, 1000×5) |
 | D46 | Phase-2 `apiFetch` | — | — | **closed** (`e533a77` / PRs #5–#6) |
 | D54 | Wizard readiness mirror has no agreement test | Token | W12 close | open |
 

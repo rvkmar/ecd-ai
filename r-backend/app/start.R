@@ -5,6 +5,10 @@
 # Verified pattern: source the factory, then api$run(...).
 
 options(plumber.methodNotAllowed = TRUE)
+# LSAT7's ADR 0002 envelope is ~100 kB. Some httpuv/plumber builds default
+# to a small body cap; refuse that rather than silently truncating.
+options(plumber.maxRequestSize = 50 * 1024 * 1024)
+options(httpuv.maxBodySize = 50 * 1024 * 1024)
 
 app_dir <- Sys.getenv("R_BACKEND_APP_DIR", unset = "/home/app")
 if (!file.exists(file.path(app_dir, "api.R"))) {

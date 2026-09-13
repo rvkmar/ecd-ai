@@ -3,7 +3,7 @@
 // Called only from the calibration job worker -- never from
 // server/delivery or any /api/sessions handler (ADR 0001).
 
-import { rPathForJobKind } from "./calibrationContract.js";
+import { rPathForJobKind, unboxPlumberScalars } from "./calibrationContract.js";
 
 const DEFAULT_R_BACKEND_URL = "http://r-backend:4000";
 const DEFAULT_R_JOB_TIMEOUT_MS = 15 * 60 * 1000;
@@ -34,7 +34,7 @@ async function rFetch(path, { method = "GET", body, timeoutMs = DEFAULT_R_JOB_TI
     let json = null;
     if (text) {
       try {
-        json = JSON.parse(text);
+        json = unboxPlumberScalars(JSON.parse(text));
       } catch {
         json = null;
       }

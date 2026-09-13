@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- D64: LSAT7 (Bock & Lieberman 1970 / `mirt::LSAT7`, 1000×5) is a
+  committed frequency-table fixture. `POST /api/calibrationJobs` accepts
+  `{ fixture: "lsat7" }` and fills the ADR 0002 request. `npm test`
+  always runs enqueue → process → ingest on that matrix with a labeled
+  contract stub (not invented mirt estimates). CI job `lsat7-pipeline`
+  starts `rvkmar/r-backend:latest` with the repo app bind-mount (same
+  path as compose) and asserts a live `/calibrate/irt` run reaches
+  `succeeded` + `converged: true` and writes
+  `statisticalModels[].parameterSets[]` with `calibrationJobId`.
+  Handoff: `claude/day64-lsat7-pipeline.md`.
+  Live CI (`lsat7-pipeline`) is green against `mirt 1.47`. Along the
+  way: plumber boxed `/health` `status` as `["healthy"]`; `TOL` is a
+  top-level `mirt()` argument (not `technical`); do not muffle mirt
+  warnings around the fit.
+
 ### Changed
 
 - Compose `r-backend` pulls `rvkmar/r-backend:latest` (R packages already

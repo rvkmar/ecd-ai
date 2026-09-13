@@ -1,0 +1,62 @@
+{
+  "source": {
+    "dataset": "LSAT7",
+    "citation": "Bock, R. D., & Lieberman, M. (1970). Fitting a response model for n dichotomously scored items. Psychometrika, 35(2), 179-197.",
+    "equivalents": [
+      "mirt::LSAT7 via expand.table()",
+      "psych::bock.table column Ob7",
+      "psych::lsat7"
+    ],
+    "note": "LSAT section 7: 1000 examinees by 5 dichotomous items. The 7 is the section number, not the item count. A 1000-by-7 matrix would not be this published dataset.",
+    "publishedItemCorrectCounts": {
+      "Item.1": 828,
+      "Item.2": 658,
+      "Item.3": 772,
+      "Item.4": 606,
+      "Item.5": 843
+    },
+    "publishedItemMeans": {
+      "Item.1": 0.828,
+      "Item.2": 0.658,
+      "Item.3": 0.772,
+      "Item.4": 0.606,
+      "Item.5": 0.843
+    },
+    "publishedMeanTotalScore": 3.707
+  },
+  "itemIds": ["Item.1", "Item.2", "Item.3", "Item.4", "Item.5"],
+  "patterns": [
+    { "responses": [0, 0, 0, 0, 0], "freq": 12 },
+    { "responses": [0, 0, 0, 0, 1], "freq": 19 },
+    { "responses": [0, 0, 0, 1, 0], "freq": 1 },
+    { "responses": [0, 0, 0, 1, 1], "freq": 7 },
+    { "responses": [0, 0, 1, 0, 0], "freq": 3 },
+    { "responses": [0, 0, 1, 0, 1], "freq": 19 },
+    { "responses": [0, 0, 1, 1, 0], "freq": 3 },
+    { "responses": [0, 0, 1, 1, 1], "freq": 17 },
+    { "responses": [0, 1, 0, 0, 0], "freq": 10 },
+    { "responses": [0, 1, 0, 0, 1], "freq": 5 },
+    { "responses": [0, 1, 0, 1, 0], "freq": 3 },
+    { "responses": [0, 1, 0, 1, 1], "freq": 7 },
+    { "responses": [0, 1, 1, 0, 0], "freq": 7 },
+    { "responses": [0, 1, 1, 0, 1], "freq": 23 },
+    { "responses": [0, 1, 1, 1, 0], "freq": 8 },
+    { "responses": [0, 1, 1, 1, 1], "freq": 28 },
+    { "responses": [1, 0, 0, 0, 0], "freq": 7 },
+    { "responses": [1, 0, 0, 0, 1], "freq": 39 },
+    { "responses": [1, 0, 0, 1, 0], "freq": 11 },
+    { "responses": [1, 0, 0, 1, 1], "freq": 34 },
+    { "responses": [1, 0, 1, 0, 0], "freq": 14 },
+    { "responses": [1, 0, 1, 0, 1], "freq": 51 },
+    { "responses": [1, 0, 1, 1, 0], "freq": 15 },
+    { "responses": [1, 0, 1, 1, 1], "freq": 90 },
+    { "responses": [1, 1, 0, 0, 0], "freq": 6 },
+    { "responses": [1, 1, 0, 0, 1], "freq": 25 },
+    { "responses": [1, 1, 0, 1, 0], "freq": 7 },
+    { "responses": [1, 1, 0, 1, 1], "freq": 35 },
+    { "responses": [1, 1, 1, 0, 0], "freq": 18 },
+    { "responses": [1, 1, 1, 0, 1], "freq": 136 },
+    { "responses": [1, 1, 1, 1, 0], "freq": 32 },
+    { "responses": [1, 1, 1, 1, 1], "freq": 308 }
+  ]
+}

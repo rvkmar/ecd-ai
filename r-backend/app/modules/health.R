@@ -4,6 +4,10 @@
 
 HEALTH_PACKAGES <- c("mirt", "GDINA", "TAM", "difR", "plumber", "jsonlite")
 
+# jsonlite is a declared runtime package (see Dockerfile /health). Used
+# here only to unbox length-1 character vectors in the payload.
+library(jsonlite)
+
 .pkg_version <- function(pkg) {
   if (requireNamespace(pkg, quietly = TRUE)) {
     as.character(utils::packageVersion(pkg))
@@ -12,13 +16,18 @@ HEALTH_PACKAGES <- c("mirt", "GDINA", "TAM", "difR", "plumber", "jsonlite")
   }
 }
 
+.unbox_chr <- function(x) {
+  if (is.na(x) || is.null(x)) return(NA_character_)
+  jsonlite::unbox(as.character(x))
+}
+
 health_payload <- function() {
-  versions <- lapply(HEALTH_PACKAGES, .pkg_version)
+  versions <- lapply(HEALTH_PACKAGES, function(pkg) .unbox_chr(.pkg_version(pkg)))
   names(versions) <- HEALTH_PACKAGES
   list(
-    status = "healthy",
-    timestamp = format(Sys.time(), tz = "UTC", usetz = TRUE),
-    rVersion = paste(R.version$major, R.version$minor, sep = "."),
+    status = jsonlite::unbox("healthy"),
+    timestamp = .unbox_chr(format(Sys.time(), tz = "UTC", usetz = TRUE)),
+    rVersion = .unbox_chr(paste(R.version$major, R.version$minor, sep = ".")),
     packages = versions
   )
 }

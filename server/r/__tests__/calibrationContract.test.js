@@ -10,6 +10,7 @@ import {
   CALIBRATION_CONTRACT_VERSION,
   validateCalibrationRequest,
   validateCalibrationResponse,
+  unboxPlumberScalars,
 } from "../calibrationContract.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -50,6 +51,11 @@ describe("request envelope", () => {
   it("does not treat a missing body as valid", () => {
     expect(validateCalibrationRequest(null).length).toBeGreaterThan(0);
   });
+
+  it("accepts the committed LSAT7 request (D64)", async () => {
+    const { applyNamedCalibrationFixture } = await import("../lsat7Fixture.js");
+    expect(validateCalibrationRequest(applyNamedCalibrationFixture({ fixture: "lsat7" }).request)).toEqual([]);
+  });
 });
 
 describe("response envelope", () => {
@@ -67,5 +73,26 @@ describe("response envelope", () => {
     const body = readFix("valid-response.json");
     delete body.packageVersion;
     expect(validateCalibrationResponse(body).join(" ")).toMatch(/packageVersion/);
+  });
+
+  it("unboxes plumber/jsonlite length-1 scalar arrays (D64 live /health)", () => {
+    const boxed = {
+      status: ["healthy"],
+      packages: { mirt: ["1.47"] },
+      contractVersion: ["1.0"],
+      converged: [true],
+      sampleSize: [1000],
+      parameters: { "Item.1": { a: [0.9], b: [-1.2], c: [0] } },
+    };
+    const plain = unboxPlumberScalars(boxed);
+    expect(plain.status).toBe("healthy");
+    expect(plain.packages.mirt).toBe("1.47");
+    expect(plain.converged).toBe(true);
+    expect(plain.sampleSize).toBe(1000);
+    expect(plain.parameters["Item.1"].a).toBe(0.9);
+    expect(unboxPlumberScalars({ data: [[0, 1], [1, 0]] }).data).toEqual([
+      [0, 1],
+      [1, 0],
+    ]);
   });
 });

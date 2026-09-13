@@ -4,10 +4,21 @@
 # Null in the response matrix means not administered, never 0.
 
 .parse_json_body <- function(req) {
+  # Programmatic plumber sometimes fills req$body (already parsed) and
+  # leaves postBody empty, or gives postBody as raw bytes.
+  if (is.list(req$body) && !is.null(req$body$model)) {
+    return(req$body)
+  }
   raw <- req$postBody
-  if (is.null(raw) || !nzchar(raw)) return(NULL)
+  if (is.raw(raw)) raw <- rawToChar(raw)
+  if (is.null(raw) || (is.character(raw) && !any(nzchar(raw)))) {
+    return(NULL)
+  }
   tryCatch(
-    jsonlite::fromJSON(raw, simplifyVector = FALSE),
+    # simplifyVector=TRUE turns the 1000x5 LSAT7 array into a matrix.
+    # simplifyVector=FALSE keeps a list-of-lists; both are accepted by
+    # response_matrix_to_df.
+    jsonlite::fromJSON(raw, simplifyVector = TRUE, simplifyDataFrame = FALSE),
     error = function(e) NULL
   )
 }
@@ -72,15 +83,21 @@ calibrate_irt <- function(body, res) {
     res$status <- 500
     return(.failure(body$jobId, "Package mirt is not installed", "MissingPackage"))
   }
+  # mirt's IRT objects are S4. requireNamespace() loads the namespace;
+  # attach so method dispatch is the same as the documented mirt(dat, 1).
+  suppressPackageStartupMessages(library(mirt, quietly = TRUE))
 
   started <- proc.time()[["elapsed"]]
   stderr_lines <- character(0)
   warnings_acc <- character(0)
 
   opts <- body$options
-  max_iter <- if (!is.null(opts$maxIterations)) as.integer(opts$maxIterations) else 500L
-  tol <- if (!is.null(opts$convergenceTolerance)) as.numeric(opts$convergenceTolerance) else 1e-4
-  seed <- as.integer(opts$seed)
+  .first <- function(x) unlist(x, use.names = FALSE)[[1]]
+  max_iter <- if (!is.null(opts$maxIterations)) as.integer(.first(opts$maxIterations)) else 500L
+  if (is.na(max_iter) || max_iter < 1) max_iter <- 500L
+  tol <- if (!is.null(opts$convergenceTolerance)) as.numeric(.first(opts$convergenceTolerance)) else 1e-4
+  if (is.na(tol) || tol <= 0) tol <- 1e-4
+  seed <- as.integer(.first(opts$seed))
   subtype <- .as_char(body$model$subtype)
   itemtype <- switch(subtype, "2PL" = "2PL", "3PL" = "3PL", "Rasch" = "Rasch", "2PL")
 
@@ -95,39 +112,58 @@ calibrate_irt <- function(body, res) {
     res$status <- 400
     return(.failure(body$jobId, "Could not coerce responseMatrix.data", "MatrixError", paste(stderr_lines, collapse = "\n")))
   }
+  message(sprintf(
+    "calibrate_irt job=%s dim=%dx%d itemtype=%s",
+    .as_char(body$jobId), nrow(resp_df), ncol(resp_df), itemtype
+  ))
 
   set.seed(seed)
 
-  fit <- NULL
-  tryCatch({
-    withCallingHandlers(
-      {
-        fit <<- mirt::mirt(
-          resp_df,
-          1,
-          itemtype = itemtype,
-          SE = TRUE,
-          verbose = FALSE,
-          technical = list(NCYCLES = max_iter, TOL = tol)
-        )
-      },
-      warning = function(w) {
-        warnings_acc <<- c(warnings_acc, conditionMessage(w))
-        invokeRestart("muffleWarning")
-      }
+  # Do not wrap mirt() in withCallingHandlers(muffleWarning): muffling
+  # mirt's own restarts left fit=NULL and an empty stderr in CI (both
+  # LSAT7 1000x5 and the 4x3 contract fixture). try() keeps the text.
+  .run_mirt <- function(se) {
+    # TOL is top-level (mirt 1.47 rejects it inside technical).
+    mirt::mirt(
+      resp_df,
+      1,
+      itemtype = itemtype,
+      SE = se,
+      verbose = FALSE,
+      TOL = tol,
+      technical = list(NCYCLES = max_iter)
     )
-  }, error = function(e) {
-    stderr_lines <<- c(stderr_lines, conditionMessage(e))
-  })
+  }
+  fit_try <- try(.run_mirt(TRUE), silent = TRUE)
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    fit_try <- try(.run_mirt(FALSE), silent = TRUE)
+  }
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    # Last resort: the call in mirt's own LSAT7 example.
+    fit_try <- try(mirt::mirt(resp_df, 1), silent = TRUE)
+  }
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    fit <- NULL
+  } else {
+    fit <- fit_try
+  }
 
   elapsed <- proc.time()[["elapsed"]] - started
   pkg_ver <- paste("mirt", as.character(utils::packageVersion("mirt")))
 
   if (is.null(fit)) {
     res$status <- 200
+    dim_note <- sprintf(" [%dx%d]", nrow(resp_df), ncol(resp_df))
     return(.failure(
       body$jobId,
-      if (length(stderr_lines)) paste(stderr_lines, collapse = "; ") else "mirt failed to fit",
+      if (length(stderr_lines)) {
+        paste0(paste(stderr_lines, collapse = "; "), dim_note)
+      } else {
+        paste0("mirt failed to fit", dim_note)
+      },
       "mirtError",
       paste(stderr_lines, collapse = "\n")
     ))
