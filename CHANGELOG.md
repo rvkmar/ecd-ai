@@ -19,9 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `succeeded` + `converged: true` and writes
   `statisticalModels[].parameterSets[]` with `calibrationJobId`.
   Handoff: `claude/day64-lsat7-pipeline.md`.
-  First CI live run showed plumber boxing `/health` `status` as
-  `["healthy"]`; the client now unboxes length-1 JSON scalars and R
-  serves `serializer_unboxed_json()`.
+  Live CI (`lsat7-pipeline`) is green against `mirt 1.47`. Along the
+  way: plumber boxed `/health` `status` as `["healthy"]`; `TOL` is a
+  top-level `mirt()` argument (not `technical`); do not muffle mirt
+  warnings around the fit.
 
 ### Changed
 

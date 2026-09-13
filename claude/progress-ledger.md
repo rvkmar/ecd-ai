@@ -22,7 +22,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Next queued | Calendar **D65** — calibration console (hooks exist, no UI). |
 | Block | W13 — R Plumber service and the calibration job queue |
 | Block gate | Administrator can start, watch, inspect and ingest a calibration without a shell (D65). ~~LSAT7 in CI (D64).~~ |
-| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 met (fixture + CI job; live mirt is the CI job, not this environment). D65 remains. |
+| Gate status | D61 live `/health` met. D62/D63 met in tests. **D64 live CI green** (`lsat7-pipeline` + `build-and-test`): enqueue → mirt 1.47 → `converged: true` → ingest. D65 remains. |
 | HEAD at D60 | `bdc88dc` |
 | HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` / `85b43fa` (live `/health` close). |
 | HEAD at D64 | this branch (see PR) |
@@ -54,7 +54,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D57 | Author UI said accuracy was unevaluated | Folded into D58 | D58 | **closed** |
 | D59 | Live report-surface browser walk skipped | Component + route tests; no running TLS stack this session | D71 | open |
 | D62/D63 | Live enqueue → process → ingest against running R | Admin token / D65 console; `/health` only that close | D64 CI + D65 | D64 covers scripted LSAT7 in CI; console still D65 |
-| D64 | Live mirt LSAT7 not executed in the authoring environment (no Docker/R here) | CI job `lsat7-pipeline` is the acceptance | this PR's CI | open until that job is green |
+| D64 | Live mirt LSAT7 not executed in the authoring environment (no Docker/R here) | CI job `lsat7-pipeline` is the acceptance | this PR's CI | **closed** — live job green (`mirt 1.47`, `converged: true`, 1000×5) |
 | D46 | Phase-2 `apiFetch` | — | — | **closed** (`e533a77` / PRs #5–#6) |
 | D54 | Wizard readiness mirror has no agreement test | Token | W12 close | open |
 

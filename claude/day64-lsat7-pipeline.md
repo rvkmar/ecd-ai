@@ -84,13 +84,12 @@ Enqueue by hand (admin token):
 
 ## Honest remaining gap
 
-This environment has no Docker and no R, so the **live** mirt run was not
-executed here. The contract-path tests were (`npx vitest run` — **1293
-passed / 1 skipped** / 81 files; the skip is the live describe). CI is
-the place the live acceptance is supposed to run. If
-`docker pull rvkmar/r-backend:latest` fails on GitHub (private image or
-Hub rate limit), `lsat7-pipeline` fails honestly — it does not skip or
-invent estimates.
+This environment has no Docker and no R. The **live** mirt run is the
+CI job. It is green: `rvkmar/r-backend:latest` + `./r-backend/app`
+mount, `/health` (R 4.6.1, mirt 1.47), LSAT7 1000×5 →
+`packageVersion: "mirt 1.47"`, `converged: true`, ingest with
+`calibrationJobId`. Local `npx vitest run` — contract path only
+(live describe skipped without `R_BACKEND_URL`).
 
 Live D62 restart recovery and the D65 console are still open.
 
