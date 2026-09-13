@@ -50,6 +50,11 @@ describe("request envelope", () => {
   it("does not treat a missing body as valid", () => {
     expect(validateCalibrationRequest(null).length).toBeGreaterThan(0);
   });
+
+  it("accepts the committed LSAT7 request (D64)", async () => {
+    const { lsat7CalibrationRequest } = await import("../lsat7Fixture.js");
+    expect(validateCalibrationRequest(lsat7CalibrationRequest())).toEqual([]);
+  });
 });
 
 describe("response envelope", () => {

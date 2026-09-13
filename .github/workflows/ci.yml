@@ -29,3 +29,49 @@ jobs:
 
       - name: Test
         run: npm test
+
+  # D64: existing build-and-test never starts r-backend (confirmed).
+  # This job uses the same published image + repo app bind-mount as
+  # compose — not a second psychometric stack — and runs the live
+  # LSAT7 enqueue → process → ingest path against real mirt.
+  lsat7-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Pull published R image
+        run: docker pull rvkmar/r-backend:latest
+
+      - name: Start r-backend (published image + repo app)
+        run: |
+          docker run -d --name r-backend \
+            -p 4000:4000 \
+            -v "$PWD/r-backend/app:/home/app" \
+            -e R_BACKEND_APP_DIR=/home/app \
+            rvkmar/r-backend:latest \
+            Rscript /home/app/start.R
+          for i in $(seq 1 45); do
+            if curl -sf http://127.0.0.1:4000/health; then
+              echo
+              echo "r-backend /health is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "r-backend did not become healthy"
+          docker logs r-backend || true
+          exit 1
+
+      - name: LSAT7 full pipeline against live R
+        env:
+          R_BACKEND_URL: http://127.0.0.1:4000
+        run: npx vitest run server/r/__tests__/lsat7Pipeline.test.js
