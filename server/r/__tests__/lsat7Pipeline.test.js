@@ -111,7 +111,7 @@ describe("LSAT7 fixture is the published matrix", () => {
     // Dockerfile.node copies only server/ + src/utils. A path that walks
     // out to r-backend/app/tests/fixtures would 500 with ENOENT in the
     // compose node image even though this test checkout has both trees.
-    const moduleDir = path.dirname(fileURLToPath(new URL("../lsat7Fixture.js", import.meta.url)));
+    const moduleDir = path.resolve(here, "..");
     const shipped = path.resolve(moduleDir, "fixtures", "lsat7-frequency-table.json");
     expect(path.resolve(LSAT7_FREQUENCY_TABLE_PATH)).toBe(shipped);
     expect(fs.existsSync(LSAT7_FREQUENCY_TABLE_PATH)).toBe(true);
