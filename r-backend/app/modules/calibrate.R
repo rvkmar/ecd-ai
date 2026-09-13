@@ -83,6 +83,9 @@ calibrate_irt <- function(body, res) {
     res$status <- 500
     return(.failure(body$jobId, "Package mirt is not installed", "MissingPackage"))
   }
+  # mirt's IRT objects are S4. requireNamespace() loads the namespace;
+  # attach so method dispatch is the same as the documented mirt(dat, 1).
+  suppressPackageStartupMessages(library(mirt, quietly = TRUE))
 
   started <- proc.time()[["elapsed"]]
   stderr_lines <- character(0)
@@ -116,31 +119,37 @@ calibrate_irt <- function(body, res) {
 
   set.seed(seed)
 
-  fit <- NULL
-  tryCatch({
-    withCallingHandlers(
-      {
-        # mirt 1.47 rejects TOL inside technical ("inputs to technical
-        # are invalid: TOL"). TOL is a top-level mirt() argument; NCYCLES
-        # stays in technical. Confirmed on live LSAT7 in CI (1000x5).
-        fit <<- mirt::mirt(
-          resp_df,
-          1,
-          itemtype = itemtype,
-          SE = TRUE,
-          verbose = FALSE,
-          TOL = tol,
-          technical = list(NCYCLES = max_iter)
-        )
-      },
-      warning = function(w) {
-        warnings_acc <<- c(warnings_acc, conditionMessage(w))
-        invokeRestart("muffleWarning")
-      }
+  # Do not wrap mirt() in withCallingHandlers(muffleWarning): muffling
+  # mirt's own restarts left fit=NULL and an empty stderr in CI (both
+  # LSAT7 1000x5 and the 4x3 contract fixture). try() keeps the text.
+  .run_mirt <- function(se) {
+    # TOL is top-level (mirt 1.47 rejects it inside technical).
+    mirt::mirt(
+      resp_df,
+      1,
+      itemtype = itemtype,
+      SE = se,
+      verbose = FALSE,
+      TOL = tol,
+      technical = list(NCYCLES = max_iter)
     )
-  }, error = function(e) {
-    stderr_lines <<- c(stderr_lines, conditionMessage(e))
-  })
+  }
+  fit_try <- try(.run_mirt(TRUE), silent = TRUE)
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    fit_try <- try(.run_mirt(FALSE), silent = TRUE)
+  }
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    # Last resort: the call in mirt's own LSAT7 example.
+    fit_try <- try(mirt::mirt(resp_df, 1), silent = TRUE)
+  }
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    fit <- NULL
+  } else {
+    fit <- fit_try
+  }
 
   elapsed <- proc.time()[["elapsed"]] - started
   pkg_ver <- paste("mirt", as.character(utils::packageVersion("mirt")))
