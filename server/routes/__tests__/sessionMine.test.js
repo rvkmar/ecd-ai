@@ -7,6 +7,13 @@ import request from "supertest";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
+// Native `node` cold-import of sessionRoutes.js (and, more lightly,
+// sessionPlay.js) can exceed Vitest's default 5s testTimeout on WSL /
+// memory-constrained hosts. Same 30s budget routeAuth.test.js documented
+// for this router's cold import. execFileSync gets a matching timeout so
+// a hung spawn fails instead of blocking the worker forever.
+const NATIVE_ESM_LOAD_MS = 30_000;
+
 vi.mock("../../utils/authMiddleware.js", () => ({
   authenticateToken: (req, _res, next) => {
     req.user = { username: "stud1", role: "student" };
@@ -149,9 +156,9 @@ describe("GET /api/sessions/mine is loadable by native Node ESM", () => {
         "-e",
         "import { attendableSessionsForStudent } from './src/utils/sessionPlay.js'; if (typeof attendableSessionsForStudent !== 'function') process.exit(2);",
       ],
-      { cwd: REPO_ROOT, encoding: "utf8", env: process.env }
+      { cwd: REPO_ROOT, encoding: "utf8", timeout: NATIVE_ESM_LOAD_MS, env: process.env }
     );
-  });
+  }, NATIVE_ESM_LOAD_MS);
 
   it("sessionRoutes.js loads under node so /mine can register before /:id", () => {
     execFileSync(
@@ -164,6 +171,7 @@ describe("GET /api/sessions/mine is loadable by native Node ESM", () => {
       {
         cwd: REPO_ROOT,
         encoding: "utf8",
+        timeout: NATIVE_ESM_LOAD_MS,
         env: {
           ...process.env,
           JWT_SECRET:
@@ -172,5 +180,5 @@ describe("GET /api/sessions/mine is loadable by native Node ESM", () => {
         },
       }
     );
-  });
+  }, NATIVE_ESM_LOAD_MS);
 });
