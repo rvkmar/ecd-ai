@@ -18,15 +18,15 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D65** — calibration console UI. `/admin/calibration` + Admin tab; district read-only. Start (LSAT7 fixture) → watch (poll while queued/running) → inspect → ingest. Non-converged ingest surfaces 409. Handoff: `claude/day65-calibration-console.md`. |
-| Next queued | Calendar **D66** — DINA calibration endpoint (currently 501). |
-| Block | W13 — R Plumber service and the calibration job queue |
+| Last completed unit | **D65** — calibration console UI. W13 close: `claude/day65-w13-close.md`. Prior: D64 LSAT7 (`claude/day64-lsat7-pipeline.md`). |
+| Next queued | Calendar **D66** — sim10GDINA through R (endpoint is still 501). Never-compress. |
+| Block | W13 recorded closed (caveats). **W14** — diagnostics calibration, CTT live, DIF, equating |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ |
-| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI green. **D65 met in UI + tests**; live operator walk deferred to coordinator. |
+| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests**; live operator walk and parameter-set diff still open. |
 | HEAD at D60 | `bdc88dc` |
 | HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` / `85b43fa` (live `/health` close). |
 | HEAD at D64 | `d27d21b` (#19) |
-| HEAD at D65 | this branch (see PR) |
+| HEAD at D65 | `ce4c71b` (#20) + `3045ff0` (#21 fixture path). W13 close: `claude/day65-w13-close.md`. |
 
 ## Session log
 
@@ -45,13 +45,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-13 | D64 | 1, alone | LSAT7 fixture (1000×5, Bock & Lieberman) + `{ fixture: "lsat7" }` enqueue. Always-run path uses a labeled contract stub. CI starts `rvkmar/r-backend:latest` + app mount for the live mirt run. Suite 1293 passed / 1 skipped (live describe). D65 not started. |
 | 2026-09-13 | D65 | 2 | Calibration console at `/admin/calibration` + Admin tab. District read-only. Process hook added (autorun is compose-only). Tests cover start → process → watch → ingest and non-converged 409. Suite 1311 passed / 1 skipped. Live operator walk not run here. |
 | 2026-09-13 | bugfix | — | LSAT7 named-fixture ENOENT in the compose node image (`Dockerfile.node` does not ship `r-backend/`). Node now loads `server/r/fixtures/lsat7-frequency-table.json`. Handoff: `claude/lsat7-fixture-node-image.md`. |
+| 2026-09-13 | close | — | W13 close at `3045ff0`. Suite 1313 passed / 1 skipped; live `test:lsat7` 8/8 on `:4000`; CI `lsat7-pipeline` green. D64 a/b check restated (no published coefficient table). D65 live walk + param-set diff not done. Next: D66. |
 
 ## Compression debt
 
 | Unit | What was compressed | Why | Discharge by | Status |
 |---|---|---|---|---|
 | D50 | District/teacher browser pass skipped | Human logins | D71 | open |
-| D55 | Entire W11 accessibility audit skipped | Never scheduled after Q-matrix/Assembly shipped | Re-date at W12 close or before D73 | **open, past one block close → standing risk** |
+| D55 | Entire W11 accessibility audit skipped | Never scheduled after Q-matrix/Assembly shipped | Re-date at W12 close or before D73 | **open, past two block closes → standing risk** |
 | D56 | Adaptive selection not live-browser | Tests only | D71 | open |
 | D58 | Live diagnostic-session ending screen not walked at first close | Walked later 2026-09-13 on `s1789288381307` | D58 | **closed** |
 | D57 | Author UI said accuracy was unevaluated | Folded into D58 | D58 | **closed** |
@@ -59,7 +60,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D62/D63 | Live enqueue → process → ingest against running R | Admin token / D65 console; `/health` only that close | D64 CI + D65 | D64 covers scripted LSAT7 in CI; D65 is the console (tests). Live operator walk still coordinator. |
 | D64 | Live mirt LSAT7 not executed in the authoring environment (no Docker/R here) | CI job `lsat7-pipeline` is the acceptance | this PR's CI | **closed** — live job green (`mirt 1.47`, `converged: true`, 1000×5) |
 | D46 | Phase-2 `apiFetch` | — | — | **closed** (`e533a77` / PRs #5–#6) |
-| D54 | Wizard readiness mirror has no agreement test | Token | W12 close | open |
+| D54 | Wizard readiness mirror has no agreement test | Token | W12 close | **open, past two block closes → standing risk** |
+| D65 | Live operator walk + parameter-set diff UI skipped | Tests + routes; seed password; diff never built | D71 / follow-on | open |
 
 Debt against the never-compress list is not permitted. **D60** (this file's real unit) is closed.
 
@@ -70,6 +72,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D58 | Write `sessionOrchestrator.js`; stop on accuracy, length, or coverage | Stop already in `activitySelection.js`; no coverage field | Persist `{ stopped }` on the session; player shows the reason; do not add a second orchestrator |
 | D59 | Split reports by role; attribute-profile UI; close teacher-report leak | One stack (`reportsRoutes` + `SessionReport`); teacher-report was authenticate-only; classification already computed, not shown on reports | Gate teacher routes with `authorizeRole`; stop the client fetching them as a student; attach `stopped` + `attributeProfile` to existing payloads/surfaces |
 | D61 | Posit-dated Dockerfile + committed `renv.lock` | Published `rvkmar/r-backend:latest`; `renv.lock` absent | Pin via live `/health` on that image; Dockerfile is a thin overlay only |
+| D64 | Pin published mirt LSAT7 *a* and *b* in the test with a numeric tolerance | Live asserts convergence, `a > 0`, and Item.5 `b` < Item.4 `b` (p=0.843 vs 0.606) | Restated live check; coefficient-table pin left for a later benchmark tightening (D88) |
 
 ## Carried-forward gaps
 
