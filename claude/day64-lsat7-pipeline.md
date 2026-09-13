@@ -58,11 +58,10 @@ R is still not on any session path (ADR 0001). No D65 UI.
 1. `GET /health` returned `status: ["healthy"]` — plumber/jsonlite boxed a
    length-1 character vector. Fix: `serializer_unboxed_json()`,
    `jsonlite::unbox` on health, `unboxPlumberScalars()` on the Node client.
-2. Next run got past health, then `succeeded` + `converged: false` in
-   ~300ms (mirt never fitted). Likely request-body parse / matrix
-   orientation. Hardened `response_matrix_to_df`, raised plumber body
-   cap, and the live test now dumps `error` / `diagnostics`. Not a
-   psychometric stub.
+2. Next run got past health with a real **1000×5** matrix, then
+   `succeeded` + `converged: false` because mirt 1.47 rejected
+   `technical = list(TOL=...)`. `TOL` is a top-level `mirt()` argument;
+   `NCYCLES` stays in `technical`. Not a psychometric stub.
 
 ## How to re-run
 

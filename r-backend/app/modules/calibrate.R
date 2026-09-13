@@ -120,13 +120,17 @@ calibrate_irt <- function(body, res) {
   tryCatch({
     withCallingHandlers(
       {
+        # mirt 1.47 rejects TOL inside technical ("inputs to technical
+        # are invalid: TOL"). TOL is a top-level mirt() argument; NCYCLES
+        # stays in technical. Confirmed on live LSAT7 in CI (1000x5).
         fit <<- mirt::mirt(
           resp_df,
           1,
           itemtype = itemtype,
           SE = TRUE,
           verbose = FALSE,
-          technical = list(NCYCLES = max_iter, TOL = tol)
+          TOL = tol,
+          technical = list(NCYCLES = max_iter)
         )
       },
       warning = function(w) {
