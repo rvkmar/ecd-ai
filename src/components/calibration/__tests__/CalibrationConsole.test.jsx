@@ -204,7 +204,7 @@ describe("admin start → process → watch → ingest", () => {
     expect(screen.queryByText(/watching queued and running jobs/i)).not.toBeInTheDocument();
     expect(screen.getByText("contract-stub (not mirt)")).toBeInTheDocument();
     expect(screen.getByText("1000")).toBeInTheDocument();
-    expect(screen.getByText(/"Item\.1"/)).toBeInTheDocument();
+    expect(screen.getAllByText(/"Item\.1"/).length).toBeGreaterThan(0);
     expect(screen.getByText(/"logLik"/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /^ingest$/i }));
@@ -284,10 +284,12 @@ describe("district read-only", () => {
 });
 
 describe("admin still has write affordances", () => {
-  it("shows enqueue and process on a queued job", () => {
+  it("shows enqueue and process on a queued job", async () => {
+    const user = userEvent.setup();
     fx.setJobs([queuedJob()]);
     render(<CalibrationConsole />);
     expect(screen.getByRole("button", { name: /enqueue lsat7/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^inspect$/i }));
     expect(screen.getByRole("button", { name: /^process$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^cancel$/i })).toBeInTheDocument();
   });

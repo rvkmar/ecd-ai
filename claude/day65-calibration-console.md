@@ -66,6 +66,9 @@ second calibrator; it is `POST /api/calibrationJobs/:id/process`.
 npx vitest run src/components/calibration/__tests__/CalibrationConsole.test.jsx \
   src/pages/__tests__/calibrationConsoleRoutes.test.jsx \
   src/config/__tests__/rolePermissions.test.js
+
+# Full suite at this close: 1311 passed / 1 skipped (live LSAT7 describe).
+# `npm run build` green (chunk warning still D74).
 ```
 
 On a stack with compose autorun + an admin token: open `/admin` → Calibration

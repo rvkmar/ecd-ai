@@ -68,9 +68,10 @@ describe("calibrationJobs (D65 console RBAC)", () => {
 
   it("district can view jobs and cannot write them", () => {
     expect(can("district", "view", "calibrationJobs")).toBe(true);
-    expect(can("district", "create", "calibrationJobs")).toBe(false);
-    expect(can("district", "edit", "calibrationJobs")).toBe(false);
-    expect(can("district", "delete", "calibrationJobs")).toBe(false);
+    // district has no canCreate list, so create is falsy by omission.
+    expect(can("district", "create", "calibrationJobs")).toBeFalsy();
+    expect(can("district", "edit", "calibrationJobs")).toBeFalsy();
+    expect(can("district", "delete", "calibrationJobs")).toBeFalsy();
   });
 
   it("teacher and student cannot see the console entity", () => {
