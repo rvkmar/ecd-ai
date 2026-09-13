@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `{ fixture: "lsat7" }` enqueue no longer opens
+  `r-backend/app/tests/fixtures/lsat7-frequency-table.json` from the Node
+  process. The compose node image (`Dockerfile.node`) copies only
+  `server/` and `src/utils`, so that path 500'd with ENOENT on the
+  operator stack. Node now loads
+  `server/r/fixtures/lsat7-frequency-table.json` (same published matrix;
+  drift test against the R-side twin when both files exist). Handoff:
+  `claude/lsat7-fixture-node-image.md`.
+
 ### Added
 
 - D65: calibration console at `/admin/calibration` (also an Admin

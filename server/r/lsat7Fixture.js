@@ -1,7 +1,11 @@
 // server/r/lsat7Fixture.js
 // D64: published LSAT7 response matrix as an ADR 0002 calibration request.
-// Source of truth is r-backend/app/tests/fixtures/lsat7-frequency-table.json
-// (Bock & Lieberman 1970 / mirt::LSAT7 via expand.table).
+// Node ships its own copy at server/r/fixtures/lsat7-frequency-table.json so
+// the compose node image (Dockerfile.node copies only server/ + src/utils)
+// can enqueue `{ fixture: "lsat7" }` without r-backend/ on disk. The R-side
+// twin is r-backend/app/tests/fixtures/lsat7-frequency-table.json (Bock &
+// Lieberman 1970 / mirt::LSAT7 via expand.table). A drift test keeps the
+// two files equal when both exist in the checkout.
 //
 // mirt::LSAT7 is LSAT *section* 7: 1000 examinees × 5 items. The 7 is not
 // the item count. Enqueue with `{ fixture: "lsat7" }` and the job route
@@ -13,9 +17,9 @@ import { fileURLToPath } from "url";
 import { CALIBRATION_CONTRACT_VERSION } from "./calibrationContract.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const FREQUENCY_TABLE_PATH = path.resolve(
+const LSAT7_FREQUENCY_TABLE_PATH = path.resolve(
   here,
-  "../../r-backend/app/tests/fixtures/lsat7-frequency-table.json"
+  "fixtures/lsat7-frequency-table.json"
 );
 
 const LSAT7_SEED = 20261120;
@@ -26,7 +30,7 @@ let cachedTable = null;
 
 function loadLsat7FrequencyTable() {
   if (!cachedTable) {
-    cachedTable = JSON.parse(fs.readFileSync(FREQUENCY_TABLE_PATH, "utf8"));
+    cachedTable = JSON.parse(fs.readFileSync(LSAT7_FREQUENCY_TABLE_PATH, "utf8"));
   }
   return cachedTable;
 }
