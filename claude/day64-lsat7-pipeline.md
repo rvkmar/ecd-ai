@@ -53,14 +53,16 @@ test pins:
 
 R is still not on any session path (ADR 0001). No D65 UI.
 
-## Live CI finding (first `lsat7-pipeline` run)
+## Live CI findings
 
-`GET /health` returned `status: ["healthy"]` — plumber/jsonlite boxed a
-length-1 character vector. The container was up; the assertion was too
-strict. Fix: `serializer_unboxed_json()` on the plumber router, `jsonlite::unbox`
-on the health payload, and `unboxPlumberScalars()` on the Node R client so
-ADR 0002 provenance fields stay strings/booleans/numbers. Not a psychometric
-stub.
+1. `GET /health` returned `status: ["healthy"]` — plumber/jsonlite boxed a
+   length-1 character vector. Fix: `serializer_unboxed_json()`,
+   `jsonlite::unbox` on health, `unboxPlumberScalars()` on the Node client.
+2. Next run got past health, then `succeeded` + `converged: false` in
+   ~300ms (mirt never fitted). Likely request-body parse / matrix
+   orientation. Hardened `response_matrix_to_df`, raised plumber body
+   cap, and the live test now dumps `error` / `diagnostics`. Not a
+   psychometric stub.
 
 ## How to re-run
 

@@ -123,12 +123,50 @@ validate_calibration_response <- function(body) {
   if (length(errors) == 0) NULL else errors
 }
 
-response_matrix_to_df <- function(rm) {
-  item_ids <- vapply(rm$itemIds, .as_char, character(1))
-  rows <- lapply(rm$data, function(row) {
-    vapply(row, .null_to_na, numeric(1))
+.response_to_matrix <- function(raw, n_items) {
+  if (is.data.frame(raw)) {
+    return(as.matrix(raw))
+  }
+  if (is.matrix(raw)) {
+    return(raw)
+  }
+  if (!is.list(raw) || length(raw) == 0) {
+    stop("responseMatrix.data must be a matrix or a list of rows")
+  }
+
+  # Column-oriented list (one numeric vector per item).
+  if (length(raw) == n_items && all(vapply(raw, function(col) {
+    is.atomic(col) && !is.list(col) && length(col) > 1
+  }, logical(1)))) {
+    return(do.call(cbind, lapply(raw, as.numeric)))
+  }
+
+  rows <- lapply(raw, function(row) {
+    as.numeric(unlist(row, use.names = FALSE))
   })
-  mat <- do.call(rbind, rows)
+  lengths <- vapply(rows, length, integer(1))
+  if (length(unique(lengths)) != 1) {
+    stop("responseMatrix.data rows do not share one length")
+  }
+  do.call(rbind, rows)
+}
+
+response_matrix_to_df <- function(rm) {
+  item_ids <- vapply(as.list(rm$itemIds), .as_char, character(1))
+  mat <- .response_to_matrix(rm$data, length(item_ids))
+
+  # lapply() over a matrix walks columns. If we accidentally built
+  # items x persons, transpose back to the ADR 0002 orientation.
+  if (nrow(mat) == length(item_ids) && ncol(mat) != length(item_ids) && ncol(mat) > 2) {
+    mat <- t(mat)
+  }
+  if (ncol(mat) != length(item_ids)) {
+    stop(sprintf(
+      "responseMatrix.data is %dx%d, expected %d columns (itemIds)",
+      nrow(mat), ncol(mat), length(item_ids)
+    ))
+  }
+  storage.mode(mat) <- "numeric"
   colnames(mat) <- item_ids
   as.data.frame(mat, stringsAsFactors = FALSE)
 }

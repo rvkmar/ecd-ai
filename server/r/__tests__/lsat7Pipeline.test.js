@@ -243,10 +243,27 @@ describe.skipIf(!live)("LSAT7 live R pipeline", () => {
       client: { postCalibration },
     });
 
-    expect(processed.ok, processed.job?.error?.message || processed.error).toBe(true);
+    const liveDump = JSON.stringify(
+      {
+        ok: processed.ok,
+        status: processed.job?.status,
+        error: processed.job?.error || processed.error,
+        responseError: processed.job?.response?.error,
+        converged: processed.job?.response?.converged,
+        packageVersion: processed.job?.response?.packageVersion,
+        sampleSize: processed.job?.response?.sampleSize,
+        diagnostics: processed.job?.response?.diagnostics,
+      },
+      null,
+      2
+    );
+    // eslint-disable-next-line no-console
+    console.log("LSAT7 live process", liveDump);
+
+    expect(processed.ok, liveDump).toBe(true);
     const job = processed.job;
-    expect(job.status).toBe("succeeded");
-    expect(job.response.converged).toBe(true);
+    expect(job.status, liveDump).toBe("succeeded");
+    expect(job.response.converged, liveDump).toBe(true);
     expect(job.response.packageVersion).toMatch(/^mirt /);
     expect(job.response.sampleSize).toBe(1000);
     expect(job.response.jobId).toBe(jobId);

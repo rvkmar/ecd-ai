@@ -75,3 +75,13 @@ jobs:
         env:
           R_BACKEND_URL: http://127.0.0.1:4000
         run: npx vitest run server/r/__tests__/lsat7Pipeline.test.js
+
+      - name: Dump R logs on failure
+        if: failure()
+        run: |
+          docker logs r-backend || true
+          echo "--- tiny /calibrate/irt ---"
+          curl -sS -X POST http://127.0.0.1:4000/calibrate/irt \
+            -H 'Content-Type: application/json' \
+            --data-binary @r-backend/app/tests/fixtures/valid-request.json | head -c 4000
+          echo
