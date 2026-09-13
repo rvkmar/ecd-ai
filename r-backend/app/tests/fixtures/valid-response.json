@@ -1,0 +1,24 @@
+{
+  "contractVersion": "1.0",
+  "jobId": "job_contract_valid",
+  "converged": true,
+  "packageVersion": "mirt 1.41",
+  "sampleSize": 4,
+  "calibratedAt": "2026-11-20T09:03:11Z",
+  "parameters": {
+    "item_a": { "a": 1.24, "b": -0.31, "c": 0.0 },
+    "item_b": { "a": 0.88, "b": 0.42, "c": 0.0 },
+    "item_c": { "a": 1.05, "b": 0.10, "c": 0.0 }
+  },
+  "standardErrors": {
+    "item_a": { "a": 0.09, "b": 0.06, "c": 0.0 }
+  },
+  "fitStatistics": {
+    "global": { "M2": 2.1, "df": 1, "p": 0.15, "RMSEA": 0.04 }
+  },
+  "diagnostics": {
+    "iterations": 12,
+    "elapsedSeconds": 0.4,
+    "warnings": []
+  }
+}

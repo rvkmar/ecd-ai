@@ -1,0 +1,134 @@
+# modules/contract.R
+# ADR 0002 request/response envelope. Same version string and required
+# fields as server/r/calibrationContract.js. Keep the two in lockstep;
+# contract tests on both sides read the same JSON fixtures.
+
+CALIBRATION_CONTRACT_VERSION <- "1.0"
+
+CALIBRATION_MODEL_FAMILIES <- c("irt", "dina", "gdina", "ctt")
+CALIBRATION_IRT_SUBTYPES <- c("2PL", "3PL", "Rasch")
+
+.as_char <- function(x) {
+  if (is.null(x)) return(NA_character_)
+  as.character(x)
+}
+
+.null_to_na <- function(x) {
+  if (is.null(x)) return(NA_real_)
+  as.numeric(x)
+}
+
+validate_calibration_request <- function(body) {
+  errors <- character(0)
+
+  if (is.null(body) || !is.list(body)) {
+    return("Request body must be a JSON object")
+  }
+
+  if (!identical(.as_char(body$contractVersion), CALIBRATION_CONTRACT_VERSION)) {
+    errors <- c(errors, paste0(
+      "contractVersion must be '", CALIBRATION_CONTRACT_VERSION, "'"
+    ))
+  }
+
+  if (is.null(body$jobId) || !nzchar(.as_char(body$jobId))) {
+    errors <- c(errors, "jobId is required")
+  }
+
+  model <- body$model
+  if (is.null(model) || !is.list(model)) {
+    errors <- c(errors, "model is required")
+  } else {
+    family <- .as_char(model$family)
+    if (!family %in% CALIBRATION_MODEL_FAMILIES) {
+      errors <- c(errors, paste0(
+        "model.family must be one of: ",
+        paste(CALIBRATION_MODEL_FAMILIES, collapse = ", ")
+      ))
+    }
+    if (identical(family, "irt")) {
+      subtype <- .as_char(model$subtype)
+      if (!subtype %in% CALIBRATION_IRT_SUBTYPES) {
+        errors <- c(errors, paste0(
+          "model.subtype must be one of: ",
+          paste(CALIBRATION_IRT_SUBTYPES, collapse = ", ")
+        ))
+      }
+    }
+    if (is.null(model$itemIds) || length(model$itemIds) < 2) {
+      errors <- c(errors, "model.itemIds must name at least two items")
+    }
+  }
+
+  rm <- body$responseMatrix
+  if (is.null(rm) || !is.list(rm)) {
+    errors <- c(errors, "responseMatrix is required")
+  } else {
+    if (is.null(rm$personIds) || length(rm$personIds) < 2) {
+      errors <- c(errors, "responseMatrix.personIds must name at least two persons")
+    }
+    if (is.null(rm$itemIds) || length(rm$itemIds) < 2) {
+      errors <- c(errors, "responseMatrix.itemIds must name at least two items")
+    }
+    if (!is.null(model$itemIds) && !is.null(rm$itemIds)) {
+      model_ids <- vapply(model$itemIds, .as_char, character(1))
+      rm_ids <- vapply(rm$itemIds, .as_char, character(1))
+      if (!identical(model_ids, rm_ids)) {
+        errors <- c(errors, "model.itemIds must match responseMatrix.itemIds in order")
+      }
+    }
+    if (is.null(rm$data) || length(rm$data) == 0) {
+      errors <- c(errors, "responseMatrix.data is required")
+    }
+  }
+
+  opts <- body$options
+  if (is.null(opts) || is.null(opts$seed)) {
+    errors <- c(errors, "options.seed is required (reproducibility is provenance)")
+  }
+
+  if (length(errors) == 0) NULL else errors
+}
+
+validate_calibration_response <- function(body) {
+  errors <- character(0)
+  if (is.null(body) || !is.list(body)) {
+    return("Response body must be a JSON object")
+  }
+  if (!identical(.as_char(body$contractVersion), CALIBRATION_CONTRACT_VERSION)) {
+    errors <- c(errors, paste0(
+      "contractVersion must be '", CALIBRATION_CONTRACT_VERSION, "'"
+    ))
+  }
+  if (is.null(body$jobId) || !nzchar(.as_char(body$jobId))) {
+    errors <- c(errors, "jobId is required")
+  }
+  if (!is.logical(body$converged) || length(body$converged) != 1) {
+    errors <- c(errors, "converged must be a boolean")
+  }
+  if (isTRUE(body$converged)) {
+    if (is.null(body$packageVersion) || !nzchar(.as_char(body$packageVersion))) {
+      errors <- c(errors, "packageVersion is required when converged is true")
+    }
+    if (is.null(body$sampleSize) || is.na(.null_to_na(body$sampleSize)) || .null_to_na(body$sampleSize) <= 0) {
+      errors <- c(errors, "sampleSize must be a positive number when converged is true")
+    }
+    if (is.null(body$calibratedAt) || !nzchar(.as_char(body$calibratedAt))) {
+      errors <- c(errors, "calibratedAt is required when converged is true")
+    }
+    if (is.null(body$parameters) || !is.list(body$parameters)) {
+      errors <- c(errors, "parameters is required when converged is true")
+    }
+  }
+  if (length(errors) == 0) NULL else errors
+}
+
+response_matrix_to_df <- function(rm) {
+  item_ids <- vapply(rm$itemIds, .as_char, character(1))
+  rows <- lapply(rm$data, function(row) {
+    vapply(row, .null_to_na, numeric(1))
+  })
+  mat <- do.call(rbind, rows)
+  colnames(mat) <- item_ids
+  as.data.frame(mat, stringsAsFactors = FALSE)
+}

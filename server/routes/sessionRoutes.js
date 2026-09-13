@@ -62,8 +62,6 @@ router.use(authenticateToken);
 // already commented "For admin use only" but never enforced.
 const adminOnly = authorizeRole(["admin"]);
 
-const R_BACKEND = process.env.R_BACKEND_URL || "http://localhost:4000";
-
 // ------------------------------
 // POST /api/sessions
 // ------------------------------
@@ -646,39 +644,9 @@ router.post("/:id/submit", async (req, res) => {
   }
   task.updatedAt = new Date().toISOString();
 
-  // 🔹 IRT theta update via R backend (using global fetch)
-  if (session.selectionStrategy === "IRT") {
-    try {
-      const R_BACKEND_URL = process.env.R_BACKEND_URL || "http://r-backend:4000"; // ✅ fix default port
-
-      const response = await fetch(`${R_BACKEND_URL}/irt/estimate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          responses: session.responses,
-          itemBank: (db.questions || []).map(q => ({
-            id: q.id,
-            a: q.metadata?.a ?? 1,
-            b: q.metadata?.b ?? 0,
-            c: q.metadata?.c ?? 0
-          }))
-        })
-      });
-
-      const result = await response.json();
-
-      if (!session.studentModel) session.studentModel = {};
-      if (result.theta !== undefined) {
-        session.studentModel.irtTheta = result.theta;
-        session.studentModel.stderr = result.stderr;
-      } else {
-        console.warn("IRT backend did not return theta:", result);
-      }
-    } catch (err) {
-      console.error("IRT estimation failed:", err);
-    }
-  }
-
+  // IRT ability updates stay in JavaScript (evidenceAccumulation on the
+  // itemId path). Calling R from /submit would put R on a session request
+  // path -- ADR 0001 forbids that. /irt/estimate is not mounted.
 
   const { valid, errors } = validateEntity("sessions", session, db);
   if (!valid) {

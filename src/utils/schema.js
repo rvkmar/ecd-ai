@@ -40,9 +40,11 @@ import {
   PSYCHOLOGICAL_PERSPECTIVE_VALUES,
   CALIBRATION_FILE_KIND_VALUES,
   statisticalModelTypesForCalibrationKind,
+  CALIBRATION_JOB_KIND_VALUES,
   BLOOM_LEVEL_VALUES,
   REASONING_TYPE_VALUES,
 } from "./ecdVocabulary.js";
+import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 
 // Canonical session status spellings -- see src/utils/sessionStatus.js for
 // why "in_progress" (underscore) is the one, not "in-progress".
@@ -305,6 +307,9 @@ export const schema = {
         // deliberately left loosely typed for that reason -- see the ADR.
         standardErrors: 'object',
         fitStatistics: 'object',
+        // D62: the job that produced this set. Provenance that cannot be
+        // traced back to its run is not provenance.
+        calibrationJobId: 'string',
       }],
       activeParameterSetId: 'string',
     }],
@@ -665,6 +670,34 @@ export const schema = {
     compiledAt: 'date',
     active: 'boolean',
     items: 'array',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
+  // calibrationJobs — D62 (W13). Node-side job record for offline R
+  // calibration. Not an authored entity: status is queued/running/
+  // succeeded/failed/cancelled (lifecycleMatrix.js), not draft/reviewed.
+  // Seven-artefact contract: this block, validateEntity below, lifecycle
+  // validator, routes + role gate, vocabulary, readiness mirror, tests.
+  // ------------------------------------------------------------------
+  calibrationJobs: {
+    id: 'string',
+    kind: 'string',
+    status: 'string',
+    evidenceModelId: 'string',
+    statisticalModelId: 'string',
+    requestedBy: 'string',
+    requestedAt: 'date',
+    startedAt: 'date',
+    finishedAt: 'date',
+    request: 'object',
+    response: 'object',
+    error: 'object',
+    attempts: 'number',
+    maxAttempts: 'number',
+    ingestedParameterSetId: 'string',
+    retainUntil: 'date',
     createdAt: 'date',
     updatedAt: 'date',
   },
@@ -4571,6 +4604,67 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       if (otherActive) {
         errors.push(`Task model '${obj.taskModelId}' already has an active composite library package ('${otherActive.id}').`);
       }
+    }
+  }
+
+  /* =====================================================
+     CALIBRATION JOBS — D62, W13
+     Structural + referential checks. Lifecycle transitions live in
+     validateCalibrationJobLifecycle; this block is the shape.
+  ===================================================== */
+
+  if (collection === "calibrationJobs") {
+    if (!obj.kind) {
+      errors.push("kind is required.");
+    } else if (!CALIBRATION_JOB_KIND_VALUES.includes(obj.kind)) {
+      errors.push(`Invalid calibration job kind '${obj.kind}'. Must be one of: ${CALIBRATION_JOB_KIND_VALUES.join(", ")}.`);
+    }
+
+    if (!obj.status) {
+      errors.push("status is required.");
+    } else if (!CALIBRATION_JOB_STATUS.includes(obj.status)) {
+      errors.push(`Invalid calibration job status '${obj.status}'.`);
+    }
+
+    if (!obj.evidenceModelId) {
+      errors.push("evidenceModelId is required.");
+    } else if (db && !db.evidenceModels?.find((m) => m.id === obj.evidenceModelId)) {
+      errors.push(`Invalid evidenceModelId: ${obj.evidenceModelId}`);
+    }
+
+    if (!obj.statisticalModelId) {
+      errors.push("statisticalModelId is required.");
+    }
+
+    if (!obj.requestedAt) {
+      errors.push("requestedAt is required.");
+    }
+
+    if (obj.request !== undefined && obj.request !== null) {
+      if (typeof obj.request !== "object" || Array.isArray(obj.request)) {
+        errors.push("request should be object");
+      }
+    } else {
+      errors.push("request is required.");
+    }
+
+    if (obj.response !== undefined && obj.response !== null) {
+      if (typeof obj.response !== "object" || Array.isArray(obj.response)) {
+        errors.push("response should be object");
+      }
+    }
+
+    if (obj.error !== undefined && obj.error !== null) {
+      if (typeof obj.error !== "object" || Array.isArray(obj.error)) {
+        errors.push("error should be object");
+      }
+    }
+
+    if (typeof obj.attempts !== "number") {
+      errors.push("attempts is required and must be a number.");
+    }
+    if (typeof obj.maxAttempts !== "number") {
+      errors.push("maxAttempts is required and must be a number.");
     }
   }
 

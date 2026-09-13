@@ -18,14 +18,13 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D60** — never-compress adversarial review of selection/stopping. Handoff: `claude/day60-adversarial-selection-stopping.md`. Not the D50 leftover file `day60-staff-play-and-student-discovery.md`. |
-| Next queued | Calendar **D61–D63** — calibration authoring. Do not confuse with `claude/day61-staff-session-operate-and-assignment.md` (D50 leftover). |
-| Block | W12 — Activity Selection, stopping, reporting |
-| Block gate | Sessions end on an accuracy target, not only on length; attribute-profile report renders |
-| Gate status | Stopping evaluates, persists, and shows (D58). Reports role-split (D59). D60 refuted the stop/selection path: P0 sibling-AM never-stop fixed; dual-attribute *targetsMet* confirmed closed; dual-attribute *selection* hole remains (P1). |
-| HEAD at D58 code | `ede5f33` |
-| HEAD at D59 | `c3b2ef7` |
-| HEAD at D60 | this branch (see PR) |
+| Last completed unit | **D61–D63** — R scaffold, calibration job queue, ADR 0002 contract. Handoff: `claude/day61-63-r-calibration-scaffold.md`. Not the D50 leftover file `day61-staff-session-operate-and-assignment.md`. |
+| Next queued | Calendar **D64** — LSAT7 through the full pipeline. **D65** is the calibration console (hooks exist, no UI). |
+| Block | W13 — R Plumber service and the calibration job queue |
+| Block gate | Administrator can start, watch, inspect and ingest a calibration without a shell (D65). LSAT7 in CI (D64). |
+| Gate status | D61–D63 landed: `/health`, job queue, ADR 0002 ingest. D64–D65 remain. |
+| HEAD at D60 | `bdc88dc` |
+| HEAD at D61–D63 | this branch (see PR) |
 
 ## Session log
 
@@ -38,6 +37,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-13 | D50 leftover | 2 | Staff list Play/Pause persist (exclusive) + Operate/Back; student/cohort assignment; /mine never 404s as "Session not found". Handoff: `day61-staff-session-operate-and-assignment.md`. |
 | 2026-09-13 | close | — | Working tree clean at `f518bc9`. Additional walk scripts gitignored (`scripts-login-dump.cjs`, `scripts-new-session-walk.cjs`, `scripts-ui-walk.cjs`). Plan **D60** (adversarial review) not started, calendar unmarked. |
 | 2026-09-13 | D60 | 1, alone | Never-compress adversarial review of selection/stopping. P0: draft/archived sibling AM made `targetsMet` inert — fixed. Cheap P1s: AM-resolution warning surface; `/submit` after stop refused. Dual-attribute *stopping* confirmed closed; *selection* hole (unmeasured attr unrankable) deferred. |
+| 2026-09-13 | D61–D63 | 2 | R Plumber scaffold (`/health` versions, compose re-enabled, scoring neutralized). `calibrationJobs` seven-artefact queue. ADR 0002 contract both sides; ingest refuses `converged: false`. `/submit` no longer calls R. |
 
 ## Compression debt
 

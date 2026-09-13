@@ -38,6 +38,7 @@ function defaultDB() {
     taskModels: [],
     students: [],
     questions: [],      // ✅ added
+    calibrationJobs: [],
   };
 }
 
