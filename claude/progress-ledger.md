@@ -24,7 +24,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Block gate | Sessions end on an accuracy target, not only on length; attribute-profile report renders |
 | Gate status | Stopping evaluates, persists, and shows in the student player (D58). Attribute-profile **report** renders, role-split; examinee cannot GET teacher-report (D59). |
 | HEAD at D58 code | `ede5f33` |
-| HEAD at D59 | this branch |
+| HEAD at D59 | `c3b2ef7` |
+| HEAD this close | `f518bc9` (PR #14 merge + extra gitignore of UI-walk scripts) |
 
 ## Session log
 
@@ -35,6 +36,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-13 | docs | — | Restored missing D51–D57 handoffs under `claude/` (see file list in that PR). No product code. D55 remains the skipped WCAG audit. |
 | 2026-09-13 | D50 leftover | 2 | Staff Play no longer bounces to `/login`; Pause on the player; student My Sessions lists attendable sessions (`GET /api/sessions/mine`). Handoff: `day60-staff-play-and-student-discovery.md` (not the never-compress D60). |
 | 2026-09-13 | D50 leftover | 2 | Staff list Play/Pause persist (exclusive) + Operate/Back; student/cohort assignment; /mine never 404s as "Session not found". Handoff: `day61-staff-session-operate-and-assignment.md`. |
+| 2026-09-13 | close | — | Working tree clean at `f518bc9`. Additional walk scripts gitignored (`scripts-login-dump.cjs`, `scripts-new-session-walk.cjs`, `scripts-ui-walk.cjs`). Plan **D60** (adversarial review) not started, calendar unmarked. |
 
 ## Compression debt
 
