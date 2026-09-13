@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `succeeded` + `converged: true` and writes
   `statisticalModels[].parameterSets[]` with `calibrationJobId`.
   Handoff: `claude/day64-lsat7-pipeline.md`.
+  First CI live run showed plumber boxing `/health` `status` as
+  `["healthy"]`; the client now unboxes length-1 JSON scalars and R
+  serves `serializer_unboxed_json()`.
 
 ### Changed
 

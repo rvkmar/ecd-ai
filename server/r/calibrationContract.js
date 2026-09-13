@@ -92,6 +92,27 @@ export function validateCalibrationRequest(body) {
   return errors;
 }
 
+// jsonlite/plumber without auto_unbox serializes length-1 vectors as
+// JSON arrays ("healthy" -> ["healthy"]). Unwrap those scalars so the
+// ADR 0002 fields stay strings/numbers/booleans. Do not collapse a
+// length-1 object/array cell — that could be real data.
+export function unboxPlumberScalars(value) {
+  if (Array.isArray(value)) {
+    if (value.length === 1 && (value[0] === null || typeof value[0] !== "object")) {
+      return value[0];
+    }
+    return value.map(unboxPlumberScalars);
+  }
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [key, child] of Object.entries(value)) {
+      out[key] = unboxPlumberScalars(child);
+    }
+    return out;
+  }
+  return value;
+}
+
 export function validateCalibrationResponse(body) {
   const errors = [];
   if (!body || typeof body !== "object" || Array.isArray(body)) {

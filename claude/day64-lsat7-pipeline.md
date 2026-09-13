@@ -53,6 +53,15 @@ test pins:
 
 R is still not on any session path (ADR 0001). No D65 UI.
 
+## Live CI finding (first `lsat7-pipeline` run)
+
+`GET /health` returned `status: ["healthy"]` — plumber/jsonlite boxed a
+length-1 character vector. The container was up; the assertion was too
+strict. Fix: `serializer_unboxed_json()` on the plumber router, `jsonlite::unbox`
+on the health payload, and `unboxPlumberScalars()` on the Node R client so
+ADR 0002 provenance fields stay strings/booleans/numbers. Not a psychometric
+stub.
+
 ## How to re-run
 
 ```bash

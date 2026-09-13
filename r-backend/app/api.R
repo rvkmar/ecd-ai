@@ -26,7 +26,13 @@ library(plumber)
 # healthchecks and operators can probe without the token.
 .r_service_token <- Sys.getenv("R_SERVICE_TOKEN", unset = "")
 
+# jsonlite's default toJSON boxes length-1 vectors. ADR 0002 and /health
+# want scalars (status: "healthy", not ["healthy"]). CI on D64 saw the
+# boxed form from the published image's plumber.
+.json_unboxed <- plumber::serializer_unboxed_json()
+
 api <- plumber::Plumber$new()
+api$setSerializer(.json_unboxed)
 
 api$filter("r_service_auth", function(req, res) {
   path <- req$PATH_INFO
@@ -54,25 +60,25 @@ api$filter("r_service_auth", function(req, res) {
 
 api$handle("GET", "/health", function(req, res) {
   health_payload()
-})
+}, serializer = .json_unboxed)
 
 api$handle("POST", "/calibrate/irt", function(req, res) {
   calibrate_dispatch(req, res, family = "irt")
-})
+}, serializer = .json_unboxed)
 
 api$handle("POST", "/calibrate/dina", function(req, res) {
   calibrate_not_implemented(req, res, family = "dina", day = "D66")
-})
+}, serializer = .json_unboxed)
 
 api$handle("POST", "/calibrate/ctt", function(req, res) {
   calibrate_not_implemented(req, res, family = "ctt", day = "D67")
-})
+}, serializer = .json_unboxed)
 
 # Legacy path kept as an alias of /calibrate/irt so a leftover client that
 # still posts here does not 404. Same contract; no session scoring.
 api$handle("POST", "/irt/calibrate", function(req, res) {
   calibrate_dispatch(req, res, family = "irt")
-})
+}, serializer = .json_unboxed)
 
 # Diagnostic only. Does not list futures() -- that call threw
 # "no applicable method for 'futures' applied to an object of class logical".
