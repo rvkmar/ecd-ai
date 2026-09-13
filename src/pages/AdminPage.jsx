@@ -22,6 +22,7 @@ import CompetencyModelBuilder from "@/components/competencies/CompetencyModelBui
 import EvidenceModelBuilder from "@/components/evidences/EvidenceModelBuilder";
 import TaskModelBuilder from "@/components/taskModels/TaskModelBuilder";
 import QMatrixModelBuilder from "@/components/qMatrix/QMatrixModelBuilder";
+import CalibrationConsole from "@/components/calibration/CalibrationConsole";
 import AnalyticsReports from "@/components/reports/AnalyticsReports";
 // Users, Policies, and Settings moved to /admin/settings (SettingsPage) --
 // see src/pages/SettingsPage.jsx. This page keeps only the
@@ -62,6 +63,7 @@ export default function AdminPage() {
             <TabsTrigger value="evidence">Evidence Model</TabsTrigger>
             <TabsTrigger value="tasks">Task Model</TabsTrigger>
             <TabsTrigger value="qmatrix">Q-Matrix</TabsTrigger>
+            <TabsTrigger value="calibration">Calibration</TabsTrigger>
             <TabsTrigger value="itembank">Item Bank</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
@@ -89,6 +91,11 @@ export default function AdminPage() {
           {/* Q-Matrix */}
           <TabsContent value="qmatrix" className="bg-white rounded-2xl shadow p-6">
             <QMatrixModelBuilder />
+          </TabsContent>
+
+          {/* D65: calibration console — same surface as /admin/calibration */}
+          <TabsContent value="calibration" className="bg-white rounded-2xl shadow p-6">
+            <CalibrationConsole />
           </TabsContent>
 
           {/* Analytics */}

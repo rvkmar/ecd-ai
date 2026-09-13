@@ -95,4 +95,4 @@ Live D62 restart recovery and the D65 console are still open.
 
 ## Next
 
-Calendar **D65** — `/admin/calibration` console (hooks exist, no screen).
+Calendar **D65** — `/admin/calibration` console. Shipped: `claude/day65-calibration-console.md`.

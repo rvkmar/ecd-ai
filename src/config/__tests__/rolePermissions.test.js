@@ -58,6 +58,28 @@ describe("existing roles are unaffected by the student addition", () => {
   });
 });
 
+describe("calibrationJobs (D65 console RBAC)", () => {
+  it("admin can view, create, edit, and delete jobs", () => {
+    expect(can("admin", "view", "calibrationJobs")).toBe(true);
+    expect(can("admin", "create", "calibrationJobs")).toBe(true);
+    expect(can("admin", "edit", "calibrationJobs")).toBe(true);
+    expect(can("admin", "delete", "calibrationJobs")).toBe(true);
+  });
+
+  it("district can view jobs and cannot write them", () => {
+    expect(can("district", "view", "calibrationJobs")).toBe(true);
+    // district has no canCreate list, so create is falsy by omission.
+    expect(can("district", "create", "calibrationJobs")).toBeFalsy();
+    expect(can("district", "edit", "calibrationJobs")).toBeFalsy();
+    expect(can("district", "delete", "calibrationJobs")).toBeFalsy();
+  });
+
+  it("teacher and student cannot see the console entity", () => {
+    expect(can("teacher", "view", "calibrationJobs")).toBe(false);
+    expect(can("student", "view", "calibrationJobs")).toBe(false);
+  });
+});
+
 describe("unknown input", () => {
   it("returns false for a role that doesn't exist", () => {
     expect(can("superuser", "view", "sessions")).toBe(false);
