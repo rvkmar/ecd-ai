@@ -115,7 +115,11 @@ import {
   itemParametersAreUsable,
   CONTINUOUS_MODEL_FAMILIES,
 } from "./evidenceAccumulation.js";
-import { evaluateDeclaredTargets, resolveAssemblyProgress } from "./assemblyProgress.js";
+import {
+  evaluateDeclaredTargets,
+  resolveAssemblyProgress,
+  GOVERNING_ASSEMBLY_MODEL_STATUSES,
+} from "./assemblyProgress.js";
 import { dinaParametersAreUsable } from "./attributeAccumulation.js";
 import { activePackageFor } from "../compositeLibrary/activePackage.js";
 
@@ -129,12 +133,10 @@ function entropy(p) {
 /* An Assembly Model only governs a live session once it has actually been
    signed off. A draft/reviewed one is authoring in progress and must not
    start ending students' sessions; archived/suspended is out of service.
-   assemblyProgress.js applies no status filter at all, but it was written
-   at Day 34 when Assembly Models had no lifecycle wiring -- D54 gave them
-   one, so there is something meaningful to filter on now. Reporting-only
-   code (assemblyProgress) and session-ENDING code (this module) are also
-   fairly held to different bars. */
-const GOVERNING_ASSEMBLY_MODEL_STATUSES = ["confirmed", "operational"];
+   The status list lives in assemblyProgress.js so the reporting lookup
+   and this ending-time lookup cannot drift (D60: a draft sibling used
+   to make resolveAssemblyProgress omit every SMV, which silently
+   disabled targetsMet on the operational model). */
 
 /**
  * Resolve a candidate item's CONTINUOUS (IRT/Rasch) parameters the way the
@@ -333,7 +335,10 @@ function resolveAssemblyModelForSession(session, db) {
   const competencyModelIds = competencyModelIdsForSession(session, db);
 
   if (competencyModelIds.size === 0) {
-    return { reason: "This session's tasks resolve to no competency model, so no Assembly Model applies." };
+    return {
+      code: "NO_COMPETENCY_MODEL",
+      reason: "This session's tasks resolve to no competency model, so no Assembly Model applies.",
+    };
   }
 
   const matching = (db.assemblyModels || []).filter((am) =>
@@ -341,7 +346,10 @@ function resolveAssemblyModelForSession(session, db) {
   );
 
   if (matching.length === 0) {
-    return { reason: "No Assembly Model is declared for this session's competency model(s)." };
+    return {
+      code: "NONE_DECLARED",
+      reason: "No Assembly Model is declared for this session's competency model(s).",
+    };
   }
 
   const governing = matching.filter((am) =>
@@ -353,12 +361,14 @@ function resolveAssemblyModelForSession(session, db) {
     // author looking at their own Assembly Model and wondering why nothing
     // stops deserves the actual reason.
     return {
+      code: "NONE_GOVERNING",
       reason: `${matching.length} Assembly Model(s) match this session's competency model, but none is ${GOVERNING_ASSEMBLY_MODEL_STATUSES.join(" or ")} (found: ${matching.map((m) => m.status || "unknown").join(", ")}); stopping rules are not applied.`,
     };
   }
 
   if (governing.length > 1) {
     return {
+      code: "AMBIGUOUS",
       reason: `${governing.length} Assembly Models govern this session's competency model(s); which one applies to THIS session is not stated anywhere, so none is applied.`,
     };
   }
@@ -424,7 +434,12 @@ function evaluateStoppingRules(session, assemblyModel, db) {
   let progress = [];
   try {
     const accumulation = accumulateEvidence(session, db);
-    progress = resolveAssemblyProgress(accumulation.posteriors, db);
+    /* Pass the already-resolved governing model so a draft/archived
+       sibling for the same Competency Model cannot make progress empty
+       (D60 P0). resolveAssemblyProgress also prefers a unique governing
+       AM on its own, but this caller must not depend on that second
+       lookup agreeing. */
+    progress = resolveAssemblyProgress(accumulation.posteriors, db, { assemblyModel });
   } catch (err) {
     warnings.push(
       `Stopping rule 'targetsMet' could not be evaluated (evidence accumulation failed: ${err.message}); the session continues.`
@@ -846,6 +861,14 @@ export function selectNextActivity(session, db) {
   /* Stopping is evaluated BEFORE selection: an Assembly Model that says
      "enough" outranks any strategy's opinion about what to present next. */
   const assemblyResolution = resolveAssemblyModelForSession(session, db);
+
+  /* D60 P1: a missing AM is the common case and must stay silent (the
+     D56 fixed-path byte-identical contract). A draft-only or ambiguous
+     match is the F24 shape -- stopping looks like it might apply, and
+     does not -- so the reason is a warning, not a dropped string. */
+  if (!assemblyResolution.assemblyModel && (assemblyResolution.code === "NONE_GOVERNING" || assemblyResolution.code === "AMBIGUOUS")) {
+    warnings.push(assemblyResolution.reason);
+  }
 
   if (assemblyResolution.assemblyModel) {
     const assemblyModel = assemblyResolution.assemblyModel;

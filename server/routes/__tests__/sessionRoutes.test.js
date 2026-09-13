@@ -871,4 +871,72 @@ describe("GET /:id/next-task — persist the measurement stop (D58)", () => {
     expect(res.body.taskId).toBeUndefined();
     expect(saveDB).not.toHaveBeenCalled();
   });
+
+  it("D60: /submit after a persisted stop is refused, so posteriors cannot drift from the stop record", async () => {
+    const persisted = {
+      rule: "targetsMet",
+      assemblyModelId: "am1",
+      reason: "Every declared Assembly Model target is scored and met (1 of 1) at 1 response(s).",
+      stoppedAt: "2026-09-13T06:00:00.000Z",
+    };
+    const db = makeDb({
+      sessions: [makeSession({
+        taskIds: ["t1", "t2"],
+        currentTaskIndex: 1,
+        selectionStrategy: "fixed",
+        responses: [{
+          taskId: "t1",
+          itemId: "item1",
+          itemVersion: 1,
+          taskModelVersion: 1,
+          evidenceModelId: "em1",
+          evidenceModelVersion: 1,
+          parameterSetId: "ps1",
+          parameterSource: "calibrated",
+          activated: true,
+        }],
+        stopped: persisted,
+      })],
+      tasks: [makeTask({ itemId: "item1" }), makeTask({ id: "t2", itemId: "item2" })],
+      items: [item, { ...item, id: "item2" }],
+    });
+    const app = buildApp(db);
+
+    const res = await request(app)
+      .post("/api/sessions/s1/submit")
+      .send({ taskId: "t2", itemId: "item2", rawAnswer: "opt_a" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/already met a stopping rule/);
+    expect(res.body.stopped).toEqual(persisted);
+    expect(db.sessions[0].responses).toHaveLength(1);
+    expect(saveDB).not.toHaveBeenCalled();
+  });
+
+  it("D60: play / pause do not clear a persisted stop, so later next-task cannot re-open", async () => {
+    const persisted = {
+      rule: "maxItems",
+      assemblyModelId: "am1",
+      reason: "Stopping rule maxItems (1) reached: 1 response(s) recorded.",
+      stoppedAt: "2026-09-13T06:00:00.000Z",
+    };
+    const db = makeDb({
+      sessions: [makeSession({
+        taskIds: ["t1", "t2"],
+        status: "paused",
+        stopped: persisted,
+      })],
+      tasks: [makeTask(), makeTask({ id: "t2" })],
+    });
+    const app = buildApp(db);
+
+    const play = await request(app).post("/api/sessions/s1/play");
+    expect(play.status).toBe(200);
+    expect(play.body.stopped).toEqual(persisted);
+    expect(db.sessions[0].stopped).toEqual(persisted);
+
+    const next = await request(app).get("/api/sessions/s1/next-task");
+    expect(next.body.stopped).toEqual(persisted);
+    expect(next.body.taskId).toBeUndefined();
+  });
 });

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- D60 adversarial review of selection/stopping. A draft or archived sibling
+  Assembly Model for the same Competency Model used to make
+  `resolveAssemblyProgress` omit every SMV (`candidates.length !== 1`), which
+  silently disabled `targetsMet` on the unique confirmed/operational model —
+  the normal revision case. Progress now prefers the unique governing AM, and
+  Activity Selection passes the already-resolved model in so the two lookups
+  cannot disagree. Two governing models still apply neither. Draft-only and
+  ambiguous matches are now a `warnings` entry rather than a dropped string.
+  `/submit` after a persisted stop is 409, so posteriors cannot drift from
+  the frozen stop record. Findings: `claude/day60-adversarial-selection-stopping.md`.
+
 ### Added
 
 - Session reports now carry the D57 attribute classification and the D58
@@ -275,7 +288,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A session is not bound to a specific Assembly Model. The one governing a
   session is inferred from the competency model its tasks measure; where two
   confirmed Assembly Models match, none is applied rather than one being
-  guessed at, so those sessions get no stopping rules at all.
+  guessed at, so those sessions get no stopping rules at all. A draft or
+  archived sibling no longer vetoes the unique governing model (D60).
+- Dual-attribute diagnostic *stopping* will not fire on a one-attribute
+  slice of a two-attribute Assembly Model. Dual-attribute *selection* still
+  cannot rank an item whose required attributes have no persisted posterior
+  yet; leftover items for already-measured attributes win until those are
+  exhausted (D60 P1, held — using the SMV prior is a psychometric change).
+- BayesianNetwork selection for a G-DINA evidence model cannot rank
+  candidates (information gain is DINA slip/guess only) and falls back to
+  first-unanswered with a warning.
 - ~~Stop reason missing from learner/teacher reports~~ closed D59.
 - Adaptive selection still picks the item whose difficulty sits closest to
   the current estimate rather than the one carrying most information at it.

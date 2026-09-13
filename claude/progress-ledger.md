@@ -18,14 +18,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D59** — role-split reports / attribute profile / examinee leak. D50 leftover staff Play routing closed in #12/#13 (`day60-…`). This branch closes the remaining staff Play/Pause/Operate + assignment + /mine leftover (`claude/day61-staff-session-operate-and-assignment.md`); that file is not the never-compress D60. |
-| Next queued | **D60** — never-compress adversarial review of selection/stopping (own session) |
+| Last completed unit | **D60** — never-compress adversarial review of selection/stopping. Handoff: `claude/day60-adversarial-selection-stopping.md`. Not the D50 leftover file `day60-staff-play-and-student-discovery.md`. |
+| Next queued | Calendar **D61–D63** — calibration authoring. Do not confuse with `claude/day61-staff-session-operate-and-assignment.md` (D50 leftover). |
 | Block | W12 — Activity Selection, stopping, reporting |
 | Block gate | Sessions end on an accuracy target, not only on length; attribute-profile report renders |
-| Gate status | Stopping evaluates, persists, and shows in the student player (D58). Attribute-profile **report** renders, role-split; examinee cannot GET teacher-report (D59). |
+| Gate status | Stopping evaluates, persists, and shows (D58). Reports role-split (D59). D60 refuted the stop/selection path: P0 sibling-AM never-stop fixed; dual-attribute *targetsMet* confirmed closed; dual-attribute *selection* hole remains (P1). |
 | HEAD at D58 code | `ede5f33` |
 | HEAD at D59 | `c3b2ef7` |
-| HEAD this close | `f518bc9` (PR #14 merge + extra gitignore of UI-walk scripts) |
+| HEAD at D60 | this branch (see PR) |
 
 ## Session log
 
@@ -37,6 +37,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-13 | D50 leftover | 2 | Staff Play no longer bounces to `/login`; Pause on the player; student My Sessions lists attendable sessions (`GET /api/sessions/mine`). Handoff: `day60-staff-play-and-student-discovery.md` (not the never-compress D60). |
 | 2026-09-13 | D50 leftover | 2 | Staff list Play/Pause persist (exclusive) + Operate/Back; student/cohort assignment; /mine never 404s as "Session not found". Handoff: `day61-staff-session-operate-and-assignment.md`. |
 | 2026-09-13 | close | — | Working tree clean at `f518bc9`. Additional walk scripts gitignored (`scripts-login-dump.cjs`, `scripts-new-session-walk.cjs`, `scripts-ui-walk.cjs`). Plan **D60** (adversarial review) not started, calendar unmarked. |
+| 2026-09-13 | D60 | 1, alone | Never-compress adversarial review of selection/stopping. P0: draft/archived sibling AM made `targetsMet` inert — fixed. Cheap P1s: AM-resolution warning surface; `/submit` after stop refused. Dual-attribute *stopping* confirmed closed; *selection* hole (unmeasured attr unrankable) deferred. |
 
 ## Compression debt
 
@@ -51,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D46 | Phase-2 `apiFetch` | — | — | **closed** (`e533a77` / PRs #5–#6) |
 | D54 | Wizard readiness mirror has no agreement test | Token | W12 close | open |
 
-Debt against the never-compress list is not permitted. **D60** is next on that list — do not start it in the same session as D59.
+Debt against the never-compress list is not permitted. **D60** (this file's real unit) is closed.
 
 ## Units revised on contact
 
@@ -68,9 +69,11 @@ Debt against the never-compress list is not permitted. **D60** is next on that l
 - ~~Classification on reports~~ closed D59
 - ~~Examinee can GET teacher-report~~ closed D59
 - Mastery cut fixed at 0.5 — still true
-- `gdina` has no pilot path
-- Session not bound to a specific Assembly Model (ambiguous match → none applied)
-- Adaptive selection: nearest difficulty, not max information (held for benchmark work)
+- `gdina` has no pilot path; BayesianNetwork selection for `gdina` is first-unanswered with a warning (D60 P1-5)
+- Session not bound to a specific Assembly Model (two *governing* matches → none applied, now warned). A draft/archived sibling no longer vetoes the unique governing model (D60 P0).
+- Adaptive selection: nearest difficulty, not max information (held for benchmark work; D60 characterisation test pins it)
+- Dual-attribute *targetsMet* early stop ("1 of 1") — **closed** (D57 join + D60 re-run)
+- Dual-attribute *selection*: items for an attribute with no persisted posterior stay unrankable while measured-attribute items remain (D60 P1-4)
 - Chunk >500 kB — D74
 - ~~Student My Sessions placeholder~~ closed D60
 - Dead-export guard can miss unused exports that share a name
