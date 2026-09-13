@@ -7,7 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- D61–D63: the R psychometrics service is a private compose service again
+  (`expose: 4000`, `R_BACKEND_URL=http://r-backend:4000`). `/health` reports
+  exact running package versions. Calibration runs as a `calibrationJobs`
+  queue (`queued → running → succeeded|failed`) with an ADR 0002 request/
+  response envelope on both sides. Ingestion writes
+  `statisticalModels[].parameterSets[]` and refuses `converged: false`.
+  Handoff: `claude/day61-63-r-calibration-scaffold.md`.
+
 ### Fixed
+
+- `/submit` no longer calls R for IRT theta (ADR 0001: R is never in a
+  session path). The old `/api/calibrate/:id` sync path that posted to
+  `r-backend:8000` and wrote `questions[].metadata` is 410.
+- R `/health` and `/irt/calibrate` boot: `start.R` sources the programmatic
+  router instead of `plumb()`-ing a file that called `$run()`; the CORS
+  preroute that referenced unbound `res` is gone; `futures(drop=FALSE)` is
+  gone.
 
 - D60 adversarial review of selection/stopping. A draft or archived sibling
   Assembly Model for the same Competency Model used to make

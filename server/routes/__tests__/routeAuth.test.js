@@ -39,6 +39,7 @@ import reportsRoutes from "../reportsRoutes.js";
 import studentsRoutes from "../studentsRoutes.js";
 import policiesRoutes from "../policiesRoutes.js";
 import calibrationRoutes from "../calibrationRoutes.js";
+import calibrationJobsRoutes from "../calibrationJobsRoutes.js";
 import qMatrixModelsRoutes from "../qMatrixModelsRoutes.js";
 import assemblyModelsRoutes from "../assemblyModelsRoutes.js";
 import compositeLibraryRoutes from "../compositeLibraryRoutes.js";
@@ -59,6 +60,7 @@ const PROTECTED_ROUTERS = [
   { name: "studentsRoutes", path: "/api/students", router: studentsRoutes },
   { name: "policiesRoutes", path: "/api/policies", router: policiesRoutes },
   { name: "calibrationRoutes", path: "/api/calibrate", router: calibrationRoutes },
+  { name: "calibrationJobsRoutes", path: "/api/calibrationJobs", router: calibrationJobsRoutes },
   // D48: the three collections that had schema and lifecycle validation
   // but no HTTP surface at all. They join this list on the day their
   // routers are created, so the gate can never be removed silently.

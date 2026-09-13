@@ -1,0 +1,24 @@
+{
+  "contractVersion": "1.0",
+  "jobId": "job_contract_valid",
+  "model": {
+    "family": "irt",
+    "subtype": "2PL",
+    "itemIds": ["item_a", "item_b", "item_c"]
+  },
+  "responseMatrix": {
+    "personIds": ["p1", "p2", "p3", "p4"],
+    "itemIds": ["item_a", "item_b", "item_c"],
+    "data": [
+      [1, 0, 1],
+      [0, 0, 1],
+      [1, 1, 1],
+      [1, null, 0]
+    ]
+  },
+  "options": {
+    "maxIterations": 50,
+    "convergenceTolerance": 0.0001,
+    "seed": 20261120
+  }
+}

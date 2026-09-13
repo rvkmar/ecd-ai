@@ -1,0 +1,13 @@
+{
+  "contractVersion": "1.0",
+  "jobId": "job_contract_nonconverged",
+  "converged": false,
+  "packageVersion": "mirt 1.41",
+  "sampleSize": 4,
+  "calibratedAt": "2026-11-20T09:03:11Z",
+  "error": {
+    "message": "mirt: EM cycles terminated after 50 iterations without convergence",
+    "rClass": "NotConverged",
+    "stderr": "EM cycles terminated without convergence"
+  }
+}

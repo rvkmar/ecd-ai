@@ -16,12 +16,14 @@ services:
       # without a real secret. Set JWT_SECRET in your .env (see .env.example).
       - JWT_SECRET=${JWT_SECRET}
       - TOKEN_EXPIRES_IN=8h
-      # - R_BACKEND_URL=http://r-backend:4000
+      - R_BACKEND_URL=http://r-backend:4000
+      - R_SERVICE_TOKEN=${R_SERVICE_TOKEN:-}
+      - CALIBRATION_QUEUE_AUTORUN=1
       - ECD_DB_FILE=/data/db.json
       - ECD_BACKUP_DIR=/data/backups
     depends_on:
       - mongo
-      # - r-backend
+      - r-backend
     volumes:
       - ecd_data:/data
     expose:
@@ -46,13 +48,24 @@ services:
     volumes:
       - mongo_data:/data/db
 
-  # r-backend:
-  #   image: rvkmar/r-backend:latest 
-  #   container_name: r-backend
-  #   command: Rscript /home/app/start.R
-  #   ports:
-  #     - "4000:4000"
-  #   restart: always
+  # Private compose-network service. Prefer expose, not host ports -- the
+  # same lesson mongo already learned. A local override may publish 4000
+  # for debugging; the browser must still never call this service (no CORS).
+  r-backend:
+    build:
+      context: ./r-backend
+    container_name: ecd-r-backend
+    command: Rscript /home/app/start.R
+    environment:
+      - R_SERVICE_TOKEN=${R_SERVICE_TOKEN:-}
+    expose:
+      - "4000"
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   nginx:
     build:

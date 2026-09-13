@@ -36,7 +36,10 @@ export const rolePermissions = {
       // shipped rather than after.
       "qMatrixModels",
       "assemblyModels",
-      "compositeLibrary"
+      "compositeLibrary",
+      // D62: calibration job queue. Admin authors; district may view
+      // (a calibration run is a system-level measurement decision).
+      "calibrationJobs"
     ],
     canEdit: [
       "questions",
@@ -53,7 +56,8 @@ export const rolePermissions = {
       // generic write. Rebuilding is an admin action against the builder,
       // not an edit of the package's contents.
       "qMatrixModels",
-      "assemblyModels"
+      "assemblyModels",
+      "calibrationJobs"
     ],
     canApprove: ["questions", "items"], // promote from review → confirmed
     canDelete: [
@@ -68,14 +72,15 @@ export const rolePermissions = {
       "users",
       "students",
       "qMatrixModels",
-      "assemblyModels"
+      "assemblyModels",
+      "calibrationJobs"
     ],
     // "students" was declared in canView but never in canCreate/canDelete
     // on any role, while studentsRoutes.js accepted any authenticated
     // caller -- the RBAC sweep found this the same way it found items/
     // student being absent before. Admin-only until a real enrollment
     // workflow exists for district/teacher.
-    canCreate: ["students"],
+    canCreate: ["students", "calibrationJobs"],
   },
 
   district: {
@@ -96,7 +101,8 @@ export const rolePermissions = {
       // local authoring. District users need to SEE the spec their
       // sessions run under without being able to change it.
       "qMatrixModels",
-      "assemblyModels"
+      "assemblyModels",
+      "calibrationJobs"
     ],
     canEdit: [
       "tasks",              // can create local tasks

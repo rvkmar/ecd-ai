@@ -1,7 +1,11 @@
 // server/utils/lifecycleValidation.js
 
 // Updated lifecycle validation aligned with latest ECD Task Model architecture
-import { canTransition } from "../utils/lifecycleMatrix.js";
+import { canTransition, canTransitionCalibrationJob, CALIBRATION_JOB_STATUS } from "../utils/lifecycleMatrix.js";
+import {
+  CALIBRATION_JOB_KIND_VALUES,
+  statisticalModelTypesForJobKind,
+} from "../../src/utils/ecdVocabulary.js";
 import {
   liveSessionsForTaskModel,
   liveSessionsBlockMessage,
@@ -624,6 +628,96 @@ export function validateQMatrixModelLifecycle(qMatrixModel, db = null, options =
         errors.push(`Q-matrix cannot be activated: competencyModelVersion (${qMatrixModel.competencyModelVersion}) does not match the competency model's current version (${cm.versionNumber}).`);
       }
     }
+  }
+
+  return errors;
+}
+
+// -------------------------------------
+// Calibration job lifecycle — D62, W13
+// -------------------------------------
+// Jobs use CALIBRATION_JOB_STATUS, not the authored-entity STATUS list.
+// A job that silently stays `running` forever is the failure mode this
+// validator exists to make illegal at the record level; restart recovery
+// (server/r/calibrationWorker.js) is the other half.
+export function validateCalibrationJobLifecycle(job, db = null) {
+  const errors = [];
+  const status = job?.status;
+
+  if (!status) {
+    errors.push("Calibration job status is required.");
+  } else if (!CALIBRATION_JOB_STATUS.includes(status)) {
+    errors.push(`Invalid calibration job status '${status}'.`);
+  }
+
+  if (db && job?.id) {
+    const existing = db.calibrationJobs?.find((j) => j.id === job.id);
+    if (existing && existing.status !== status && !canTransitionCalibrationJob(existing.status, status)) {
+      errors.push(`Illegal calibration job status transition: '${existing.status}' -> '${status}'.`);
+    }
+  }
+
+  if (!job?.kind || !CALIBRATION_JOB_KIND_VALUES.includes(job.kind)) {
+    errors.push("Calibration job kind is required and must be a declared CALIBRATION_JOB_KIND.");
+  }
+
+  if (!job?.evidenceModelId) {
+    errors.push("Calibration job must reference an evidenceModelId.");
+  }
+  if (!job?.statisticalModelId) {
+    errors.push("Calibration job must reference a statisticalModelId.");
+  }
+
+  if (db && job?.evidenceModelId) {
+    const em = db.evidenceModels?.find((m) => m.id === job.evidenceModelId);
+    if (!em) {
+      errors.push(`Calibration job references unknown evidenceModelId '${job.evidenceModelId}'.`);
+    } else if (job.statisticalModelId) {
+      const sm = (em.statisticalModels || []).find((m) => m.id === job.statisticalModelId);
+      if (!sm) {
+        errors.push(`Calibration job references unknown statisticalModelId '${job.statisticalModelId}' on evidence model '${job.evidenceModelId}'.`);
+      } else {
+        const allowed = statisticalModelTypesForJobKind(job.kind);
+        if (allowed.length > 0 && sm.type && !allowed.includes(sm.type)) {
+          errors.push(`Job kind '${job.kind}' does not apply to statistical model type '${sm.type}'.`);
+        }
+      }
+    }
+  }
+
+  if (!job?.request || typeof job.request !== "object" || Array.isArray(job.request)) {
+    errors.push("Calibration job must store the request envelope sent to R.");
+  }
+
+  if (status === "running" && !job?.startedAt) {
+    errors.push("A running calibration job must record startedAt.");
+  }
+
+  if (status === "succeeded") {
+    if (!job?.response || typeof job.response !== "object" || Array.isArray(job.response)) {
+      errors.push("A succeeded calibration job must store the R response envelope.");
+    }
+    if (!job?.finishedAt) {
+      errors.push("A succeeded calibration job must record finishedAt.");
+    }
+  }
+
+  if (status === "failed") {
+    if (!job?.error || typeof job.error !== "object" || Array.isArray(job.error)) {
+      errors.push("A failed calibration job must store an inspectable error (message, stderr, rClass).");
+    } else if (!job.error.message) {
+      errors.push("A failed calibration job error must include a message.");
+    }
+    if (!job?.finishedAt) {
+      errors.push("A failed calibration job must record finishedAt.");
+    }
+  }
+
+  if (typeof job?.attempts !== "number" || job.attempts < 1) {
+    errors.push("Calibration job attempts must be a positive number.");
+  }
+  if (typeof job?.maxAttempts !== "number" || job.maxAttempts < 1) {
+    errors.push("Calibration job maxAttempts must be a positive number.");
   }
 
   return errors;

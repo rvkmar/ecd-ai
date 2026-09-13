@@ -544,3 +544,36 @@ export const CALIBRATION_FILE_KIND_VALUES = CALIBRATION_FILE_KINDS.map((k) => k.
 export function statisticalModelTypesForCalibrationKind(kind) {
   return CALIBRATION_FILE_KINDS.find((k) => k.value === kind)?.statisticalModelTypes || [];
 }
+
+/* =====================================================
+   8b. Calibration job kinds (D62, W13)
+   -----------------------------------------------------
+   The three D19 file kinds write parameterSets[]. The four analysis
+   kinds write analysis artefacts (W16) and ingest into nothing. Single
+   definition: routes, schema, the R client, and the readiness mirror
+   all import from here.
+===================================================== */
+
+export const CALIBRATION_JOB_KINDS = [
+  { value: "irt-parameters", label: "IRT Parameters", package: "mirt", ingests: "parameterSets", statisticalModelTypes: ["irt", "rasch"] },
+  { value: "dina-parameters", label: "DINA/G-DINA Parameters", package: "GDINA", ingests: "parameterSets", statisticalModelTypes: ["dina", "gdina"] },
+  { value: "ctt-statistics", label: "CTT Statistics", package: "TAM", ingests: "parameterSets", statisticalModelTypes: ["ctt"] },
+  { value: "dif-analysis", label: "DIF Analysis", package: "difR", ingests: "analysisArtefact", statisticalModelTypes: [] },
+  { value: "equating", label: "Equating", package: "equate", ingests: "analysisArtefact", statisticalModelTypes: [] },
+  { value: "item-analysis", label: "Item Analysis", package: "mirt", ingests: "analysisArtefact", statisticalModelTypes: [] },
+  { value: "test-information", label: "Test Information", package: "mirt", ingests: "analysisArtefact", statisticalModelTypes: [] },
+];
+
+export const CALIBRATION_JOB_KIND_VALUES = CALIBRATION_JOB_KINDS.map((k) => k.value);
+
+function calibrationJobKind(kind) {
+  return CALIBRATION_JOB_KINDS.find((k) => k.value === kind) || null;
+}
+
+export function statisticalModelTypesForJobKind(kind) {
+  return calibrationJobKind(kind)?.statisticalModelTypes || [];
+}
+
+export function jobKindIngestsParameterSets(kind) {
+  return calibrationJobKind(kind)?.ingests === "parameterSets";
+}

@@ -18,6 +18,9 @@ import studentsRoutes from "./routes/studentsRoutes.js";
 import policiesRoutes from "./routes/policiesRoutes.js";
 import curricularPoliciesRoutes from "./routes/curricularPoliciesRoutes.js";
 import calibrationRoutes from "./routes/calibrationRoutes.js";
+import calibrationJobsRoutes from "./routes/calibrationJobsRoutes.js";
+import { recoverRunningJobs, processQueuedJobs } from "./r/calibrationWorker.js";
+import { getRHealth, rBackendUrl } from "./r/rClient.js";
 import usersRoutes from "./routes/usersRoutes.js";
 // D48: the three collections that had schema, lifecycle validators and no
 // HTTP surface at all -- artefacts 4 and 6 of the seven-artefact contract
@@ -82,6 +85,7 @@ app.use("/api/policies", policiesRoutes);
 // adaptive item-selection policies mounted immediately above.
 app.use("/api/curricularPolicies", curricularPoliciesRoutes);
 app.use("/api/calibrate", calibrationRoutes);
+app.use("/api/calibrationJobs", calibrationJobsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/qMatrixModels", qMatrixModelsRoutes);
 app.use("/api/assemblyModels", assemblyModelsRoutes);
@@ -93,4 +97,21 @@ app.use("/api/compositeLibrary", compositeLibraryRoutes);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ ECD Assessment API running at http://localhost:${PORT}`);
+  try {
+    recoverRunningJobs();
+  } catch (err) {
+    console.error("calibration job recovery failed:", err);
+  }
+  getRHealth()
+    .then((h) => {
+      console.log(`R backend ${rBackendUrl()} /health -> ${h.status}${h.ok ? "" : " (unreachable)"}`);
+    })
+    .catch((err) => {
+      console.error(`R backend ${rBackendUrl()} probe failed:`, err?.message || err);
+    });
+  if (process.env.CALIBRATION_QUEUE_AUTORUN === "1") {
+    processQueuedJobs().catch((err) => {
+      console.error("calibration queue start failed:", err);
+    });
+  }
 });

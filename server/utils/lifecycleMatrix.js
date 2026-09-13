@@ -51,3 +51,34 @@ export function canTransition(from, to) {
   const allowed = TRANSITIONS[from] || [];
   return allowed.includes(to);
 }
+
+// ------------------------------------------------------------------
+// Calibration jobs (D62). A different machine from the authored-entity
+// STATUS list above -- jobs are not drafted/reviewed/confirmed. Declared
+// here (the D8 lesson) rather than as ad-hoc status strings in the route.
+// queued -> running -> succeeded | failed
+// queued -> cancelled
+// failed -> queued on retry
+// ------------------------------------------------------------------
+export const CALIBRATION_JOB_STATUS = [
+  "queued",
+  "running",
+  "succeeded",
+  "failed",
+  "cancelled",
+];
+
+const CALIBRATION_JOB_TRANSITIONS = {
+  queued: ["running", "cancelled"],
+  running: ["succeeded", "failed"],
+  failed: ["queued"],
+  succeeded: [],
+  cancelled: [],
+};
+
+export function canTransitionCalibrationJob(from, to) {
+  if (!from || !to) return false;
+  if (from === to) return true;
+  const allowed = CALIBRATION_JOB_TRANSITIONS[from] || [];
+  return allowed.includes(to);
+}

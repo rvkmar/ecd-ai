@@ -1,0 +1,32 @@
+{
+  "kind": "irt-parameters",
+  "evidenceModelId": "REPLACE_WITH_EVIDENCE_MODEL_ID",
+  "statisticalModelId": "REPLACE_WITH_STATISTICAL_MODEL_ID",
+  "request": {
+    "contractVersion": "1.0",
+    "model": {
+      "family": "irt",
+      "subtype": "2PL",
+      "itemIds": ["item_a", "item_b", "item_c", "item_d", "item_e"]
+    },
+    "responseMatrix": {
+      "personIds": ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"],
+      "itemIds": ["item_a", "item_b", "item_c", "item_d", "item_e"],
+      "data": [
+        [1, 1, 0, 1, 0],
+        [0, 1, 0, 0, 0],
+        [1, 1, 1, 1, 1],
+        [1, 0, 0, 1, 0],
+        [1, 1, 1, 0, 1],
+        [0, 0, 0, 1, 0],
+        [1, 1, 0, 1, 1],
+        [1, null, 1, 1, 0]
+      ]
+    },
+    "options": {
+      "maxIterations": 200,
+      "convergenceTolerance": 0.0001,
+      "seed": 20261120
+    }
+  }
+}

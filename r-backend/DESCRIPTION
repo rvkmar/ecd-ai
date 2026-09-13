@@ -1,0 +1,15 @@
+Package: ecdRBackend
+Title: ECD Assessment Platform R Psychometrics Service
+Version: 0.1.0
+Description: Private Plumber service for offline calibration (ADR 0001).
+  Never on a session request path.
+Depends: R (>= 4.4.2)
+Imports:
+    plumber,
+    jsonlite,
+    mirt,
+    GDINA,
+    TAM,
+    difR
+Encoding: UTF-8
+License: MIT
