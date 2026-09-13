@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../apiClient";
 import { useAuth } from "../../auth/AuthProvider";
+import { evidenceModelsKey } from "./evidenceModels";
 
 export const calibrationJobsKey = ["calibrationJobs"];
 export const calibrationJobKey = (id) => ["calibrationJobs", id];
@@ -70,6 +71,22 @@ export function useRetryCalibrationJob() {
   });
 }
 
+// Compose sets CALIBRATION_QUEUE_AUTORUN=1 so enqueue kicks the worker.
+// Local npm run dev and tests leave autorun off; the D65 console therefore
+// exposes Process (POST /:id/process) as an explicit operator action.
+export function useProcessCalibrationJob() {
+  const { auth } = useAuth() || {};
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) =>
+      apiFetch(`/api/calibrationJobs/${id}/process`, { method: "POST" }, auth),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: calibrationJobsKey });
+      queryClient.invalidateQueries({ queryKey: calibrationJobKey(id) });
+    },
+  });
+}
+
 export function useIngestCalibrationJob() {
   const { auth } = useAuth() || {};
   const queryClient = useQueryClient();
@@ -79,6 +96,9 @@ export function useIngestCalibrationJob() {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: calibrationJobsKey });
       queryClient.invalidateQueries({ queryKey: calibrationJobKey(id) });
+      // Ingest appends statisticalModels[].parameterSets[]; refresh EMs
+      // so an open Evidence Model workspace sees the new set.
+      queryClient.invalidateQueries({ queryKey: evidenceModelsKey });
     },
   });
 }

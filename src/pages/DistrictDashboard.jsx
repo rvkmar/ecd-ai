@@ -15,6 +15,7 @@ import AnalyticsReports from "../components/reports/AnalyticsReports";
 
 import QuestionBankTabs from "@/components/questions/QuestionBankTabs";
 import QMatrixModelBuilder from "@/components/qMatrix/QMatrixModelBuilder";
+import CalibrationConsole from "@/components/calibration/CalibrationConsole";
 import RequirePermission from "@/auth/RequirePermission";
 
 export default function DistrictDashboard() {
@@ -69,6 +70,16 @@ export default function DistrictDashboard() {
             content: (
               <RequirePermission entity="qMatrixModels" action="view">
                 <QMatrixModelBuilder readOnly />
+              </RequirePermission>
+            ),
+          },
+          {
+            id: "calibration",
+            label: "Calibration",
+            entity: "calibrationJobs",
+            content: (
+              <RequirePermission entity="calibrationJobs" action="view">
+                <CalibrationConsole readOnly />
               </RequirePermission>
             ),
           },

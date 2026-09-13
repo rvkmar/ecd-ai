@@ -57,7 +57,7 @@ A non-converged run is stored on the job (`status: succeeded`, `converged: false
 ## Remaining gaps (out of scope)
 
 - ~~**D64** — LSAT7 through the full pipeline in CI.~~ see `claude/day64-lsat7-pipeline.md`
-- **D65** — calibration console UI (hooks shipped; no screen).
+- ~~**D65** — calibration console UI (hooks shipped; no screen).~~ see `claude/day65-calibration-console.md`
 - **D66 / D67** — DINA and CTT endpoints return contract-shaped 501.
 - `renv.lock` is still absent; `/health` on `rvkmar/r-backend:latest` is the version record.
 - Response-matrix size limit / sparse encoding / multi-tenancy (architecture doc §12) — not decided.

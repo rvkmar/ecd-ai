@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage";
 // New imports for dashboards
 import AdminPage from "./pages/AdminPage";
 import SettingsPage from "./pages/SettingsPage";
+import CalibrationConsolePage from "./pages/CalibrationConsolePage";
 import DistrictDashboard from "./pages/DistrictDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
@@ -112,6 +113,10 @@ export default function App() {
                         rolePermissions.js's reasoning: a system-level
                         measurement decision, not local authoring. */}
                     <Route path="assembly-models" element={<AssemblyModelBuilder />} />
+
+                    {/* D65: calibration job console. Also a tab on
+                        AdminPage so the surface is not URL-only. */}
+                    <Route path="calibration" element={<CalibrationConsolePage />} />
                   </Routes>
                 </ProtectedRoute>
               }
@@ -135,6 +140,10 @@ export default function App() {
                         the reachable entry point — this is the addressable
                         one, for links and bookmarks. */}
                     <Route path="q-matrices" element={<QMatrixModelBuilder readOnly />} />
+                    {/* D65: district may inspect jobs; no write
+                        affordances (readOnly). The DistrictDashboard
+                        Calibration tab is the reachable entry. */}
+                    <Route path="calibration" element={<CalibrationConsolePage readOnly />} />
                     <Route path="manage-tasks" element={<TasksManager />} />
                     <Route path="sessions/build" element={<SessionBuilder />} />
                     <Route path="sessions/play" element={<SessionPlayer />} />

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- D65: calibration console at `/admin/calibration` (also an Admin
+  Control Center tab; district read-only at `/district/calibration`).
+  Administrator can enqueue `{ fixture: "lsat7" }` bound to an existing
+  IRT evidence / statistical model, poll while `queued`/`running`,
+  inspect the request and R response (parameters, SEs, fit,
+  `packageVersion`, `sampleSize`, `converged`, `error.stderr`), and
+  ingest. Ingest of `converged: false` surfaces the 409 and does not
+  pretend a parameter set was written. `useProcessCalibrationJob` is
+  the operator hook for environments without
+  `CALIBRATION_QUEUE_AUTORUN`. Students and teachers have no console
+  route. Handoff: `claude/day65-calibration-console.md`.
+
 - D64: LSAT7 (Bock & Lieberman 1970 / `mirt::LSAT7`, 1000×5) is a
   committed frequency-table fixture. `POST /api/calibrationJobs` accepts
   `{ fixture: "lsat7" }` and fills the ADR 0002 request. `npm test`
