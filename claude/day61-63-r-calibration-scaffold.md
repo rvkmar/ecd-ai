@@ -1,6 +1,6 @@
 # D61–D63 — R calibration scaffold, job queue, ADR 0002 contract
 
-**Status: DONE in tests and compose wiring.** Live Docker `/health` + enqueue-through-R was not run in this environment (no Docker/R daemon). Verify on the user's stack at `localhost:6060` with the override that publishes `r-backend:4000`.
+**Status: DONE in tests and compose wiring.** Live `/health` was executed 2026-09-13 on the user's stack (`GET :4000/health` 200; versions in `claude/day61-63-live-r-health.md`). Live enqueue → process → ingest was still not walked.
 
 Do not confuse with `claude/day61-staff-session-operate-and-assignment.md` (a D50 leftover).
 
