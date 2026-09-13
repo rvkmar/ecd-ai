@@ -1,6 +1,8 @@
 # install-packages.R
-# Installs the W13 psychometric stack from the dated CRAN snapshot set in
-# the Dockerfile (CRAN / RENV_CONFIG_REPOS_OVERRIDE). ASCII only.
+# Optional / orphan. Not used by `docker compose up`.
+# The published image rvkmar/r-backend:latest already has these packages.
+# Keep this script only if you rebuild a from-scratch rocker image.
+# Dated CRAN snapshot below is leftover from the D61 Posit pin. ASCII only.
 
 repos <- Sys.getenv(
   "CRAN",

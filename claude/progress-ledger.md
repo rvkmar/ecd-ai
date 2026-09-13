@@ -18,7 +18,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D61–D63** — R scaffold, calibration job queue, ADR 0002 contract. Handoff: `claude/day61-63-r-calibration-scaffold.md`. Not the D50 leftover file `day61-staff-session-operate-and-assignment.md`. |
+| Last completed unit | **D61–D63** — R scaffold, calibration job queue, ADR 0002 contract. Compose default is **`rvkmar/r-backend:latest`** + bind-mount of `./r-backend/app` (not a Posit/rocker build from `./r-backend`). Handoff: `claude/day61-63-r-calibration-scaffold.md`. Not the D50 leftover file `day61-staff-session-operate-and-assignment.md`. |
 | Next queued | Calendar **D64** — LSAT7 through the full pipeline. **D65** is the calibration console (hooks exist, no UI). |
 | Block | W13 — R Plumber service and the calibration job queue |
 | Block gate | Administrator can start, watch, inspect and ingest a calibration without a shell (D65). LSAT7 in CI (D64). |
@@ -38,6 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-13 | close | — | Working tree clean at `f518bc9`. Additional walk scripts gitignored (`scripts-login-dump.cjs`, `scripts-new-session-walk.cjs`, `scripts-ui-walk.cjs`). Plan **D60** (adversarial review) not started, calendar unmarked. |
 | 2026-09-13 | D60 | 1, alone | Never-compress adversarial review of selection/stopping. P0: draft/archived sibling AM made `targetsMet` inert — fixed. Cheap P1s: AM-resolution warning surface; `/submit` after stop refused. Dual-attribute *stopping* confirmed closed; *selection* hole (unmeasured attr unrankable) deferred. |
 | 2026-09-13 | D61–D63 | 2 | R Plumber scaffold (`/health` versions, compose re-enabled, scoring neutralized). `calibrationJobs` seven-artefact queue. ADR 0002 contract both sides; ingest refuses `converged: false`. `/submit` no longer calls R. |
+| 2026-09-13 | ops | — | Compose `r-backend` uses published `rvkmar/r-backend:latest` + `./r-backend/app` mount. Do not `docker compose build r-backend` as the default path. |
 
 ## Compression debt
 
