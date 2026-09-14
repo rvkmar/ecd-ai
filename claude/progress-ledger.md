@@ -22,12 +22,12 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Next queued | Calendar **D67** — CTT through R (endpoint is still 501). Never-compress. |
 | Block | **W14** — diagnostics calibration, CTT live, DIF, equating |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ D66: sim10GDINA through R in tests/CI. |
-| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run tests in this PR; live GDINA is CI (`lsat7-pipeline` now also runs sim10GDINA). |
+| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. |
 | HEAD at D60 | `bdc88dc` |
 | HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` / `85b43fa` (live `/health` close). |
 | HEAD at D64 | `d27d21b` (#19) |
 | HEAD at D65 | `ce4c71b` (#20) + `3045ff0` (#21 fixture path). W13 close: `claude/day65-w13-close.md`. |
-| HEAD at D66 | this PR |
+| HEAD at D66 | `dca6c31` (#22). Close: this file + `claude/day66-sim10gdina.md`. |
 
 ## Session log
 
@@ -49,6 +49,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-13 | close | — | W13 close at `3045ff0`. Suite 1313 passed / 1 skipped; live `test:lsat7` 8/8 on `:4000`; CI `lsat7-pipeline` green. D64 a/b check restated (no published coefficient table). D65 live walk + param-set diff not done. Next: D66. |
 | 2026-09-13 | D65 walk | — | Coordinator live operator walk on localhost:6060 (`admin1` / WalkPass!2026). Job `job1789319022666002` converged and ingested `ps1789319081640`. Recorded on D66 close; was left open in the W13 ledger. Parameter-set diff UI still not built. |
 | 2026-09-14 | D66 | 1, alone | sim10GDINA (`GDINA::sim10GDINA`, 1000×10, simQ 10×3) through enqueue → R `/calibrate/dina`/`gdina` → ingest. Always-run contract stub + live CI on the same `lsat7-pipeline` job. Console binds DINA/G-DINA. CTT still 501. |
+| 2026-09-14 | close | — | D66 close at `dca6c31`. Suite 1323 passed / 3 skipped; build green. Live GDINA is CI (not local). Calendar marked. Classification half of the plan exit check restated as not in this pipeline (D79). Next: D67. |
 
 ## Compression debt
 
@@ -77,7 +78,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D59 | Split reports by role; attribute-profile UI; close teacher-report leak | One stack (`reportsRoutes` + `SessionReport`); teacher-report was authenticate-only; classification already computed, not shown on reports | Gate teacher routes with `authorizeRole`; stop the client fetching them as a student; attach `stopped` + `attributeProfile` to existing payloads/surfaces |
 | D61 | Posit-dated Dockerfile + committed `renv.lock` | Published `rvkmar/r-backend:latest`; `renv.lock` absent | Pin via live `/health` on that image; Dockerfile is a thin overlay only |
 | D64 | Pin published mirt LSAT7 *a* and *b* in the test with a numeric tolerance | Live path does not pin published coefficient tables. It runs the published **1000×5** matrix through enqueue → `postCalibration` → ingest and asserts `converged: true`, `packageVersion` `/^mirt /`, `sampleSize: 1000`, every `a > 0`, and Item.5 `b` **lower** than Item.4 `b` because p(Item.5)=0.843 and p(Item.4)=0.606 | Restated live check; coefficient-table pin left for a later benchmark tightening (D88) |
-| D66 | Pin recovered G-DINA probabilities to package `simItempar` | Live path asserts `2^k` table lengths from published `simQ`, values in `[0,1]`, and P(all mastered) > P(none) — true of every generating row, not a recovered-vs-generating tolerance | Restated live check; `simItempar` is documented on the fixture and is not the expected output |
+| D66 | Pin recovered G-DINA probabilities **and** attribute-profile classification to published sim10GDINA | Live path asserts `2^k` table lengths from published `simQ`, values in `[0,1]`, and P(all mastered) > P(none); no examinee-class table exists in the package object as used here | Restated item-parameter check; classification left for ADR 0004 / D79 (not dropped). `simItempar` is documented on the fixture and is not the expected output |
 
 ## Carried-forward gaps
 

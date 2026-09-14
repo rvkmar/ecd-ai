@@ -1,9 +1,35 @@
 # D66 — sim10GDINA through R (never-compress)
 
-**Status: DONE in code + always-run tests.** Live GDINA is the CI job
-`lsat7-pipeline` (same published image + app mount as compose). This
-environment has no Docker/R, so the live describe is skipped here.
-CTT remains 501 (D67). R is still not on any session path (ADR 0001).
+**Status: DONE with a restated live check** (same class as D64). Product
+is on `master` at `dca6c31` (#22). Live GDINA is CI job `lsat7-pipeline`
+(same published image + app mount as compose). This environment has no
+Docker/R, so the live describe is skipped here. CTT remains 501 (D67).
+R is still not on any session path (ADR 0001).
+
+## Exit check
+
+| Plan exit check | What was actually executed |
+|---|---|
+| Published sim10GDINA **item parameters** and **attribute-profile classification** reproduced within a stated tolerance; D37 list closed or re-justified; check in CI | **Restated.** Live path does **not** pin `simItempar`. It runs published **1000×10** `simdat` + package `simQ` through enqueue → `GDINA::GDINA` → ingest and asserts `converged: true`, `packageVersion` `/^GDINA /`, `sampleSize: 1000`, each item's `probabilities` length `2^k` from that `simQ` row, values in `[0,1]`, and P(all mastered) > P(none). DINA path asserts `guess < 1 - slip`. **Attribute-profile classification was not reproduced** — `sim10GDINA` has no published examinee-class table in this pipeline; that remains ADR 0004 / D79. CI: [lsat7-pipeline on `dca6c31`](https://github.com/rvkmar/ecd-claude/actions/runs/34801158134). |
+
+## D37 “cannot yet verify” list (closed or restated)
+
+The cited `day37-gdina-attribute-ordering-resolution.md` is not in the
+repo. The list is reconstructed from `attributeAccumulation.js`
+(`REDUCED_PATTERN_ORDER`) and the D40 handoff.
+
+| Item | Status |
+|---|---|
+| Graded-lexicographic row order (`alpha2` / `attributepattern`), not a binary counter | **Closed D37** in JS against GDINA 2.9.12 source. Live R now emits tables in that same order (`gdina-graded-lex`). |
+| Recovered item parameters match generating `simItempar` within a numeric tolerance | **Restated** (structure + P(all) > P(none), not recovered-vs-generating). Same honesty as D64. Tightening is D88. |
+| Attribute-profile classification vs a published class table | **Not closed.** No such table is in the committed fixture. Held with ADR 0004 / D79. Not silently dropped. |
+
+## Session-close verification (2026-09-14 IST)
+
+- `NODE_OPTIONS=--max-old-space-size=3072 npx vitest run` — **1323 passed / 3 skipped** (84 files), 67.16s. Skips: live LSAT7 + two live sim10GDINA describes when `R_BACKEND_URL` is unset.
+- `npm run build` — Vite 7.3.6, **17.14s**. Chunk warning remains (`index-DOaYaVz4.js` 2,272 kB / gzip 633 kB) — D74.
+- `git status` at this close — dirty only with this recording until committed. Product HEAD **`dca6c31`**.
+- Live R not run locally (no Docker/R). CI `lsat7-pipeline` on merge: LSAT7 step + sim10GDINA step both green.
 
 ## What sim10GDINA actually is
 
