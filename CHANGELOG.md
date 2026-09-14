@@ -22,8 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `converged: false`. Always-run tests use a labeled contract stub.
   CI job `lsat7-pipeline` also runs the live CTT path against
   `rvkmar/r-backend:latest` + app mount. Console can bind/enqueue the
-  fixture on a CTT statistical model. Handoff:
-  `claude/day67-ctt-calibration.md`.
+  fixture on a CTT statistical model. Live CI `lsat7-pipeline` CTT step
+  is green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`).
+  Observed KR-20 0.4542 is recorded in the handoff, not pinned.
+  Handoff: `claude/day67-ctt-calibration.md`.
 
 - D66: published `GDINA::sim10GDINA` (1000 examinees × 10 items, 3
   attributes; `simdat` / `simQ` / `simItempar` from GDINA 2.9.12) is a

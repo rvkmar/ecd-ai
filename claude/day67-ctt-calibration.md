@@ -1,17 +1,18 @@
 # D67 — CTT through R (never-compress)
 
 **Status: DONE with a restated live check** (same class as D64/D66). Product
-is the PR against `main` on `rvkmar/ecd-ai`. Live TAM is CI job
+is PR **#23** against `main` on `rvkmar/ecd-ai`. Live TAM is CI job
 `lsat7-pipeline` (same published image + app mount as compose). This
 environment has no Docker/R, so the live describe is skipped here.
-`POST /calibrate/ctt` is implemented for this path. R is still not on
-any session path (ADR 0001).
+`POST /calibrate/ctt` is implemented for this path. Live CI on
+`45de56f`: `TAM 4.3.25`, `converged: true`, 1000×5, method
+`TAM::tam.ctt2`. R is still not on any session path (ADR 0001).
 
 ## Exit check
 
 | Plan exit check | What was actually executed |
 |---|---|
-| Published (or well-documented classical) CTT coefficients through enqueue → R → ingest; check in CI | **Restated in part.** Live path does **not** pin a published KR-20 or point-biserial table — none exists for LSAT7 in this pipeline. It runs the published **1000×5** Bock & Lieberman matrix through enqueue → `TAM::tam.ctt` → ingest and asserts `converged: true`, `packageVersion` `/^TAM /`, `sampleSize: 1000`, each item's CTT **difficulty equals the published item mean** (definitional for complete dichotomous data), Item.5 p > Item.4 p, item-total rpb in (0, 1), and KR-20 in (0, 1). CI: `lsat7-pipeline` CTT step. |
+| Published (or well-documented classical) CTT coefficients through enqueue → R → ingest; check in CI | **Restated in part.** Live path does **not** pin a published KR-20 or point-biserial table — none exists for LSAT7 in this pipeline. It runs the published **1000×5** Bock & Lieberman matrix through enqueue → `TAM::tam.ctt` → ingest and asserts `converged: true`, `packageVersion` `/^TAM /`, `sampleSize: 1000`, each item's CTT **difficulty equals the published item mean** (definitional for complete dichotomous data), Item.5 p > Item.4 p, item-total rpb in (0, 1), and KR-20 in (0, 1). CI: [lsat7-pipeline on `45de56f`](https://github.com/rvkmar/ecd-ai/actions/runs/34802897124) (`TAM 4.3.25`, `TAM::tam.ctt2`, observed KR-20 0.4542 — recorded, not pinned). |
 
 ## What the CTT fixture actually is
 
@@ -80,6 +81,14 @@ Same lesson as D64/D66. The live path asserts:
 
 Do not treat a recovered KR-20 as a published coefficient.
 
+## Live CI finding
+
+[`lsat7-pipeline` on `45de56f`](https://github.com/rvkmar/ecd-ai/actions/runs/34802897124)
+identified CTT on the first live run: `TAM 4.3.25`, `converged: true`,
+1000×5, parameters keyed `Item.1` … `Item.5`, method `TAM::tam.ctt2`.
+Observed (not pinned) `fitStatistics.kr20` 0.4542, `meanScore` 3.707
+(published), `sdScore` 1.1986. No column-name or keying fix was needed.
+
 ## How to re-run
 
 ```bash
@@ -106,6 +115,8 @@ Enqueue by hand (admin token):
   **1332 passed / 4 skipped** (85 files). Skips: live LSAT7, two live
   sim10GDINA describes, and the live CTT describe when `R_BACKEND_URL`
   is unset. `npm run build` green (chunk warning remains — D74).
+  Live CI is green: `TAM 4.3.25`, `converged: true`, 1000×5,
+  `TAM::tam.ctt2`.
 - No published KR-20 / point-biserial table for LSAT7 was found; that
   pin is not invented. Tightening is D88-class if a table is later
   sourced.
