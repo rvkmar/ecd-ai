@@ -110,10 +110,10 @@ describe("staff Play / Pause / Operate exclusivity", () => {
 });
 
 describe("sessionListPath", () => {
-  it("returns the role dashboard, not the player", () => {
-    expect(sessionListPath("teacher")).toBe("/teacher");
-    expect(sessionListPath("district")).toBe("/district");
-    expect(sessionListPath("student")).toBe("/student");
+  it("returns the role dashboard sessions tab, not the player", () => {
+    expect(sessionListPath("teacher")).toBe("/teacher?tab=sessions");
+    expect(sessionListPath("district")).toBe("/district?tab=sessions");
+    expect(sessionListPath("student")).toBe("/student?tab=mysessions");
   });
 });
 

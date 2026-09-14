@@ -35,6 +35,20 @@ function saveJSON(data) {
 // ------------------------------
 let mongoModels = {};
 
+function ensureMongoModel(name) {
+  if (mongoModels[name]) return mongoModels[name];
+  if (mongoose.models[name]) {
+    mongoModels[name] = mongoose.models[name];
+    return mongoModels[name];
+  }
+  const GenericSchema = new mongoose.Schema(
+    { any: {} },
+    { strict: false, timestamps: true }
+  );
+  mongoModels[name] = mongoose.model(name, GenericSchema);
+  return mongoModels[name];
+}
+
 async function initMongo() {
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(MONGO_URI, { dbName: "ecd_assessment" });
@@ -69,18 +83,7 @@ async function initMongo() {
   }
 
   // 2️⃣ Generic dynamic schema generator for other collections
-  const ensureModel = (name) => {
-    if (mongoModels[name]) return mongoModels[name];
-
-    // Define a simple flexible schema
-    const GenericSchema = new mongoose.Schema(
-      { any: {} },
-      { strict: false, timestamps: true }
-    );
-
-    mongoModels[name] = mongoose.model(name, GenericSchema);
-    return mongoModels[name];
-  };
+  const ensureModel = ensureMongoModel;
 
   // 2️⃣b Explicit User schema for profile fields
   if (!mongoModels.User) {
@@ -134,7 +137,7 @@ export const dbAdapter = {
     }
 
     const models = await initMongo();
-    const Model = models[capitalize(collection)];
+    const Model = ensureMongoModel(capitalize(collection));
     return await Model.find().lean();
   },
 
@@ -145,7 +148,7 @@ export const dbAdapter = {
     }
 
     const models = await initMongo();
-    const Model = models[capitalize(collection)];
+    const Model = ensureMongoModel(capitalize(collection));
     return await Model.findOne({ id }).lean();
   },
 
@@ -165,7 +168,7 @@ export const dbAdapter = {
     }
 
     const models = await initMongo();
-    const Model = models[capitalize(collection)];
+    const Model = ensureMongoModel(capitalize(collection));
     return await Model.create(obj);
   },
 
@@ -195,7 +198,7 @@ export const dbAdapter = {
     }
 
     const models = await initMongo();
-    const Model = models[capitalize(collection)];
+    const Model = ensureMongoModel(capitalize(collection));
     return await Model.findOneAndUpdate(filter, updates, { new: true }).lean();
   },
 
@@ -211,7 +214,7 @@ export const dbAdapter = {
     }
 
     const models = await initMongo();
-    const Model = models[capitalize(collection)];
+    const Model = ensureMongoModel(capitalize(collection));
     await Model.deleteOne(filter);
     return true;
   },
@@ -229,7 +232,7 @@ export const dbAdapter = {
     }
 
     const models = await initMongo();
-    const Model = models[capitalize(collection)];
+    const Model = ensureMongoModel(capitalize(collection));
     return await Model.findOneAndUpdate({ id }, updates, { new: true }).lean();
   },
 
@@ -242,7 +245,7 @@ export const dbAdapter = {
     }
 
     const models = await initMongo();
-    const Model = models[capitalize(collection)];
+    const Model = ensureMongoModel(capitalize(collection));
     await Model.deleteOne({ _id: id });
     return true;
   },

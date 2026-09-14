@@ -742,6 +742,25 @@ export function isLinkableEvidenceModel(em) {
   );
 }
 
+/* Same shorthand, one layer up: Evidence Models bind a Competency Model.
+   The operate panel and wizard Step 1 filtered `status === "confirmed"`
+   only. Once a CM is activated, New Evidence Model disabled itself and
+   claimed none were confirmed — D71 live walk, D56/D57 Diagnostic Walk
+   was operational with an operational EM already hanging off it. */
+export const LINKABLE_COMPETENCY_MODEL_STATUSES = [
+  "confirmed",
+  "operational",
+  "suspended",
+];
+
+export function isLinkableCompetencyModel(cm) {
+  return (
+    !!cm &&
+    !!cm.locked &&
+    LINKABLE_COMPETENCY_MODEL_STATUSES.includes(cm.status)
+  );
+}
+
 // F14 (D53a live walk, session 10; fixed D53b): the same "locked,
 // structurally-frozen" set as LINKABLE_EVIDENCE_MODEL_STATUSES above,
 // applied to the Q-matrix a DINA/G-DINA statistical model binds to. Before

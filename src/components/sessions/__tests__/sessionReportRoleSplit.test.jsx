@@ -62,6 +62,7 @@ vi.mock("../../../api/apiClient", () => ({
 }));
 
 import SessionReport from "../SessionReport.jsx";
+import { apiFetch } from "../../../api/apiClient";
 
 const reportSrc = fs.readFileSync(
   path.resolve(__dirname, "../SessionReport.jsx"),
@@ -118,5 +119,14 @@ describe("SessionReport — classification and stop on report surfaces", () => {
     expect(await screen.findByText("Why this session ended")).toBeInTheDocument();
     expect(screen.getByText("Attribute profile")).toBeInTheDocument();
     expect(screen.getByText("attrA")).toBeInTheDocument();
+  });
+
+  it("keeps Close when every report endpoint fails", async () => {
+    apiFetch.mockImplementation(() => Promise.reject(new Error("404")));
+    const onClose = vi.fn();
+    render(<SessionReport sessionId="s-d59" onClose={onClose} />);
+    expect(await screen.findByText("Failed to load report")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalled();
   });
 });

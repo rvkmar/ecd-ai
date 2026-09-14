@@ -1,9 +1,7 @@
 // src/components/ui/DashboardLayout.jsx
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { can } from "@/config/rolePermissions";
 
 // export default function DashboardLayout({ title, tabs }) {
 //   const role = localStorage.getItem("role");
@@ -44,15 +42,31 @@ import { can } from "@/config/rolePermissions";
 // }
 
 export default function DashboardLayout({ title, tabs = [] }) {
-  const [activeTab, setActiveTab] = useState(tabs[0]?.id || "");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const fallbackId = tabs[0]?.id || "";
+  const urlTab =
+    tabFromUrl && tabs.some((t) => t.id === tabFromUrl) ? tabFromUrl : fallbackId;
+  const [activeTab, setActiveTab] = useState(urlTab);
+
+  useEffect(() => {
+    setActiveTab(urlTab);
+  }, [urlTab]);
 
   if (!tabs.length) return <div className="p-6">No content available</div>;
+
+  const selectTab = (id) => {
+    setActiveTab(id);
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", id);
+    setSearchParams(next, { replace: true });
+  };
 
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-3xl font-bold mb-4">{title}</h1>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={selectTab}>
         <TabsList className="flex bg-gray-100 p-1 rounded-lg space-x-2">
           {tabs.map((t) => (
             <TabsTrigger

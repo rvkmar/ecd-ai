@@ -19,6 +19,7 @@ import EvidenceWizard from "./EvidenceWizard/EvidenceWizard";
 import EvidenceModelCalibration from "./EvidenceModelCalibration";
 import { EvidenceWizardProvider } from "./EvidenceWizard/EvidenceWizardContext";
 import { useCompetencyModels, useCompetencies } from "@/api/queries/competencies";
+import { isLinkableCompetencyModel } from "@/utils/schema";
 
 export default function EvidenceModelBuilderPanel() {
     const [mode, setMode] = useState("list"); // list | create | edit | calibrate
@@ -30,16 +31,16 @@ export default function EvidenceModelBuilderPanel() {
     };
 
     /* =====================================================
-       Load Confirmed Competency Structures (shared caches)
-       - Only confirmed competency models are eligible for new
-         Evidence Models, same governance boundary as before.
+       Load linkable competency structures (shared caches).
+       Confirmed / operational / suspended are all frozen parents;
+       a literal `status === "confirmed"` hid every activated CM.
     ===================================================== */
 
     const { data: allModels = [], isLoading: modelsLoading } = useCompetencyModels();
     const { data: allCompetencies = [], isLoading: competenciesLoading } = useCompetencies();
 
     const competencyModels = useMemo(
-        () => (allModels || []).filter((m) => m.status === "confirmed"),
+        () => (allModels || []).filter(isLinkableCompetencyModel),
         [allModels]
     );
 
@@ -49,7 +50,7 @@ export default function EvidenceModelBuilderPanel() {
     }, [allCompetencies, competencyModels]);
 
     const loading = modelsLoading || competenciesLoading;
-    const noConfirmedModels = competencyModels.length === 0;
+    const noLinkableModels = competencyModels.length === 0;
 
     /* =====================================================
        🔹 WIZARD MODE — full replace, matching ItemBuilder's
@@ -102,7 +103,7 @@ export default function EvidenceModelBuilderPanel() {
                         setSelectedModel(null);
                         setMode("create");
                     }}
-                    disabled={noConfirmedModels}
+                    disabled={noLinkableModels}
                     className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                     <Plus size={16} />
@@ -110,13 +111,13 @@ export default function EvidenceModelBuilderPanel() {
                 </button>
             </div>
 
-            {noConfirmedModels && (
+            {noLinkableModels && (
                 <div className="border rounded bg-yellow-50 p-4 text-sm text-yellow-800">
-                    <strong>No confirmed competency models found.</strong>
+                    <strong>No linkable competency models found.</strong>
                     <p className="mt-1">
                         Evidence models can only be created against
-                        confirmed competency structures.
-                        Please confirm a Competency Model first.
+                        confirmed, operational, or suspended competency
+                        structures. Confirm a Competency Model first.
                     </p>
                 </div>
             )}

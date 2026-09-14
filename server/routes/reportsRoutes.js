@@ -333,7 +333,7 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, (req, res) => {
             }
           }
 
-          if (!competencyId && em.constructs.length > 0) {
+          if (!competencyId && (em.constructs || []).length > 0) {
             competencyId = em.constructs[0].competencyId || competencyId;
             evidenceId = em.constructs[0].evidenceId || evidenceId;
           }

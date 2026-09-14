@@ -51,23 +51,37 @@ export default function SessionReport({ sessionId, onClose }) {
       requests.push(apiFetch(`/api/reports/session/${sessionId}/teacher-report`, {}, auth));
     }
 
-    Promise.all(requests)
-      .then(([rep, learner, teacher]) => {
+    Promise.allSettled(requests)
+      .then((results) => {
+        const [rep, learner, teacher] = results.map((r) =>
+          r.status === "fulfilled" ? r.value : null
+        );
+        if (!rep && !learner && !teacher) {
+          setError("Failed to load report");
+          return;
+        }
         setReport(rep);
         setLearnerFeedback(learner);
         setTeacherReport(teacher || null);
         if (!canViewTeacherReports && tab === "teacher") setTab("learner");
-      })
-      .catch((err) => {
-        console.error("Failed to load report", err);
-        setError("Failed to load report");
       })
       .finally(() => setLoading(false));
   }, [sessionId, canViewTeacherReports]);
 
   if (!sessionId) return null;
   if (loading) return <div className="p-4">Loading report...</div>;
-  if (error) return <div className="p-4 text-red-600">{error}</div>;
+  if (error) {
+    return (
+      <div className="p-4">
+        <p className="text-red-600">{error}</p>
+        {onClose && (
+          <button type="button" onClick={onClose} className="mt-2 px-3 py-1 bg-gray-300 rounded">
+            Close
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const stopped = report?.stopped || learnerFeedback?.stopped || teacherReport?.stopped || null;
   const attributeProfile =

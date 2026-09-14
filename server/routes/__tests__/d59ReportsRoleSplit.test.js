@@ -108,6 +108,20 @@ describe("GET /api/reports/session/:id/teacher-report — examinee leak (D59)", 
       expect(res.body.modelSummary.AttributeProfile.attrA.classification).toBe("master");
     }
   });
+
+  it("does not 500 when a bound evidence model has no constructs array", async () => {
+    dbState.current = {
+      ...dbState.current,
+      tasks: [{ id: "t1", taskModelId: "tm1" }],
+      taskModels: [{ id: "tm1", evidenceModelIds: ["em1"] }],
+      evidenceModels: [{ id: "em1", observations: [] }],
+    };
+    const res = await request(app())
+      .get("/api/reports/session/s-d59/teacher-report")
+      .set("Authorization", `Bearer ${tokenFor("teacher")}`);
+    expect(res.status).toBe(200);
+    expect(res.body.sessionId).toBe("s-d59");
+  });
 });
 
 describe("learner and generic session reports carry the same measurement fields", () => {

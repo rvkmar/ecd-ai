@@ -8,6 +8,7 @@ import { apiFetch, apiErrorMessage } from "../../api/apiClient";
 import { SESSION_STATUS } from "../../utils/sessionStatus";
 import { canPauseSession, sessionListPath } from "../../utils/sessionPlay";
 import { measurementStopHeading, measurementStopDetails } from "./measurementStop";
+import SessionReport from "./SessionReport";
 
 import { useNavigate, useParams } from "react-router-dom";
 // SessionPlayer.jsx
@@ -78,6 +79,7 @@ export default function SessionPlayer({
   const [showResumedBanner, setShowResumedBanner] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finishModalOpen, setFinishModalOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   
   // Policy name resolution now goes through the shared usePolicies() cache
   // (see src/api/queries/policies.js) instead of its own fetch — Phase 2
@@ -865,11 +867,11 @@ export default function SessionPlayer({
       {loadingTask ? (
         <div>Loading next activity...</div>
       ) : measurementStop ? (
-        <div className="p-4 border rounded bg-green-50" data-testid="measurement-stop-panel">
+        <div className="p-4 border border-border rounded bg-muted text-foreground" data-testid="measurement-stop-panel">
           <p className="font-medium">{measurementStopHeading(measurementStop)}</p>
-          <p className="text-sm text-gray-700 mt-1">{measurementStop.reason}</p>
+          <p className="text-sm text-muted-foreground mt-1">{measurementStop.reason}</p>
           {measurementStopDetails(measurementStop).length > 0 && (
-            <ul className="mt-2 text-sm text-gray-700 list-disc ml-5">
+            <ul className="mt-2 text-sm text-foreground list-disc ml-5">
               {measurementStopDetails(measurementStop).map((t) => (
                 <li key={t.smvId || t.classification}>
                   {t.smvId}
@@ -884,7 +886,7 @@ export default function SessionPlayer({
               ))}
             </ul>
           )}
-          <p className="text-sm text-gray-600 mt-2">
+          <p className="text-sm text-muted-foreground mt-2">
             You can finish the session or review responses.
           </p>
           <div className="mt-3 space-x-2">
@@ -898,20 +900,19 @@ export default function SessionPlayer({
                 {finishing ? "Finishing..." : "Finish Session"}
               </button>
             )}
-            <a
-              href={`/api/reports/session/${sessionId}`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => setReportOpen(true)}
               className="px-3 py-1 bg-indigo-600 text-white rounded"
             >
-              Open Report (raw JSON)
-            </a>
+              Open Report
+            </button>
           </div>
         </div>
       ) : noMoreTasks ? (
-        <div className="p-4 border rounded bg-green-50">
+        <div className="p-4 border border-border rounded bg-muted text-foreground">
           <p className="font-medium">No more tasks available.</p>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             You can finish the session or review responses.
           </p>
           <div className="mt-3 space-x-2">
@@ -925,14 +926,13 @@ export default function SessionPlayer({
                 {finishing ? "Finishing..." : "Finish Session"}
               </button>
             )}
-            <a
-              href={`/api/reports/session/${sessionId}`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => setReportOpen(true)}
               className="px-3 py-1 bg-indigo-600 text-white rounded"
             >
-              Open Report (raw JSON)
-            </a>
+              Open Report
+            </button>
           </div>
         </div>
       ) : task ? (
@@ -1413,6 +1413,12 @@ export default function SessionPlayer({
           </>
         )}
       </div>
+
+      {reportOpen && sessionId && (
+        <div className="p-4 border border-border rounded-md bg-card mt-4">
+          <SessionReport sessionId={sessionId} onClose={() => setReportOpen(false)} />
+        </div>
+      )}
 
       {/* Finish confirmation modal */}
       <Modal

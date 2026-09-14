@@ -32,6 +32,8 @@ export function sessionPlayerPath(role, sessionId) {
 export function sessionListPath(role) {
   if (!role) return "/";
   if (role === "admin") return "/admin";
+  if (role === "student") return "/student?tab=mysessions";
+  if (role === "teacher" || role === "district") return `/${role}?tab=sessions`;
   return `/${role}`;
 }
 

@@ -12,6 +12,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useEvidenceWizardContext } from "../EvidenceWizardContext";
 import CompetencyStructuralPanel from "../components/CompetencyStructuralPanel";
+import {
+    isLinkableCompetencyModel,
+    LINKABLE_EVIDENCE_MODEL_STATUSES,
+} from "@/utils/schema";
 
 const inputBase =
     "w-full rounded-md border bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed";
@@ -49,7 +53,7 @@ export default function Step1ClaimIdentity({ onValidityChange, locked }) {
         (competencies || []).forEach((comp) => {
 
             const model = competencyModels.find(
-                m => m.id === comp.modelId && m.status === "confirmed"
+                m => m.id === comp.modelId && isLinkableCompetencyModel(m)
             );
 
             if (!model) return;
@@ -104,7 +108,7 @@ export default function Step1ClaimIdentity({ onValidityChange, locked }) {
 
             const otherConfirmed = (evidenceModels || []).filter(
                 em =>
-                    em.status === "confirmed" &&
+                    LINKABLE_EVIDENCE_MODEL_STATUSES.includes(em.status) &&
                     em.competencyId !== draftModel.competencyId &&
                     em.competencyModelVersion === selectedModelMeta?.versionNumber
             );
