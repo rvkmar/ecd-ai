@@ -95,6 +95,39 @@ describe("sessions.responses — provenance checks are scoped to item-based resp
     expect(errors.join(" ")).toMatch(/Session response parameterSetId mismatch/);
   });
 
+  it("D68: a calibrated response may cite a still-owned set that is no longer active", () => {
+    const db = makeDb({
+      evidenceModels: [{
+        id: "em1",
+        versionNumber: 1,
+        competencyId: "c1",
+        statisticalModels: [{
+          id: "sm1",
+          type: "irt",
+          active: true,
+          activeParameterSetId: "ps2",
+          parameterSets: [
+            { parameterSetId: "ps1", parameters: { o1: { a: 1, b: 0 } } },
+            { parameterSetId: "ps2", parameters: { o1: { a: 2, b: -1 } } },
+          ],
+        }],
+      }],
+    });
+    const errors = sessionErrors([
+      {
+        taskId: "t1",
+        itemId: "item1",
+        itemVersion: 2,
+        taskModelVersion: 3,
+        evidenceModelId: "em1",
+        evidenceModelVersion: 1,
+        parameterSetId: "ps1",
+        parameterSource: "calibrated",
+      },
+    ], db);
+    expect(errors).toEqual([]);
+  });
+
   it("an item-based response with a stale itemVersion or taskModelVersion is refused", () => {
     const errors = sessionErrors([
       {

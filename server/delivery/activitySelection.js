@@ -22,10 +22,11 @@
 // Task Model activation, per ADR 0003), not from re-walking
 // taskModel -> items -> evidenceModels at request time. Item PARAMETERS are
 // deliberately NOT in the package -- ADR 0003 excludes them precisely so
-// recalibration takes effect immediately -- so they are resolved live, by
-// pointer, exactly as the scoring path does. See resolveContinuousParameters
-// and resolveDinaParameters below, and the agreement test that pins them to
-// sessionRoutes.js's own choices.
+// recalibration takes effect on the next *new* session. D68 freezes an
+// in-flight session to the source and parameterSetId it opened with, so a
+// mid-session ingest cannot mix pilot with calibrated (or ps1 with ps2)
+// and kill the posterior. See resolveContinuousParameters /
+// resolveDinaParameters and the agreement test.
 //
 // WHAT "READS THE LIVE POSTERIOR" MEANS HERE. `session.studentModel
 // .smvPosteriors` -- written by applyPosteriorsToSession() on every submit.
@@ -114,6 +115,7 @@ import {
   accumulateEvidence,
   itemParametersAreUsable,
   CONTINUOUS_MODEL_FAMILIES,
+  calibratedIrtParams,
 } from "./evidenceAccumulation.js";
 import {
   evaluateDeclaredTargets,
@@ -122,6 +124,9 @@ import {
 } from "./assemblyProgress.js";
 import { dinaParametersAreUsable } from "./attributeAccumulation.js";
 import { activePackageFor } from "../compositeLibrary/activePackage.js";
+import {
+  frozenScoringContext,
+} from "./parameterSourceResolution.js";
 
 /* Moved here from sessionRoutes.js, where it existed solely to serve the
    selection branch this module replaces. Binary Shannon entropy in bits. */
@@ -140,46 +145,46 @@ function entropy(p) {
 
 /**
  * Resolve a candidate item's CONTINUOUS (IRT/Rasch) parameters the way the
- * scoring path resolves them: an active calibrated parameter set wins, and
- * the item's own pilot `psychometrics.irtParams` is the fallback.
+ * scoring path resolves them: an active calibrated parameter set wins for
+ * a NEW session, and the item's own pilot `psychometrics.irtParams` is the
+ * fallback. D68: an in-flight session frozen to pilot stays on pilot even
+ * after ingest; one frozen to a parameterSetId keeps that set, not the
+ * newly active one.
  *
- * Deliberately a SECOND implementation rather than a shared helper extracted
- * out of sessionRoutes.js's submit path. The two answer different questions
- * -- submit asks "what do I PIN onto this response for reproducibility",
- * selection asks "what are this candidate's parameters right now" -- and
- * this project's own lesson 24 is that two independent implementations plus
- * an agreement test beats a shared helper. The agreement test lives in
- * __tests__/activitySelection.test.js and pins the SOURCE choice (calibrated
- * vs pilot vs refused), which is the part that must never drift.
+ * Deliberately a SECOND implementation rather than extracting submit's
+ * pin-onto-response helper. The agreement test in activitySelection.test.js
+ * pins SOURCE choice (including freeze) against chooseSubmitParameterBinding.
  *
- * Calibrated continuous parameters are keyed by OBSERVABLE id (the
- * convention evidenceAccumulation.js reads them by); DINA parameters are
- * keyed by ITEM id (attributeAccumulation.js, "Decision 1"). That asymmetry
- * is real and is why these are two functions rather than one.
+ * Calibrated continuous parameters are keyed by OBSERVABLE id (D50/D68:
+ * distinct difficulties are distinct observables). DINA parameters are
+ * keyed by ITEM id. That asymmetry is why these are two functions.
  */
-function resolveContinuousParameters(observationId, evidenceModel, item) {
+function resolveContinuousParameters(observationId, evidenceModel, item, freeze = {}) {
+  if (freeze.error) {
+    return { reason: freeze.error };
+  }
+
   const statisticalModel = evidenceModel?.statisticalModels?.find((sm) => sm.active);
   if (!statisticalModel) {
     return { reason: `Evidence model '${evidenceModel?.id}' has no active statistical model.` };
   }
 
   const family = statisticalModel.type;
-  const calibratedId = statisticalModel.activeParameterSetId || null;
+  const liveCalibratedId = statisticalModel.activeParameterSetId || null;
+  const frozen = freeze.frozenSource || null;
+  const usePilot = frozen === "pilot" || (frozen == null && !liveCalibratedId);
+  const useCalibrated =
+    frozen === "calibrated" || (frozen == null && Boolean(liveCalibratedId));
 
-  /* THE SOURCE ORDER IS THE PART THAT MUST NOT DRIFT from sessionRoutes.js's
-     submit path: an active calibrated parameter set wins outright, and pilot
-     is reached ONLY when there is no calibrated set at all. Falling back to
-     pilot when a calibrated set exists but happens to carry nothing for this
-     observable would be worse than refusing: the item would be chosen on
-     pilot numbers and then scored as `parameterSource: "calibrated"`, where
-     evidenceAccumulation.js excludes it for exactly the missing parameters
-     selection just papered over. The session would present an item that can
-     contribute no evidence. Refuse the candidate instead. */
-  if (calibratedId) {
+  if (useCalibrated) {
+    const calibratedId = freeze.frozenParameterSetId || liveCalibratedId;
     const parameterSet = (statisticalModel.parameterSets || []).find(
       (ps) => ps.parameterSetId === calibratedId
     );
-    const params = parameterSet?.parameters?.[observationId];
+    const { params } = calibratedIrtParams(parameterSet, {
+      observableId: observationId,
+      itemId: item?.id,
+    });
 
     if (!params) {
       return {
@@ -220,10 +225,19 @@ function resolveContinuousParameters(observationId, evidenceModel, item) {
  * probability-table field exists, and inventing one to make a selection
  * decision would be worse than declining to rank that candidate.
  */
-function resolveDinaParameters(itemId, item, statisticalModel, family) {
-  const calibratedId = statisticalModel?.activeParameterSetId || null;
+function resolveDinaParameters(itemId, item, statisticalModel, family, freeze = {}) {
+  if (freeze.error) {
+    return { reason: freeze.error };
+  }
 
-  if (calibratedId) {
+  const liveCalibratedId = statisticalModel?.activeParameterSetId || null;
+  const frozen = freeze.frozenSource || null;
+  const usePilot = frozen === "pilot" || (frozen == null && !liveCalibratedId);
+  const useCalibrated =
+    frozen === "calibrated" || (frozen == null && Boolean(liveCalibratedId));
+
+  if (useCalibrated) {
+    const calibratedId = freeze.frozenParameterSetId || liveCalibratedId;
     const parameterSet = (statisticalModel.parameterSets || []).find(
       (ps) => ps.parameterSetId === calibratedId
     );
@@ -637,7 +651,8 @@ function selectIrt(session, db, warnings) {
     }
 
     const item = (db.items || []).find((it) => it.id === task.itemId);
-    const resolved = resolveContinuousParameters(entry.observationId, evidenceModel, item);
+    const freeze = frozenScoringContext(session, evidenceModel.id);
+    const resolved = resolveContinuousParameters(entry.observationId, evidenceModel, item, freeze);
 
     if (!resolved.params) {
       skipped.push({ taskId, reason: resolved.reason });
@@ -748,7 +763,8 @@ function selectBayesianNetwork(session, db, warnings) {
     }
 
     const item = (db.items || []).find((it) => it.id === task.itemId);
-    const resolved = resolveDinaParameters(task.itemId, item, statisticalModel, family);
+    const freeze = frozenScoringContext(session, evidenceModel?.id);
+    const resolved = resolveDinaParameters(task.itemId, item, statisticalModel, family, freeze);
 
     if (!resolved.params) {
       unrankable.push({ taskId, reason: resolved.reason });

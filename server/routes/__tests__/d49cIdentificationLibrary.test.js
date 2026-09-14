@@ -3,7 +3,9 @@
 // D49c submit-path exit checks that Identification's library contract
 // actually reaches the student: a missing/stale package is a 409, a live
 // structural edit without rebuild does not change the score, and a
-// parameter flip without rebuild does.
+// parameter flip without rebuild does — for a *new* session. D68 froze
+// in-flight sessions to their opening parameter set, so the same-session
+// next item must NOT pick up the new active set.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
@@ -216,8 +218,33 @@ describe("D49c submit path — library is the structural source", () => {
     expect(db.sessions[0].responses).toHaveLength(0);
   });
 
-  it("flipping activeParameterSetId without a rebuild takes effect on the next score", async () => {
-    const db = makeDb();
+  it("flipping activeParameterSetId without a rebuild takes effect on a new session, not mid-flight (D68)", async () => {
+    const db = makeDb({
+      sessions: [
+        {
+          id: "s1",
+          studentId: "u1",
+          taskIds: ["t1", "t2"],
+          currentTaskIndex: 0,
+          responses: [],
+          studentModel: {},
+          selectionStrategy: "fixed",
+          status: "in_progress",
+          isCompleted: false,
+        },
+        {
+          id: "s2",
+          studentId: "u1",
+          taskIds: ["t1"],
+          currentTaskIndex: 0,
+          responses: [],
+          studentModel: {},
+          selectionStrategy: "fixed",
+          status: "in_progress",
+          isCompleted: false,
+        },
+      ],
+    });
     const app = buildApp(db);
     const packageBefore = JSON.stringify(db.compositeLibrary);
 
@@ -235,9 +262,16 @@ describe("D49c submit path — library is the structural source", () => {
       .send({ taskId: "t2", itemId: "item1", rawAnswer: "opt_a" });
 
     expect(second.status).toBe(200);
-    expect(second.body.responses[1].parameterSetId).toBe("ps2");
+    expect(second.body.responses[1].parameterSetId).toBe("ps1");
     expect(second.body.responses[1].parameterSource).toBe("calibrated");
     expect(second.body.responses[1].activated).toBe(true);
+
+    const fresh = await request(app)
+      .post("/api/sessions/s2/submit")
+      .send({ taskId: "t1", itemId: "item1", rawAnswer: "opt_a" });
+    expect(fresh.status).toBe(200);
+    expect(fresh.body.responses[0].parameterSetId).toBe("ps2");
+    expect(fresh.body.responses[0].parameterSource).toBe("calibrated");
     expect(JSON.stringify(db.compositeLibrary)).toBe(packageBefore);
   });
 });

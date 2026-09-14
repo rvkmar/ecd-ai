@@ -54,6 +54,24 @@ import { activePackageFor, packageEntryFor } from "../compositeLibrary/activePac
    ecdVocabulary.js's own convention (build reference Part 1.1). */
 export const CONTINUOUS_MODEL_FAMILIES = ["irt", "rasch"];
 
+/**
+ * D50 / D68: IRT calibrated parameters are keyed by observableId. Distinct
+ * item difficulties require distinct observables — items that share an
+ * observation correctly share one (a, b). R jobs often key columns by
+ * model.itemIds; if the observable key is absent, fall back to itemId so
+ * an ingested set is not silently unused. When both exist, observable wins.
+ */
+export function calibratedIrtParams(parameterSet, { observableId, itemId } = {}) {
+  const map = parameterSet?.parameters || {};
+  if (observableId && map[observableId]) {
+    return { params: map[observableId], keyedBy: "observableId" };
+  }
+  if (itemId && map[itemId]) {
+    return { params: map[itemId], keyedBy: "itemId" };
+  }
+  return { params: undefined, keyedBy: null };
+}
+
 /* CTT / sum / threshold: a (possibly weighted) raw/observed score rather
    than a posterior over a latent trait. schema.js treats these three as
    one family for decision-rule purposes ("Raw score models cannot use
@@ -1035,7 +1053,11 @@ export function accumulateEvidence(session, db, options = {}) {
         params = r.pilotParams;
         sourceLabel = `response for item '${r.itemId}''s pinned pilot parameters`;
       } else {
-        params = parameterSet?.parameters?.[r.observableId];
+        const resolved = calibratedIrtParams(parameterSet, {
+          observableId: r.observableId,
+          itemId: r.itemId,
+        });
+        params = resolved.params;
         sourceLabel = `parameter set '${parameterSetId}'`;
       }
 

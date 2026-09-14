@@ -876,6 +876,35 @@ describe("accumulateEvidence — reproducibility", () => {
     expect(a.estimate).toBe(b.estimate);
     expect(a.precision).toBe(b.precision);
   });
+
+  it("D50/D68: items that share an observable share calibrated (a, b); distinct observables keep distinct b", () => {
+    const db = makeDb();
+    db.evidenceModels[0].observables.push(
+      { id: "o2", evidenceRule: { direction: "supports", strengthLevel: 4 } }
+    );
+    db.evidenceModels[0].statisticalModels[0].parameterSets[0].parameters = {
+      o1: { a: 1, b: -1 },
+      o2: { a: 1, b: 1 },
+      "i-same-a": { a: 9, b: 9 },
+      "i-same-b": { a: 8, b: 8 },
+    };
+
+    const sharedA = accumulateEvidence(
+      sessionWith([makeResponse({ itemId: "i-same-a", observableId: "o1", observationId: "o1" })]),
+      db
+    ).posteriors[0].estimate;
+    const sharedB = accumulateEvidence(
+      sessionWith([makeResponse({ itemId: "i-same-b", observableId: "o1", observationId: "o1" })]),
+      db
+    ).posteriors[0].estimate;
+    expect(sharedA).toBe(sharedB);
+
+    const distinct = accumulateEvidence(
+      sessionWith([makeResponse({ itemId: "i-o2", observableId: "o2", observationId: "o2" })]),
+      db
+    ).posteriors[0].estimate;
+    expect(distinct).not.toBe(sharedA);
+  });
 });
 
 describe("accumulateEvidence — Day 39 (adversarial review) regression tests", () => {

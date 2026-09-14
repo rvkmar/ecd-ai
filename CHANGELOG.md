@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- D68: calibrated parameters supersede Step 7 / DINA pilots for **new**
+  sessions; an in-flight session freezes to the parameter source (and,
+  if calibrated, the `parameterSetId`) it opened with, so ingest cannot
+  mix pilot with calibrated or two calibrated sets and silently drop the
+  posterior. IRT calibrated lookup is by `observableId` (distinct
+  difficulties are distinct observables), with `itemId` fallback when an
+  R job keyed columns that way. Session schema accepts a still-owned
+  historical set after `activeParameterSetId` moves. Handoff:
+  `claude/day68-calibrated-supersedes-pilot.md`.
+
 - D67: CTT through R. `{ fixture: "lsat7-ctt" }` reuses the published
   Bock & Lieberman (1970) LSAT section-7 matrix (1000×5; same Node
   table as D64, `model.family: "ctt"`). `POST /calibrate/ctt` calls

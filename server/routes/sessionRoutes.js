@@ -13,11 +13,11 @@ import { identifyEvidence } from "../delivery/evidenceIdentification.js";
 import {
   accumulateEvidence,
   applyPosteriorsToSession,
-  CONTINUOUS_MODEL_FAMILIES,
-  RAW_SCORE_MODEL_FAMILIES,
-  itemParametersAreUsable,
 } from "../delivery/evidenceAccumulation.js";
-import { dinaParametersAreUsable } from "../delivery/attributeAccumulation.js";
+import {
+  chooseSubmitParameterBinding,
+  frozenScoringContext,
+} from "../delivery/parameterSourceResolution.js";
 import { resolveAssemblyProgress } from "../delivery/assemblyProgress.js";
 // D56: Activity Selection. /next-task's whole strategy block used to live
 // inline below; it now lives in one module that reads the composite library
@@ -365,73 +365,28 @@ router.post("/:id/submit", async (req, res) => {
     const family = activeStatModel.type;
     const calibratedParameterSetId = activeStatModel.activeParameterSetId || null;
 
-    let parameterSetId = null;
-    let parameterSource = null;
-    // Day 39 (adversarial review, P0-3): a SNAPSHOT of the pilot IRT
-    // parameters actually used to score THIS response, not a live pointer.
-    // The calibrated path is reproducible-by-design -- `parameterSetId`
-    // pins an immutable, versioned parameterSet, so re-resolving it later
-    // always returns the same numbers (Decision 1 in
-    // evidenceAccumulation.js's header). `item.psychometrics.irtParams` has
-    // no such immutability: it is ordinary, editable Item Wizard Step 7
-    // data, and an author can change it at any time. Without pinning it
-    // here, evidenceAccumulation.js re-reads the item's CURRENT pilot
-    // values on every accumulation pass (it recomputes from
-    // session.responses on every call) -- so editing an item's pilot a/b
-    // silently rewrites every past session's historical posterior, with no
-    // record it moved. Persisting the actual numbers used keeps the pilot
-    // path reproducible from the stored response alone, exactly like the
-    // calibrated path already is.
-    let pilotParams = null;
+    // D68: freeze to the opening source for this Evidence Model on THIS
+    // session. A live calibrated set must not retag an in-flight pilot
+    // session (that mixed-source group is refused by accumulation). A
+    // later activeParameterSetId must not retag an in-flight calibrated
+    // session onto a second set (same refusal, mixed parameterSetIds).
+    // New sessions still prefer calibrated over Step 7 / dinaParams pilot.
+    // Day 39 (P0-3) still applies: pilot numbers are snapshotted onto the
+    // response; calibrated numbers are a pointer to the frozen set.
+    const freeze = frozenScoringContext(session, item.evidenceModelId);
+    const binding = chooseSubmitParameterBinding({
+      family,
+      calibratedParameterSetId,
+      item,
+      freeze,
+    });
 
-    if (RAW_SCORE_MODEL_FAMILIES.includes(family)) {
-      // Never needed a calibrated parameterSet; a weighted proportion over
-      // Task Model weights, nothing more.
-      parameterSource = "not-applicable";
-    } else if (calibratedParameterSetId) {
-      parameterSetId = calibratedParameterSetId;
-      parameterSource = "calibrated";
-    } else if (CONTINUOUS_MODEL_FAMILIES.includes(family)) {
-      const currentPilotParams = item.psychometrics?.irtParams;
-
-      if (!itemParametersAreUsable(currentPilotParams)) {
-        return res.status(400).json({
-          error: `Evidence model '${item.evidenceModelId}' has no active calibrated parameter set, and item '${itemId}' carries no usable pilot IRT parameters (psychometrics.irtParams needs at least a > 0 and a finite b) for a '${family}' model to fall back on.`,
-        });
-      }
-
-      parameterSource = "pilot";
-      pilotParams = {
-        a: currentPilotParams.a,
-        b: currentPilotParams.b,
-        ...(Number.isFinite(currentPilotParams.c) ? { c: currentPilotParams.c } : {}),
-      };
-    } else if (family === "dina") {
-      // D53b: the 'dina' analogue of the CONTINUOUS_MODEL_FAMILIES branch
-      // just above -- same fallback, same snapshot-pinning discipline, new
-      // field. 'gdina' deliberately has NO branch here: a saturated
-      // probability table sized to each item's own required-attribute
-      // count is real new authoring surface this unit did not build, so a
-      // 'gdina' item with no calibrated parameter set still falls through
-      // to the honest refusal below, exactly as before D53b.
-      const currentPilotParams = item.psychometrics?.dinaParams;
-
-      if (!dinaParametersAreUsable(currentPilotParams)) {
-        return res.status(400).json({
-          error: `Evidence model '${item.evidenceModelId}' has no active calibrated parameter set, and item '${itemId}' carries no usable pilot DINA parameters (psychometrics.dinaParams needs slip and guess each in [0,1), with guess < 1 - slip) for a '${family}' model to fall back on.`,
-        });
-      }
-
-      parameterSource = "pilot";
-      pilotParams = {
-        slip: currentPilotParams.slip,
-        guess: currentPilotParams.guess,
-      };
-    } else {
-      return res.status(400).json({
-        error: `Evidence model '${item.evidenceModelId}' has no active calibrated parameter set yet; item '${itemId}' cannot be scored through it. Pilot parameters are not yet supported for the '${family}' family.`,
-      });
+    if (binding.error) {
+      const status = freeze.error ? 409 : 400;
+      return res.status(status).json({ error: binding.error });
     }
+
+    const { parameterSource, parameterSetId, pilotParams } = binding;
 
     // Day 30 (adversarial review finding): observationId is only required
     // under strict/confirm-time validation (src/utils/schema.js), so a

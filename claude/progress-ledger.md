@@ -18,17 +18,18 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D67** — CTT through R. Handoff: `claude/day67-ctt-calibration.md`. Prior: D66 sim10GDINA (`claude/day66-sim10gdina.md`); D65 console; D64 LSAT7. |
-| Next queued | Calendar **D68** — calibrated supersedes pilot. Never-compress. Then D69 DIF / D70 equating. |
+| Last completed unit | **D68** — calibrated supersedes pilot (switchover). Handoff: `claude/day68-calibrated-supersedes-pilot.md`. Prior: D67 CTT. |
+| Next queued | Calendar **D69** — DIF / difR. Never-compress. Then D70 equating / W14 close. |
 | Block | **W14** — diagnostics calibration, CTT live, DIF, equating |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ D67: CTT through R in tests/CI (`/calibrate/ctt` no longer a permanent 501). |
-| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. |
+| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. |
 | HEAD at D60 | `bdc88dc` |
 | HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` / `85b43fa` (live `/health` close). |
 | HEAD at D64 | `d27d21b` (#19) |
 | HEAD at D65 | `ce4c71b` (#20) + `3045ff0` (#21 fixture path). W13 close: `claude/day65-w13-close.md`. |
 | HEAD at D66 | `dca6c31` (#22). Close: `claude/day66-sim10gdina.md`. |
-| HEAD at D67 | `4e8881a` (#23). Close: this file + `claude/day67-ctt-calibration.md`. Live CI: [lsat7-pipeline `45de56f`](https://github.com/rvkmar/ecd-ai/actions/runs/34802897124). |
+| HEAD at D67 | `4e8881a` (#23) + close `6dd7357`. Close: `claude/day67-ctt-calibration.md`. Live CI: [lsat7-pipeline `45de56f`](https://github.com/rvkmar/ecd-ai/actions/runs/34802897124). |
+| HEAD at D68 | this close. Close: `claude/day68-calibrated-supersedes-pilot.md`. |
 
 ## Session log
 
@@ -53,6 +54,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-14 | close | — | D66 close at `dca6c31`. Suite 1323 passed / 3 skipped; build green. Live GDINA is CI (not local). Calendar marked. Classification half of the plan exit check restated as not in this pipeline (D79). Next: D67. |
 | 2026-09-14 | D67 | 1, alone | LSAT7 CTT (`{ fixture: "lsat7-ctt" }`, same Bock & Lieberman 1000×5) through enqueue → R `/calibrate/ctt` (`TAM::tam.ctt`) → ingest. Always-run contract stub + live CI on `lsat7-pipeline`. Console binds CTT. No published KR-20 table; difficulty is the published item mean. Suite **1332 passed / 4 skipped**; build green. Live TAM CI green (`TAM 4.3.25`, `converged: true`). |
 | 2026-09-14 | close | — | D67 close at `4e8881a`. Suite re-run **1332 passed / 4 skipped**; build green. Calendar marked. G6 operational lifecycle walk not executed. `classicalCalibration.js` still IRT-shaped. Next: D68. |
+| 2026-09-14 | D68 | 3, alone | Never-compress switchover. In-flight freeze to opening source / parameterSetId. New sessions still take the active calibrated set. D50: IRT keyed by observableId (itemId fallback). Schema no longer requires pointer == current active set. D49c same-session flip test restated. Suite **1350 passed / 4 skipped**. Player regression on `:6060` (`s1789288355960`). |
 
 ## Compression debt
 
@@ -71,6 +73,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D65 | Live operator walk + parameter-set diff UI skipped | Tests + routes; seed password; diff never built | D71 / follow-on | **walk closed 2026-09-13** (coordinator, `job1789319022666002` → `ps1789319081640`). Parameter-set diff UI still open. |
 | D66 | Live GDINA sim10GDINA not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `sim10gdinaPipeline.test.js` | this PR's CI | **closed** — live job green (`GDINA 2.9.12`, `converged: true`, 1000×10; first CI keyed `"Item 1"`, then keyed by request `itemIds`) |
 | D67 | Live TAM LSAT7 CTT not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `cttPipeline.test.js` | this PR's CI | **closed** — live job green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`; observed KR-20 0.4542 recorded, not pinned) |
+| D68 | Live mid-flight ingest + second submit on `:6060` | HTTP switchover tests; player regression only | D71 | open |
 
 Debt against the never-compress list is not permitted. **D60** (this file's real unit) is closed.
 
@@ -83,8 +86,9 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D61 | Posit-dated Dockerfile + committed `renv.lock` | Published `rvkmar/r-backend:latest`; `renv.lock` absent | Pin via live `/health` on that image; Dockerfile is a thin overlay only |
 | D64 | Pin published mirt LSAT7 *a* and *b* in the test with a numeric tolerance | Live path does not pin published coefficient tables. It runs the published **1000×5** matrix through enqueue → `postCalibration` → ingest and asserts `converged: true`, `packageVersion` `/^mirt /`, `sampleSize: 1000`, every `a > 0`, and Item.5 `b` **lower** than Item.4 `b` because p(Item.5)=0.843 and p(Item.4)=0.606 | Restated live check; coefficient-table pin left for a later benchmark tightening (D88) |
 | D66 | Pin recovered G-DINA probabilities **and** attribute-profile classification to published sim10GDINA | Live path asserts `2^k` table lengths from published `simQ`, values in `[0,1]`, and P(all mastered) > P(none); no examinee-class table exists in the package object as used here | Restated item-parameter check; classification left for ADR 0004 / D79 (not dropped). `simItempar` is documented on the fixture and is not the expected output |
-| D67 | Rewrite `classicalCalibration.js` to native CTT; wire the file kind through the import panel; first CTT Evidence Model reaches `operational` | Real calibration path is R jobs. `/calibrate/ctt` was a contract-shaped 501. `ctt-statistics` was already a declared job kind (TAM). `classicalCalibration.js` still emits provisional IRT. `readinessErrorsFor` already only requires *some* parameter set. | TAM `POST /calibrate/ctt` on published LSAT7 as `{ fixture: "lsat7-ctt" }`. Ingest native `{ difficulty, discrimination, n }` + KR-20. Enqueue refuses an IRT bind. File-import rewrite and the operational lifecycle POST were **not** this unit (held for D68 / D71 / D77). |
+| D67 | Rewrite `classicalCalibration.js` to native CTT; wire the file kind through the import panel; first CTT Evidence Model reaches `operational` | Real calibration path is R jobs. `/calibrate/ctt` was a contract-shaped 501. `ctt-statistics` was already a declared job kind (TAM). `classicalCalibration.js` still emits provisional IRT. `readinessErrorsFor` already only requires *some* parameter set. | TAM `POST /calibrate/ctt` on published LSAT7 as `{ fixture: "lsat7-ctt" }`. Ingest native `{ difficulty, discrimination, n }` + KR-20. Enqueue refuses an IRT bind. File-import rewrite and the operational lifecycle POST were **not** this unit (held for D71 / D77). |
 | D67 | Pin published CTT coefficients (KR-20, point-biserial) for a classical dataset | No published KR-20 / rpb table for LSAT7 is in this pipeline. CTT difficulty **is** the published item mean (definitional). Live path asserts those means, Item.5 p > Item.4 p, rpb in (0,1), KR-20 in (0,1), `packageVersion` `/^TAM /` | Restated reliability / discrimination check; difficulty identity kept. Tightening is D88-class if a table is later sourced |
+| D68 | Wire calibrated values through Item Wizard Step 7; re-verify D39 P0-3 on switchover | Calibrated already won on submit/selection for new work. The hole was the *next* submit on an in-flight session mixing sources/sets. Schema required `parameterSetId === activeParameterSetId`, which itself blocked a frozen historical pointer. D49c required the mix. | Freeze per EM to opening source + opening set. New sessions still prefer calibrated. IRT keyed by observableId (itemId fallback). Schema: set must still exist, need not be active. D49c restated to a new session. |
 
 ## Carried-forward gaps
 

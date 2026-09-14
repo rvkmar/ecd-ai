@@ -3999,11 +3999,20 @@ export function validateEntity(collection, obj, db = null, options = {}) {
                 `Session response for evidence ${r.evidenceModelId} missing parameterSetId.`
               );
             } else {
-              const sm = evidence.statisticalModels?.find(
-                sm => sm.active
-              );
-
-              if (!sm || sm.activeParameterSetId !== r.parameterSetId) {
+              // D68: the pointer must resolve to a set that still exists on
+              // the Evidence Model. It must NOT be required to equal the
+              // currently active set — that would reject (or force a mixed
+              // retag of) every in-flight session the moment ingest flips
+              // activeParameterSetId, which is exactly the quiet rescoring
+              // hole this unit closes.
+              const models = evidence.statisticalModels || [];
+              const hasListedSets = models.some((sm) => (sm.parameterSets || []).length > 0);
+              const owned = hasListedSets
+                ? models.some((sm) =>
+                    (sm.parameterSets || []).some((ps) => ps.parameterSetId === r.parameterSetId)
+                  )
+                : models.some((sm) => sm.activeParameterSetId === r.parameterSetId);
+              if (!owned) {
                 errors.push(
                   `Session response parameterSetId mismatch for evidence ${r.evidenceModelId}.`
                 );
