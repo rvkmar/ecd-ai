@@ -18,10 +18,10 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D69** — DIF through R (`difR::difMH`, planted Item.5 unique ETS C in CI). Handoff: `claude/day69-dif-analysis.md`. Prior: D68 switchover. |
-| Next queued | Calendar **D70** — equating / W14 close. Never-compress. |
-| Block | **W14** — diagnostics calibration, CTT live, DIF, equating |
-| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ D69: planted DIF unique-item flag in CI. Equating still 501. |
+| Last completed unit | **D70** — equating through R (`plink::plink` Mean/Sigma after mirt Rasch; known-equating recovers slope 1 / intercept −0.5 locally). Handoff: `claude/day70-equating.md`. Prior: D69 DIF. |
+| Next queued | Calendar **D71** — full core browser pass (W15). Never treat as thin. |
+| Block | **W14** closed. Next block **W15** — four-role live sign-off |
+| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
 | HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` / `85b43fa` (live `/health` close). |
@@ -31,6 +31,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D67 | `4e8881a` (#23) + close `6dd7357`. Close: `claude/day67-ctt-calibration.md`. Live CI: [lsat7-pipeline `45de56f`](https://github.com/rvkmar/ecd-ai/actions/runs/34802897124). |
 | HEAD at D68 | product `c4e5d77` + close `8a5ff65` + D68 completed verification commit. Close: `claude/day68-calibrated-supersedes-pilot.md`. |
 | HEAD at D69 | product `a66c475` + ETS-C `2d602bb` + `alphaMH` delta `56de11d` + this close. Close: `claude/day69-dif-analysis.md`. Live CI: [lsat7-pipeline `56de11d`](https://github.com/rvkmar/ecd-ai/actions/runs/34810924755). |
+| HEAD at D70 | first pass `0a2ff01` (hand Mean/Sigma) + plink `b96511a` + this close. Close: `claude/day70-equating.md`. Live path: local `:4000` (`plink` 1.5.1), not Hub CI. |
 
 ## Session log
 
@@ -59,6 +60,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-14 | close | — | D68 close verification. Suite re-run **1349 passed / 4 skipped** (one fewer than product-commit 1350; recorded as-run). Build green 30.45s. Calendar already ✅. Live mid-flight ingest still D71. Next: D69. |
 | 2026-09-14 | D69 | 1, alone | Premise rewritten: job kind already existed. Wired `/calibrate/dif`, groups, artefact ingest, planted-dif CI. First live CI overflagged at MH p < 0.05; ETS C with missing `deltaMH` field underflagged; unique C from `-2.35 * log(alphaMH)` passed. |
 | 2026-09-14 | close | — | D69 close. Suite **1357 passed / 5 skipped**; build 28.50s. Live planted DIF green on `56de11d`. Calendar marked. Next: D70. |
+| 2026-09-14 | D70 | 1, alone | Premise rewritten twice: job kind existed; Hub lacked equate/plink so first pass was mirt Mean/Sigma; local rebuild then `plink::plink`. Known-equating recovered locally. |
+| 2026-09-14 | close | — | D70 close. Suite **1371 passed**; build 37.55s. Live plink on `:4000`. Calendar marked. Next: D71. Hub image publish still open. |
 
 ## Compression debt
 
@@ -79,6 +82,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D67 | Live TAM LSAT7 CTT not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `cttPipeline.test.js` | this PR's CI | **closed** — live job green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`; observed KR-20 0.4542 recorded, not pinned) |
 | D68 | Live mid-flight ingest + second submit on `:6060` | HTTP switchover tests; player regression only | D71 | open |
 | D69 | Live difR planted-item flags not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `difPipeline.test.js` | this PR's CI | **closed** — live job green (`difR 6.1.0`, unique ETS C on Item.5; first two live runs failed the unique-item rule, recorded in the handoff) |
+| D70 | Live known-equating not executed against Hub `rvkmar/r-backend:latest` | Local `:4000` has equate 2.0.9 / plink 1.5.1; CI still pulls Hub | Docker Hub push of the rebuilt image | **open** — local exit check closed; GitHub live equating waits on Hub |
 
 Debt against the never-compress list is not permitted. **D60** (this file's real unit) is closed.
 
@@ -95,6 +99,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D67 | Pin published CTT coefficients (KR-20, point-biserial) for a classical dataset | No published KR-20 / rpb table for LSAT7 is in this pipeline. CTT difficulty **is** the published item mean (definitional). Live path asserts those means, Item.5 p > Item.4 p, rpb in (0,1), KR-20 in (0,1), `packageVersion` `/^TAM /` | Restated reliability / discrimination check; difficulty identity kept. Tightening is D88-class if a table is later sourced |
 | D68 | Wire calibrated values through Item Wizard Step 7; re-verify D39 P0-3 on switchover | Calibrated already won on submit/selection for new work. The hole was the *next* submit on an in-flight session mixing sources/sets. Schema required `parameterSetId === activeParameterSetId`, which itself blocked a frozen historical pointer. D49c required the mix. | Freeze per EM to opening source + opening set. New sessions still prefer calibrated. IRT keyed by observableId (itemId fallback). Schema: set must still exist, need not be active. D49c restated to a new session. |
 | D69 | Wire `difR` as a job kind; unique planted-item flag in CI at a stated tolerance | `dif-analysis` / package `difR` already declared. No `/calibrate/dif`, no groups, no artefact ingest. Unadjusted MH p < 0.05 is not unique on this 8-item matrix. `difR` stores `alphaMH`, not `deltaMH`. | R path + groups + artefact ingest. Stated tolerance is ETS C from `-2.35 * log(alphaMH)`. Unique Item.5 in CI on `56de11d`. |
+| D70 | Wire equate / plink as a job kind; recover a known transformation in CI | `equating` already declared. No `/calibrate/equating`, no `forms`, no fixture. Hub image lacked `equate` and `plink`. | Seeded NEAT fixture + R path + artefact ingest. First pass hand Mean/Sigma on mirt (`0a2ff01`). After local image rebuild, operational constants from `plink::plink` Mean/Sigma (`b96511a`). Tolerance slope 1 ± 0.2, intercept −0.5 ± 0.3. Live check executed on local `:4000`, not Hub. |
 
 ## Carried-forward gaps
 
