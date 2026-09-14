@@ -1,6 +1,6 @@
 # modules/calibrate.R
-# ADR 0002 calibration endpoints. IRT (mirt) is implemented here; DINA and
-# CTT return a contract-shaped 501 until D66 / D67.
+# ADR 0002 calibration endpoints. IRT (mirt) and DINA/G-DINA (GDINA)
+# are implemented here. CTT returns a contract-shaped 501 until D67.
 # Null in the response matrix means not administered, never 0.
 
 .parse_json_body <- function(req) {
@@ -61,17 +61,28 @@ calibrate_dispatch <- function(req, res, family) {
   }
 
   requested_family <- .as_char(body$model$family)
-  if (!identical(requested_family, family)) {
-    res$status <- 400
-    return(.failure(
-      body$jobId,
-      paste0("This endpoint calibrates family '", family, "', not '", requested_family, "'"),
-      "FamilyMismatch"
-    ))
+  if (identical(family, "irt")) {
+    if (!identical(requested_family, "irt")) {
+      res$status <- 400
+      return(.failure(
+        body$jobId,
+        paste0("This endpoint calibrates family 'irt', not '", requested_family, "'"),
+        "FamilyMismatch"
+      ))
+    }
+    return(calibrate_irt(body, res))
   }
 
-  if (identical(family, "irt")) {
-    return(calibrate_irt(body, res))
+  if (family %in% c("dina", "gdina")) {
+    if (!requested_family %in% c("dina", "gdina")) {
+      res$status <- 400
+      return(.failure(
+        body$jobId,
+        paste0("This endpoint calibrates family 'dina' or 'gdina', not '", requested_family, "'"),
+        "FamilyMismatch"
+      ))
+    }
+    return(calibrate_diagnostic(body, res))
   }
 
   res$status <- 501
@@ -243,6 +254,189 @@ calibrate_irt <- function(body, res) {
     diagnostics = list(
       iterations = tryCatch(mirt::extract.mirt(fit, "iterations"), error = function(e) NA_integer_),
       elapsedSeconds = elapsed,
+      warnings = as.list(warnings_acc)
+    )
+  )
+}
+
+calibrate_diagnostic <- function(body, res) {
+  if (!requireNamespace("GDINA", quietly = TRUE)) {
+    res$status <- 500
+    return(.failure(body$jobId, "Package GDINA is not installed", "MissingPackage"))
+  }
+  suppressPackageStartupMessages(library(GDINA, quietly = TRUE))
+
+  started <- proc.time()[["elapsed"]]
+  stderr_lines <- character(0)
+  warnings_acc <- character(0)
+
+  opts <- body$options
+  .first <- function(x) unlist(x, use.names = FALSE)[[1]]
+  max_iter <- if (!is.null(opts$maxIterations)) as.integer(.first(opts$maxIterations)) else 2000L
+  if (is.na(max_iter) || max_iter < 1) max_iter <- 2000L
+  tol <- if (!is.null(opts$convergenceTolerance)) as.numeric(.first(opts$convergenceTolerance)) else 1e-4
+  if (is.na(tol) || tol <= 0) tol <- 1e-4
+  seed <- as.integer(.first(opts$seed))
+  family <- .as_char(body$model$family)
+  gdina_model <- if (identical(family, "dina")) "DINA" else "GDINA"
+
+  resp_df <- tryCatch(
+    response_matrix_to_df(body$responseMatrix),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(resp_df)) {
+    res$status <- 400
+    return(.failure(body$jobId, "Could not coerce responseMatrix.data", "MatrixError", paste(stderr_lines, collapse = "\n")))
+  }
+
+  Q <- tryCatch(
+    q_matrix_to_matrix(body$qMatrix),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(Q)) {
+    res$status <- 400
+    return(.failure(body$jobId, "Could not coerce qMatrix.data", "MatrixError", paste(stderr_lines, collapse = "\n")))
+  }
+
+  message(sprintf(
+    "calibrate_diagnostic job=%s family=%s dim=%dx%d Q=%dx%d model=%s",
+    .as_char(body$jobId), family, nrow(resp_df), ncol(resp_df), nrow(Q), ncol(Q), gdina_model
+  ))
+
+  set.seed(seed)
+
+  .run_gdina <- function() {
+    GDINA::GDINA(
+      dat = resp_df,
+      Q = Q,
+      model = gdina_model,
+      verbose = 0,
+      control = list(
+        maxitr = max_iter,
+        conv.crit = tol,
+        randomseed = seed
+      )
+    )
+  }
+
+  fit_try <- try(.run_gdina(), silent = TRUE)
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    fit_try <- try(GDINA::GDINA(dat = resp_df, Q = Q, model = gdina_model, verbose = 0), silent = TRUE)
+  }
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    fit <- NULL
+  } else {
+    fit <- fit_try
+  }
+
+  elapsed <- proc.time()[["elapsed"]] - started
+  pkg_ver <- paste("GDINA", as.character(utils::packageVersion("GDINA")))
+
+  if (is.null(fit)) {
+    res$status <- 200
+    dim_note <- sprintf(" [%dx%d]", nrow(resp_df), ncol(resp_df))
+    return(.failure(
+      body$jobId,
+      if (length(stderr_lines)) {
+        paste0(paste(stderr_lines, collapse = "; "), dim_note)
+      } else {
+        paste0("GDINA failed to fit", dim_note)
+      },
+      "GDINAError",
+      paste(stderr_lines, collapse = "\n")
+    ))
+  }
+
+  conv_raw <- tryCatch(GDINA::extract(fit, what = "convergence"), error = function(e) FALSE)
+  if (length(conv_raw) != 1 || is.na(conv_raw)) {
+    itr <- tryCatch(as.integer(fit$options$itr), error = function(e) NA_integer_)
+    conv_raw <- is.finite(itr) && itr < max_iter
+  }
+  converged <- isTRUE(conv_raw)
+
+  if (!converged) {
+    res$status <- 200
+    out <- .failure(
+      body$jobId,
+      paste0(gdina_model, " did not converge"),
+      "NotConverged",
+      paste(stderr_lines, collapse = "\n")
+    )
+    out$packageVersion <- pkg_ver
+    out$sampleSize <- nrow(resp_df)
+    out$calibratedAt <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+    out$diagnostics <- list(
+      iterations = tryCatch(as.integer(fit$options$itr), error = function(e) NA_integer_),
+      elapsedSeconds = elapsed,
+      model = gdina_model,
+      warnings = as.list(warnings_acc)
+    )
+    return(out)
+  }
+
+  catprob <- tryCatch(
+    GDINA::extract(fit, what = "catprob.parm"),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(catprob) || length(catprob) == 0) {
+    res$status <- 200
+    return(.failure(body$jobId, "Unable to extract DINA/G-DINA category probabilities", "ExtractError", paste(stderr_lines, collapse = "\n")))
+  }
+
+  item_ids <- names(catprob)
+  if (is.null(item_ids) || !any(nzchar(item_ids))) {
+    item_ids <- colnames(resp_df)
+  }
+
+  parameters <- list()
+  for (i in seq_along(catprob)) {
+    id <- item_ids[[i]]
+    probs <- as.numeric(unname(catprob[[i]]))
+    if (identical(family, "dina")) {
+      guess <- probs[[1]]
+      slip <- 1 - probs[[length(probs)]]
+      parameters[[id]] <- list(guess = as.numeric(guess), slip = as.numeric(slip))
+    } else {
+      parameters[[id]] <- list(probabilities = as.numeric(probs))
+    }
+  }
+
+  fit_stats <- tryCatch({
+    list(
+      AIC = as.numeric(AIC(fit)),
+      BIC = as.numeric(BIC(fit)),
+      logLik = as.numeric(logLik(fit)),
+      deviance = as.numeric(deviance(fit))
+    )
+  }, error = function(e) {
+    list(note = conditionMessage(e))
+  })
+
+  list(
+    contractVersion = CALIBRATION_CONTRACT_VERSION,
+    jobId = .as_char(body$jobId),
+    converged = TRUE,
+    packageVersion = pkg_ver,
+    sampleSize = nrow(resp_df),
+    calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    parameters = parameters,
+    standardErrors = NULL,
+    fitStatistics = fit_stats,
+    diagnostics = list(
+      iterations = tryCatch(as.integer(fit$options$itr), error = function(e) NA_integer_),
+      elapsedSeconds = elapsed,
+      model = gdina_model,
       warnings = as.list(warnings_acc)
     )
   )

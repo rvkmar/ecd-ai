@@ -67,7 +67,13 @@ api$handle("POST", "/calibrate/irt", function(req, res) {
 }, serializer = .json_unboxed)
 
 api$handle("POST", "/calibrate/dina", function(req, res) {
-  calibrate_not_implemented(req, res, family = "dina", day = "D66")
+  calibrate_dispatch(req, res, family = "dina")
+}, serializer = .json_unboxed)
+
+# Same worker as /calibrate/dina. The job kind dina-parameters posts
+# here when model.family is gdina; both families share GDINA::GDINA.
+api$handle("POST", "/calibrate/gdina", function(req, res) {
+  calibrate_dispatch(req, res, family = "gdina")
 }, serializer = .json_unboxed)
 
 api$handle("POST", "/calibrate/ctt", function(req, res) {

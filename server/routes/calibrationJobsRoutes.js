@@ -19,7 +19,7 @@ import { isDeclaredJobKind } from "../r/calibrationContract.js";
 import {
   applyNamedCalibrationFixture,
   CALIBRATION_NAMED_FIXTURES,
-} from "../r/lsat7Fixture.js";
+} from "../r/calibrationFixtures.js";
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -70,7 +70,7 @@ router.post("/", canAuthor, (req, res) => {
 
   let incoming;
   try {
-    incoming = applyNamedCalibrationFixture(req.body);
+    incoming = applyNamedCalibrationFixture(req.body, db);
   } catch (err) {
     if (err?.code === "UNKNOWN_CALIBRATION_FIXTURE") {
       return res.status(400).json({

@@ -187,6 +187,12 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
               <dt className="text-muted-foreground">Item ids</dt>
               <dd>{summary.itemIds.join(", ") || "—"}</dd>
             </div>
+            {summary.attributeIds.length > 0 && (
+              <div className="md:col-span-2">
+                <dt className="text-muted-foreground">Q-matrix attributes</dt>
+                <dd>{summary.attributeIds.join(", ")}</dd>
+              </div>
+            )}
           </dl>
         ) : (
           <p className="text-sm text-muted-foreground">No request envelope on this job.</p>

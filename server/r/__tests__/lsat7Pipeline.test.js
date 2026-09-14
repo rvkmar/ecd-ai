@@ -22,7 +22,7 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../../config/jwt.js";
 import { processJobById } from "../calibrationWorker.js";
 import { postCalibration, getRHealth } from "../rClient.js";
-import { applyNamedCalibrationFixture } from "../lsat7Fixture.js";
+import { applyNamedCalibrationFixture } from "../calibrationFixtures.js";
 import { validateCalibrationRequest, CALIBRATION_CONTRACT_VERSION } from "../calibrationContract.js";
 
 const tokenFor = (role) =>
@@ -118,10 +118,15 @@ describe("LSAT7 fixture is the published matrix", () => {
     // Do not import the resolved path from the module — repoGuards treats
     // a test-only export as a dead production export (F4).
     const loaderSrc = fs.readFileSync(path.resolve(here, "../lsat7Fixture.js"), "utf8");
+    const dispatcherSrc = fs.readFileSync(
+      path.resolve(here, "../calibrationFixtures.js"),
+      "utf8"
+    );
     expect(loaderSrc).toMatch(
       /path\.resolve\(\s*here,\s*["']fixtures\/lsat7-frequency-table\.json["']\s*\)/
     );
     expect(loaderSrc).not.toMatch(/path\.resolve\([^)]*r-backend/);
+    expect(dispatcherSrc).not.toMatch(/path\.resolve\([^)]*r-backend/);
     expect(fs.existsSync(LSAT7_NODE_TABLE_PATH)).toBe(true);
     expect(LSAT7_NODE_TABLE_PATH.replace(/\\/g, "/")).toMatch(
       /\/server\/r\/fixtures\/lsat7-frequency-table\.json$/

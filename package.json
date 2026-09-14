@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:lsat7": "vitest run server/r/__tests__/lsat7Pipeline.test.js",
+    "test:sim10gdina": "vitest run server/r/__tests__/sim10gdinaPipeline.test.js",
     "migrate": "node server/migrations/run.js",
     "migrate:dry-run": "node server/migrations/run.js --dry-run",
     "storybook": "storybook dev -p 6006",
