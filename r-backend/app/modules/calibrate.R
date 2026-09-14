@@ -801,14 +801,25 @@ calibrate_dif <- function(body, res) {
   }
 
   parameters <- list()
+  c_flagged <- character(0)
   for (i in seq_along(request_item_ids)) {
     id <- request_item_ids[[i]]
+    p_i <- as.numeric(p_values[[i]])
+    a_i <- if (length(alpha_mh) >= i) as.numeric(alpha_mh[[i]]) else NA_real_
+    d_i <- if (length(delta_mh) >= i) as.numeric(delta_mh[[i]]) else NA_real_
+    abs_d <- if (is.finite(d_i)) abs(d_i) else NA_real_
+    ets <- if (!is.finite(abs_d)) "unclassified" else if (abs_d < 1) "A" else if (abs_d < 1.5) "B" else "C"
+    # Stated tolerance (D69): a flag is ETS C (|deltaMH| >= 1.5), not
+    # unadjusted MH p < 0.05. Eight tests at alpha=0.05 overflag.
+    is_flag <- identical(ets, "C")
+    if (is_flag) c_flagged <- c(c_flagged, id)
     parameters[[id]] <- list(
-      statistic = as.numeric(p_values[[i]]),
-      pValue = as.numeric(p_values[[i]]),
-      alphaMH = if (length(alpha_mh) >= i) as.numeric(alpha_mh[[i]]) else NA_real_,
-      deltaMH = if (length(delta_mh) >= i) as.numeric(delta_mh[[i]]) else NA_real_,
-      flag = id %in% flagged_ids,
+      statistic = p_i,
+      pValue = p_i,
+      alphaMH = a_i,
+      deltaMH = d_i,
+      etsClass = ets,
+      flag = is_flag,
       method = "Mantel-Haenszel",
       pair = paste0(grouped$focal, " vs ", grouped$reference)
     )
@@ -850,7 +861,7 @@ calibrate_dif <- function(body, res) {
       nPersons = nrow(resp_df),
       nReference = as.integer(sum(grouped$codes == 0L)),
       nFocal = as.integer(sum(grouped$codes == 1L)),
-      nFlagged = length(flagged_ids),
+      nFlagged = length(c_flagged),
       alpha = alpha
     ),
     diagnostics = list(
@@ -859,7 +870,9 @@ calibrate_dif <- function(body, res) {
       method = "difR::difMH",
       purification = FALSE,
       continuityCorrection = TRUE,
-      flaggedItemIds = as.list(flagged_ids),
+      flaggedItemIds = as.list(c_flagged),
+      mhSignificantItemIds = as.list(flagged_ids),
+      flagRule = "ETS C: |deltaMH| >= 1.5 (Holland and Thayer / ETS). Unadjusted MH p < 0.05 is recorded, not the operational flag.",
       reference = grouped$reference,
       focal = grouped$focal,
       note = "A DIF flag is a prompt to investigate an item, not a finding about a group of students.",

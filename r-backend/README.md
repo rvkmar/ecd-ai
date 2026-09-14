@@ -76,8 +76,8 @@ pipeline. Ingest still refuses `converged: false`.
 
 `{ fixture: "planted-dif" }` expands a seeded 800-person × 8-item
 Rasch matrix in Node (`server/r/plantedDifFixture.js`, seed 20261201).
-The focal group answers Item.5 against a difficulty shifted +1.75
+The focal group answers Item.5 against a difficulty shifted +2.5
 logits; ability is N(0,1) in both groups. `POST /calibrate/dif` calls
-`difR::difMH` (Mantel-Haenszel, alpha 0.05, no purification). Ingest
-writes `analysisArtefacts[]` on the evidence model. DIF informs; it
-does not authorise a parameter set.
+`difR::difMH` (Mantel-Haenszel, alpha 0.05, no purification). The
+operational flag is ETS C (`|deltaMH| >= 1.5`), because unadjusted
+MH p < 0.05 overflagged Item.1 and Item.4 on the first live CI.

@@ -77,6 +77,7 @@ function difContractStub(jobId, itemIds) {
       pValue: planted ? 0.0001 : 0.4,
       alphaMH: planted ? 3 : 1,
       deltaMH: planted ? -2.4 : 0,
+      etsClass: planted ? "C" : "A",
       flag: planted,
       method: "Mantel-Haenszel",
       pair: "focal vs reference",
@@ -324,11 +325,13 @@ describe.skipIf(!live)("planted DIF live R pipeline", () => {
       .filter(([, p]) => p.flag === true)
       .map(([id]) => id);
     expect(flagged, liveDump).toEqual([PLANTED_ITEM]);
-    expect(job.response.parameters[PLANTED_ITEM].pValue).toBeLessThan(0.05);
+    expect(job.response.parameters[PLANTED_ITEM].etsClass).toBe("C");
+    expect(Math.abs(job.response.parameters[PLANTED_ITEM].deltaMH)).toBeGreaterThanOrEqual(1.5);
     expect(job.response.parameters[PLANTED_ITEM].method).toBe("Mantel-Haenszel");
     for (const id of Object.keys(job.response.parameters).filter((x) => x !== PLANTED_ITEM)) {
       expect(job.response.parameters[id].flag, `${id} should not be flagged`).toBe(false);
-      expect(job.response.parameters[id].pValue).toBeGreaterThan(0.05);
+      expect(job.response.parameters[id].etsClass, `${id} should not be ETS C`).not.toBe("C");
+      expect(Math.abs(job.response.parameters[id].deltaMH)).toBeLessThan(1.5);
     }
 
     const ingested = await request(app)

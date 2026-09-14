@@ -9,8 +9,10 @@
 //   nRef / nFocal   400 / 400 (equal ability: theta ~ N(0,1) in both)
 //   items           Item.1 … Item.8
 //   Rasch b         [-1.4, -1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.4]
-//   planted         Item.5 (column 4): focal group answers against b+1.75
+//   planted         Item.5 (column 4): focal group answers against b+2.5
 //                   (uniform DIF). Reference uses the listed b.
+//   flag            ETS C (|deltaMH| >= 1.5). Unadjusted MH p < 0.05 overflagged
+//                   Item.1 and Item.4 on the first live CI (a66c475).
 //   P(u=1)          1 / (1 + exp(-(theta - b_used)))
 //
 // Groups travel on the ADR 0002 request as `groups` (focal/reference
@@ -33,7 +35,7 @@ const PLANTED_DIF_ITEM_IDS = [
   "Item.8",
 ];
 const PLANTED_DIF_B = [-1.4, -1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.4];
-const PLANTED_DIF_FOCAL_SHIFT = 1.75;
+const PLANTED_DIF_FOCAL_SHIFT = 2.5;
 const PLANTED_DIF_REFERENCE = "reference";
 const PLANTED_DIF_FOCAL = "focal";
 

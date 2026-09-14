@@ -11,9 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - D69: DIF through R (`difR::difMH`). `{ fixture: "planted-dif" }` is a
   seeded 800×8 Rasch matrix (seed 20261201) with one planted uniform
-  DIF item (`Item.5`, focal difficulty shifted +1.75). Groups travel on
+  DIF item (`Item.5`, focal difficulty shifted +2.5). Groups travel on
   the ADR 0002 envelope. `POST /calibrate/dif` returns per-item
-  statistic, p-value, flag and method. Ingest writes an analysis
+  statistic, p-value, ETS class, flag and method. The operational flag
+  is ETS C (`|deltaMH| ≥ 1.5`). Ingest writes an analysis
   artefact on the evidence model, not a parameter set. Live CI
   (`lsat7-pipeline`) must flag Item.5 and only Item.5. Always-run tests
   use a labeled contract stub.

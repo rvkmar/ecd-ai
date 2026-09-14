@@ -73,7 +73,7 @@ export const NAMED_CALIBRATION_FIXTURES = [
       "No evidence model has an IRT or Rasch statistical model to bind. Author one before enqueueing planted DIF.",
     successToast: "Planted DIF analysis job queued.",
     description:
-      "Seeded 800×8 Rasch matrix (seed 20261201) with one planted uniform DIF item (Item.5, focal b shifted +1.75). Bound to an IRT model for provenance only — ingest writes an analysis artefact, not a parameter set. Live CI runs difR::difMH and must flag Item.5 only.",
+      "Seeded 800×8 Rasch matrix (seed 20261201) with one planted uniform DIF item (Item.5, focal b shifted +2.5). Flag is ETS C (|deltaMH| ≥ 1.5), not unadjusted MH p < 0.05. Bound to an IRT model for provenance only — ingest writes an analysis artefact, not a parameter set. Live CI runs difR::difMH and must flag Item.5 only.",
   },
 ];
 
