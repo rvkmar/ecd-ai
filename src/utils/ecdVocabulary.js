@@ -559,7 +559,7 @@ export const CALIBRATION_JOB_KINDS = [
   { value: "dina-parameters", label: "DINA/G-DINA Parameters", package: "GDINA", ingests: "parameterSets", statisticalModelTypes: ["dina", "gdina"] },
   { value: "ctt-statistics", label: "CTT Statistics", package: "TAM", ingests: "parameterSets", statisticalModelTypes: ["ctt"] },
   { value: "dif-analysis", label: "DIF Analysis", package: "difR", ingests: "analysisArtefact", statisticalModelTypes: ["irt", "rasch"] },
-  { value: "equating", label: "Equating", package: "mirt", ingests: "analysisArtefact", statisticalModelTypes: ["irt", "rasch"] },
+  { value: "equating", label: "Equating", package: "plink", ingests: "analysisArtefact", statisticalModelTypes: ["irt", "rasch"] },
   { value: "item-analysis", label: "Item Analysis", package: "mirt", ingests: "analysisArtefact", statisticalModelTypes: [] },
   { value: "test-information", label: "Test Information", package: "mirt", ingests: "analysisArtefact", statisticalModelTypes: [] },
 ];

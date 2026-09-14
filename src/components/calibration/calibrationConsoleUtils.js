@@ -90,7 +90,7 @@ export const NAMED_CALIBRATION_FIXTURES = [
       "No evidence model has an IRT or Rasch statistical model to bind. Author one before enqueueing known equating.",
     successToast: "Known-equating analysis job queued.",
     description:
-      "Seeded NEAT common-item design (seed 20261202): 400 Form X + 400 Form Y, 6 common items, Form Y generated 0.5 logits harder. Live CI runs two mirt Rasch calibrations and Mean/Sigma linking (equate/plink are not on the published image). Recovers slope 1 and intercept −0.5 within stated tolerances. Ingest writes an analysis artefact, not a parameter set.",
+      "Seeded NEAT common-item design (seed 20261202): 400 Form X + 400 Form Y, 6 common items, Form Y generated 0.5 logits harder. Live path estimates Rasch b with mirt then links with plink::plink Mean/Sigma. Recovers slope 1 and intercept −0.5 within stated tolerances. Ingest writes an analysis artefact, not a parameter set.",
   },
 ];
 

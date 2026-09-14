@@ -2,7 +2,7 @@
 # GET /health reports exact running package versions (ADR 0002 provenance).
 # Versions are read from the session, never hardcoded.
 
-HEALTH_PACKAGES <- c("mirt", "GDINA", "TAM", "difR", "plumber", "jsonlite")
+HEALTH_PACKAGES <- c("mirt", "GDINA", "TAM", "difR", "equate", "plink", "plumber", "jsonlite")
 
 # jsonlite is a declared runtime package (see Dockerfile /health). Used
 # here only to unbox length-1 character vectors in the payload.

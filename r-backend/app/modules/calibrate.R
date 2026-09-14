@@ -952,12 +952,54 @@ calibrate_dif <- function(body, res) {
   colnames(resp_df)[keep]
 }
 
+.plink_mean_sigma <- function(b_x, x_ids, b_y, y_ids, common_ids) {
+  n_x <- length(x_ids)
+  n_y <- length(y_ids)
+  pars_x <- cbind(
+    a = rep(1, n_x),
+    b = as.numeric(b_x[x_ids]),
+    c = rep(0, n_x)
+  )
+  pars_y <- cbind(
+    a = rep(1, n_y),
+    b = as.numeric(b_y[y_ids]),
+    c = rep(0, n_y)
+  )
+  rownames(pars_x) <- x_ids
+  rownames(pars_y) <- y_ids
+  common <- cbind(match(common_ids, x_ids), match(common_ids, y_ids))
+  if (any(is.na(common))) {
+    stop("common items missing from a form's estimated b vector")
+  }
+  obj <- plink::as.irt.pars(
+    list(pars_x, pars_y),
+    common,
+    list(rep(2L, n_x), rep(2L, n_y)),
+    list(plink::as.poly.mod(n_x, "drm"), plink::as.poly.mod(n_y, "drm")),
+    grp.names = c("X", "Y")
+  )
+  out <- plink::plink(obj, rescale = "MS")
+  con <- plink::link.con(out)
+  if (is.list(con)) con <- con[[1]]
+  row <- con["Mean/Sigma", ]
+  list(
+    slope = as.numeric(row[["A"]]),
+    intercept = as.numeric(row[["B"]]),
+    constants = con
+  )
+}
+
 calibrate_equating <- function(body, res) {
   if (!requireNamespace("mirt", quietly = TRUE)) {
     res$status <- 500
     return(.failure(body$jobId, "Package mirt is not installed", "MissingPackage"))
   }
+  if (!requireNamespace("plink", quietly = TRUE)) {
+    res$status <- 500
+    return(.failure(body$jobId, "Package plink is not installed", "MissingPackage"))
+  }
   suppressPackageStartupMessages(library(mirt, quietly = TRUE))
+  suppressPackageStartupMessages(library(plink, quietly = TRUE))
 
   started <- proc.time()[["elapsed"]]
   stderr_lines <- character(0)
@@ -1004,7 +1046,7 @@ calibrate_equating <- function(body, res) {
   }
 
   message(sprintf(
-    "calibrate_equating job=%s dim=%dx%d method=mean-sigma mirt Rasch",
+    "calibrate_equating job=%s dim=%dx%d method=plink Mean/Sigma",
     .as_char(body$jobId), nrow(resp_df), ncol(resp_df)
   ))
 
@@ -1024,7 +1066,8 @@ calibrate_equating <- function(body, res) {
     silent = TRUE
   )
   elapsed <- proc.time()[["elapsed"]] - started
-  pkg_ver <- paste("mirt", as.character(utils::packageVersion("mirt")))
+  pkg_ver <- paste("plink", as.character(utils::packageVersion("plink")))
+  mirt_ver <- paste("mirt", as.character(utils::packageVersion("mirt")))
 
   if (inherits(x_fit, "try-error") || inherits(y_fit, "try-error")) {
     err <- if (inherits(x_fit, "try-error")) x_fit else y_fit
@@ -1079,8 +1122,25 @@ calibrate_equating <- function(body, res) {
     ))
   }
 
-  slope <- sd_x / sd_y
-  intercept <- mean(b_x) - slope * mean(b_y)
+  linked <- try(
+    .plink_mean_sigma(x_fit$b, x_items, y_fit$b, y_items, common_ids),
+    silent = TRUE
+  )
+  if (inherits(linked, "try-error")) {
+    res$status <- 200
+    return(.failure(
+      body$jobId,
+      paste(c("plink failed to link the forms", as.character(linked)), collapse = "\n"),
+      "plinkError",
+      paste(stderr_lines, collapse = "\n")
+    ))
+  }
+  slope <- linked$slope
+  intercept <- linked$intercept
+  if (!is.finite(slope) || !is.finite(intercept)) {
+    res$status <- 200
+    return(.failure(body$jobId, "plink Mean/Sigma constants were not finite", "ExtractError"))
+  }
 
   common <- list()
   for (i in seq_along(common_ids)) {
@@ -1090,6 +1150,17 @@ calibrate_equating <- function(body, res) {
       bY = b_y[[i]],
       bYOnX = slope * b_y[[i]] + intercept
     )
+  }
+
+  extra_methods <- list()
+  if (!is.null(linked$constants) && is.matrix(linked$constants)) {
+    rn <- rownames(linked$constants)
+    for (i in seq_len(nrow(linked$constants))) {
+      extra_methods[[rn[[i]]]] <- list(
+        slope = as.numeric(linked$constants[i, "A"]),
+        intercept = as.numeric(linked$constants[i, "B"])
+      )
+    }
   }
 
   list(
@@ -1120,12 +1191,14 @@ calibrate_equating <- function(body, res) {
       iterationsX = x_fit$iterations,
       iterationsY = y_fit$iterations,
       elapsedSeconds = elapsed,
-      method = "Mean/Sigma on separately calibrated mirt Rasch forms",
+      method = "plink::plink Mean/Sigma after separate mirt Rasch calibrations",
+      calibrationPackage = mirt_ver,
       commonItemIds = as.list(common_ids),
       commonItems = common,
+      allLinkingMethods = extra_methods,
       formX = split$formX,
       formY = split$formY,
-      note = "equate and plink are not installed on rvkmar/r-backend:latest. Mean/Sigma (Marco 1977) is computed from mirt Rasch b on the common items. Equating informs; it does not authorise a parameter set.",
+      note = "Item parameters are estimated with mirt. Linking constants come from plink (Weeks 2010). equate is available on this image for observed-score equating; this job is IRT common-item linking. Equating informs; it does not authorise a parameter set.",
       warnings = as.list(warnings_acc)
     )
   )

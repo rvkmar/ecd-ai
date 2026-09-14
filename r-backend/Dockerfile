@@ -1,9 +1,9 @@
 # r-backend/Dockerfile
 # Thin overlay on the published psychometric image.
 #
-# rvkmar/r-backend:latest owns the R package set (verified 2026-09-13:
-# R 4.6.1; mirt 1.47, GDINA 2.9.12, TAM 4.3.25, difR 6.1.0, plumber 1.3.3,
-# jsonlite 2.0.0). This file only copies repo app sources when someone
+# rvkmar/r-backend:latest owns the R package set (local rebuild 2026-09-14
+# adds equate and plink; /health reports mirt, GDINA, TAM, difR, equate,
+# plink, plumber, jsonlite). This file only copies repo app sources when someone
 # explicitly runs `docker compose build r-backend` (uncomment `build:` in
 # docker-compose.yml first) or `docker build -t ecd-r-backend:local ./r-backend`.
 #

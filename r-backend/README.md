@@ -89,6 +89,6 @@ ETS C (`|deltaMH| >= 1.5`). Unadjusted MH p < 0.05 overflags.
 design in Node (`server/r/knownEquatingFixture.js`, seed 20261202).
 Two independent samples of 400, six common items, Form Y generated
 0.5 logits harder. `POST /calibrate/equating` fits a `mirt` Rasch
-model on each form and computes Mean/Sigma constants that put Form Y
-on Form X. `equate` and `plink` are not on this image; the method is
-stated on the artefact. Ingest writes `analysisArtefacts[]`.
+model on each form, then `plink::plink` Mean/Sigma constants that put
+Form Y on Form X. `equate` is installed for observed-score work; this
+job is IRT linking. Ingest writes `analysisArtefacts[]`.

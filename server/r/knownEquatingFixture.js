@@ -14,10 +14,11 @@
 //                   b + 0.5. Form X uses the listed b.
 //   missing         Form X persons have null on Y.* ; Form Y persons have
 //                   null on X.* (not administered, never 0).
-//   linking         Mean/Sigma on common-item Rasch b, putting Y on X:
+//   linking         plink Mean/Sigma on common-item Rasch b, putting Y on X:
 //                   b_X ≈ A * b_Y + B. True A = 1, true B = -0.5.
-//   runtime         mirt Rasch on each form (equate / plink are not on
-//                   rvkmar/r-backend:latest).
+//   runtime         mirt Rasch per form, then plink::plink (Mean/Sigma).
+//                   equate is installed for observed-score work; this job
+//                   is IRT linking, so plink is the linking package.
 //   P(u=1)          1 / (1 + exp(-(theta - b_used)))
 //
 // Forms travel on the ADR 0002 envelope as `forms`. Equating informs;
@@ -131,7 +132,7 @@ export function knownEquatingCalibrationRequest({
       convergenceTolerance: 1e-4,
       seed,
       method: "Mean/Sigma",
-      package: "mirt",
+      package: "plink",
     },
   };
 }

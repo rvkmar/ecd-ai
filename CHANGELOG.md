@@ -11,12 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - D70: linking / equating through R. `{ fixture: "known-equating" }` is a
   seeded NEAT common-item design (seed 20261202): 400 Form X + 400 Form Y,
-  6 common items, Form Y generated 0.5 logits harder. `equate` / `plink`
-  are not installed on `rvkmar/r-backend:latest`. `POST /calibrate/equating`
-  fits two `mirt` Rasch models and computes Mean/Sigma (Marco 1977) to put
-  Form Y on Form X. Live CI must recover slope 1 and intercept −0.5 within
-  stated tolerances. Ingest writes an analysis artefact, not a parameter
-  set. Always-run tests use a labeled contract stub.
+  6 common items, Form Y generated 0.5 logits harder. `POST /calibrate/equating`
+  estimates Rasch b with `mirt` then computes Mean/Sigma constants with
+  `plink::plink` (Weeks 2010) to put Form Y on Form X. Live path must recover
+  slope 1 and intercept −0.5 within stated tolerances. Ingest writes an
+  analysis artefact, not a parameter set. Always-run tests use a labeled
+  contract stub. Local `rvkmar/r-backend:latest` now includes `equate` and
+  `plink`; GitHub `lsat7-pipeline` stays green only after that image is
+  pushed to Docker Hub.
 
 - D69: DIF through R (`difR::difMH`). `{ fixture: "planted-dif" }` is a
   seeded 800×8 Rasch matrix (seed 20261201) with one planted uniform

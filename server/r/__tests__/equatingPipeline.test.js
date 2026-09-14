@@ -6,7 +6,7 @@
 //      response is a labeled contract stub. Proves the node pipeline
 //      without inventing Mean/Sigma constants.
 //   2. Live path when R_BACKEND_URL is set — worker posts the same
-//      matrix to R /calibrate/equating. Asserts mirt Rasch Mean/Sigma
+//      matrix to R /calibrate/equating. Asserts plink Mean/Sigma
 //      recovers slope 1 and intercept -0.5 within stated tolerances.
 //
 // Existing CI `npm test` covers (1). The `lsat7-pipeline` job starts
@@ -75,7 +75,7 @@ function equatingContractStub(jobId) {
     contractVersion: CALIBRATION_CONTRACT_VERSION,
     jobId,
     converged: true,
-    packageVersion: "contract-stub (not mirt)",
+    packageVersion: "contract-stub (not plink)",
     sampleSize: 800,
     calibratedAt: "2026-09-14T00:00:00Z",
     parameters: {
@@ -261,10 +261,11 @@ describe("known equating contract-path pipeline (always runs)", () => {
 const live = Boolean(process.env.R_BACKEND_URL);
 
 describe.skipIf(!live)("known equating live R pipeline", () => {
-  it("health reports mirt, then enqueue → process recovers the known shift, then artefact ingest", async () => {
+  it("health reports plink, then enqueue → process recovers the known shift, then artefact ingest", async () => {
     const health = await getRHealth({ timeoutMs: 15_000 });
     expect(health.ok, health.text || health.error?.message).toBe(true);
     expect(health.json?.status).toBe("healthy");
+    expect(health.json?.packages?.plink).toBeTruthy();
     expect(health.json?.packages?.mirt).toBeTruthy();
 
     const app = await jobsApp();
@@ -308,7 +309,7 @@ describe.skipIf(!live)("known equating live R pipeline", () => {
     const job = processed.job;
     expect(job.status, liveDump).toBe("succeeded");
     expect(job.response.converged, liveDump).toBe(true);
-    expect(job.response.packageVersion).toMatch(/^mirt /);
+    expect(job.response.packageVersion).toMatch(/^plink /);
     expect(job.response.sampleSize).toBe(800);
     expect(job.response.jobId).toBe(jobId);
     expect(job.response.parameters.method).toBe("Mean/Sigma");
@@ -327,7 +328,7 @@ describe.skipIf(!live)("known equating live R pipeline", () => {
     expect(ingested.status).toBe(200);
     expect(ingested.body.parameterSet).toBeNull();
     expect(ingested.body.analysisArtefact.calibrationJobId).toBe(jobId);
-    expect(ingested.body.analysisArtefact.packageVersion).toMatch(/^mirt /);
+    expect(ingested.body.analysisArtefact.packageVersion).toMatch(/^plink /);
     expect(dbState.current.evidenceModels[0].analysisArtefacts).toHaveLength(1);
     expect(dbState.current.evidenceModels[0].statisticalModels[0].parameterSets).toHaveLength(0);
   }, 180_000);

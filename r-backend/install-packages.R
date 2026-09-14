@@ -16,7 +16,9 @@ pkgs <- c(
   "mirt",
   "GDINA",
   "TAM",
-  "difR"
+  "difR",
+  "equate",
+  "plink"
 )
 
 install.packages(pkgs, dependencies = TRUE, Ncpus = max(1L, parallel::detectCores() - 1L))
