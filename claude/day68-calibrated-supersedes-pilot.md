@@ -58,9 +58,15 @@ silently unused. When both keys exist, observable wins
 
 ## Session-close verification (2026-09-14 IST)
 
-- `NODE_OPTIONS=--max-old-space-size=3072 npx vitest run` — **1350 passed / 4 skipped** (87 files). Skips: live LSAT7, two live sim10GDINA describes, live CTT when `R_BACKEND_URL` is unset.
-- `npm run build` — Vite 7.3.6, **27.43s**. Chunk warning remains (`index-4BMHM0La.js` 2,272.82 kB / gzip 633.36 kB) — D74.
-- Live R not involved. Player regression on `:6060` as above.
+Product-commit suite: **1350 passed / 4 skipped** (87 files). Product-commit build: Vite 7.3.6, **27.43s**.
+
+This close re-run:
+
+- `NODE_OPTIONS=--max-old-space-size=3072 npx vitest run` — **1349 passed / 4 skipped** (87 files, 68.71s). One fewer passing test than the product-commit run; D68 files themselves still green. Recorded as-run, not rounded up. Skips: live LSAT7, two live sim10GDINA describes, live CTT when `R_BACKEND_URL` is unset.
+- `npm run build` — Vite 7.3.6, **✓ built in 30.45s**. Chunk warning remains (`index-4BMHM0La.js` 2,272.82 kB / gzip 633.36 kB) — D74.
+- **HEAD:** product `c4e5d77` + first close `8a5ff65` + this verification commit. Local `master` matched `main/master` at `8a5ff65` before this commit.
+- **Half-applied:** none. Scoring path is freeze-to-opening-source, not a mid-cutover.
+- Live R not involved. Player regression on `:6060` as above. Mid-flight ingest still not walked live.
 
 ## Honest remaining gaps
 
