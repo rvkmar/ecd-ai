@@ -102,7 +102,10 @@ Enqueue by hand (admin token):
 ## Honest remaining gaps
 
 - Live TAM in this authoring environment: no Docker/R here. CI is the
-  live acceptance, as with D64/D66.
+  live acceptance, as with D64/D66. Always-run suite at this close:
+  **1332 passed / 4 skipped** (85 files). Skips: live LSAT7, two live
+  sim10GDINA describes, and the live CTT describe when `R_BACKEND_URL`
+  is unset. `npm run build` green (chunk warning remains — D74).
 - No published KR-20 / point-biserial table for LSAT7 was found; that
   pin is not invented. Tightening is D88-class if a table is later
   sourced.
