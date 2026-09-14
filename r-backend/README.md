@@ -82,3 +82,13 @@ logits; ability is N(0,1) in both groups. `POST /calibrate/dif` calls
 delta is computed from stored `alphaMH` (`-2.35 * log(alphaMH)`);
 difR does not put `deltaMH` on the MH object. The operational flag is
 ETS C (`|deltaMH| >= 1.5`). Unadjusted MH p < 0.05 overflags.
+
+## Known equating fixture (D70)
+
+`{ fixture: "known-equating" }` expands a seeded NEAT common-item
+design in Node (`server/r/knownEquatingFixture.js`, seed 20261202).
+Two independent samples of 400, six common items, Form Y generated
+0.5 logits harder. `POST /calibrate/equating` fits a `mirt` Rasch
+model on each form and computes Mean/Sigma constants that put Form Y
+on Form X. `equate` and `plink` are not on this image; the method is
+stated on the artefact. Ingest writes `analysisArtefacts[]`.

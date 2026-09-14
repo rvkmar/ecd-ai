@@ -65,12 +65,13 @@ describe("request envelope", () => {
     expect(body.qMatrix.attributeIds).toHaveLength(3);
   });
 
-  it("accepts the committed planted DIF request (D69)", async () => {
+  it("accepts the committed known-equating request (D70)", async () => {
     const { applyNamedCalibrationFixture } = await import("../calibrationFixtures.js");
-    const body = applyNamedCalibrationFixture({ fixture: "planted-dif" }).request;
+    const body = applyNamedCalibrationFixture({ fixture: "known-equating" }).request;
     expect(validateCalibrationRequest(body)).toEqual([]);
-    expect(body.model.family).toBe("dif");
-    expect(body.groups.focal).toBe("focal");
+    expect(body.model.family).toBe("equating");
+    expect(body.forms.formX).toBe("X");
+    expect(body.forms.commonItemIds).toHaveLength(6);
     expect(body.responseMatrix.personIds).toHaveLength(800);
   });
 });

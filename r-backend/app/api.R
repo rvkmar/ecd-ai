@@ -84,6 +84,10 @@ api$handle("POST", "/calibrate/dif", function(req, res) {
   calibrate_dispatch(req, res, family = "dif")
 }, serializer = .json_unboxed)
 
+api$handle("POST", "/calibrate/equating", function(req, res) {
+  calibrate_dispatch(req, res, family = "equating")
+}, serializer = .json_unboxed)
+
 # Legacy path kept as an alias of /calibrate/irt so a leftover client that
 # still posts here does not 404. Same contract; no session scoring.
 api$handle("POST", "/irt/calibrate", function(req, res) {

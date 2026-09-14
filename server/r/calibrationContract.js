@@ -7,7 +7,7 @@ import { CALIBRATION_JOB_KIND_VALUES } from "../../src/utils/ecdVocabulary.js";
 
 export const CALIBRATION_CONTRACT_VERSION = "1.0";
 
-const CALIBRATION_MODEL_FAMILIES = ["irt", "dina", "gdina", "ctt", "dif"];
+const CALIBRATION_MODEL_FAMILIES = ["irt", "dina", "gdina", "ctt", "dif", "equating"];
 const CALIBRATION_IRT_SUBTYPES = ["2PL", "3PL", "Rasch"];
 
 const KIND_TO_R_PATH = {
@@ -15,6 +15,7 @@ const KIND_TO_R_PATH = {
   "dina-parameters": "/calibrate/dina",
   "ctt-statistics": "/calibrate/ctt",
   "dif-analysis": "/calibrate/dif",
+  equating: "/calibrate/equating",
 };
 
 export function rPathForJobKind(kind) {
@@ -123,6 +124,48 @@ export function validateCalibrationRequest(body) {
         const nFoc = groups.labels.filter((g) => g === groups.focal).length;
         if (nRef < 2) errors.push("groups.labels must include at least two reference persons");
         if (nFoc < 2) errors.push("groups.labels must include at least two focal persons");
+      }
+    }
+  }
+
+  if (model?.family === "equating") {
+    const forms = body.forms;
+    if (!forms || typeof forms !== "object" || Array.isArray(forms)) {
+      errors.push("forms is required for family equating");
+    } else {
+      if (!forms.formX || typeof forms.formX !== "string") {
+        errors.push("forms.formX is required");
+      }
+      if (!forms.formY || typeof forms.formY !== "string") {
+        errors.push("forms.formY is required");
+      }
+      if (forms.formX && forms.formY && forms.formX === forms.formY) {
+        errors.push("forms.formX and forms.formY must differ");
+      }
+      if (!Array.isArray(forms.labels) || forms.labels.length < 2) {
+        errors.push("forms.labels must name at least two persons");
+      }
+      if (!Array.isArray(forms.commonItemIds) || forms.commonItemIds.length < 2) {
+        errors.push("forms.commonItemIds must name at least two common items");
+      }
+      const rmIds = body.responseMatrix?.personIds;
+      if (Array.isArray(rmIds) && Array.isArray(forms.labels)) {
+        if (forms.labels.length !== rmIds.length) {
+          errors.push("forms.labels length must match responseMatrix.personIds");
+        }
+      }
+      if (Array.isArray(forms.labels) && forms.formX && forms.formY) {
+        const nX = forms.labels.filter((g) => g === forms.formX).length;
+        const nY = forms.labels.filter((g) => g === forms.formY).length;
+        if (nX < 2) errors.push("forms.labels must include at least two form-X persons");
+        if (nY < 2) errors.push("forms.labels must include at least two form-Y persons");
+      }
+      const itemIds = model?.itemIds;
+      if (Array.isArray(itemIds) && Array.isArray(forms.commonItemIds)) {
+        const missing = forms.commonItemIds.filter((id) => !itemIds.includes(id));
+        if (missing.length) {
+          errors.push("forms.commonItemIds must be a subset of model.itemIds");
+        }
       }
     }
   }

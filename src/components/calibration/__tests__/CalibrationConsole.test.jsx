@@ -221,6 +221,29 @@ vi.mock("@/api/queries/calibrationJobs", () => ({
           })
         );
       }
+      if (payload.fixture === "known-equating") {
+        return fx.addJob(
+          queuedJob({
+            id: "job-known-equating",
+            kind: "equating",
+            evidenceModelId: payload.evidenceModelId,
+            statisticalModelId: payload.statisticalModelId,
+            request: {
+              contractVersion: "1.0",
+              jobId: "job-known-equating",
+              model: {
+                family: "equating",
+                itemIds: ["X.1", "C.1", "C.2", "Y.1"],
+              },
+              responseMatrix: {
+                personIds: Array.from({ length: 8 }, (_, i) => `p${i}`),
+                itemIds: ["X.1"],
+              },
+              options: { seed: 20261202 },
+            },
+          })
+        );
+      }
       return fx.addJob(queuedJob());
     },
   }),
@@ -390,6 +413,31 @@ describe("admin start → process → watch → ingest", () => {
     ]);
     expect(screen.getByRole("heading", { name: /inspect job-planted-dif/i })).toBeInTheDocument();
     expect(screen.getByText(/8 × 8/)).toBeInTheDocument();
+  });
+
+  it("enqueues known equating bound to an IRT statistical model", async () => {
+    const user = userEvent.setup();
+    render(<CalibrationConsole />);
+
+    await user.selectOptions(screen.getByLabelText(/published fixture/i), "known-equating");
+    expect(screen.getByRole("button", { name: /enqueue known equating/i })).toBeInTheDocument();
+    expect(screen.getByText(/Mean\/Sigma/)).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /LSAT CTT evidence/ })).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/evidence model/i), "em1");
+    await user.selectOptions(screen.getByLabelText(/statistical model/i), "sm1");
+    await user.click(screen.getByRole("button", { name: /enqueue known equating/i }));
+
+    expect(fx.enqueuePayloads).toEqual([
+      {
+        fixture: "known-equating",
+        kind: "equating",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+      },
+    ]);
+    expect(screen.getByRole("heading", { name: /inspect job-known-equating/i })).toBeInTheDocument();
+    expect(screen.getByText(/4 × 8/)).toBeInTheDocument();
   });
 });
 

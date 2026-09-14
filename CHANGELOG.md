@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- D70: linking / equating through R. `{ fixture: "known-equating" }` is a
+  seeded NEAT common-item design (seed 20261202): 400 Form X + 400 Form Y,
+  6 common items, Form Y generated 0.5 logits harder. `equate` / `plink`
+  are not installed on `rvkmar/r-backend:latest`. `POST /calibrate/equating`
+  fits two `mirt` Rasch models and computes Mean/Sigma (Marco 1977) to put
+  Form Y on Form X. Live CI must recover slope 1 and intercept −0.5 within
+  stated tolerances. Ingest writes an analysis artefact, not a parameter
+  set. Always-run tests use a labeled contract stub.
+
 - D69: DIF through R (`difR::difMH`). `{ fixture: "planted-dif" }` is a
   seeded 800×8 Rasch matrix (seed 20261201) with one planted uniform
   DIF item (`Item.5`, focal difficulty shifted +2.5). Groups travel on

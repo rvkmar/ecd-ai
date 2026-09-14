@@ -92,6 +92,11 @@ jobs:
           R_BACKEND_URL: http://127.0.0.1:4000
         run: npx vitest run server/r/__tests__/difPipeline.test.js
 
+      - name: known equating full pipeline against live R
+        env:
+          R_BACKEND_URL: http://127.0.0.1:4000
+        run: npx vitest run server/r/__tests__/equatingPipeline.test.js
+
       - name: Dump R logs on failure
         if: failure()
         run: |

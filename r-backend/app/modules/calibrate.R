@@ -109,6 +109,18 @@ calibrate_dispatch <- function(req, res, family) {
     return(calibrate_dif(body, res))
   }
 
+  if (identical(family, "equating")) {
+    if (!identical(requested_family, "equating")) {
+      res$status <- 400
+      return(.failure(
+        body$jobId,
+        paste0("This endpoint calibrates family 'equating', not '", requested_family, "'"),
+        "FamilyMismatch"
+      ))
+    }
+    return(calibrate_equating(body, res))
+  }
+
   res$status <- 501
   .failure(body$jobId, paste0("Unsupported family: ", family), "NotImplemented")
 }
@@ -887,6 +899,233 @@ calibrate_dif <- function(body, res) {
       reference = grouped$reference,
       focal = grouped$focal,
       note = "A DIF flag is a prompt to investigate an item, not a finding about a group of students.",
+      warnings = as.list(warnings_acc)
+    )
+  )
+}
+
+.form_row_index <- function(forms, n_persons) {
+  labels <- vapply(as.list(forms$labels), .as_char, character(1))
+  if (length(labels) != n_persons) {
+    stop("forms.labels length does not match the response matrix")
+  }
+  form_x <- .as_char(forms$formX)
+  form_y <- .as_char(forms$formY)
+  list(
+    x = which(labels == form_x),
+    y = which(labels == form_y),
+    formX = form_x,
+    formY = form_y
+  )
+}
+
+.rasch_b <- function(dat, seed, max_iter) {
+  set.seed(seed)
+  fit <- mirt::mirt(
+    dat,
+    1,
+    itemtype = "Rasch",
+    verbose = FALSE,
+    technical = list(NCYCLES = max_iter)
+  )
+  converged <- isTRUE(tryCatch(mirt::extract.mirt(fit, "converged"), error = function(e) FALSE))
+  if (!converged) {
+    return(list(ok = FALSE, error = "mirt Rasch did not converge", fit = fit))
+  }
+  coefs <- mirt::coef(fit, IRTpars = TRUE, simplify = TRUE)$items
+  if (is.null(coefs) || !("b" %in% colnames(coefs))) {
+    return(list(ok = FALSE, error = "Unable to extract Rasch b", fit = fit))
+  }
+  b <- as.numeric(coefs[, "b"])
+  names(b) <- rownames(coefs)
+  list(
+    ok = TRUE,
+    b = b,
+    iterations = tryCatch(mirt::extract.mirt(fit, "iterations"), error = function(e) NA_integer_)
+  )
+}
+
+.observed_item_ids <- function(resp_df, row_idx) {
+  keep <- vapply(seq_len(ncol(resp_df)), function(j) {
+    any(is.finite(as.numeric(resp_df[row_idx, j])))
+  }, logical(1))
+  colnames(resp_df)[keep]
+}
+
+calibrate_equating <- function(body, res) {
+  if (!requireNamespace("mirt", quietly = TRUE)) {
+    res$status <- 500
+    return(.failure(body$jobId, "Package mirt is not installed", "MissingPackage"))
+  }
+  suppressPackageStartupMessages(library(mirt, quietly = TRUE))
+
+  started <- proc.time()[["elapsed"]]
+  stderr_lines <- character(0)
+  warnings_acc <- character(0)
+
+  opts <- body$options
+  .first <- function(x) unlist(x, use.names = FALSE)[[1]]
+  seed <- as.integer(.first(opts$seed))
+  max_iter <- if (!is.null(opts$maxIterations)) as.integer(.first(opts$maxIterations)) else 500L
+  if (is.na(max_iter) || max_iter < 50L) max_iter <- 500L
+
+  resp_df <- tryCatch(
+    response_matrix_to_df(body$responseMatrix),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(resp_df)) {
+    res$status <- 400
+    return(.failure(body$jobId, "Could not coerce responseMatrix.data", "MatrixError", paste(stderr_lines, collapse = "\n")))
+  }
+
+  split <- tryCatch(
+    .form_row_index(body$forms, nrow(resp_df)),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(split)) {
+    res$status <- 400
+    return(.failure(body$jobId, "Could not coerce forms", "FormError", paste(stderr_lines, collapse = "\n")))
+  }
+  if (length(split$x) < 2L || length(split$y) < 2L) {
+    res$status <- 400
+    return(.failure(body$jobId, "Each form must have at least two persons", "FormError"))
+  }
+
+  common_ids <- vapply(as.list(body$forms$commonItemIds), .as_char, character(1))
+  if (any(!common_ids %in% colnames(resp_df))) {
+    res$status <- 400
+    return(.failure(body$jobId, "forms.commonItemIds must be columns of the response matrix", "FormError"))
+  }
+
+  message(sprintf(
+    "calibrate_equating job=%s dim=%dx%d method=mean-sigma mirt Rasch",
+    .as_char(body$jobId), nrow(resp_df), ncol(resp_df)
+  ))
+
+  x_items <- .observed_item_ids(resp_df, split$x)
+  y_items <- .observed_item_ids(resp_df, split$y)
+  if (!all(common_ids %in% x_items) || !all(common_ids %in% y_items)) {
+    res$status <- 400
+    return(.failure(body$jobId, "Every common item must be observed on both forms", "FormError"))
+  }
+
+  x_fit <- try(
+    .rasch_b(resp_df[split$x, x_items, drop = FALSE], seed, max_iter),
+    silent = TRUE
+  )
+  y_fit <- try(
+    .rasch_b(resp_df[split$y, y_items, drop = FALSE], seed, max_iter),
+    silent = TRUE
+  )
+  elapsed <- proc.time()[["elapsed"]] - started
+  pkg_ver <- paste("mirt", as.character(utils::packageVersion("mirt")))
+
+  if (inherits(x_fit, "try-error") || inherits(y_fit, "try-error")) {
+    err <- if (inherits(x_fit, "try-error")) x_fit else y_fit
+    res$status <- 200
+    return(.failure(
+      body$jobId,
+      paste(c("mirt failed to fit a form", as.character(err)), collapse = "\n"),
+      "mirtError",
+      paste(stderr_lines, collapse = "\n")
+    ))
+  }
+  if (!isTRUE(x_fit$ok) || !isTRUE(y_fit$ok)) {
+    res$status <- 200
+    out <- .failure(
+      body$jobId,
+      paste(c(x_fit$error, y_fit$error), collapse = "; "),
+      "NotConverged",
+      paste(stderr_lines, collapse = "\n")
+    )
+    out$packageVersion <- pkg_ver
+    out$sampleSize <- nrow(resp_df)
+    out$calibratedAt <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+    out$diagnostics <- list(
+      elapsedSeconds = elapsed,
+      method = "Mean/Sigma",
+      warnings = as.list(warnings_acc)
+    )
+    return(out)
+  }
+
+  b_x <- as.numeric(x_fit$b[common_ids])
+  b_y <- as.numeric(y_fit$b[common_ids])
+  if (length(b_x) != length(common_ids) || length(b_y) != length(common_ids) ||
+      any(!is.finite(b_x)) || any(!is.finite(b_y))) {
+    res$status <- 200
+    return(.failure(
+      body$jobId,
+      "Common-item Rasch difficulties were not identified",
+      "ExtractError",
+      paste(stderr_lines, collapse = "\n")
+    ))
+  }
+
+  sd_x <- stats::sd(b_x)
+  sd_y <- stats::sd(b_y)
+  if (!is.finite(sd_y) || sd_y < 1e-8) {
+    res$status <- 200
+    return(.failure(
+      body$jobId,
+      "Form Y common-item difficulties have no spread; Mean/Sigma is unidentified",
+      "NotConverged"
+    ))
+  }
+
+  slope <- sd_x / sd_y
+  intercept <- mean(b_x) - slope * mean(b_y)
+
+  common <- list()
+  for (i in seq_along(common_ids)) {
+    id <- common_ids[[i]]
+    common[[id]] <- list(
+      bX = b_x[[i]],
+      bY = b_y[[i]],
+      bYOnX = slope * b_y[[i]] + intercept
+    )
+  }
+
+  list(
+    contractVersion = CALIBRATION_CONTRACT_VERSION,
+    jobId = .as_char(body$jobId),
+    converged = TRUE,
+    packageVersion = pkg_ver,
+    sampleSize = nrow(resp_df),
+    calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    parameters = list(
+      slope = slope,
+      intercept = intercept,
+      method = "Mean/Sigma",
+      from = split$formY,
+      to = split$formX
+    ),
+    standardErrors = NULL,
+    fitStatistics = list(
+      nItems = ncol(resp_df),
+      nPersons = nrow(resp_df),
+      nFormX = length(split$x),
+      nFormY = length(split$y),
+      nCommon = length(common_ids),
+      sdCommonX = sd_x,
+      sdCommonY = sd_y
+    ),
+    diagnostics = list(
+      iterationsX = x_fit$iterations,
+      iterationsY = y_fit$iterations,
+      elapsedSeconds = elapsed,
+      method = "Mean/Sigma on separately calibrated mirt Rasch forms",
+      commonItemIds = as.list(common_ids),
+      commonItems = common,
+      formX = split$formX,
+      formY = split$formY,
+      note = "equate and plink are not installed on rvkmar/r-backend:latest. Mean/Sigma (Marco 1977) is computed from mirt Rasch b on the common items. Equating informs; it does not authorise a parameter set.",
       warnings = as.list(warnings_acc)
     )
   )

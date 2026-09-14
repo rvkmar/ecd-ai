@@ -22,6 +22,10 @@ export const PLANTED_DIF_JOB_KIND = "dif-analysis";
 
 export const PLANTED_DIF_STATISTICAL_MODEL_TYPES = ["irt", "rasch"];
 
+export const KNOWN_EQUATING_JOB_KIND = "equating";
+
+export const KNOWN_EQUATING_STATISTICAL_MODEL_TYPES = ["irt", "rasch"];
+
 export const NAMED_CALIBRATION_FIXTURES = [
   {
     id: "lsat7",
@@ -74,6 +78,19 @@ export const NAMED_CALIBRATION_FIXTURES = [
     successToast: "Planted DIF analysis job queued.",
     description:
       "Seeded 800×8 Rasch matrix (seed 20261201) with one planted uniform DIF item (Item.5, focal b shifted +2.5). Flag is ETS C (|deltaMH| ≥ 1.5), not unadjusted MH p < 0.05. Bound to an IRT model for provenance only — ingest writes an analysis artefact, not a parameter set. Live CI runs difR::difMH and must flag Item.5 only.",
+  },
+  {
+    id: "known-equating",
+    label: "Known equating",
+    kind: KNOWN_EQUATING_JOB_KIND,
+    statisticalModelTypes: KNOWN_EQUATING_STATISTICAL_MODEL_TYPES,
+    buttonLabel: "Enqueue known equating",
+    choosePrompt: "Choose an evidence model and an IRT statistical model to bind the equating artefact to.",
+    emptyBind:
+      "No evidence model has an IRT or Rasch statistical model to bind. Author one before enqueueing known equating.",
+    successToast: "Known-equating analysis job queued.",
+    description:
+      "Seeded NEAT common-item design (seed 20261202): 400 Form X + 400 Form Y, 6 common items, Form Y generated 0.5 logits harder. Live CI runs two mirt Rasch calibrations and Mean/Sigma linking (equate/plink are not on the published image). Recovers slope 1 and intercept −0.5 within stated tolerances. Ingest writes an analysis artefact, not a parameter set.",
   },
 ];
 

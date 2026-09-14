@@ -5,7 +5,7 @@
 
 CALIBRATION_CONTRACT_VERSION <- "1.0"
 
-CALIBRATION_MODEL_FAMILIES <- c("irt", "dina", "gdina", "ctt", "dif")
+CALIBRATION_MODEL_FAMILIES <- c("irt", "dina", "gdina", "ctt", "dif", "equating")
 CALIBRATION_IRT_SUBTYPES <- c("2PL", "3PL", "Rasch")
 
 .as_char <- function(x) {
@@ -109,6 +109,33 @@ validate_calibration_request <- function(body) {
       if (!is.null(rm$personIds) && !is.null(groups$labels) &&
           length(groups$labels) != length(rm$personIds)) {
         errors <- c(errors, "groups.labels length must match responseMatrix.personIds")
+      }
+    }
+  }
+  if (identical(family, "equating")) {
+    forms <- body$forms
+    if (is.null(forms) || !is.list(forms)) {
+      errors <- c(errors, "forms is required for family equating")
+    } else {
+      if (is.null(forms$formX) || !nzchar(.as_char(forms$formX))) {
+        errors <- c(errors, "forms.formX is required")
+      }
+      if (is.null(forms$formY) || !nzchar(.as_char(forms$formY))) {
+        errors <- c(errors, "forms.formY is required")
+      }
+      if (!is.null(forms$formX) && !is.null(forms$formY) &&
+          identical(.as_char(forms$formX), .as_char(forms$formY))) {
+        errors <- c(errors, "forms.formX and forms.formY must differ")
+      }
+      if (is.null(forms$labels) || length(forms$labels) < 2) {
+        errors <- c(errors, "forms.labels must name at least two persons")
+      }
+      if (is.null(forms$commonItemIds) || length(forms$commonItemIds) < 2) {
+        errors <- c(errors, "forms.commonItemIds must name at least two common items")
+      }
+      if (!is.null(rm$personIds) && !is.null(forms$labels) &&
+          length(forms$labels) != length(rm$personIds)) {
+        errors <- c(errors, "forms.labels length must match responseMatrix.personIds")
       }
     }
   }
