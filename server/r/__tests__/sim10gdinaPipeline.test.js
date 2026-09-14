@@ -346,6 +346,7 @@ describe.skipIf(!live)("sim10GDINA live R pipeline", () => {
         converged: processed.job?.response?.converged,
         packageVersion: processed.job?.response?.packageVersion,
         sampleSize: processed.job?.response?.sampleSize,
+        parameterKeys: Object.keys(processed.job?.response?.parameters || {}),
         diagnostics: processed.job?.response?.diagnostics,
       },
       null,
@@ -415,6 +416,7 @@ describe.skipIf(!live)("sim10GDINA live R pipeline", () => {
         converged: processed.job?.response?.converged,
         packageVersion: processed.job?.response?.packageVersion,
         sampleSize: processed.job?.response?.sampleSize,
+        parameterKeys: Object.keys(processed.job?.response?.parameters || {}),
       },
       null,
       2

@@ -47,6 +47,15 @@ package object's `simQ`.
   No invented item parameters.
 - CTT `/calibrate/ctt` is still a contract-shaped 501.
 
+## Live CI finding
+
+The first live run converged (`GDINA 2.9.12`, 1000×10, 45 EM cycles) but
+keyed parameters `"Item 1"` … `"Item 10"` — GDINA’s default
+`item.names` uses a space, not `Item.1`. The Node test looks up the
+request ids. Fix: pass `item.names` from `model.itemIds` and key the
+ADR 0002 `parameters` object by that same vector, not
+`names(catprob.parm)`.
+
 ## Live checks (not a coefficient-table pin)
 
 Same lesson as D64. The live path asserts:

@@ -20,7 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   live sim10GDINA path against `rvkmar/r-backend:latest` + app mount.
   Console can bind/enqueue the fixture on a DINA or G-DINA statistical
   model. Node loads `server/r/fixtures/sim10gdina.json` (#21 lesson).
-  Handoff: `claude/day66-sim10gdina.md`. CTT stays 501 (D67).
+  First live CI run converged on GDINA 2.9.12 but keyed `"Item 1"`
+  (package default `item.names`); the response is now keyed by request
+  `itemIds`. Handoff: `claude/day66-sim10gdina.md`. CTT stays 501 (D67).
 
 - D65: calibration console at `/admin/calibration` (also an Admin
   Control Center tab; district read-only at `/district/calibration`).

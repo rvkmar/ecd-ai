@@ -310,12 +310,19 @@ calibrate_diagnostic <- function(body, res) {
   ))
 
   set.seed(seed)
+  # GDINA defaults item.names to "Item 1", "Item 2", ... (space, not
+  # a dot). CI on D66 returned those keys, so request itemIds like
+  # Item.1 were missing on the Node side. Pass the ADR 0002 ids through
+  # and key the response by the same vector.
+  request_item_ids <- vapply(as.list(body$model$itemIds), .as_char, character(1))
+  colnames(resp_df) <- request_item_ids
 
   .run_gdina <- function() {
     GDINA::GDINA(
       dat = resp_df,
       Q = Q,
       model = gdina_model,
+      item.names = request_item_ids,
       verbose = 0,
       control = list(
         maxitr = max_iter,
@@ -328,7 +335,16 @@ calibrate_diagnostic <- function(body, res) {
   fit_try <- try(.run_gdina(), silent = TRUE)
   if (inherits(fit_try, "try-error")) {
     stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
-    fit_try <- try(GDINA::GDINA(dat = resp_df, Q = Q, model = gdina_model, verbose = 0), silent = TRUE)
+    fit_try <- try(
+      GDINA::GDINA(
+        dat = resp_df,
+        Q = Q,
+        model = gdina_model,
+        item.names = request_item_ids,
+        verbose = 0
+      ),
+      silent = TRUE
+    )
   }
   if (inherits(fit_try, "try-error")) {
     stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
@@ -394,14 +410,22 @@ calibrate_diagnostic <- function(body, res) {
     return(.failure(body$jobId, "Unable to extract DINA/G-DINA category probabilities", "ExtractError", paste(stderr_lines, collapse = "\n")))
   }
 
-  item_ids <- names(catprob)
-  if (is.null(item_ids) || !any(nzchar(item_ids))) {
-    item_ids <- colnames(resp_df)
+  if (length(catprob) != length(request_item_ids)) {
+    res$status <- 200
+    return(.failure(
+      body$jobId,
+      sprintf(
+        "GDINA returned %d item parameter vectors, expected %d (model.itemIds)",
+        length(catprob), length(request_item_ids)
+      ),
+      "ExtractError",
+      paste(stderr_lines, collapse = "\n")
+    ))
   }
 
   parameters <- list()
   for (i in seq_along(catprob)) {
-    id <- item_ids[[i]]
+    id <- request_item_ids[[i]]
     probs <- as.numeric(unname(catprob[[i]]))
     if (identical(family, "dina")) {
       guess <- probs[[1]]
