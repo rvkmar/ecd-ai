@@ -47,10 +47,15 @@ sound (D51). No extra grid work.
 
 ## Session-close verification (2026-09-14 IST)
 
+- Product commit: `ff71b21`. Working tree clean; `master` tracks `main/master`.
 - `NODE_OPTIONS=--max-old-space-size=3072 npx vitest run` — **1382
-  passed / 6 skipped** (93 files, 59.01s). Recorded as-run.
-- `npm run build` — Vite 7.3.6, **✓ built in 17.08s**. Chunk still
-  ~2275 kB — D74.
+  passed / 6 skipped** (93 files). Product-commit run 59.01s; close re-run
+  **53.85s**. Same count. Recorded as-run.
+- `npm run build` — Vite 7.3.6. Product-commit **17.08s**; close re-run
+  **12.97s**. Chunk `index-B3fI_ElH.js` 2,274.94 kB — D74.
+- Exit check: each landed change maps to F-A1–F-A6. Not a nine-surface
+  axe/keyboard/SR pass. Keyboard-only completion of every item interaction
+  was calendar priority text, not a numbered required finding.
 
 ## Next
 
