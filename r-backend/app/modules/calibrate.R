@@ -1,7 +1,7 @@
 # modules/calibrate.R
-# ADR 0002 calibration endpoints. IRT (mirt) and DINA/G-DINA (GDINA)
-# are implemented here. CTT returns a contract-shaped 501 until D67.
-# Null in the response matrix means not administered, never 0.
+# ADR 0002 calibration endpoints. IRT (mirt), DINA/G-DINA (GDINA), and
+# CTT (TAM::tam.ctt). Null in the response matrix means not administered,
+# never 0.
 
 .parse_json_body <- function(req) {
   # Programmatic plumber sometimes fills req$body (already parsed) and
@@ -83,6 +83,18 @@ calibrate_dispatch <- function(req, res, family) {
       ))
     }
     return(calibrate_diagnostic(body, res))
+  }
+
+  if (identical(family, "ctt")) {
+    if (!identical(requested_family, "ctt")) {
+      res$status <- 400
+      return(.failure(
+        body$jobId,
+        paste0("This endpoint calibrates family 'ctt', not '", requested_family, "'"),
+        "FamilyMismatch"
+      ))
+    }
+    return(calibrate_ctt(body, res))
   }
 
   res$status <- 501
@@ -461,6 +473,200 @@ calibrate_diagnostic <- function(body, res) {
       iterations = tryCatch(as.integer(fit$options$itr), error = function(e) NA_integer_),
       elapsedSeconds = elapsed,
       model = gdina_model,
+      warnings = as.list(warnings_acc)
+    )
+  )
+}
+
+# KR-20 (Kuder & Richardson 1937). For complete dichotomous data this is
+# Cronbach's alpha. Sample variance of the total score (R's var, n-1).
+# Not a published coefficient table -- a textbook formula on the matrix.
+.kr20 <- function(mat) {
+  k <- ncol(mat)
+  if (is.null(k) || k < 2L) return(NA_real_)
+  p <- colMeans(mat, na.rm = TRUE)
+  totals <- rowSums(mat, na.rm = TRUE)
+  var_t <- stats::var(totals)
+  if (!is.finite(var_t) || var_t <= 0) return(NA_real_)
+  sum_pq <- sum(p * (1 - p), na.rm = TRUE)
+  as.numeric((k / (k - 1)) * (1 - sum_pq / var_t))
+}
+
+.run_tam_ctt <- function(resp_mat, score) {
+  # tam.ctt2 is the faster Rcpp path and accepts wlescore. tam.ctt is
+  # the documented fallback. wlescore here is the raw total, not an
+  # IRT WLE -- TAM's rpb.WLE is then the ordinary item-total
+  # point-biserial (TAM help: "for dichotomously scored data, rpb.WLE
+  # is the ordinary point biserial correlation of an item and a test
+  # score (here the WLE)").
+  out2 <- try(TAM::tam.ctt2(resp_mat, wlescore = score, progress = FALSE), silent = TRUE)
+  if (!inherits(out2, "try-error") && is.data.frame(out2) && "rpb.WLE" %in% names(out2) &&
+      any(is.finite(out2$rpb.WLE))) {
+    return(list(dfr = out2, method = "TAM::tam.ctt2"))
+  }
+  out <- TAM::tam.ctt(resp_mat, wlescore = score, progress = FALSE)
+  list(dfr = out, method = "TAM::tam.ctt")
+}
+
+.ctt_parameters_from_tam <- function(dfr, item_ids) {
+  if (is.null(dfr) || !is.data.frame(dfr) || nrow(dfr) == 0) {
+    stop("tam.ctt returned no item statistics")
+  }
+  if (!("item" %in% names(dfr))) {
+    stop("tam.ctt output has no item column")
+  }
+  parameters <- list()
+  for (id in item_ids) {
+    item_rows <- dfr[as.character(dfr$item) == id, , drop = FALSE]
+    if (nrow(item_rows) == 0) {
+      stop(sprintf("tam.ctt did not return rows for item '%s'", id))
+    }
+    correct <- item_rows[as.character(item_rows$Categ) == "1", , drop = FALSE]
+    if (nrow(correct) == 0) {
+      # All-incorrect item: p = 0, no category-1 point-biserial.
+      n <- if ("N" %in% names(item_rows)) as.integer(item_rows$N[[1]]) else NA_integer_
+      parameters[[id]] <- list(
+        difficulty = 0,
+        discrimination = NA_real_,
+        n = n
+      )
+      next
+    }
+    p <- if ("RelFreq" %in% names(correct)) as.numeric(correct$RelFreq[[1]]) else NA_real_
+    rpb <- if ("rpb.WLE" %in% names(correct)) as.numeric(correct$rpb.WLE[[1]]) else NA_real_
+    n <- if ("N" %in% names(correct)) as.integer(correct$N[[1]]) else NA_integer_
+    parameters[[id]] <- list(
+      difficulty = p,
+      discrimination = rpb,
+      n = n
+    )
+  }
+  parameters
+}
+
+calibrate_ctt <- function(body, res) {
+  if (!requireNamespace("TAM", quietly = TRUE)) {
+    res$status <- 500
+    return(.failure(body$jobId, "Package TAM is not installed", "MissingPackage"))
+  }
+  suppressPackageStartupMessages(library(TAM, quietly = TRUE))
+
+  started <- proc.time()[["elapsed"]]
+  stderr_lines <- character(0)
+  warnings_acc <- character(0)
+
+  opts <- body$options
+  .first <- function(x) unlist(x, use.names = FALSE)[[1]]
+  seed <- as.integer(.first(opts$seed))
+
+  resp_df <- tryCatch(
+    response_matrix_to_df(body$responseMatrix),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(resp_df)) {
+    res$status <- 400
+    return(.failure(body$jobId, "Could not coerce responseMatrix.data", "MatrixError", paste(stderr_lines, collapse = "\n")))
+  }
+
+  request_item_ids <- vapply(as.list(body$model$itemIds), .as_char, character(1))
+  colnames(resp_df) <- request_item_ids
+  resp_mat <- as.matrix(resp_df)
+  storage.mode(resp_mat) <- "numeric"
+
+  message(sprintf(
+    "calibrate_ctt job=%s dim=%dx%d",
+    .as_char(body$jobId), nrow(resp_mat), ncol(resp_mat)
+  ))
+
+  set.seed(seed)
+  score <- rowSums(resp_mat, na.rm = TRUE)
+
+  fit_try <- try(.run_tam_ctt(resp_mat, score), silent = TRUE)
+  elapsed <- proc.time()[["elapsed"]] - started
+  pkg_ver <- paste("TAM", as.character(utils::packageVersion("TAM")))
+
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    res$status <- 200
+    dim_note <- sprintf(" [%dx%d]", nrow(resp_mat), ncol(resp_mat))
+    return(.failure(
+      body$jobId,
+      paste0(paste(stderr_lines, collapse = "; "), dim_note),
+      "TAMError",
+      paste(stderr_lines, collapse = "\n")
+    ))
+  }
+
+  parameters <- tryCatch(
+    .ctt_parameters_from_tam(fit_try$dfr, request_item_ids),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(parameters)) {
+    res$status <- 200
+    return(.failure(body$jobId, "Unable to extract CTT item statistics", "ExtractError", paste(stderr_lines, collapse = "\n")))
+  }
+
+  kr20 <- .kr20(resp_mat)
+  mean_score <- mean(score)
+  sd_score <- stats::sd(score)
+
+  difficulties <- vapply(parameters, function(p) as.numeric(p$difficulty), numeric(1))
+  discriminations <- vapply(parameters, function(p) as.numeric(p$discrimination), numeric(1))
+  # CTT is not iterative. "Converged" means the statistics are identified:
+  # finite p in [0,1] for every item, finite item-total rpb, finite KR-20
+  # (total-score variance > 0). Ingest still refuses converged: false.
+  converged <- all(is.finite(difficulties) & difficulties >= 0 & difficulties <= 1) &&
+    all(is.finite(discriminations) & discriminations > -1 & discriminations < 1) &&
+    is.finite(kr20)
+
+  if (!converged) {
+    res$status <- 200
+    out <- .failure(
+      body$jobId,
+      "CTT statistics were not identified (zero total-score variance or missing item stats)",
+      "NotConverged",
+      paste(stderr_lines, collapse = "\n")
+    )
+    out$packageVersion <- pkg_ver
+    out$sampleSize <- nrow(resp_mat)
+    out$calibratedAt <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+    out$diagnostics <- list(
+      iterations = 1L,
+      elapsedSeconds = elapsed,
+      method = fit_try$method,
+      warnings = as.list(warnings_acc)
+    )
+    return(out)
+  }
+
+  list(
+    contractVersion = CALIBRATION_CONTRACT_VERSION,
+    jobId = .as_char(body$jobId),
+    converged = TRUE,
+    packageVersion = pkg_ver,
+    sampleSize = nrow(resp_mat),
+    calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    parameters = parameters,
+    standardErrors = NULL,
+    fitStatistics = list(
+      kr20 = as.numeric(kr20),
+      meanScore = as.numeric(mean_score),
+      sdScore = as.numeric(sd_score),
+      nItems = ncol(resp_mat),
+      nPersons = nrow(resp_mat)
+    ),
+    diagnostics = list(
+      iterations = 1L,
+      elapsedSeconds = elapsed,
+      method = fit_try$method,
+      scoreForDiscrimination = "raw total (rowSums), not an IRT WLE",
+      reliability = "KR-20 (Kuder & Richardson 1937); equals Cronbach's alpha for dichotomous complete data",
       warnings = as.list(warnings_acc)
     )
   )

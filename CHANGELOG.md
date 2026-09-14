@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- D67: CTT through R. `{ fixture: "lsat7-ctt" }` reuses the published
+  Bock & Lieberman (1970) LSAT section-7 matrix (1000×5; same Node
+  table as D64, `model.family: "ctt"`). `POST /calibrate/ctt` calls
+  `TAM::tam.ctt` / `tam.ctt2` with the raw total as the score
+  (ordinary item-total point-biserial, not an IRT WLE). Parameters are
+  `{ difficulty, discrimination, n }` keyed by request `itemIds`.
+  `fitStatistics.kr20` is Kuder & Richardson (1937) on that matrix —
+  there is no published KR-20 table here, so live tests do not invent
+  one. Difficulty is asserted against the published item means
+  (definitional for complete dichotomous data). Ingest still refuses
+  `converged: false`. Always-run tests use a labeled contract stub.
+  CI job `lsat7-pipeline` also runs the live CTT path against
+  `rvkmar/r-backend:latest` + app mount. Console can bind/enqueue the
+  fixture on a CTT statistical model. Handoff:
+  `claude/day67-ctt-calibration.md`.
+
 - D66: published `GDINA::sim10GDINA` (1000 examinees × 10 items, 3
   attributes; `simdat` / `simQ` / `simItempar` from GDINA 2.9.12) is a
   committed fixture. `POST /api/calibrationJobs` accepts

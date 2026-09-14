@@ -1,8 +1,8 @@
 # r-backend
 
-Private Plumber service for IRT / diagnostic calibration. Node talks to it
-only through the `calibrationJobs` queue (`R_BACKEND_URL`), never from a
-session path.
+Private Plumber service for IRT / diagnostic / CTT calibration. Node talks
+to it only through the `calibrationJobs` queue (`R_BACKEND_URL`), never
+from a session path.
 
 ## Default: published image
 
@@ -58,5 +58,16 @@ Node ships the same table at `server/r/fixtures/sim10gdina.json` and
 expands it for `{ fixture: "sim10gdina" }`. `POST /calibrate/dina` and
 `POST /calibrate/gdina` both call `GDINA::GDINA`. `model.family`
 selects `"DINA"` or `"GDINA"`. The vignette Q around `simdat` is not
-`simQ`; this fixture uses the package object's Q-matrix. CTT remains
-501 until D67.
+`simQ`; this fixture uses the package object's Q-matrix.
+
+## LSAT7 CTT fixture (D67)
+
+The same published Bock & Lieberman (1970) LSAT section-7 matrix is
+analysed classically. `{ fixture: "lsat7-ctt" }` expands the Node copy
+at `server/r/fixtures/lsat7-frequency-table.json` with
+`model.family: "ctt"`. `POST /calibrate/ctt` calls `TAM::tam.ctt` (or
+`tam.ctt2`) with the raw total as the score so `rpb.WLE` is the ordinary
+item-total point-biserial. Difficulty is RelFreq of the keyed category
+(the published item mean). KR-20 is the Kuder & Richardson (1937)
+formula on that matrix — there is no published KR-20 table in this
+pipeline. Ingest still refuses `converged: false`.

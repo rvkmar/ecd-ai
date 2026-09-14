@@ -77,7 +77,7 @@ api$handle("POST", "/calibrate/gdina", function(req, res) {
 }, serializer = .json_unboxed)
 
 api$handle("POST", "/calibrate/ctt", function(req, res) {
-  calibrate_not_implemented(req, res, family = "ctt", day = "D67")
+  calibrate_dispatch(req, res, family = "ctt")
 }, serializer = .json_unboxed)
 
 # Legacy path kept as an alias of /calibrate/irt so a leftover client that

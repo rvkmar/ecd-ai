@@ -14,6 +14,10 @@ export const SIM10GDINA_JOB_KIND = "dina-parameters";
 
 export const SIM10GDINA_STATISTICAL_MODEL_TYPES = ["dina", "gdina"];
 
+export const LSAT7_CTT_JOB_KIND = "ctt-statistics";
+
+export const LSAT7_CTT_STATISTICAL_MODEL_TYPES = ["ctt"];
+
 export const NAMED_CALIBRATION_FIXTURES = [
   {
     id: "lsat7",
@@ -40,6 +44,19 @@ export const NAMED_CALIBRATION_FIXTURES = [
     successToast: "sim10GDINA calibration job queued.",
     description:
       "GDINA::sim10GDINA (Ma & de la Torre 2020): 1000 examinees × 10 dichotomous items, 3 attributes. The server fills simdat and simQ. Binding a G-DINA model fits G-DINA; binding a DINA model fits DINA. This form does not invent item parameters.",
+  },
+  {
+    id: "lsat7-ctt",
+    label: "LSAT7 CTT",
+    kind: LSAT7_CTT_JOB_KIND,
+    statisticalModelTypes: LSAT7_CTT_STATISTICAL_MODEL_TYPES,
+    buttonLabel: "Enqueue LSAT7 CTT",
+    choosePrompt: "Choose an evidence model and a CTT statistical model.",
+    emptyBind:
+      "No evidence model has a CTT statistical model to bind. Author one before enqueueing LSAT7 CTT.",
+    successToast: "LSAT7 CTT calibration job queued.",
+    description:
+      "LSAT section 7 (Bock & Lieberman 1970) analysed with classical test theory via TAM::tam.ctt: difficulty (p), item-total point-biserial, KR-20. Same published 1000×5 matrix as the IRT fixture. This form does not invent item statistics.",
   },
 ];
 
