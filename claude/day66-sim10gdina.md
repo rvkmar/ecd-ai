@@ -106,6 +106,8 @@ not built.
   live acceptance, as with D64. Always-run suite at this close:
   **1323 passed / 3 skipped** (the skips are the live LSAT7 describe and
   the two live sim10GDINA describes when `R_BACKEND_URL` is unset).
+  Live CI is green: `GDINA 2.9.12`, `converged: true`, 1000×10, parameters
+  keyed by request `itemIds`.
 - D67 CTT still 501.
 - Parameter-set diff UI still not started.
 - `renv.lock` still absent; `/health` on `rvkmar/r-backend:latest` is
