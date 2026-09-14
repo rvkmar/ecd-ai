@@ -29,7 +29,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D65 | `ce4c71b` (#20) + `3045ff0` (#21 fixture path). W13 close: `claude/day65-w13-close.md`. |
 | HEAD at D66 | `dca6c31` (#22). Close: `claude/day66-sim10gdina.md`. |
 | HEAD at D67 | `4e8881a` (#23) + close `6dd7357`. Close: `claude/day67-ctt-calibration.md`. Live CI: [lsat7-pipeline `45de56f`](https://github.com/rvkmar/ecd-ai/actions/runs/34802897124). |
-| HEAD at D68 | this close. Close: `claude/day68-calibrated-supersedes-pilot.md`. |
+| HEAD at D68 | `c4e5d77`. Close: `claude/day68-calibrated-supersedes-pilot.md`. |
 
 ## Session log
 
