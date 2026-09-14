@@ -203,7 +203,11 @@ export default function QMatrixGrid({
 
   return (
     <>
-      <div className="mt-2 overflow-x-auto rounded-md border border-slate-200">
+      <div
+        className="mt-2 overflow-x-auto rounded-md border border-slate-200"
+        tabIndex={0}
+        aria-label="Q-matrix table"
+      >
         <table
           role="grid"
           aria-label="Q-matrix: items by required attributes"
@@ -281,6 +285,7 @@ export default function QMatrixGrid({
                       >
                         <input
                           type="checkbox"
+                          className="h-6 w-6 min-h-6 min-w-6 align-middle"
                           ref={(el) => {
                             if (el) cellRefs.current.set(`${r}:${c}`, el);
                             else cellRefs.current.delete(`${r}:${c}`);

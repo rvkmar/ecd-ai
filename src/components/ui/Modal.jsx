@@ -1,40 +1,69 @@
 import React from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./dialog";
 
+// Confirm/discard overlay used by SessionPlayer Finish and (after D73)
+// the wizard discard copies. Radix Dialog supplies role="dialog",
+// aria-modal, focus trap, and Escape — the hand-rolled overlay had none
+// of those (F-A1).
 export default function Modal({
   isOpen,
   onClose,
   onConfirm,
   title,
   message,
-  confirmClass = "bg-blue-500 hover:bg-blue-600 text-white", // ✅ default
+  children,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  confirmClass = "bg-blue-500 hover:bg-blue-600 text-white",
 }) {
-  if (!isOpen) return null;
-
   const handleConfirm = () => {
-    if (onConfirm) onConfirm();   // run caller’s confirm action
-    if (onClose) onClose();       // always close modal afterwards
+    if (onConfirm) onConfirm();
+    if (onClose) onClose();
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div className="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full">
-        <h3 className="font-bold text-lg mb-2">{title}</h3>
-        <p className="mb-4">{message}</p>
-        <div className="flex justify-end gap-2">
+    <Dialog
+      open={!!isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose?.();
+      }}
+    >
+      <DialogContent className="max-w-sm bg-white text-slate-900 sm:rounded-xl">
+        <DialogHeader>
+          <DialogTitle className="font-bold text-lg text-left">{title}</DialogTitle>
+          {message ? (
+            <DialogDescription className="text-left text-slate-600">
+              {message}
+            </DialogDescription>
+          ) : null}
+        </DialogHeader>
+        {children}
+        <DialogFooter className="flex-row justify-end gap-2 sm:space-x-0">
           <button
-            onClick={onClose}
+            type="button"
+            onClick={() => onClose?.()}
             className="px-3 py-1 bg-gray-300 hover:bg-gray-400 rounded"
           >
-            Cancel
+            {cancelLabel}
           </button>
-          <button
-            onClick={handleConfirm}
-            className={`px-3 py-1 rounded ${confirmClass}`}
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
+          {onConfirm && (
+            <button
+              type="button"
+              onClick={handleConfirm}
+              className={`px-3 py-1 rounded ${confirmClass}`}
+            >
+              {confirmLabel}
+            </button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

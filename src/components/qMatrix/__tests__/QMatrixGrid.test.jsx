@@ -18,6 +18,10 @@ describe("QMatrixGrid", () => {
   it("renders one checkbox per item x attribute cell", () => {
     render(<QMatrixGrid attributes={attributes} items={items} entries={[]} />);
     expect(screen.getAllByRole("checkbox")).toHaveLength(items.length * attributes.length);
+    screen.getAllByRole("checkbox").forEach((cb) => {
+      expect(cb.className).toMatch(/h-6/);
+      expect(cb.className).toMatch(/w-6/);
+    });
   });
 
   it("reflects entries as checked and calls onToggleCell on click", () => {

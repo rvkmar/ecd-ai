@@ -140,11 +140,12 @@ export default function Step1Instantiation() {
 
       {/* --- Task Model --- */}
       <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <label className="mb-1.5 block text-sm font-medium text-slate-700">
+        <label htmlFor="item-wizard-task-model" className="mb-1.5 block text-sm font-medium text-slate-700">
           Task Model
         </label>
 
         <select
+          id="item-wizard-task-model"
           value={item.taskModelId || ""}
           disabled={!canEdit || isLoading}
           onChange={(e) => {
@@ -184,11 +185,12 @@ export default function Step1Instantiation() {
       {/* --- Observation --- */}
       {taskModel && (
         <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">
+          <label htmlFor="item-wizard-observation" className="mb-1.5 block text-sm font-medium text-slate-700">
             Observation elicited
           </label>
 
           <select
+            id="item-wizard-observation"
             value={item.observationId || ""}
             disabled={!canEdit}
             onChange={(e) => bindObservation(e.target.value || null)}

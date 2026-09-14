@@ -32,6 +32,7 @@
 
 import React, { useState } from "react";
 import { ChevronLeft, ChevronRight, Lock, X } from "lucide-react";
+import Modal from "@/components/ui/Modal";
 
 export default function WizardStepContainer({
     step,
@@ -308,33 +309,16 @@ export default function WizardStepContainer({
                 </div>
             </div>
 
-            {showCancelModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-                    <div className="w-[26rem] rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
-                        <h2 className="text-base font-semibold text-slate-900">
-                            Discard changes?
-                        </h2>
-                        <p className="mt-2 text-sm text-slate-500">
-                            You have unsaved changes on this step. Leaving now will
-                            discard them.
-                        </p>
-                        <div className="mt-6 flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowCancelModal(false)}
-                                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-                            >
-                                Continue Editing
-                            </button>
-                            <button
-                                onClick={confirmCancel}
-                                className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700"
-                            >
-                                Discard & Exit
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <Modal
+                isOpen={showCancelModal}
+                onClose={() => setShowCancelModal(false)}
+                onConfirm={confirmCancel}
+                title="Discard changes?"
+                message="You have unsaved changes on this step. Leaving now will discard them."
+                cancelLabel="Continue Editing"
+                confirmLabel="Discard & Exit"
+                confirmClass="bg-red-600 hover:bg-red-700 text-white"
+            />
         </div>
     );
 }

@@ -135,7 +135,11 @@ export default function WizardSidebar({
             </div>
 
             {/* Scrollable Step Tracker */}
-            <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-6 ${collapsed ? "px-2" : "px-4"}`}>
+            <nav
+                aria-label="Wizard steps"
+                tabIndex={0}
+                className={`flex-1 overflow-y-auto overflow-x-hidden py-6 ${collapsed ? "px-2" : "px-4"}`}
+            >
                 <ol className="relative">
                     {steps.map((step, index) => {
                         const state = getStepState(index);
@@ -147,14 +151,14 @@ export default function WizardSidebar({
                             completed:
                                 "bg-white text-slate-900 border-2 border-slate-900",
                             pending:
-                                "bg-white text-slate-400 border-2 border-slate-200",
+                                "bg-white text-slate-600 border-2 border-slate-200",
                         }[state];
 
                         const labelClasses = {
                             active: "text-slate-900 font-semibold",
                             completed:
                                 "text-slate-600 font-medium group-hover:text-slate-900",
-                            pending: "text-slate-400 font-medium",
+                            pending: "text-slate-600 font-medium",
                         }[state];
 
                         return (
@@ -201,10 +205,10 @@ export default function WizardSidebar({
             {/* Sticky Bottom Footer */}
             {!collapsed && (
                 <div className="border-t border-slate-100 px-6 py-5">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
                         Evidence Centered Design (ECD)
                     </p>
-                    <p className="mt-0.5 text-[11px] text-slate-300">{footerLabel}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-600">{footerLabel}</p>
                 </div>
             )}
         </aside>

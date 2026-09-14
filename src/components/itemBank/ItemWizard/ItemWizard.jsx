@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { ItemWizardProvider, useItemWizard } from "./ItemWizardContext";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import Modal from "@/components/ui/Modal";
 
 import Step1Instantiation from "./steps/Step1Instantiation";
 import Step2Blueprint from "./steps/Step2Blueprint";
@@ -209,7 +210,7 @@ function WizardLayout({ onClose }) {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4">
+        <nav className="flex-1 overflow-y-auto py-4" tabIndex={0} aria-label="Wizard steps">
           {steps.map((step, index) => {
             const active = index === currentStep;
             // Real completion, not cursor position. `index < currentStep`
@@ -448,74 +449,36 @@ function WizardLayout({ onClose }) {
         </div>
       </div>
 
-      {/* ---------- Discard modal ---------- */}
-      {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-          <div className="w-[26rem] rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
-            <h2 className="text-base font-semibold text-slate-900">Discard changes?</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              You have unsaved changes on this step. Leaving now will discard them.
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowCancelModal(false)}
-                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-              >
-                Continue editing
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCancelModal(false);
-                  onClose?.();
-                }}
-                className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700"
-              >
-                Discard &amp; exit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={() => onClose?.()}
+        title="Discard changes?"
+        message="You have unsaved changes on this step. Leaving now will discard them."
+        cancelLabel="Continue editing"
+        confirmLabel="Discard & exit"
+        confirmClass="bg-red-600 hover:bg-red-700 text-white"
+      />
 
-      {/* ---------- Destructive transition modal ---------- */}
-      {confirmTransition && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-          <div className="w-[30rem] rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
-            <h2 className="text-base font-semibold text-slate-900">
-              {confirmTransition === "archived" ? "Archive this item?" : "Suspend this item?"}
-            </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              {confirmTransition === "archived"
-                ? "Archiving retires the item permanently. It can never be cloned or returned to service, and any Task Model relying on it for activation loses that support."
-                : "Suspending removes the item from delivery. It can be reactivated later, subject to its reactivation ceiling."}
-            </p>
-            <p className="mt-3 text-xs text-slate-500">
-              If a live session depends on this item the server will refuse.
-              Forcing past that closes those sessions and is an admin action.
-            </p>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setConfirmTransition(null)}
-                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => runTransition(confirmTransition)}
-                disabled={busy}
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400"
-              >
-                {busy ? "Working…" : confirmTransition === "archived" ? "Archive" : "Suspend"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={!!confirmTransition}
+        onClose={() => setConfirmTransition(null)}
+        onConfirm={() => runTransition(confirmTransition)}
+        title={confirmTransition === "archived" ? "Archive this item?" : "Suspend this item?"}
+        message={
+          confirmTransition === "archived"
+            ? "Archiving retires the item permanently. It can never be cloned or returned to service, and any Task Model relying on it for activation loses that support."
+            : "Suspending removes the item from delivery. It can be reactivated later, subject to its reactivation ceiling."
+        }
+        cancelLabel="Cancel"
+        confirmLabel={busy ? "Working…" : confirmTransition === "archived" ? "Archive" : "Suspend"}
+        confirmClass="bg-slate-900 hover:bg-slate-800 text-white"
+      >
+        <p className="text-xs text-slate-500">
+          If a live session depends on this item the server will refuse.
+          Forcing past that closes those sessions and is an admin action.
+        </p>
+      </Modal>
     </div>
   );
 }

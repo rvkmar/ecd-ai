@@ -18,9 +18,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D72** — adversarial review of the whole core. P0: student session ownership. Handoff: `claude/day72-adversarial-core.md`. Prior: D71 four-role walk. |
-| Next queued | Calendar **D73** — accessibility audit. D55 in git was a skip; do not treat calendar ✅ as a real WCAG pass. |
-| Block | **W15** — Core sign-off (D71–D72 walked; D73–D75 remain) |
+| Last completed unit | **D73** — accessibility backfills F-A1–F-A6 (calendar D55 findings, source-verified). Handoff: `claude/day73-accessibility-backfills.md`. Prior: D72. |
+| Next queued | Calendar **D74** — bundle split (>500 kB). Then **D75** W15 close (never-compress). |
+| Block | **W15** — Core sign-off (D71–D73 done; D74–D75 remain) |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -33,7 +33,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D69 | product `a66c475` + ETS-C `2d602bb` + `alphaMH` delta `56de11d` + this close. Close: `claude/day69-dif-analysis.md`. Live CI: [lsat7-pipeline `56de11d`](https://github.com/rvkmar/ecd-ai/actions/runs/34810924755). |
 | HEAD at D70 | first pass `0a2ff01` (hand Mean/Sigma) + plink `b96511a` + this close. Close: `claude/day70-equating.md`. Live path: local `:4000` (`plink` 1.5.1), not Hub CI. |
 | HEAD at D71 | `b9c6274`. Close: `claude/day71-core-browser-pass.md`. Live path: nginx `:6060` + node rebuilt that session. |
-| HEAD at D72 | this close. Close: `claude/day72-adversarial-core.md`. |
+| HEAD at D72 | `c2f387b`. Close: `claude/day72-adversarial-core.md`. |
+| HEAD at D73 | this close. Close: `claude/day73-accessibility-backfills.md`. |
 
 ## Session log
 
@@ -65,14 +66,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-14 | D70 | 1, alone | Premise rewritten twice: job kind existed; Hub lacked equate/plink so first pass was mirt Mean/Sigma; local rebuild then `plink::plink`. Known-equating recovered locally. |
 | 2026-09-14 | close | — | D70 close. Suite **1371 passed**; build 37.55s. Live plink on `:4000`. Calendar marked. Next: D71. Hub image publish still open. |
 | 2026-09-14 | D71 | 3, alone | Four-role live walk on `:6060`. Reports: keep `loadDB` (sessions are JSON); teacher-report 500 on missing `constructs`. D68 mid-flight not walked. Suite **1369 passed / 6 skipped**. |
-| 2026-09-14 | D72 | 3, alone | Whole-core adversarial. No psychometric P0. P0: `/mine` fallback + ungated `GET /:id` `/submit`. Live 403 on foreign session. Suite **1379 passed / 6 skipped**. |
+| 2026-09-14 | D73 | 1, alone | Calendar D55 findings recovered (git never had the audit file). F-A1 Modal→Radix Dialog; F-A2 contrast; F-A3 cards; F-A4 labels; F-A5 scroll; F-A6 24px checkboxes. Suite **1382 passed / 6 skipped**. |
 
 ## Compression debt
 
 | Unit | What was compressed | Why | Discharge by | Status |
 |---|---|---|---|---|
 | D50 | District/teacher browser pass skipped | Human logins | D71 | **closed** — district Operate + teacher Sessions walked 2026-09-14 |
-| D55 | Entire W11 accessibility audit skipped | Never scheduled after Q-matrix/Assembly shipped | Re-date at W12 close or before D73 | **open, past two block closes → standing risk** |
+| D55 | Entire W11 accessibility audit skipped | Never scheduled after Q-matrix/Assembly shipped | Re-date at W12 close or before D73 | **closed as backfill** — D73 source-verified calendar F-A1–F-A6 and fixed them. No new axe report invented. |
 | D56 | Adaptive selection not live-browser | Tests only | D71 | **closed as inspection** — live BN session `s1789288355960` already ranked t-d56-1 / t-d56-3 and stopped; ranking not re-run |
 | D58 | Live diagnostic-session ending screen not walked at first close | Walked later 2026-09-13 on `s1789288381307` | D58 | **closed** |
 | D57 | Author UI said accuracy was unevaluated | Folded into D58 | D58 | **closed** |
@@ -106,6 +107,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D70 | Wire equate / plink as a job kind; recover a known transformation in CI | `equating` already declared. No `/calibrate/equating`, no `forms`, no fixture. Hub image lacked `equate` and `plink`. | Seeded NEAT fixture + R path + artefact ingest. First pass hand Mean/Sigma on mirt (`0a2ff01`). After local image rebuild, operational constants from `plink::plink` Mean/Sigma (`b96511a`). Tolerance slope 1 ± 0.2, intercept −0.5 ± 0.3. Live check executed on local `:4000`, not Hub. |
 | D71 | First proof author → deliver → score → accumulate → calibrate → rescore even exists | Admin+student IRT already moved a posterior (D50). District/teacher Play, reports, and D68 freeze were the holes. `DB_MODE=mongo` does not mean sessions live in Mongo. | Four-role live sign-off. Session reports stay on `loadDB` (`ECD_DB_FILE`). Teacher-report must tolerate Evidence Models without `constructs`. |
 | D72 | Refute delivery, accumulation, selection, R pipeline, W10 reachability | Those surfaces exist and D60/D68/D39 hold. The uncalled production path was `sessionAssignedToStudent` (tests only + `/mine` leak-fallback). | Ranked findings. P0: student may not list/read/submit another examinee's session. P1s recorded, not all fixed. |
+| D73 | Execute only D55 numbered required backfills | `claude/day56-accessibility-audit.md` was never in git. Calendar D55 listed F-A1–F-A6. | Recover those six, re-verify in source, backfill only still-present defects. |
 
 ## Carried-forward gaps
 

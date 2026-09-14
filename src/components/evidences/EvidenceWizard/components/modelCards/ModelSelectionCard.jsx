@@ -36,13 +36,15 @@ export default function ModelSelectionCard({
 
     return (
 
-        <div
+        <button
+            type="button"
             onClick={() => {
                 if (interactive) onSelect(modelMeta.type);
             }}
+            disabled={!interactive}
+            aria-pressed={selected}
             title={reason || undefined}
-            aria-disabled={unavailable || locked}
-            className={`space-y-2 rounded-lg border p-4 shadow-sm transition
+            className={`w-full text-left space-y-2 rounded-lg border p-4 shadow-sm transition
                 ${selected
                     ? "border-slate-900 bg-white ring-2 ring-slate-900/10"
                     : unavailable
@@ -104,7 +106,7 @@ export default function ModelSelectionCard({
 
             )}
 
-        </div>
+        </button>
 
     );
 
