@@ -78,6 +78,7 @@ pipeline. Ingest still refuses `converged: false`.
 Rasch matrix in Node (`server/r/plantedDifFixture.js`, seed 20261201).
 The focal group answers Item.5 against a difficulty shifted +2.5
 logits; ability is N(0,1) in both groups. `POST /calibrate/dif` calls
-`difR::difMH` (Mantel-Haenszel, alpha 0.05, no purification). The
-operational flag is ETS C (`|deltaMH| >= 1.5`), because unadjusted
-MH p < 0.05 overflagged Item.1 and Item.4 on the first live CI.
+`difR::difMH` (Mantel-Haenszel, alpha 0.05, no purification). ETS
+delta is computed from stored `alphaMH` (`-2.35 * log(alphaMH)`);
+difR does not put `deltaMH` on the MH object. The operational flag is
+ETS C (`|deltaMH| >= 1.5`). Unadjusted MH p < 0.05 overflags.

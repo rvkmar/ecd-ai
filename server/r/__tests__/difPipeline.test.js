@@ -291,8 +291,9 @@ describe.skipIf(!live)("planted DIF live R pipeline", () => {
       client: { postCalibration },
     });
 
+    const parameters = processed.job?.response?.parameters || {};
     const flags = Object.fromEntries(
-      Object.entries(processed.job?.response?.parameters || {}).map(([id, p]) => [id, p.flag])
+      Object.entries(parameters).map(([id, p]) => [id, p.flag])
     );
     const liveDump = JSON.stringify(
       {
@@ -304,6 +305,15 @@ describe.skipIf(!live)("planted DIF live R pipeline", () => {
         packageVersion: processed.job?.response?.packageVersion,
         sampleSize: processed.job?.response?.sampleSize,
         flags,
+        etsClass: Object.fromEntries(
+          Object.entries(parameters).map(([id, p]) => [id, p.etsClass])
+        ),
+        deltaMH: Object.fromEntries(
+          Object.entries(parameters).map(([id, p]) => [id, p.deltaMH])
+        ),
+        alphaMH: Object.fromEntries(
+          Object.entries(parameters).map(([id, p]) => [id, p.alphaMH])
+        ),
         fitStatistics: processed.job?.response?.fitStatistics,
         diagnostics: processed.job?.response?.diagnostics,
       },

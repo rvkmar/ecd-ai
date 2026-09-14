@@ -788,8 +788,15 @@ calibrate_dif <- function(body, res) {
 
   flagged_ids <- .dif_flagged_ids(fit_try, request_item_ids)
   p_values <- as.numeric(fit_try$p.value)
+  mh_stats <- as.numeric(fit_try$MH)
+  # difR stores alphaMH on the MH object; deltaMH is printed, not stored
+  # (print.MH: -2.35 * log(alphaMH), Holland and Thayer 1985).
   alpha_mh <- as.numeric(fit_try$alphaMH)
-  delta_mh <- as.numeric(fit_try$deltaMH)
+  if (length(alpha_mh) == length(request_item_ids) && !is.null(names(fit_try$alphaMH))) {
+    named <- as.numeric(fit_try$alphaMH[request_item_ids])
+    if (all(is.finite(named))) alpha_mh <- named
+  }
+  delta_mh <- ifelse(is.finite(alpha_mh) & alpha_mh > 0, -2.35 * log(alpha_mh), NA_real_)
   if (length(p_values) != length(request_item_ids)) {
     res$status <- 200
     return(.failure(
@@ -813,8 +820,9 @@ calibrate_dif <- function(body, res) {
     # unadjusted MH p < 0.05. Eight tests at alpha=0.05 overflag.
     is_flag <- identical(ets, "C")
     if (is_flag) c_flagged <- c(c_flagged, id)
+    mh_i <- if (length(mh_stats) >= i) as.numeric(mh_stats[[i]]) else NA_real_
     parameters[[id]] <- list(
-      statistic = p_i,
+      statistic = if (is.finite(mh_i)) mh_i else p_i,
       pValue = p_i,
       alphaMH = a_i,
       deltaMH = d_i,

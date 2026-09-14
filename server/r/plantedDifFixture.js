@@ -11,8 +11,10 @@
 //   Rasch b         [-1.4, -1.0, -0.6, -0.2, 0.2, 0.6, 1.0, 1.4]
 //   planted         Item.5 (column 4): focal group answers against b+2.5
 //                   (uniform DIF). Reference uses the listed b.
-//   flag            ETS C (|deltaMH| >= 1.5). Unadjusted MH p < 0.05 overflagged
-//                   Item.1 and Item.4 on the first live CI (a66c475).
+//   flag            ETS C (|deltaMH| >= 1.5), with delta from -2.35*log(alphaMH).
+//                   Unadjusted MH p < 0.05 overflagged Item.1 and Item.4 on
+//                   a66c475. 2d602bb used ETS C but read a missing deltaMH
+//                   field, so every item looked unflagged.
 //   P(u=1)          1 / (1 + exp(-(theta - b_used)))
 //
 // Groups travel on the ADR 0002 request as `groups` (focal/reference
