@@ -13,8 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   seeded 800×8 Rasch matrix (seed 20261201) with one planted uniform
   DIF item (`Item.5`, focal difficulty shifted +2.5). Groups travel on
   the ADR 0002 envelope. `POST /calibrate/dif` returns per-item
-  statistic, p-value, ETS class, flag and method. The operational flag
-  is ETS C (`|deltaMH| ≥ 1.5`). Ingest writes an analysis
+  statistic, p-value, ETS class, flag and method. ETS delta is
+  `-2.35 * log(alphaMH)` (printed by difR, not stored on the MH object).
+  The operational flag is ETS C (`|deltaMH| ≥ 1.5`). Ingest writes an analysis
   artefact on the evidence model, not a parameter set. Live CI
   (`lsat7-pipeline`) must flag Item.5 and only Item.5. Always-run tests
   use a labeled contract stub.

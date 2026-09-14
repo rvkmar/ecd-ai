@@ -797,11 +797,14 @@ calibrate_dif <- function(body, res) {
     if (all(is.finite(named))) alpha_mh <- named
   }
   delta_mh <- ifelse(is.finite(alpha_mh) & alpha_mh > 0, -2.35 * log(alpha_mh), NA_real_)
-  if (length(p_values) != length(request_item_ids)) {
+  if (length(p_values) != length(request_item_ids) || length(alpha_mh) != length(request_item_ids)) {
     res$status <- 200
     return(.failure(
       body$jobId,
-      sprintf("difMH returned %d p-values, expected %d", length(p_values), length(request_item_ids)),
+      sprintf(
+        "difMH returned %d p-values and %d alphaMH values, expected %d",
+        length(p_values), length(alpha_mh), length(request_item_ids)
+      ),
       "ExtractError",
       paste(stderr_lines, collapse = "\n")
     ))

@@ -18,11 +18,11 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D68** — calibrated supersedes pilot (switchover). Handoff: `claude/day68-calibrated-supersedes-pilot.md`. Prior: D67 CTT. |
-| Next queued | Calendar **D69** — DIF / difR. Never-compress. Then D70 equating / W14 close. |
+| Last completed unit | **D69** — DIF through R (`difR::difMH`, planted Item.5 unique ETS C in CI). Handoff: `claude/day69-dif-analysis.md`. Prior: D68 switchover. |
+| Next queued | Calendar **D70** — equating / W14 close. Never-compress. |
 | Block | **W14** — diagnostics calibration, CTT live, DIF, equating |
-| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ D67: CTT through R in tests/CI (`/calibrate/ctt` no longer a permanent 501). |
-| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. |
+| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ D69: planted DIF unique-item flag in CI. Equating still 501. |
+| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
 | HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` / `85b43fa` (live `/health` close). |
 | HEAD at D64 | `d27d21b` (#19) |
@@ -30,6 +30,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D66 | `dca6c31` (#22). Close: `claude/day66-sim10gdina.md`. |
 | HEAD at D67 | `4e8881a` (#23) + close `6dd7357`. Close: `claude/day67-ctt-calibration.md`. Live CI: [lsat7-pipeline `45de56f`](https://github.com/rvkmar/ecd-ai/actions/runs/34802897124). |
 | HEAD at D68 | product `c4e5d77` + close `8a5ff65` + D68 completed verification commit. Close: `claude/day68-calibrated-supersedes-pilot.md`. |
+| HEAD at D69 | product `a66c475` + ETS-C `2d602bb` + `alphaMH` delta `56de11d` + this close. Close: `claude/day69-dif-analysis.md`. Live CI: [lsat7-pipeline `56de11d`](https://github.com/rvkmar/ecd-ai/actions/runs/34810924755). |
 
 ## Session log
 
@@ -56,6 +57,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-14 | close | — | D67 close at `4e8881a`. Suite re-run **1332 passed / 4 skipped**; build green. Calendar marked. G6 operational lifecycle walk not executed. `classicalCalibration.js` still IRT-shaped. Next: D68. |
 | 2026-09-14 | D68 | 3, alone | Never-compress switchover. In-flight freeze to opening source / parameterSetId. New sessions still take the active calibrated set. D50: IRT keyed by observableId (itemId fallback). Schema no longer requires pointer == current active set. D49c same-session flip test restated. Suite **1350 passed / 4 skipped**. Player regression on `:6060` (`s1789288355960`). |
 | 2026-09-14 | close | — | D68 close verification. Suite re-run **1349 passed / 4 skipped** (one fewer than product-commit 1350; recorded as-run). Build green 30.45s. Calendar already ✅. Live mid-flight ingest still D71. Next: D69. |
+| 2026-09-14 | D69 | 1, alone | Premise rewritten: job kind already existed. Wired `/calibrate/dif`, groups, artefact ingest, planted-dif CI. First live CI overflagged at MH p < 0.05; ETS C with missing `deltaMH` field underflagged; unique C from `-2.35 * log(alphaMH)` passed. |
+| 2026-09-14 | close | — | D69 close. Suite **1357 passed / 5 skipped**; build 28.50s. Live planted DIF green on `56de11d`. Calendar marked. Next: D70. |
 
 ## Compression debt
 
@@ -75,6 +78,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D66 | Live GDINA sim10GDINA not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `sim10gdinaPipeline.test.js` | this PR's CI | **closed** — live job green (`GDINA 2.9.12`, `converged: true`, 1000×10; first CI keyed `"Item 1"`, then keyed by request `itemIds`) |
 | D67 | Live TAM LSAT7 CTT not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `cttPipeline.test.js` | this PR's CI | **closed** — live job green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`; observed KR-20 0.4542 recorded, not pinned) |
 | D68 | Live mid-flight ingest + second submit on `:6060` | HTTP switchover tests; player regression only | D71 | open |
+| D69 | Live difR planted-item flags not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `difPipeline.test.js` | this PR's CI | **closed** — live job green (`difR 6.1.0`, unique ETS C on Item.5; first two live runs failed the unique-item rule, recorded in the handoff) |
 
 Debt against the never-compress list is not permitted. **D60** (this file's real unit) is closed.
 
@@ -90,6 +94,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D67 | Rewrite `classicalCalibration.js` to native CTT; wire the file kind through the import panel; first CTT Evidence Model reaches `operational` | Real calibration path is R jobs. `/calibrate/ctt` was a contract-shaped 501. `ctt-statistics` was already a declared job kind (TAM). `classicalCalibration.js` still emits provisional IRT. `readinessErrorsFor` already only requires *some* parameter set. | TAM `POST /calibrate/ctt` on published LSAT7 as `{ fixture: "lsat7-ctt" }`. Ingest native `{ difficulty, discrimination, n }` + KR-20. Enqueue refuses an IRT bind. File-import rewrite and the operational lifecycle POST were **not** this unit (held for D71 / D77). |
 | D67 | Pin published CTT coefficients (KR-20, point-biserial) for a classical dataset | No published KR-20 / rpb table for LSAT7 is in this pipeline. CTT difficulty **is** the published item mean (definitional). Live path asserts those means, Item.5 p > Item.4 p, rpb in (0,1), KR-20 in (0,1), `packageVersion` `/^TAM /` | Restated reliability / discrimination check; difficulty identity kept. Tightening is D88-class if a table is later sourced |
 | D68 | Wire calibrated values through Item Wizard Step 7; re-verify D39 P0-3 on switchover | Calibrated already won on submit/selection for new work. The hole was the *next* submit on an in-flight session mixing sources/sets. Schema required `parameterSetId === activeParameterSetId`, which itself blocked a frozen historical pointer. D49c required the mix. | Freeze per EM to opening source + opening set. New sessions still prefer calibrated. IRT keyed by observableId (itemId fallback). Schema: set must still exist, need not be active. D49c restated to a new session. |
+| D69 | Wire `difR` as a job kind; unique planted-item flag in CI at a stated tolerance | `dif-analysis` / package `difR` already declared. No `/calibrate/dif`, no groups, no artefact ingest. Unadjusted MH p < 0.05 is not unique on this 8-item matrix. `difR` stores `alphaMH`, not `deltaMH`. | R path + groups + artefact ingest. Stated tolerance is ETS C from `-2.35 * log(alphaMH)`. Unique Item.5 in CI on `56de11d`. |
 
 ## Carried-forward gaps
 
