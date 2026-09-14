@@ -1,12 +1,19 @@
 # D67 — CTT through R (never-compress)
 
-**Status: DONE with a restated live check** (same class as D64/D66). Product
-is PR **#23** against `main` on `rvkmar/ecd-ai`. Live TAM is CI job
+**Status: DONE with a restated live check** (same class as D64/D66).
+Product is on `master` at **`4e8881a`** (#23). Live TAM is CI job
 `lsat7-pipeline` (same published image + app mount as compose). This
 environment has no Docker/R, so the live describe is skipped here.
 `POST /calibrate/ctt` is implemented for this path. Live CI on
 `45de56f`: `TAM 4.3.25`, `converged: true`, 1000×5, method
 `TAM::tam.ctt2`. R is still not on any session path (ADR 0001).
+
+The original G6 exit check (“a CTT Evidence Model reaches
+`operational`”) was **not** executed as a lifecycle POST. What ran is
+enqueue → R → ingest of a native `ctt-statistics` parameter set.
+`readinessErrorsFor` now has something it can accept; the confirm →
+operational walk itself was not this unit. `classicalCalibration.js`
+still emits provisional IRT *a*/*b* from a CSV.
 
 ## Exit check
 
@@ -108,6 +115,13 @@ Enqueue by hand (admin token):
 # POST /api/calibrationJobs/:id/ingest
 ```
 
+## Session-close verification (2026-09-14 IST)
+
+- `NODE_OPTIONS=--max-old-space-size=3072 npx vitest run` — **1332 passed / 4 skipped** (85 files), 62.56s. Skips: live LSAT7, two live sim10GDINA describes, and the live CTT describe when `R_BACKEND_URL` is unset.
+- `npm run build` — Vite 7.3.6, **26.59s**. Chunk warning remains (`index-4BMHM0La.js` 2,272.82 kB / gzip 633.36 kB) — D74.
+- `git status` at this recording — dirty only with this close until committed. Product HEAD **`4e8881a`**.
+- Live R not run locally (no Docker/R). CI `lsat7-pipeline` CTT step green on merge (`TAM 4.3.25`, `TAM::tam.ctt2`, KR-20 0.4542 observed not pinned).
+
 ## Honest remaining gaps
 
 - Live TAM in this authoring environment: no Docker/R here. CI is the
@@ -125,8 +139,13 @@ Enqueue by hand (admin token):
 - Parameter-set diff UI still not started.
 - `renv.lock` still absent; `/health` on `rvkmar/r-backend:latest` is
   the version record.
+- `classicalCalibration.js` still wraps a response matrix as
+  `kind: "irt-parameters"`. File-import CTT is not this pipeline.
+- No test or browser walk promotes a CTT Evidence Model to
+  `operational` after ingest. G6’s original behavioural check stays
+  open as that walk (D68 / D71), not as a missing R endpoint.
 
 ## Next
 
-W14 remainder — DIF / equating (job kinds declared; no live endpoint
-yet). Never-compress.
+Calendar **D68** — calibrated parameters supersede pilot (never-compress).
+D69 DIF and D70 equating follow. Do not start D68 on a thin budget.
