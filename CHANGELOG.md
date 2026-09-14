@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- D69: DIF through R (`difR::difMH`). `{ fixture: "planted-dif" }` is a
+  seeded 800×8 Rasch matrix (seed 20261201) with one planted uniform
+  DIF item (`Item.5`, focal difficulty shifted +1.75). Groups travel on
+  the ADR 0002 envelope. `POST /calibrate/dif` returns per-item
+  statistic, p-value, flag and method. Ingest writes an analysis
+  artefact on the evidence model, not a parameter set. Live CI
+  (`lsat7-pipeline`) must flag Item.5 and only Item.5. Always-run tests
+  use a labeled contract stub.
+
 - D68: calibrated parameters supersede Step 7 / DINA pilots for **new**
   sessions; an in-flight session freezes to the parameter source (and,
   if calibrated, the `parameterSetId`) it opened with, so ingest cannot

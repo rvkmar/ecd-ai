@@ -20,6 +20,7 @@ import {
   formatTimestamp,
   requestSummary,
 } from "./calibrationConsoleUtils";
+import { jobKindIngestsAnalysisArtefact } from "@/utils/ecdVocabulary";
 
 function JsonBlock({ value, empty }) {
   if (value == null) {
@@ -50,7 +51,12 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
   const canProcess = !readOnly && job.status === "queued";
   const canRetry =
     !readOnly && job.status === "failed" && (job.attempts || 0) < (job.maxAttempts || 0);
-  const canIngest = !readOnly && job.status === "succeeded" && !job.ingestedParameterSetId;
+  const canIngest =
+    !readOnly &&
+    job.status === "succeeded" &&
+    !job.ingestedParameterSetId &&
+    !job.ingestedAnalysisArtefactId;
+  const writesArtefact = jobKindIngestsAnalysisArtefact(job.kind);
 
   async function runAction(label, mutation, id) {
     setActionError(null);
@@ -60,10 +66,17 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
       if (label === "Ingest") {
         const parameterSetId =
           result?.parameterSet?.parameterSetId || result?.job?.ingestedParameterSetId;
+        const analysisArtefactId =
+          result?.analysisArtefact?.analysisArtefactId || result?.job?.ingestedAnalysisArtefactId;
+        if (analysisArtefactId) {
+          setIngestResult(result.analysisArtefact || { analysisArtefactId });
+          toast.success(`Ingested as analysis artefact ${analysisArtefactId}.`);
+          return;
+        }
         if (!parameterSetId) {
           setIngestResult(null);
-          setActionError("Ingest succeeded but no parameter set id was returned.");
-          toast.error("Ingest response did not include a parameter set.");
+          setActionError("Ingest succeeded but no parameter set or analysis artefact id was returned.");
+          toast.error("Ingest response did not include a parameter set or analysis artefact.");
           return;
         }
         setIngestResult(result.parameterSet || { parameterSetId });
@@ -137,7 +150,7 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
       {job.response?.converged === false && canIngest && (
         <p className="text-sm text-muted-foreground">
           This run did not converge. Ingest will be refused (HTTP 409) and will
-          not write a parameter set.
+          not write a {writesArtefact ? "analysis artefact" : "parameter set"}.
         </p>
       )}
 
@@ -153,9 +166,22 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
         </p>
       )}
 
+      {ingestResult?.analysisArtefactId && (
+        <p className="text-sm" role="status">
+          Wrote analysis artefact <strong>{ingestResult.analysisArtefactId}</strong>.
+        </p>
+      )}
+
       {job.ingestedParameterSetId && !ingestResult && (
         <p className="text-sm" role="status">
           Already ingested as parameter set <strong>{job.ingestedParameterSetId}</strong>.
+        </p>
+      )}
+
+      {job.ingestedAnalysisArtefactId && !ingestResult && (
+        <p className="text-sm" role="status">
+          Already ingested as analysis artefact{" "}
+          <strong>{job.ingestedAnalysisArtefactId}</strong>.
         </p>
       )}
 

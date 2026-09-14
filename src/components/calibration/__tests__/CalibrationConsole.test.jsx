@@ -189,6 +189,38 @@ vi.mock("@/api/queries/calibrationJobs", () => ({
           })
         );
       }
+      if (payload.fixture === "planted-dif") {
+        return fx.addJob(
+          queuedJob({
+            id: "job-planted-dif",
+            kind: "dif-analysis",
+            evidenceModelId: payload.evidenceModelId,
+            statisticalModelId: payload.statisticalModelId,
+            request: {
+              contractVersion: "1.0",
+              jobId: "job-planted-dif",
+              model: {
+                family: "dif",
+                itemIds: [
+                  "Item.1",
+                  "Item.2",
+                  "Item.3",
+                  "Item.4",
+                  "Item.5",
+                  "Item.6",
+                  "Item.7",
+                  "Item.8",
+                ],
+              },
+              responseMatrix: {
+                personIds: Array.from({ length: 8 }, (_, i) => `p${i}`),
+                itemIds: ["Item.1"],
+              },
+              options: { seed: 20261201 },
+            },
+          })
+        );
+      }
       return fx.addJob(queuedJob());
     },
   }),
@@ -333,6 +365,31 @@ describe("admin start → process → watch → ingest", () => {
     ]);
     expect(screen.getByRole("heading", { name: /inspect job-lsat7-ctt/i })).toBeInTheDocument();
     expect(screen.getByText(/5 × 8/)).toBeInTheDocument();
+  });
+
+  it("enqueues planted DIF bound to an IRT statistical model", async () => {
+    const user = userEvent.setup();
+    render(<CalibrationConsole />);
+
+    await user.selectOptions(screen.getByLabelText(/published fixture/i), "planted-dif");
+    expect(screen.getByRole("button", { name: /enqueue planted dif/i })).toBeInTheDocument();
+    expect(screen.getByText(/difR::difMH/)).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /LSAT CTT evidence/ })).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/evidence model/i), "em1");
+    await user.selectOptions(screen.getByLabelText(/statistical model/i), "sm1");
+    await user.click(screen.getByRole("button", { name: /enqueue planted dif/i }));
+
+    expect(fx.enqueuePayloads).toEqual([
+      {
+        fixture: "planted-dif",
+        kind: "dif-analysis",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+      },
+    ]);
+    expect(screen.getByRole("heading", { name: /inspect job-planted-dif/i })).toBeInTheDocument();
+    expect(screen.getByText(/8 × 8/)).toBeInTheDocument();
   });
 });
 

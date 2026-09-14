@@ -1,0 +1,6 @@
+{
+  "kind": "dif-analysis",
+  "fixture": "planted-dif",
+  "evidenceModelId": "REPLACE_WITH_EVIDENCE_MODEL_ID",
+  "statisticalModelId": "REPLACE_WITH_STATISTICAL_MODEL_ID"
+}

@@ -97,6 +97,18 @@ calibrate_dispatch <- function(req, res, family) {
     return(calibrate_ctt(body, res))
   }
 
+  if (identical(family, "dif")) {
+    if (!identical(requested_family, "dif")) {
+      res$status <- 400
+      return(.failure(
+        body$jobId,
+        paste0("This endpoint calibrates family 'dif', not '", requested_family, "'"),
+        "FamilyMismatch"
+      ))
+    }
+    return(calibrate_dif(body, res))
+  }
+
   res$status <- 501
   .failure(body$jobId, paste0("Unsupported family: ", family), "NotImplemented")
 }
@@ -667,6 +679,190 @@ calibrate_ctt <- function(body, res) {
       method = fit_try$method,
       scoreForDiscrimination = "raw total (rowSums), not an IRT WLE",
       reliability = "KR-20 (Kuder & Richardson 1937); equals Cronbach's alpha for dichotomous complete data",
+      warnings = as.list(warnings_acc)
+    )
+  )
+}
+
+.group_codes <- function(groups, n_persons) {
+  labels <- vapply(as.list(groups$labels), .as_char, character(1))
+  if (length(labels) != n_persons) {
+    stop("groups.labels length does not match the response matrix")
+  }
+  reference <- .as_char(groups$reference)
+  focal <- .as_char(groups$focal)
+  codes <- ifelse(labels == focal, 1L, ifelse(labels == reference, 0L, NA_integer_))
+  if (any(is.na(codes))) {
+    stop("groups.labels contains a value that is neither reference nor focal")
+  }
+  list(codes = codes, reference = reference, focal = focal)
+}
+
+.dif_flagged_ids <- function(fit, item_ids) {
+  flagged <- fit$DIFitems
+  if (is.null(flagged) || (is.character(flagged) && grepl("No DIF", flagged[[1]], ignore.case = TRUE))) {
+    return(character(0))
+  }
+  if (is.numeric(flagged)) {
+    idx <- as.integer(flagged)
+    idx <- idx[idx >= 1L & idx <= length(item_ids)]
+    return(item_ids[idx])
+  }
+  as.character(flagged)
+}
+
+calibrate_dif <- function(body, res) {
+  if (!requireNamespace("difR", quietly = TRUE)) {
+    res$status <- 500
+    return(.failure(body$jobId, "Package difR is not installed", "MissingPackage"))
+  }
+  suppressPackageStartupMessages(library(difR, quietly = TRUE))
+
+  started <- proc.time()[["elapsed"]]
+  stderr_lines <- character(0)
+  warnings_acc <- character(0)
+
+  opts <- body$options
+  .first <- function(x) unlist(x, use.names = FALSE)[[1]]
+  seed <- as.integer(.first(opts$seed))
+  alpha <- if (!is.null(opts$convergenceTolerance)) as.numeric(.first(opts$convergenceTolerance)) else 0.05
+  if (is.na(alpha) || alpha <= 0 || alpha >= 1) alpha <- 0.05
+
+  resp_df <- tryCatch(
+    response_matrix_to_df(body$responseMatrix),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(resp_df)) {
+    res$status <- 400
+    return(.failure(body$jobId, "Could not coerce responseMatrix.data", "MatrixError", paste(stderr_lines, collapse = "\n")))
+  }
+
+  request_item_ids <- vapply(as.list(body$model$itemIds), .as_char, character(1))
+  colnames(resp_df) <- request_item_ids
+
+  grouped <- tryCatch(
+    .group_codes(body$groups, nrow(resp_df)),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(grouped)) {
+    res$status <- 400
+    return(.failure(body$jobId, "Could not coerce groups", "GroupError", paste(stderr_lines, collapse = "\n")))
+  }
+
+  message(sprintf(
+    "calibrate_dif job=%s dim=%dx%d method=difR::difMH",
+    .as_char(body$jobId), nrow(resp_df), ncol(resp_df)
+  ))
+
+  set.seed(seed)
+  fit_try <- try(
+    difR::difMH(
+      Data = resp_df,
+      group = grouped$codes,
+      focal.name = 1,
+      alpha = alpha,
+      purify = FALSE,
+      correct = TRUE
+    ),
+    silent = TRUE
+  )
+  elapsed <- proc.time()[["elapsed"]] - started
+  pkg_ver <- paste("difR", as.character(utils::packageVersion("difR")))
+
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    res$status <- 200
+    return(.failure(
+      body$jobId,
+      paste0(paste(stderr_lines, collapse = "; "), sprintf(" [%dx%d]", nrow(resp_df), ncol(resp_df))),
+      "difRError",
+      paste(stderr_lines, collapse = "\n")
+    ))
+  }
+
+  flagged_ids <- .dif_flagged_ids(fit_try, request_item_ids)
+  p_values <- as.numeric(fit_try$p.value)
+  alpha_mh <- as.numeric(fit_try$alphaMH)
+  delta_mh <- as.numeric(fit_try$deltaMH)
+  if (length(p_values) != length(request_item_ids)) {
+    res$status <- 200
+    return(.failure(
+      body$jobId,
+      sprintf("difMH returned %d p-values, expected %d", length(p_values), length(request_item_ids)),
+      "ExtractError",
+      paste(stderr_lines, collapse = "\n")
+    ))
+  }
+
+  parameters <- list()
+  for (i in seq_along(request_item_ids)) {
+    id <- request_item_ids[[i]]
+    parameters[[id]] <- list(
+      statistic = as.numeric(p_values[[i]]),
+      pValue = as.numeric(p_values[[i]]),
+      alphaMH = if (length(alpha_mh) >= i) as.numeric(alpha_mh[[i]]) else NA_real_,
+      deltaMH = if (length(delta_mh) >= i) as.numeric(delta_mh[[i]]) else NA_real_,
+      flag = id %in% flagged_ids,
+      method = "Mantel-Haenszel",
+      pair = paste0(grouped$focal, " vs ", grouped$reference)
+    )
+  }
+
+  converged <- all(is.finite(p_values))
+
+  if (!converged) {
+    res$status <- 200
+    out <- .failure(
+      body$jobId,
+      "DIF statistics were not identified (non-finite Mantel-Haenszel p-values)",
+      "NotConverged",
+      paste(stderr_lines, collapse = "\n")
+    )
+    out$packageVersion <- pkg_ver
+    out$sampleSize <- nrow(resp_df)
+    out$calibratedAt <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+    out$diagnostics <- list(
+      iterations = 1L,
+      elapsedSeconds = elapsed,
+      method = "difR::difMH",
+      warnings = as.list(warnings_acc)
+    )
+    return(out)
+  }
+
+  list(
+    contractVersion = CALIBRATION_CONTRACT_VERSION,
+    jobId = .as_char(body$jobId),
+    converged = TRUE,
+    packageVersion = pkg_ver,
+    sampleSize = nrow(resp_df),
+    calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    parameters = parameters,
+    standardErrors = NULL,
+    fitStatistics = list(
+      nItems = ncol(resp_df),
+      nPersons = nrow(resp_df),
+      nReference = as.integer(sum(grouped$codes == 0L)),
+      nFocal = as.integer(sum(grouped$codes == 1L)),
+      nFlagged = length(flagged_ids),
+      alpha = alpha
+    ),
+    diagnostics = list(
+      iterations = 1L,
+      elapsedSeconds = elapsed,
+      method = "difR::difMH",
+      purification = FALSE,
+      continuityCorrection = TRUE,
+      flaggedItemIds = as.list(flagged_ids),
+      reference = grouped$reference,
+      focal = grouped$focal,
+      note = "A DIF flag is a prompt to investigate an item, not a finding about a group of students.",
       warnings = as.list(warnings_acc)
     )
   )

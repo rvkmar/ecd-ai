@@ -5,7 +5,7 @@
 
 CALIBRATION_CONTRACT_VERSION <- "1.0"
 
-CALIBRATION_MODEL_FAMILIES <- c("irt", "dina", "gdina", "ctt")
+CALIBRATION_MODEL_FAMILIES <- c("irt", "dina", "gdina", "ctt", "dif")
 CALIBRATION_IRT_SUBTYPES <- c("2PL", "3PL", "Rasch")
 
 .as_char <- function(x) {
@@ -88,6 +88,30 @@ validate_calibration_request <- function(body) {
   }
 
   family <- if (!is.null(model) && is.list(model)) .as_char(model$family) else NA_character_
+  if (identical(family, "dif")) {
+    groups <- body$groups
+    if (is.null(groups) || !is.list(groups)) {
+      errors <- c(errors, "groups is required for family dif")
+    } else {
+      if (is.null(groups$reference) || !nzchar(.as_char(groups$reference))) {
+        errors <- c(errors, "groups.reference is required")
+      }
+      if (is.null(groups$focal) || !nzchar(.as_char(groups$focal))) {
+        errors <- c(errors, "groups.focal is required")
+      }
+      if (!is.null(groups$reference) && !is.null(groups$focal) &&
+          identical(.as_char(groups$reference), .as_char(groups$focal))) {
+        errors <- c(errors, "groups.reference and groups.focal must differ")
+      }
+      if (is.null(groups$labels) || length(groups$labels) < 2) {
+        errors <- c(errors, "groups.labels must name at least two persons")
+      }
+      if (!is.null(rm$personIds) && !is.null(groups$labels) &&
+          length(groups$labels) != length(rm$personIds)) {
+        errors <- c(errors, "groups.labels length must match responseMatrix.personIds")
+      }
+    }
+  }
   diagnostic <- identical(family, "dina") || identical(family, "gdina")
   if (isTRUE(diagnostic) && is.null(body$qMatrix)) {
     errors <- c(errors, "qMatrix is required for dina/gdina")

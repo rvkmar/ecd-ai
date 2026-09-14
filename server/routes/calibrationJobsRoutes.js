@@ -103,6 +103,7 @@ router.post("/", canAuthor, (req, res) => {
     attempts: 1,
     maxAttempts: Number(req.body?.maxAttempts) > 0 ? Number(req.body.maxAttempts) : 3,
     ingestedParameterSetId: null,
+    ingestedAnalysisArtefactId: null,
     retainUntil: retainUntilFrom(now),
     createdAt: now,
     updatedAt: now,
@@ -223,7 +224,11 @@ router.post("/:id/ingest", canAuthor, (req, res) => {
     return res.status(409).json({ error: result.error, details: result.details });
   }
   saveDB(db);
-  res.json({ job, parameterSet: result.parameterSet });
+  res.json({
+    job,
+    parameterSet: result.parameterSet || null,
+    analysisArtefact: result.analysisArtefact || null,
+  });
 });
 
 // ------------------------------
@@ -238,6 +243,11 @@ router.delete("/:id", canAuthor, (req, res) => {
   if (job.ingestedParameterSetId) {
     return res.status(409).json({
       error: `Cannot delete job '${job.id}' while ingestedParameterSetId '${job.ingestedParameterSetId}' points at a live parameter set.`,
+    });
+  }
+  if (job.ingestedAnalysisArtefactId) {
+    return res.status(409).json({
+      error: `Cannot delete job '${job.id}' while ingestedAnalysisArtefactId '${job.ingestedAnalysisArtefactId}' points at a live analysis artefact.`,
     });
   }
   db.calibrationJobs.splice(idx, 1);

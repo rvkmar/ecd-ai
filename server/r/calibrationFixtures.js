@@ -1,15 +1,17 @@
 // server/r/calibrationFixtures.js
-// Named-fixture enqueue: `{ fixture: "lsat7" | "sim10gdina" | "lsat7-ctt" }`.
+// Named-fixture enqueue: `{ fixture: "lsat7" | "sim10gdina" | "lsat7-ctt" | "planted-dif" }`.
 // Production caller is POST /api/calibrationJobs. Keep this list in
 // lockstep with the fixture modules; unknown names 400.
 
 import { lsat7CalibrationRequest } from "./lsat7Fixture.js";
 import { sim10gdinaCalibrationRequest } from "./sim10gdinaFixture.js";
+import { plantedDifCalibrationRequest } from "./plantedDifFixture.js";
 
-export const CALIBRATION_NAMED_FIXTURES = ["lsat7", "sim10gdina", "lsat7-ctt"];
+export const CALIBRATION_NAMED_FIXTURES = ["lsat7", "sim10gdina", "lsat7-ctt", "planted-dif"];
 
 function mergeFixtureRequest(body, fromFix) {
   const qMatrix = body.request?.qMatrix || fromFix.qMatrix;
+  const groups = body.request?.groups || fromFix.groups;
   return {
     ...body,
     request: {
@@ -19,6 +21,7 @@ function mergeFixtureRequest(body, fromFix) {
       responseMatrix: body.request?.responseMatrix || fromFix.responseMatrix,
       options: { ...fromFix.options, ...(body.request?.options || {}) },
       ...(qMatrix ? { qMatrix } : {}),
+      ...(groups ? { groups } : {}),
     },
   };
 }
@@ -57,6 +60,14 @@ export function applyNamedCalibrationFixture(body, db = null) {
     );
     err.code = "UNKNOWN_CALIBRATION_FIXTURE";
     throw err;
+  }
+  if (body.fixture === "planted-dif") {
+    return mergeFixtureRequest(
+      body,
+      plantedDifCalibrationRequest({
+        jobId: body.request?.jobId,
+      })
+    );
   }
   if (body.fixture === "lsat7" || body.fixture === "lsat7-ctt") {
     const ctt =

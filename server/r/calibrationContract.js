@@ -7,13 +7,14 @@ import { CALIBRATION_JOB_KIND_VALUES } from "../../src/utils/ecdVocabulary.js";
 
 export const CALIBRATION_CONTRACT_VERSION = "1.0";
 
-const CALIBRATION_MODEL_FAMILIES = ["irt", "dina", "gdina", "ctt"];
+const CALIBRATION_MODEL_FAMILIES = ["irt", "dina", "gdina", "ctt", "dif"];
 const CALIBRATION_IRT_SUBTYPES = ["2PL", "3PL", "Rasch"];
 
 const KIND_TO_R_PATH = {
   "irt-parameters": "/calibrate/irt",
   "dina-parameters": "/calibrate/dina",
   "ctt-statistics": "/calibrate/ctt",
+  "dif-analysis": "/calibrate/dif",
 };
 
 export function rPathForJobKind(kind) {
@@ -81,6 +82,49 @@ export function validateCalibrationRequest(body) {
 
   if (body.options?.seed === undefined || body.options?.seed === null) {
     errors.push("options.seed is required (reproducibility is provenance)");
+  }
+
+  if (model?.family === "dif") {
+    const groups = body.groups;
+    if (!groups || typeof groups !== "object" || Array.isArray(groups)) {
+      errors.push("groups is required for family dif");
+    } else {
+      if (!groups.reference || typeof groups.reference !== "string") {
+        errors.push("groups.reference is required");
+      }
+      if (!groups.focal || typeof groups.focal !== "string") {
+        errors.push("groups.focal is required");
+      }
+      if (groups.reference && groups.focal && groups.reference === groups.focal) {
+        errors.push("groups.reference and groups.focal must differ");
+      }
+      if (!Array.isArray(groups.labels) || groups.labels.length < 2) {
+        errors.push("groups.labels must name at least two persons");
+      }
+      const rmIds = body.responseMatrix?.personIds;
+      if (Array.isArray(rmIds) && Array.isArray(groups.labels)) {
+        if (groups.labels.length !== rmIds.length) {
+          errors.push("groups.labels length must match responseMatrix.personIds");
+        }
+        if (Array.isArray(groups.personIds) && groups.personIds.length !== rmIds.length) {
+          errors.push("groups.personIds must match responseMatrix.personIds in length");
+        }
+        if (Array.isArray(groups.personIds)) {
+          const same =
+            groups.personIds.length === rmIds.length &&
+            groups.personIds.every((id, i) => id === rmIds[i]);
+          if (!same) {
+            errors.push("groups.personIds must match responseMatrix.personIds in order");
+          }
+        }
+      }
+      if (Array.isArray(groups.labels) && groups.reference && groups.focal) {
+        const nRef = groups.labels.filter((g) => g === groups.reference).length;
+        const nFoc = groups.labels.filter((g) => g === groups.focal).length;
+        if (nRef < 2) errors.push("groups.labels must include at least two reference persons");
+        if (nFoc < 2) errors.push("groups.labels must include at least two focal persons");
+      }
+    }
   }
 
   const diagnosticFamily = model?.family === "dina" || model?.family === "gdina";

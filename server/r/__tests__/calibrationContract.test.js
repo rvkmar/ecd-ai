@@ -65,13 +65,13 @@ describe("request envelope", () => {
     expect(body.qMatrix.attributeIds).toHaveLength(3);
   });
 
-  it("accepts the committed LSAT7 CTT request (D67)", async () => {
+  it("accepts the committed planted DIF request (D69)", async () => {
     const { applyNamedCalibrationFixture } = await import("../calibrationFixtures.js");
-    const body = applyNamedCalibrationFixture({ fixture: "lsat7-ctt" }).request;
+    const body = applyNamedCalibrationFixture({ fixture: "planted-dif" }).request;
     expect(validateCalibrationRequest(body)).toEqual([]);
-    expect(body.model.family).toBe("ctt");
-    expect(body.responseMatrix.personIds).toHaveLength(1000);
-    expect(body.qMatrix).toBeUndefined();
+    expect(body.model.family).toBe("dif");
+    expect(body.groups.focal).toBe("focal");
+    expect(body.responseMatrix.personIds).toHaveLength(800);
   });
 });
 

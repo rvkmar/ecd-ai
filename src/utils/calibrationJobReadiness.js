@@ -16,6 +16,7 @@ const JOB_KINDS = [
 ];
 
 const PARAM_KINDS = new Set(["irt-parameters", "dina-parameters", "ctt-statistics"]);
+const ARTEFACT_KINDS = new Set(["dif-analysis", "equating", "item-analysis", "test-information"]);
 const JOB_STATUSES = ["queued", "running", "succeeded", "failed", "cancelled"];
 const CONTRACT_VERSION = "1.0";
 
@@ -49,6 +50,16 @@ function requestProblems(request) {
   }
   if (request.options?.seed === undefined || request.options?.seed === null) {
     errors.push("Request options.seed is required");
+  }
+  if (request.model?.family === "dif") {
+    const groups = request.groups;
+    if (!groups || typeof groups !== "object" || Array.isArray(groups)) {
+      errors.push("Request groups is required for family dif");
+    } else if (!groups.reference || !groups.focal) {
+      errors.push("Request groups.reference and groups.focal are required");
+    } else if (!Array.isArray(groups.labels) || groups.labels.length < 2) {
+      errors.push("Request groups.labels must name at least two persons");
+    }
   }
   return errors;
 }
@@ -198,11 +209,11 @@ export function ingestReadiness(job) {
     message: succeeded ? "Job succeeded" : `Job status is '${job?.status || "missing"}', not succeeded`,
   });
 
-  const already = Boolean(job?.ingestedParameterSetId);
+  const alreadyParam = Boolean(job?.ingestedParameterSetId);
   checks.push({
     id: "notIngested",
-    ok: !already,
-    message: already
+    ok: !alreadyParam,
+    message: alreadyParam
       ? `Already ingested as parameter set '${job.ingestedParameterSetId}'`
       : "Not yet ingested",
   });
@@ -230,6 +241,55 @@ export function ingestReadiness(job) {
     message: converged
       ? "Run converged"
       : "Ingestion refuses converged: false — the job stays inspectable and never becomes a parameter set",
+  });
+
+  return { ready: checks.every((c) => c.ok), checks };
+}
+
+export function ingestArtefactReadiness(job) {
+  const checks = [];
+
+  const succeeded = job?.status === "succeeded";
+  checks.push({
+    id: "succeeded",
+    ok: succeeded,
+    message: succeeded ? "Job succeeded" : `Job status is '${job?.status || "missing"}', not succeeded`,
+  });
+
+  const already = Boolean(job?.ingestedAnalysisArtefactId) || Boolean(job?.ingestedParameterSetId);
+  checks.push({
+    id: "notIngested",
+    ok: !already,
+    message: job?.ingestedAnalysisArtefactId
+      ? `Already ingested as analysis artefact '${job.ingestedAnalysisArtefactId}'`
+      : job?.ingestedParameterSetId
+        ? `Already ingested as parameter set '${job.ingestedParameterSetId}'`
+        : "Not yet ingested",
+  });
+
+  const writesArtefact = ARTEFACT_KINDS.has(job?.kind);
+  checks.push({
+    id: "kindIngests",
+    ok: writesArtefact,
+    message: writesArtefact
+      ? "Kind writes an analysis artefact"
+      : `Kind '${job?.kind || ""}' writes parameterSets, not an analysis artefact`,
+  });
+
+  const responseErrors = responseProblems(job?.response);
+  checks.push({
+    id: "response",
+    ok: responseErrors.length === 0,
+    message: responseErrors.length === 0 ? "Response envelope is valid" : responseErrors.join(" "),
+  });
+
+  const converged = job?.response?.converged === true;
+  checks.push({
+    id: "converged",
+    ok: converged,
+    message: converged
+      ? "Run converged"
+      : "Ingestion refuses converged: false — the job stays inspectable and never becomes an analysis artefact",
   });
 
   return { ready: checks.every((c) => c.ok), checks };

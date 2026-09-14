@@ -697,6 +697,7 @@ export const schema = {
     attempts: 'number',
     maxAttempts: 'number',
     ingestedParameterSetId: 'string',
+    ingestedAnalysisArtefactId: 'string',
     retainUntil: 'date',
     createdAt: 'date',
     updatedAt: 'date',

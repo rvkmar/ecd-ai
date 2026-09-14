@@ -7,7 +7,7 @@ import { validateEntity } from "../schema.js";
 import { validateCalibrationJobLifecycle } from "../../../server/utils/lifecycleValidation.js";
 import { validateCalibrationRequest } from "../../../server/r/calibrationContract.js";
 import { ingestRefusal } from "../../../server/r/calibrationIngest.js";
-import { enqueueReadiness, ingestReadiness } from "../calibrationJobReadiness.js";
+import { enqueueReadiness, ingestReadiness, ingestArtefactReadiness } from "../calibrationJobReadiness.js";
 import { CALIBRATION_JOB_KIND_VALUES } from "../ecdVocabulary.js";
 import { CALIBRATION_JOB_STATUS } from "../../../server/utils/lifecycleMatrix.js";
 
@@ -192,6 +192,8 @@ describe("ingest readiness mirror agrees with the server", () => {
     const job = succeeded({ kind: "dif-analysis" });
     const world = db();
     expect(ingestReadiness(job).ready).toBe(false);
-    expect(ingestRefusal(job, world)).toMatch(/analysis artefact/);
+    expect(ingestReadiness(job).checks.find((c) => c.id === "kindIngests").ok).toBe(false);
+    expect(ingestArtefactReadiness(job).ready).toBe(true);
+    expect(ingestRefusal(job, world)).toBeNull();
   });
 });

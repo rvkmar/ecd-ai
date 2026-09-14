@@ -1,10 +1,11 @@
 // server/r/calibrationIngest.js
-// Append an ADR 0002 parameter set from a succeeded job. Refuses
-// converged: false -- the job stays inspectable and never becomes a
-// stored parameter set (Day 19 + ADR 0002 + D63).
+// Append an ADR 0002 parameter set (parameter kinds) or an analysis
+// artefact (DIF / equating / item-analysis / test-information) from a
+// succeeded job. Refuses converged: false. DIF informs; it does not
+// authorise a parameter set.
 
 import { validateEntity } from "../../src/utils/schema.js";
-import { CALIBRATION_JOB_KINDS, jobKindIngestsParameterSets } from "../../src/utils/ecdVocabulary.js";
+import { jobKindIngestsParameterSets, jobKindIngestsAnalysisArtefact } from "../../src/utils/ecdVocabulary.js";
 import {
   parameterSetFromCalibrationResponse,
   validateCalibrationResponse,
@@ -18,16 +19,24 @@ export function ingestRefusal(job, db) {
   if (job.ingestedParameterSetId) {
     return `Already ingested as parameter set '${job.ingestedParameterSetId}'`;
   }
-  const kindMeta = CALIBRATION_JOB_KINDS.find((k) => k.value === job.kind);
-  if (!jobKindIngestsParameterSets(job.kind) || kindMeta?.ingests !== "parameterSets") {
-    return `Kind '${job.kind}' writes an analysis artefact, not a parameter set`;
+  if (job.ingestedAnalysisArtefactId) {
+    return `Already ingested as analysis artefact '${job.ingestedAnalysisArtefactId}'`;
   }
+
+  const writesParams = jobKindIngestsParameterSets(job.kind);
+  const writesArtefact = jobKindIngestsAnalysisArtefact(job.kind);
+  if (!writesParams && !writesArtefact) {
+    return `Kind '${job.kind}' has no ingest target`;
+  }
+
   const responseErrors = validateCalibrationResponse(job.response);
   if (responseErrors.length > 0) {
     return responseErrors.join(" ");
   }
   if (job.response?.converged !== true) {
-    return "Ingestion refuses converged: false — the job stays inspectable and never becomes a parameter set";
+    return writesArtefact
+      ? "Ingestion refuses converged: false — the job stays inspectable and never becomes an analysis artefact"
+      : "Ingestion refuses converged: false — the job stays inspectable and never becomes a parameter set";
   }
   if (db) {
     const em = db.evidenceModels?.find((m) => m.id === job.evidenceModelId);
@@ -38,10 +47,56 @@ export function ingestRefusal(job, db) {
   return null;
 }
 
+function analysisArtefactFromCalibrationResponse(response, extras = {}) {
+  return {
+    analysisArtefactId: extras.analysisArtefactId,
+    kind: extras.kind,
+    parameters: response.parameters,
+    standardErrors: response.standardErrors ?? undefined,
+    fitStatistics: response.fitStatistics ?? undefined,
+    diagnostics: response.diagnostics ?? undefined,
+    packageVersion: response.packageVersion,
+    converged: response.converged,
+    sampleSize: response.sampleSize,
+    calibratedAt: response.calibratedAt,
+    calibrationJobId: extras.calibrationJobId,
+    calibratedBy: extras.calibratedBy || "r-backend",
+    calibrationMethod: extras.calibrationMethod || "r-job",
+    notes: extras.notes || "",
+  };
+}
+
 export function ingestCalibrationJob(job, db, extras = {}) {
   const refusal = ingestRefusal(job, db);
   if (refusal) {
     return { ok: false, error: refusal };
+  }
+
+  if (jobKindIngestsAnalysisArtefact(job.kind)) {
+    const em = db.evidenceModels.find((m) => m.id === job.evidenceModelId);
+    const analysisArtefactId = extras.analysisArtefactId || `aa${Date.now()}`;
+    const artefact = analysisArtefactFromCalibrationResponse(job.response, {
+      analysisArtefactId,
+      kind: job.kind,
+      calibrationJobId: job.id,
+      calibratedBy: extras.calibratedBy || job.requestedBy || "r-backend",
+      calibrationMethod: "r-job",
+    });
+    em.analysisArtefacts = em.analysisArtefacts || [];
+    em.analysisArtefacts.push(artefact);
+
+    const { valid, errors } = validateEntity("evidenceModels", em, db, { strict: false });
+    if (!valid) {
+      em.analysisArtefacts = em.analysisArtefacts.filter(
+        (a) => a.analysisArtefactId !== analysisArtefactId
+      );
+      return { ok: false, error: "Analysis artefact failed evidence-model validation", details: errors };
+    }
+
+    job.ingestedAnalysisArtefactId = analysisArtefactId;
+    em.updatedAt = new Date().toISOString();
+    job.updatedAt = em.updatedAt;
+    return { ok: true, analysisArtefact: artefact };
   }
 
   const em = db.evidenceModels.find((m) => m.id === job.evidenceModelId);

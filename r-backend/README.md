@@ -71,3 +71,13 @@ item-total point-biserial. Difficulty is RelFreq of the keyed category
 (the published item mean). KR-20 is the Kuder & Richardson (1937)
 formula on that matrix — there is no published KR-20 table in this
 pipeline. Ingest still refuses `converged: false`.
+
+## Planted DIF fixture (D69)
+
+`{ fixture: "planted-dif" }` expands a seeded 800-person × 8-item
+Rasch matrix in Node (`server/r/plantedDifFixture.js`, seed 20261201).
+The focal group answers Item.5 against a difficulty shifted +1.75
+logits; ability is N(0,1) in both groups. `POST /calibrate/dif` calls
+`difR::difMH` (Mantel-Haenszel, alpha 0.05, no purification). Ingest
+writes `analysisArtefacts[]` on the evidence model. DIF informs; it
+does not authorise a parameter set.

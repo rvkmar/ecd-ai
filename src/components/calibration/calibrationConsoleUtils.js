@@ -18,6 +18,10 @@ export const LSAT7_CTT_JOB_KIND = "ctt-statistics";
 
 export const LSAT7_CTT_STATISTICAL_MODEL_TYPES = ["ctt"];
 
+export const PLANTED_DIF_JOB_KIND = "dif-analysis";
+
+export const PLANTED_DIF_STATISTICAL_MODEL_TYPES = ["irt", "rasch"];
+
 export const NAMED_CALIBRATION_FIXTURES = [
   {
     id: "lsat7",
@@ -57,6 +61,19 @@ export const NAMED_CALIBRATION_FIXTURES = [
     successToast: "LSAT7 CTT calibration job queued.",
     description:
       "LSAT section 7 (Bock & Lieberman 1970) analysed with classical test theory via TAM::tam.ctt: difficulty (p), item-total point-biserial, KR-20. Same published 1000×5 matrix as the IRT fixture. This form does not invent item statistics.",
+  },
+  {
+    id: "planted-dif",
+    label: "Planted DIF",
+    kind: PLANTED_DIF_JOB_KIND,
+    statisticalModelTypes: PLANTED_DIF_STATISTICAL_MODEL_TYPES,
+    buttonLabel: "Enqueue planted DIF",
+    choosePrompt: "Choose an evidence model and an IRT statistical model to bind the DIF artefact to.",
+    emptyBind:
+      "No evidence model has an IRT or Rasch statistical model to bind. Author one before enqueueing planted DIF.",
+    successToast: "Planted DIF analysis job queued.",
+    description:
+      "Seeded 800×8 Rasch matrix (seed 20261201) with one planted uniform DIF item (Item.5, focal b shifted +1.75). Bound to an IRT model for provenance only — ingest writes an analysis artefact, not a parameter set. Live CI runs difR::difMH and must flag Item.5 only.",
   },
 ];
 
