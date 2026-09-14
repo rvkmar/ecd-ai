@@ -1,7 +1,8 @@
 // src/components/calibration/EnqueueCalibrationForm.jsx
-// Admin-only start form. The only named fixture is LSAT7; the server
-// expands the published 1000×5 matrix. This form binds evidenceModelId /
-// statisticalModelId and does not invent item parameters.
+// Admin-only start form. Named fixtures are LSAT7 (IRT) and sim10GDINA
+// (DINA/G-DINA). The server expands the published matrix (and Q). This
+// form binds evidenceModelId / statisticalModelId and does not invent
+// item parameters.
 
 import React, { useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -12,30 +13,46 @@ import { apiErrorMessage } from "@/api/apiClient";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { useEnqueueCalibrationJob } from "@/api/queries/calibrationJobs";
 import {
-  LSAT7_JOB_KIND,
-  statisticalModelsForLsat7,
+  namedCalibrationFixture,
+  NAMED_CALIBRATION_FIXTURES,
+  statisticalModelsForFixture,
 } from "./calibrationConsoleUtils";
 
 export default function EnqueueCalibrationForm({ onEnqueued }) {
   const { data: evidenceModels = [], isLoading } = useEvidenceModels();
   const enqueue = useEnqueueCalibrationJob();
+  const [fixtureId, setFixtureId] = useState("lsat7");
   const [evidenceModelId, setEvidenceModelId] = useState("");
   const [statisticalModelId, setStatisticalModelId] = useState("");
   const [formError, setFormError] = useState(null);
 
+  const fixture = namedCalibrationFixture(fixtureId);
+
   const bindableModels = useMemo(
     () =>
-      (evidenceModels || []).filter((em) => statisticalModelsForLsat7(em).length > 0),
-    [evidenceModels]
+      (evidenceModels || []).filter(
+        (em) => statisticalModelsForFixture(em, fixture.statisticalModelTypes).length > 0
+      ),
+    [evidenceModels, fixture.statisticalModelTypes]
   );
 
   const selectedModel = bindableModels.find((em) => em.id === evidenceModelId);
-  const statisticalModels = statisticalModelsForLsat7(selectedModel);
+  const statisticalModels = statisticalModelsForFixture(
+    selectedModel,
+    fixture.statisticalModelTypes
+  );
+
+  function handleFixtureChange(nextId) {
+    setFixtureId(nextId);
+    setEvidenceModelId("");
+    setStatisticalModelId("");
+    setFormError(null);
+  }
 
   function handleEvidenceChange(nextId) {
     setEvidenceModelId(nextId);
     const next = bindableModels.find((em) => em.id === nextId);
-    const sms = statisticalModelsForLsat7(next);
+    const sms = statisticalModelsForFixture(next, fixture.statisticalModelTypes);
     setStatisticalModelId(sms[0]?.id || "");
     setFormError(null);
   }
@@ -44,17 +61,17 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
     event.preventDefault();
     setFormError(null);
     if (!evidenceModelId || !statisticalModelId) {
-      setFormError("Choose an evidence model and an IRT statistical model.");
+      setFormError(fixture.choosePrompt);
       return;
     }
     try {
       const job = await enqueue.mutateAsync({
-        fixture: "lsat7",
-        kind: LSAT7_JOB_KIND,
+        fixture: fixture.id,
+        kind: fixture.kind,
         evidenceModelId,
         statisticalModelId,
       });
-      toast.success("LSAT7 calibration job queued.");
+      toast.success(fixture.successToast);
       onEnqueued?.(job);
     } catch (err) {
       const message = apiErrorMessage(err, "Could not enqueue the calibration job.");
@@ -71,11 +88,23 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
     <form onSubmit={handleSubmit} className="space-y-4" aria-label="Enqueue calibration job">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold tracking-tight">Start a calibration</h2>
-        <p className="text-sm text-muted-foreground">
-          LSAT section 7 (Bock &amp; Lieberman 1970 / <code>mirt::LSAT7</code>): 1000
-          examinees × 5 dichotomous items. The server fills the ADR 0002 request
-          from the published fixture. This form does not invent item parameters.
-        </p>
+        <p className="text-sm text-muted-foreground">{fixture.description}</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="calibration-fixture">Published fixture</Label>
+        <select
+          id="calibration-fixture"
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm md:max-w-sm"
+          value={fixtureId}
+          onChange={(e) => handleFixtureChange(e.target.value)}
+        >
+          {NAMED_CALIBRATION_FIXTURES.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -119,8 +148,7 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
 
       {bindableModels.length === 0 && (
         <p className="text-sm text-muted-foreground" role="status">
-          No evidence model has an IRT or Rasch statistical model to bind. Author
-          one before enqueueing LSAT7.
+          {fixture.emptyBind}
         </p>
       )}
 
@@ -132,7 +160,7 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={enqueue.isPending || bindableModels.length === 0}>
-          {enqueue.isPending ? "Enqueueing…" : "Enqueue LSAT7"}
+          {enqueue.isPending ? "Enqueueing…" : fixture.buttonLabel}
         </Button>
         <p className="text-caption text-muted-foreground">
           Compose autorun starts queued jobs. If this environment does not

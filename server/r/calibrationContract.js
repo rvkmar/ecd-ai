@@ -83,9 +83,40 @@ export function validateCalibrationRequest(body) {
     errors.push("options.seed is required (reproducibility is provenance)");
   }
 
+  const diagnosticFamily = model?.family === "dina" || model?.family === "gdina";
+  if (diagnosticFamily && (body.qMatrix === undefined || body.qMatrix === null)) {
+    errors.push("qMatrix is required for dina/gdina");
+  }
   if (body.qMatrix !== undefined && body.qMatrix !== null) {
     if (typeof body.qMatrix !== "object" || Array.isArray(body.qMatrix)) {
       errors.push("qMatrix should be object");
+    } else {
+      const qm = body.qMatrix;
+      if (!Array.isArray(qm.attributeIds) || qm.attributeIds.length < 1) {
+        errors.push("qMatrix.attributeIds must name at least one attribute");
+      }
+      if (!Array.isArray(qm.itemIds) || qm.itemIds.length < 2) {
+        errors.push("qMatrix.itemIds must name at least two items");
+      }
+      if (Array.isArray(model?.itemIds) && Array.isArray(qm.itemIds)) {
+        const same =
+          model.itemIds.length === qm.itemIds.length &&
+          model.itemIds.every((id, i) => id === qm.itemIds[i]);
+        if (!same) {
+          errors.push("qMatrix.itemIds must match model.itemIds in order");
+        }
+      }
+      if (!Array.isArray(qm.data) || qm.data.length === 0) {
+        errors.push("qMatrix.data is required");
+      } else if (Array.isArray(qm.itemIds) && qm.data.length !== qm.itemIds.length) {
+        errors.push("qMatrix.data row count must match itemIds");
+      } else if (Array.isArray(qm.attributeIds)) {
+        qm.data.forEach((row, i) => {
+          if (!Array.isArray(row) || row.length !== qm.attributeIds.length) {
+            errors.push(`qMatrix.data[${i}] must have one cell per attributeId`);
+          }
+        });
+      }
     }
   }
 

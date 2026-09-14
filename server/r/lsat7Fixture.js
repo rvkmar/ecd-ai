@@ -9,7 +9,8 @@
 //
 // mirt::LSAT7 is LSAT *section* 7: 1000 examinees × 5 items. The 7 is not
 // the item count. Enqueue with `{ fixture: "lsat7" }` and the job route
-// fills request.model / responseMatrix / options.seed.
+// fills request.model / responseMatrix / options.seed via
+// applyNamedCalibrationFixture in calibrationFixtures.js.
 
 import fs from "fs";
 import path from "path";
@@ -23,8 +24,6 @@ const LSAT7_FREQUENCY_TABLE_PATH = path.resolve(
 );
 
 const LSAT7_SEED = 20261120;
-
-export const CALIBRATION_NAMED_FIXTURES = ["lsat7"];
 
 let cachedTable = null;
 
@@ -50,7 +49,7 @@ function lsat7PersonIds(n) {
   return Array.from({ length: n }, (_, i) => `p${String(i + 1).padStart(4, "0")}`);
 }
 
-function lsat7CalibrationRequest({ jobId = "job_lsat7", seed = LSAT7_SEED } = {}) {
+export function lsat7CalibrationRequest({ jobId = "job_lsat7", seed = LSAT7_SEED } = {}) {
   const table = loadLsat7FrequencyTable();
   const data = expandLsat7Responses();
   return {
@@ -70,31 +69,6 @@ function lsat7CalibrationRequest({ jobId = "job_lsat7", seed = LSAT7_SEED } = {}
       maxIterations: 200,
       convergenceTolerance: 0.0001,
       seed,
-    },
-  };
-}
-
-export function applyNamedCalibrationFixture(body) {
-  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
-  if (body.fixture === undefined || body.fixture === null || body.fixture === "") {
-    return body;
-  }
-  if (body.fixture !== "lsat7") {
-    const err = new Error(
-      `Unknown calibration fixture '${body.fixture}'. Declared: ${CALIBRATION_NAMED_FIXTURES.join(", ")}`
-    );
-    err.code = "UNKNOWN_CALIBRATION_FIXTURE";
-    throw err;
-  }
-  const fromFix = lsat7CalibrationRequest({ jobId: body.request?.jobId });
-  return {
-    ...body,
-    request: {
-      ...fromFix,
-      ...(body.request || {}),
-      model: { ...fromFix.model, ...(body.request?.model || {}) },
-      responseMatrix: body.request?.responseMatrix || fromFix.responseMatrix,
-      options: { ...fromFix.options, ...(body.request?.options || {}) },
     },
   };
 }

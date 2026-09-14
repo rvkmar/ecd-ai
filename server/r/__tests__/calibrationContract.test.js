@@ -53,8 +53,16 @@ describe("request envelope", () => {
   });
 
   it("accepts the committed LSAT7 request (D64)", async () => {
-    const { applyNamedCalibrationFixture } = await import("../lsat7Fixture.js");
+    const { applyNamedCalibrationFixture } = await import("../calibrationFixtures.js");
     expect(validateCalibrationRequest(applyNamedCalibrationFixture({ fixture: "lsat7" }).request)).toEqual([]);
+  });
+
+  it("accepts the committed sim10GDINA request (D66)", async () => {
+    const { applyNamedCalibrationFixture } = await import("../calibrationFixtures.js");
+    const body = applyNamedCalibrationFixture({ fixture: "sim10gdina" }).request;
+    expect(validateCalibrationRequest(body)).toEqual([]);
+    expect(body.model.family).toBe("gdina");
+    expect(body.qMatrix.attributeIds).toHaveLength(3);
   });
 });
 

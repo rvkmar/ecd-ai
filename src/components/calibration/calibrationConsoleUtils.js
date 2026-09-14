@@ -10,6 +10,43 @@ export const LSAT7_JOB_KIND = "irt-parameters";
 
 export const LSAT7_STATISTICAL_MODEL_TYPES = ["irt", "rasch"];
 
+export const SIM10GDINA_JOB_KIND = "dina-parameters";
+
+export const SIM10GDINA_STATISTICAL_MODEL_TYPES = ["dina", "gdina"];
+
+export const NAMED_CALIBRATION_FIXTURES = [
+  {
+    id: "lsat7",
+    label: "LSAT7",
+    kind: LSAT7_JOB_KIND,
+    statisticalModelTypes: LSAT7_STATISTICAL_MODEL_TYPES,
+    buttonLabel: "Enqueue LSAT7",
+    choosePrompt: "Choose an evidence model and an IRT statistical model.",
+    emptyBind:
+      "No evidence model has an IRT or Rasch statistical model to bind. Author one before enqueueing LSAT7.",
+    successToast: "LSAT7 calibration job queued.",
+    description:
+      "LSAT section 7 (Bock & Lieberman 1970 / mirt::LSAT7): 1000 examinees × 5 dichotomous items. The server fills the ADR 0002 request from the published fixture. This form does not invent item parameters.",
+  },
+  {
+    id: "sim10gdina",
+    label: "sim10GDINA",
+    kind: SIM10GDINA_JOB_KIND,
+    statisticalModelTypes: SIM10GDINA_STATISTICAL_MODEL_TYPES,
+    buttonLabel: "Enqueue sim10GDINA",
+    choosePrompt: "Choose an evidence model and a DINA or G-DINA statistical model.",
+    emptyBind:
+      "No evidence model has a DINA or G-DINA statistical model to bind. Author one before enqueueing sim10GDINA.",
+    successToast: "sim10GDINA calibration job queued.",
+    description:
+      "GDINA::sim10GDINA (Ma & de la Torre 2020): 1000 examinees × 10 dichotomous items, 3 attributes. The server fills simdat and simQ. Binding a G-DINA model fits G-DINA; binding a DINA model fits DINA. This form does not invent item parameters.",
+  },
+];
+
+export function namedCalibrationFixture(id) {
+  return NAMED_CALIBRATION_FIXTURES.find((f) => f.id === id) || NAMED_CALIBRATION_FIXTURES[0];
+}
+
 export function isActiveCalibrationJob(job) {
   return Boolean(job && ACTIVE_JOB_STATUSES.has(job.status));
 }
@@ -48,11 +85,16 @@ export function requestSummary(job) {
       : 0,
     seed: request.options?.seed,
     contractVersion: request.contractVersion || "—",
+    attributeIds: Array.isArray(request.qMatrix?.attributeIds)
+      ? request.qMatrix.attributeIds
+      : [],
   };
 }
 
+export function statisticalModelsForFixture(evidenceModel, types) {
+  return (evidenceModel?.statisticalModels || []).filter((sm) => types.includes(sm.type));
+}
+
 export function statisticalModelsForLsat7(evidenceModel) {
-  return (evidenceModel?.statisticalModels || []).filter((sm) =>
-    LSAT7_STATISTICAL_MODEL_TYPES.includes(sm.type)
-  );
+  return statisticalModelsForFixture(evidenceModel, LSAT7_STATISTICAL_MODEL_TYPES);
 }

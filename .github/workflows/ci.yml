@@ -30,10 +30,10 @@ jobs:
       - name: Test
         run: npm test
 
-  # D64: existing build-and-test never starts r-backend (confirmed).
+  # D64/D66: existing build-and-test never starts r-backend (confirmed).
   # This job uses the same published image + repo app bind-mount as
   # compose — not a second psychometric stack — and runs the live
-  # LSAT7 enqueue → process → ingest path against real mirt.
+  # LSAT7 (mirt) and sim10GDINA (GDINA) enqueue → process → ingest paths.
   lsat7-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -75,6 +75,11 @@ jobs:
         env:
           R_BACKEND_URL: http://127.0.0.1:4000
         run: npx vitest run server/r/__tests__/lsat7Pipeline.test.js
+
+      - name: sim10GDINA full pipeline against live R
+        env:
+          R_BACKEND_URL: http://127.0.0.1:4000
+        run: npx vitest run server/r/__tests__/sim10gdinaPipeline.test.js
 
       - name: Dump R logs on failure
         if: failure()

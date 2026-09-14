@@ -22,6 +22,14 @@ const fx = vi.hoisted(() => {
           { id: "sm1", type: "irt", subtype: "2PL", active: true, parameterSets: [] },
         ],
       },
+      {
+        id: "em-gdina",
+        name: "sim10GDINA evidence",
+        statisticalModels: [
+          { id: "sm-gdina", type: "gdina", active: true, parameterSets: [] },
+          { id: "sm-dina", type: "dina", active: true, parameterSets: [] },
+        ],
+      },
     ],
     enqueuePayloads: [],
     processIds: [],
@@ -119,6 +127,40 @@ vi.mock("@/api/queries/calibrationJobs", () => ({
     isPending: false,
     mutateAsync: async (payload) => {
       fx.enqueuePayloads.push(payload);
+      if (payload.fixture === "sim10gdina") {
+        return fx.addJob(
+          queuedJob({
+            id: "job-sim10gdina",
+            kind: "dina-parameters",
+            evidenceModelId: payload.evidenceModelId,
+            statisticalModelId: payload.statisticalModelId,
+            request: {
+              contractVersion: "1.0",
+              jobId: "job-sim10gdina",
+              model: {
+                family: payload.statisticalModelId === "sm-dina" ? "dina" : "gdina",
+                itemIds: [
+                  "Item.1",
+                  "Item.2",
+                  "Item.3",
+                  "Item.4",
+                  "Item.5",
+                  "Item.6",
+                  "Item.7",
+                  "Item.8",
+                  "Item.9",
+                  "Item.10",
+                ],
+              },
+              responseMatrix: {
+                personIds: Array.from({ length: 8 }, (_, i) => `p${i}`),
+                itemIds: ["Item.1"],
+              },
+              options: { seed: 20261120 },
+            },
+          })
+        );
+      }
       return fx.addJob(queuedJob());
     },
   }),
@@ -212,6 +254,31 @@ describe("admin start → process → watch → ingest", () => {
     expect(fx.ingestIds).toEqual(["job-lsat7"]);
     expect(screen.getByRole("status")).toHaveTextContent("Wrote parameter set ps-lsat7");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("enqueues sim10GDINA bound to a G-DINA statistical model", async () => {
+    const user = userEvent.setup();
+    render(<CalibrationConsole />);
+
+    await user.selectOptions(screen.getByLabelText(/published fixture/i), "sim10gdina");
+    expect(screen.getByRole("button", { name: /enqueue sim10gdina/i })).toBeInTheDocument();
+    expect(screen.getByText(/GDINA::sim10GDINA/)).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /LSAT evidence/ })).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/evidence model/i), "em-gdina");
+    await user.selectOptions(screen.getByLabelText(/statistical model/i), "sm-gdina");
+    await user.click(screen.getByRole("button", { name: /enqueue sim10gdina/i }));
+
+    expect(fx.enqueuePayloads).toEqual([
+      {
+        fixture: "sim10gdina",
+        kind: "dina-parameters",
+        evidenceModelId: "em-gdina",
+        statisticalModelId: "sm-gdina",
+      },
+    ]);
+    expect(screen.getByRole("heading", { name: /inspect job-sim10gdina/i })).toBeInTheDocument();
+    expect(screen.getByText(/10 × 8/)).toBeInTheDocument();
   });
 });
 

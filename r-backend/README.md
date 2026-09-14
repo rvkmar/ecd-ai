@@ -49,3 +49,14 @@ ships the same table at `server/r/fixtures/lsat7-frequency-table.json`
 `server/r/lsat7Fixture.js`, and posts the ADR 0002 request to
 `POST /calibrate/irt`. A drift test keeps the two copies equal. The 7
 is the section number, not the item count.
+
+## sim10GDINA fixture (D66)
+
+`app/tests/fixtures/sim10gdina.json` is `GDINA::sim10GDINA` from GDINA
+2.9.12 (`simdat` 1000×10, `simQ` 10×3, plus documented `simItempar`).
+Node ships the same table at `server/r/fixtures/sim10gdina.json` and
+expands it for `{ fixture: "sim10gdina" }`. `POST /calibrate/dina` and
+`POST /calibrate/gdina` both call `GDINA::GDINA`. `model.family`
+selects `"DINA"` or `"GDINA"`. The vignette Q around `simdat` is not
+`simQ`; this fixture uses the package object's Q-matrix. CTT remains
+501 until D67.

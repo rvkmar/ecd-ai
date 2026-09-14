@@ -49,4 +49,12 @@ lsat7_n <- sum(vapply(lsat7$patterns, function(p) as.integer(p$freq), integer(1)
 .stop_if(!identical(lsat7_n, 1000L), "LSAT7 frequency table does not sum to 1000")
 .stop_if(length(lsat7$itemIds) != 5L, "LSAT7 must have 5 item ids (section 7, not 7 items)")
 
+# D66: sim10GDINA is the published 1000-person, 10-item, 3-attribute matrix.
+sim10 <- jsonlite::fromJSON(file.path(fix_dir, "sim10gdina.json"), simplifyVector = FALSE)
+sim10_n <- sum(vapply(sim10$patterns, function(p) as.integer(p$freq), integer(1)))
+.stop_if(!identical(sim10_n, 1000L), "sim10GDINA frequency table does not sum to 1000")
+.stop_if(length(sim10$itemIds) != 10L, "sim10GDINA must have 10 item ids")
+.stop_if(length(sim10$attributeIds) != 3L, "sim10GDINA must have 3 attribute ids")
+.stop_if(length(sim10$qMatrix) != 10L, "sim10GDINA Q must have 10 item rows")
+
 cat("R contract tests passed\n")

@@ -87,6 +87,31 @@ validate_calibration_request <- function(body) {
     errors <- c(errors, "options.seed is required (reproducibility is provenance)")
   }
 
+  family <- if (!is.null(model) && is.list(model)) .as_char(model$family) else NA_character_
+  diagnostic <- identical(family, "dina") || identical(family, "gdina")
+  if (isTRUE(diagnostic) && is.null(body$qMatrix)) {
+    errors <- c(errors, "qMatrix is required for dina/gdina")
+  }
+  if (!is.null(body$qMatrix)) {
+    qm <- body$qMatrix
+    if (!is.list(qm) || is.null(qm$attributeIds) || length(qm$attributeIds) < 1) {
+      errors <- c(errors, "qMatrix.attributeIds must name at least one attribute")
+    }
+    if (is.list(qm) && (is.null(qm$itemIds) || length(qm$itemIds) < 2)) {
+      errors <- c(errors, "qMatrix.itemIds must name at least two items")
+    }
+    if (is.list(qm) && !is.null(model$itemIds) && !is.null(qm$itemIds)) {
+      model_ids <- vapply(model$itemIds, .as_char, character(1))
+      qm_ids <- vapply(qm$itemIds, .as_char, character(1))
+      if (!identical(model_ids, qm_ids)) {
+        errors <- c(errors, "qMatrix.itemIds must match model.itemIds in order")
+      }
+    }
+    if (is.list(qm) && (is.null(qm$data) || length(qm$data) == 0)) {
+      errors <- c(errors, "qMatrix.data is required")
+    }
+  }
+
   if (length(errors) == 0) NULL else errors
 }
 
@@ -169,4 +194,25 @@ response_matrix_to_df <- function(rm) {
   storage.mode(mat) <- "numeric"
   colnames(mat) <- item_ids
   as.data.frame(mat, stringsAsFactors = FALSE)
+}
+
+q_matrix_to_matrix <- function(qm) {
+  item_ids <- vapply(as.list(qm$itemIds), .as_char, character(1))
+  attr_ids <- vapply(as.list(qm$attributeIds), .as_char, character(1))
+  mat <- .response_to_matrix(qm$data, length(attr_ids))
+
+  if (nrow(mat) == length(attr_ids) && ncol(mat) == length(item_ids) &&
+      length(attr_ids) != length(item_ids)) {
+    mat <- t(mat)
+  }
+  if (nrow(mat) != length(item_ids) || ncol(mat) != length(attr_ids)) {
+    stop(sprintf(
+      "qMatrix.data is %dx%d, expected %dx%d (items x attributes)",
+      nrow(mat), ncol(mat), length(item_ids), length(attr_ids)
+    ))
+  }
+  storage.mode(mat) <- "numeric"
+  rownames(mat) <- item_ids
+  colnames(mat) <- attr_ids
+  mat
 }

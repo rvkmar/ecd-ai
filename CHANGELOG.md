@@ -7,18 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- `{ fixture: "lsat7" }` enqueue no longer opens
-  `r-backend/app/tests/fixtures/lsat7-frequency-table.json` from the Node
-  process. The compose node image (`Dockerfile.node`) copies only
-  `server/` and `src/utils`, so that path 500'd with ENOENT on the
-  operator stack. Node now loads
-  `server/r/fixtures/lsat7-frequency-table.json` (same published matrix;
-  drift test against the R-side twin when both files exist). Handoff:
-  `claude/lsat7-fixture-node-image.md`.
-
 ### Added
+
+- D66: published `GDINA::sim10GDINA` (1000 examinees × 10 items, 3
+  attributes; `simdat` / `simQ` / `simItempar` from GDINA 2.9.12) is a
+  committed fixture. `POST /api/calibrationJobs` accepts
+  `{ fixture: "sim10gdina" }` and fills the ADR 0002 request including
+  the package Q-matrix (not the vignette Q). `/calibrate/dina` and
+  `/calibrate/gdina` call `GDINA::GDINA`; `model.family` selects DINA
+  or G-DINA. Ingest still refuses `converged: false`. Always-run tests
+  use a labeled contract stub. CI job `lsat7-pipeline` also runs the
+  live sim10GDINA path against `rvkmar/r-backend:latest` + app mount.
+  Console can bind/enqueue the fixture on a DINA or G-DINA statistical
+  model. Node loads `server/r/fixtures/sim10gdina.json` (#21 lesson).
+  First live CI run converged on GDINA 2.9.12 but keyed `"Item 1"`
+  (package default `item.names`); the response is now keyed by request
+  `itemIds`. Handoff: `claude/day66-sim10gdina.md`. CTT stays 501 (D67).
 
 - D65: calibration console at `/admin/calibration` (also an Admin
   Control Center tab; district read-only at `/district/calibration`).
@@ -49,10 +53,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- D65 live operator walk is recorded closed (coordinator, 2026-09-13,
+  localhost:6060, `admin1` / WalkPass!2026; job `job1789319022666002`
+  converged and ingested `ps1789319081640`). Parameter-set diff UI is
+  still not built.
+
 - Compose `r-backend` pulls `rvkmar/r-backend:latest` (R packages already
   installed) and bind-mounts `./r-backend/app` so repo plumber routes win.
   The Posit/rocker from-scratch Dockerfile is a thin overlay only; do not
   `docker compose build r-backend` as the default path.
+
+### Fixed
+
+- `{ fixture: "lsat7" }` enqueue no longer opens
+  `r-backend/app/tests/fixtures/lsat7-frequency-table.json` from the Node
+  process. The compose node image (`Dockerfile.node`) copies only
+  `server/` and `src/utils`, so that path 500'd with ENOENT on the
+  operator stack. Node now loads
+  `server/r/fixtures/lsat7-frequency-table.json` (same published matrix;
+  drift test against the R-side twin when both files exist). Handoff:
+  `claude/lsat7-fixture-node-image.md`.
 
 ### Added
 
