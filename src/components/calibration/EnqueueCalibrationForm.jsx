@@ -1,8 +1,8 @@
 // src/components/calibration/EnqueueCalibrationForm.jsx
-// Admin-only start form. Named fixtures are LSAT7 (IRT) and sim10GDINA
-// (DINA/G-DINA). The server expands the published matrix (and Q). This
-// form binds evidenceModelId / statisticalModelId and does not invent
-// item parameters.
+// Admin-only start form. Named fixtures are LSAT7 (IRT), sim10GDINA
+// (DINA/G-DINA), and LSAT7 CTT. The server expands the published matrix
+// (and Q). This form binds evidenceModelId / statisticalModelId and
+// does not invent item parameters.
 
 import React, { useMemo, useState } from "react";
 import toast from "react-hot-toast";

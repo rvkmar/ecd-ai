@@ -1,12 +1,12 @@
 // server/r/calibrationFixtures.js
-// Named-fixture enqueue: `{ fixture: "lsat7" | "sim10gdina" }`.
+// Named-fixture enqueue: `{ fixture: "lsat7" | "sim10gdina" | "lsat7-ctt" }`.
 // Production caller is POST /api/calibrationJobs. Keep this list in
 // lockstep with the fixture modules; unknown names 400.
 
 import { lsat7CalibrationRequest } from "./lsat7Fixture.js";
 import { sim10gdinaCalibrationRequest } from "./sim10gdinaFixture.js";
 
-export const CALIBRATION_NAMED_FIXTURES = ["lsat7", "sim10gdina"];
+export const CALIBRATION_NAMED_FIXTURES = ["lsat7", "sim10gdina", "lsat7-ctt"];
 
 function mergeFixtureRequest(body, fromFix) {
   const qMatrix = body.request?.qMatrix || fromFix.qMatrix;
@@ -58,8 +58,18 @@ export function applyNamedCalibrationFixture(body, db = null) {
     err.code = "UNKNOWN_CALIBRATION_FIXTURE";
     throw err;
   }
-  if (body.fixture === "lsat7") {
-    return mergeFixtureRequest(body, lsat7CalibrationRequest({ jobId: body.request?.jobId }));
+  if (body.fixture === "lsat7" || body.fixture === "lsat7-ctt") {
+    const ctt =
+      body.fixture === "lsat7-ctt" ||
+      body.kind === "ctt-statistics" ||
+      body.request?.model?.family === "ctt";
+    return mergeFixtureRequest(
+      body,
+      lsat7CalibrationRequest({
+        jobId: body.request?.jobId,
+        family: ctt ? "ctt" : "irt",
+      })
+    );
   }
   const familyHint = body.request?.model?.family;
   const expanded = mergeFixtureRequest(

@@ -30,10 +30,11 @@ jobs:
       - name: Test
         run: npm test
 
-  # D64/D66: existing build-and-test never starts r-backend (confirmed).
+  # D64/D66/D67: existing build-and-test never starts r-backend (confirmed).
   # This job uses the same published image + repo app bind-mount as
   # compose — not a second psychometric stack — and runs the live
-  # LSAT7 (mirt) and sim10GDINA (GDINA) enqueue → process → ingest paths.
+  # LSAT7 (mirt), sim10GDINA (GDINA), and LSAT7 CTT (TAM) enqueue →
+  # process → ingest paths.
   lsat7-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -81,6 +82,11 @@ jobs:
           R_BACKEND_URL: http://127.0.0.1:4000
         run: npx vitest run server/r/__tests__/sim10gdinaPipeline.test.js
 
+      - name: LSAT7 CTT full pipeline against live R
+        env:
+          R_BACKEND_URL: http://127.0.0.1:4000
+        run: npx vitest run server/r/__tests__/cttPipeline.test.js
+
       - name: Dump R logs on failure
         if: failure()
         run: |
@@ -89,4 +95,9 @@ jobs:
           curl -sS -X POST http://127.0.0.1:4000/calibrate/irt \
             -H 'Content-Type: application/json' \
             --data-binary @r-backend/app/tests/fixtures/valid-request.json | head -c 4000
+          echo
+          echo "--- /calibrate/ctt family mismatch on IRT fixture ---"
+          curl -sS -X POST http://127.0.0.1:4000/calibrate/ctt \
+            -H 'Content-Type: application/json' \
+            --data-binary @r-backend/app/tests/fixtures/valid-request.json | head -c 2000
           echo

@@ -30,6 +30,11 @@ const fx = vi.hoisted(() => {
           { id: "sm-dina", type: "dina", active: true, parameterSets: [] },
         ],
       },
+      {
+        id: "em-ctt",
+        name: "LSAT CTT evidence",
+        statisticalModels: [{ id: "sm-ctt", type: "ctt", active: true, parameterSets: [] }],
+      },
     ],
     enqueuePayloads: [],
     processIds: [],
@@ -161,6 +166,29 @@ vi.mock("@/api/queries/calibrationJobs", () => ({
           })
         );
       }
+      if (payload.fixture === "lsat7-ctt") {
+        return fx.addJob(
+          queuedJob({
+            id: "job-lsat7-ctt",
+            kind: "ctt-statistics",
+            evidenceModelId: payload.evidenceModelId,
+            statisticalModelId: payload.statisticalModelId,
+            request: {
+              contractVersion: "1.0",
+              jobId: "job-lsat7-ctt",
+              model: {
+                family: "ctt",
+                itemIds: ["Item.1", "Item.2", "Item.3", "Item.4", "Item.5"],
+              },
+              responseMatrix: {
+                personIds: Array.from({ length: 8 }, (_, i) => `p${i}`),
+                itemIds: ["Item.1"],
+              },
+              options: { seed: 20261120 },
+            },
+          })
+        );
+      }
       return fx.addJob(queuedJob());
     },
   }),
@@ -279,6 +307,32 @@ describe("admin start → process → watch → ingest", () => {
     ]);
     expect(screen.getByRole("heading", { name: /inspect job-sim10gdina/i })).toBeInTheDocument();
     expect(screen.getByText(/10 × 8/)).toBeInTheDocument();
+  });
+
+  it("enqueues LSAT7 CTT bound to a CTT statistical model", async () => {
+    const user = userEvent.setup();
+    render(<CalibrationConsole />);
+
+    await user.selectOptions(screen.getByLabelText(/published fixture/i), "lsat7-ctt");
+    expect(screen.getByRole("button", { name: /enqueue lsat7 ctt/i })).toBeInTheDocument();
+    expect(screen.getByText(/TAM::tam\.ctt/)).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /LSAT evidence/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /sim10GDINA evidence/ })).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/evidence model/i), "em-ctt");
+    await user.selectOptions(screen.getByLabelText(/statistical model/i), "sm-ctt");
+    await user.click(screen.getByRole("button", { name: /enqueue lsat7 ctt/i }));
+
+    expect(fx.enqueuePayloads).toEqual([
+      {
+        fixture: "lsat7-ctt",
+        kind: "ctt-statistics",
+        evidenceModelId: "em-ctt",
+        statisticalModelId: "sm-ctt",
+      },
+    ]);
+    expect(screen.getByRole("heading", { name: /inspect job-lsat7-ctt/i })).toBeInTheDocument();
+    expect(screen.getByText(/5 × 8/)).toBeInTheDocument();
   });
 });
 
