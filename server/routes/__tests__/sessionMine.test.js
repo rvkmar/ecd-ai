@@ -64,6 +64,29 @@ describe("GET /api/sessions/mine", () => {
     expect(res.body).not.toEqual(expect.objectContaining({ error: "Session not found" }));
   });
 
+  it("does not fall back to every live session when identity matching finds none", async () => {
+    loadDB.mockReturnValue({
+      students: [],
+      sessions: [
+        { id: "s-other", studentId: "stu-other", status: "in_progress", taskIds: ["t1"] },
+      ],
+    });
+    const res = await request(app).get("/api/sessions/mine");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it("refuses GET /:id for another student's session", async () => {
+    const res = await request(app).get("/api/sessions/s-other");
+    expect(res.status).toBe(403);
+  });
+
+  it("omits other examinees from GET /", async () => {
+    const res = await request(app).get("/api/sessions");
+    expect(res.status).toBe(200);
+    expect(res.body.map((s) => s.id)).toEqual(["s-mine", "s-done"]);
+  });
+
   it("matches a session assigned by typed username in studentIds", async () => {
     loadDB.mockReturnValue({
       students: [],

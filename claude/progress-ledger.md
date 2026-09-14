@@ -18,9 +18,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D71** — four-role live core pass on `:6060`. Handoff: `claude/day71-core-browser-pass.md`. Prior: D70 equating. |
-| Next queued | Calendar **D72** — adversarial review of the whole core. Separate agent. Never treat as thin. |
-| Block | **W15** — Core sign-off (D71 walked; D72–D75 remain) |
+| Last completed unit | **D72** — adversarial review of the whole core. P0: student session ownership. Handoff: `claude/day72-adversarial-core.md`. Prior: D71 four-role walk. |
+| Next queued | Calendar **D73** — accessibility audit. D55 in git was a skip; do not treat calendar ✅ as a real WCAG pass. |
+| Block | **W15** — Core sign-off (D71–D72 walked; D73–D75 remain) |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -32,7 +32,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D68 | product `c4e5d77` + close `8a5ff65` + D68 completed verification commit. Close: `claude/day68-calibrated-supersedes-pilot.md`. |
 | HEAD at D69 | product `a66c475` + ETS-C `2d602bb` + `alphaMH` delta `56de11d` + this close. Close: `claude/day69-dif-analysis.md`. Live CI: [lsat7-pipeline `56de11d`](https://github.com/rvkmar/ecd-ai/actions/runs/34810924755). |
 | HEAD at D70 | first pass `0a2ff01` (hand Mean/Sigma) + plink `b96511a` + this close. Close: `claude/day70-equating.md`. Live path: local `:4000` (`plink` 1.5.1), not Hub CI. |
-| HEAD at D71 | this close. Close: `claude/day71-core-browser-pass.md`. Live path: nginx `:6060` + node rebuilt this session. |
+| HEAD at D71 | `b9c6274`. Close: `claude/day71-core-browser-pass.md`. Live path: nginx `:6060` + node rebuilt that session. |
+| HEAD at D72 | this close. Close: `claude/day72-adversarial-core.md`. |
 
 ## Session log
 
@@ -64,6 +65,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-14 | D70 | 1, alone | Premise rewritten twice: job kind existed; Hub lacked equate/plink so first pass was mirt Mean/Sigma; local rebuild then `plink::plink`. Known-equating recovered locally. |
 | 2026-09-14 | close | — | D70 close. Suite **1371 passed**; build 37.55s. Live plink on `:4000`. Calendar marked. Next: D71. Hub image publish still open. |
 | 2026-09-14 | D71 | 3, alone | Four-role live walk on `:6060`. Reports: keep `loadDB` (sessions are JSON); teacher-report 500 on missing `constructs`. D68 mid-flight not walked. Suite **1369 passed / 6 skipped**. |
+| 2026-09-14 | D72 | 3, alone | Whole-core adversarial. No psychometric P0. P0: `/mine` fallback + ungated `GET /:id` `/submit`. Live 403 on foreign session. Suite **1379 passed / 6 skipped**. |
 
 ## Compression debt
 
@@ -103,6 +105,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D69 | Wire `difR` as a job kind; unique planted-item flag in CI at a stated tolerance | `dif-analysis` / package `difR` already declared. No `/calibrate/dif`, no groups, no artefact ingest. Unadjusted MH p < 0.05 is not unique on this 8-item matrix. `difR` stores `alphaMH`, not `deltaMH`. | R path + groups + artefact ingest. Stated tolerance is ETS C from `-2.35 * log(alphaMH)`. Unique Item.5 in CI on `56de11d`. |
 | D70 | Wire equate / plink as a job kind; recover a known transformation in CI | `equating` already declared. No `/calibrate/equating`, no `forms`, no fixture. Hub image lacked `equate` and `plink`. | Seeded NEAT fixture + R path + artefact ingest. First pass hand Mean/Sigma on mirt (`0a2ff01`). After local image rebuild, operational constants from `plink::plink` Mean/Sigma (`b96511a`). Tolerance slope 1 ± 0.2, intercept −0.5 ± 0.3. Live check executed on local `:4000`, not Hub. |
 | D71 | First proof author → deliver → score → accumulate → calibrate → rescore even exists | Admin+student IRT already moved a posterior (D50). District/teacher Play, reports, and D68 freeze were the holes. `DB_MODE=mongo` does not mean sessions live in Mongo. | Four-role live sign-off. Session reports stay on `loadDB` (`ECD_DB_FILE`). Teacher-report must tolerate Evidence Models without `constructs`. |
+| D72 | Refute delivery, accumulation, selection, R pipeline, W10 reachability | Those surfaces exist and D60/D68/D39 hold. The uncalled production path was `sessionAssignedToStudent` (tests only + `/mine` leak-fallback). | Ranked findings. P0: student may not list/read/submit another examinee's session. P1s recorded, not all fixed. |
 
 ## Carried-forward gaps
 
@@ -120,4 +123,4 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 - Chunk >500 kB — D74
 - ~~Student My Sessions placeholder~~ closed D60
 - Dead-export guard can miss unused exports that share a name
-- Session ownership-scoping (a student may only read their own session) — still open; D59 closed the role leak only
+- ~~Session ownership-scoping (a student may only read their own session)~~ closed D72 on session + session-report routes; `GET /api/students` roster dump still open (D97-class)

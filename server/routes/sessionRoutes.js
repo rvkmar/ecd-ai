@@ -8,6 +8,8 @@ import {
   buildAssignableRoster,
   isReservedSessionCollectionId,
   resolveSessionAssignees,
+  sessionsVisibleToUser,
+  studentForbiddenFromSession,
 } from "../../src/utils/sessionPlay.js";
 import { identifyEvidence } from "../delivery/evidenceIdentification.js";
 import {
@@ -53,14 +55,25 @@ const router = express.Router();
 // Phase 1 security hardening pass; see AUTH_SECURITY_FIXES.md.)
 router.use(authenticateToken);
 
-// Most routes below are deliberately left open to any authenticated
-// role: creating, submitting, pausing and finishing a session is a
-// student's own self-service flow, not a privileged action, and
-// rolePermissions.js has no per-role session ownership model to gate
-// against yet (that's a real gap, but a scope-based one, not a role-list
-// one -- see the RBAC sweep notes). DELETE is the one exception: it was
-// already commented "For admin use only" but never enforced.
+// Most routes below are open to any authenticated role for their own
+// work. A student may not read or mutate another examinee's session
+// (D72). DELETE remains admin-only.
 const adminOnly = authorizeRole(["admin"]);
+
+function rejectUnassignedStudent(req, res, session, db) {
+  if (
+    studentForbiddenFromSession(
+      session,
+      req.user,
+      db.students || [],
+      db.users || []
+    )
+  ) {
+    res.status(403).json({ error: "Forbidden" });
+    return true;
+  }
+  return false;
+}
 
 // ------------------------------
 // POST /api/sessions
@@ -175,7 +188,8 @@ router.post("/", (req, res) => {
 // ------------------------------
 router.get("/", (req, res) => {
   const db = loadDB();
-  res.json(db.sessions || []);
+  const sessions = db.sessions || [];
+  res.json(sessionsVisibleToUser(sessions, req.user, db.students || [], db.users || []));
 });
 
 // ------------------------------
@@ -185,7 +199,7 @@ router.get("/active", (req, res) => {
   const db = loadDB();
   if (!db.sessions) db.sessions = [];
   const active = db.sessions.filter((s) => s.status !== "archived");
-  res.json(active);
+  res.json(sessionsVisibleToUser(active, req.user, db.students || [], db.users || []));
 });
 
 // ------------------------------
@@ -195,7 +209,7 @@ router.get("/archived", (req, res) => {
   const db = loadDB();
   if (!db.sessions) db.sessions = [];
   const archived = db.sessions.filter((s) => s.status === "archived");
-  res.json(archived);
+  res.json(sessionsVisibleToUser(archived, req.user, db.students || [], db.users || []));
 });
 
 // ------------------------------
@@ -236,6 +250,7 @@ router.get("/:id", (req, res) => {
   const db = loadDB();
   const session = (db.sessions || []).find(s => s.id === req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
+  if (rejectUnassignedStudent(req, res, session, db)) return;
   res.json(session);
 });
 
@@ -250,6 +265,7 @@ router.post("/:id/submit", async (req, res) => {
   const db = loadDB();
   const session = db.sessions.find(s => s.id === id && !s.isCompleted);
   if (!session) return res.status(404).json({ error: "Session not found or already completed" });
+  if (rejectUnassignedStudent(req, res, session, db)) return;
 
   // D60: a persisted stop is the authority that nothing more will be
   // presented. Accepting another response after that would keep updating
@@ -620,6 +636,7 @@ router.get("/:id/next-task", (req, res) => {
   const db = loadDB();
   const session = db.sessions.find(s => s.id === req.params.id && !s.isCompleted);
   if (!session) return res.json({});
+  if (rejectUnassignedStudent(req, res, session, db)) return;
 
   // D58: once a stopping rule has fired, the persisted record is the
   // authority -- not a fresh re-evaluation that could disagree if the
@@ -662,6 +679,7 @@ router.post("/:id/play", (req, res) => {
   if (idx === -1) return res.status(404).json({ error: "Session not found" });
 
   const session = db.sessions[idx];
+  if (rejectUnassignedStudent(req, res, session, db)) return;
   if (session.isCompleted || ["completed", "archived", "submitted", "reviewed"].includes(session.status)) {
     return res.status(400).json({ error: "Session cannot be played" });
   }
@@ -682,6 +700,7 @@ router.post("/:id/pause", (req, res) => {
   if (!db.sessions) db.sessions = [];
   const idx = db.sessions.findIndex((s) => s.id === id);
   if (idx === -1) return res.status(404).json({ error: "Session not found" });
+  if (rejectUnassignedStudent(req, res, db.sessions[idx], db)) return;
 
   db.sessions[idx].status = "paused";
   db.sessions[idx].updatedAt = new Date().toISOString();
@@ -698,6 +717,7 @@ router.post("/:id/resume", (req, res) => {
   if (!db.sessions) db.sessions = [];
   const idx = db.sessions.findIndex((s) => s.id === id);
   if (idx === -1) return res.status(404).json({ error: "Session not found" });
+  if (rejectUnassignedStudent(req, res, db.sessions[idx], db)) return;
 
   if (db.sessions[idx].status !== SESSION_STATUS.PAUSED) {
     return res.status(400).json({ error: "Session is not paused" });
@@ -719,6 +739,7 @@ router.post("/:id/finish", (req, res) => {
   if (!db.sessions) db.sessions = [];
   const idx = db.sessions.findIndex((s) => s.id === id);
   if (idx === -1) return res.status(404).json({ error: "Session not found" });
+  if (rejectUnassignedStudent(req, res, db.sessions[idx], db)) return;
 
   db.sessions[idx].status = "completed";   // ✅ mark completed
   db.sessions[idx].isCompleted = true;     // keep legacy flag if used
@@ -739,6 +760,7 @@ router.post("/:id/review", (req, res) => {
   if (idx === -1) return res.status(404).json({ error: "Session not found" });
 
   const session = db.sessions[idx];
+  if (rejectUnassignedStudent(req, res, session, db)) return;
   session.status = "reviewed";
   session.isCompleted = true;
   session.reviewedAt = new Date().toISOString();

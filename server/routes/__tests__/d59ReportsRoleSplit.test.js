@@ -70,7 +70,7 @@ function app() {
 beforeEach(() => {
   dbState.current = {
     sessions: [SESSION],
-    students: [{ id: "stu1", name: "Pat", classId: "c1", districtId: "d1" }],
+    students: [{ id: "stu1", name: "Pat", username: "student1", classId: "c1", districtId: "d1" }],
     tasks: [],
     taskModels: [],
     evidenceModels: [],
@@ -148,6 +148,14 @@ describe("learner and generic session reports carry the same measurement fields"
         expect.objectContaining({ type: "AttributeProfile", smvId: "attrA", classification: "master" }),
       ])
     );
+  });
+
+  it("refuses a student reading another examinee's session report", async () => {
+    dbState.current.sessions = [{ ...SESSION, id: "s-other", studentId: "stu-other" }];
+    const res = await request(app())
+      .get("/api/reports/session/s-other")
+      .set("Authorization", `Bearer ${tokenFor("student")}`);
+    expect(res.status).toBe(403);
   });
 });
 

@@ -49,7 +49,7 @@ import { vi } from "vitest";
 
 vi.mock("../../utils/authMiddleware.js", () => ({
   authenticateToken: (req, _res, next) => {
-    req.user = { id: "u1", role: "student" };
+    req.user = { id: "student-1", username: "student-1", role: "student" };
     next();
   },
   authorizeRole: () => (_req, _res, next) => next(),

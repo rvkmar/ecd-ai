@@ -5,6 +5,8 @@ import {
   studentIdentityKeys,
   sessionAssignedToStudent,
   attendableSessionsForStudent,
+  studentForbiddenFromSession,
+  sessionsVisibleToUser,
   canPauseSession,
   canPlaySession,
   canOperateSession,
@@ -55,13 +57,34 @@ describe("student session matching", () => {
     expect(mine.map((s) => s.id)).toEqual(["mine"]);
   });
 
-  it("falls back to every live session when users and students are unlinked", () => {
+  it("returns no sessions when this student is assigned to none of them", () => {
     const sessions = [
       { id: "live", studentId: "stu-other", status: "in_progress" },
       { id: "done", studentId: "stu-other", status: "completed" },
     ];
     const mine = attendableSessionsForStudent(sessions, user, []);
-    expect(mine.map((s) => s.id)).toEqual(["live"]);
+    expect(mine.map((s) => s.id)).toEqual([]);
+  });
+
+  it("forbids a student from a session assigned to someone else", () => {
+    expect(
+      studentForbiddenFromSession({ studentId: "stu-other" }, user, students)
+    ).toBe(true);
+    expect(
+      studentForbiddenFromSession({ studentId: "stu99" }, user, students)
+    ).toBe(false);
+    expect(
+      studentForbiddenFromSession({ studentId: "stu-other" }, { role: "teacher" }, students)
+    ).toBe(false);
+  });
+
+  it("hides other examinees from a student list without dropping staff lists", () => {
+    const sessions = [
+      { id: "mine", studentId: "stu99" },
+      { id: "other", studentId: "stu-other" },
+    ];
+    expect(sessionsVisibleToUser(sessions, user, students).map((s) => s.id)).toEqual(["mine"]);
+    expect(sessionsVisibleToUser(sessions, { role: "teacher" }, students)).toHaveLength(2);
   });
 
   it("treats the legacy hyphenated in-progress spelling as attendable", () => {

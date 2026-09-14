@@ -4,6 +4,7 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { loadDB } from "../../src/utils/db-server.js";
 import { dbAdapter } from "../utils/dbAdapter.js";
 import { sessionMeasurementReport } from "../delivery/sessionReportMeasurement.js";
+import { studentForbiddenFromSession } from "../../src/utils/sessionPlay.js";
 
 
 const router = express.Router();
@@ -18,9 +19,8 @@ router.use(authenticateToken);
 // any logged-in student could GET /session/:id/teacher-report. Matches
 // rolePermissions.js `teacherReports` (admin / district / teacher).
 // Learner feedback and the generic session report stay open to any
-// authenticated role: students may read their own session's learner
-// view. Ownership-scoping (a student may only read THEIR session) is
-// the same outstanding gap sessionRoutes.js already names.
+// authenticated role for *their own* session. A student requesting
+// another examinee's id is 403 (D72). Teacher-report remains staff-only.
 const canViewTeacherReports = authorizeRole(["admin", "district", "teacher"]);
 
 // ------------------------------
@@ -31,6 +31,16 @@ router.get("/session/:id", (req, res) => {
   const db = loadDB();
   const session = db.sessions.find(s => s.id === id);
   if (!session) return res.status(404).json({ error: "Session not found" });
+  if (
+    studentForbiddenFromSession(
+      session,
+      req.user,
+      db.students || [],
+      db.users || []
+    )
+  ) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
 
   const student = db.students?.find(stu => stu.id === session.studentId);
 
@@ -180,6 +190,16 @@ router.get("/session/:id/learner-feedback", (req, res) => {
   const db = loadDB();
   const session = db.sessions.find(s => s.id === id);
   if (!session) return res.status(404).json({ error: "Session not found" });
+  if (
+    studentForbiddenFromSession(
+      session,
+      req.user,
+      db.students || [],
+      db.users || []
+    )
+  ) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
 
   // 🔹 Lookup policy info
   const policies = db.policies || [];
@@ -268,6 +288,16 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, (req, res) => {
   const db = loadDB();
   const session = db.sessions.find(s => s.id === id);
   if (!session) return res.status(404).json({ error: "Session not found" });
+  if (
+    studentForbiddenFromSession(
+      session,
+      req.user,
+      db.students || [],
+      db.users || []
+    )
+  ) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
 
   const student = db.students?.find(stu => stu.id === session.studentId);
 

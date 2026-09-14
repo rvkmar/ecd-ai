@@ -10,7 +10,8 @@
 // Student discovery has an identity gap: sessions store `studentId` from
 // the students collection (`stu…`) or a typed username (`stud1`), while
 // the logged-in user is a `users` row. Matching covers username / user id
-// / student name / studentIds[] / optional student.username.
+// / student name / studentIds[] / optional student.username. Unmatched
+// students see an empty list, not every live session.
 //
 // Node ESM (server/index.js, Docker CMD) will not resolve a bare
 // "./sessionStatus" — Vite/Vitest will. Always import with .js.
@@ -107,12 +108,22 @@ export function isAttendableStatus(status) {
 
 export function attendableSessionsForStudent(sessions, user, students = [], users = []) {
   const live = (sessions || []).filter((s) => isAttendableStatus(s?.status));
-  const assigned = live.filter((s) => sessionAssignedToStudent(s, user, students, users));
-  // If we can resolve this user onto at least one session, only show those.
-  // Otherwise show every live session so discovery is not empty solely
-  // because users and students are still unlinked collections.
-  if (assigned.length > 0) return assigned;
-  return live;
+  return live.filter((s) => sessionAssignedToStudent(s, user, students, users));
+}
+
+// Staff (and any non-student role) may list or operate any session.
+// A student may only see sessions assigned to them — an empty match is
+// empty, not "every live session" (that fallback leaked other examinees).
+export function sessionsVisibleToUser(sessions, user, students = [], users = []) {
+  if (!user || user.role !== "student") return sessions || [];
+  return (sessions || []).filter((s) =>
+    sessionAssignedToStudent(s, user, students, users)
+  );
+}
+
+export function studentForbiddenFromSession(session, user, students = [], users = []) {
+  if (!user || user.role !== "student") return false;
+  return !sessionAssignedToStudent(session, user, students, users);
 }
 
 function isClosedSession(session) {
