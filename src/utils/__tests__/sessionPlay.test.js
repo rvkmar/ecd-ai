@@ -2,15 +2,20 @@ import { describe, it, expect } from "vitest";
 import {
   sessionPlayerPath,
   sessionListPath,
+  sessionReviewPath,
   studentIdentityKeys,
   sessionAssignedToStudent,
   attendableSessionsForStudent,
+  closedSessionsForStudent,
   studentForbiddenFromSession,
   sessionsVisibleToUser,
   canPauseSession,
   canPlaySession,
   canStartSession,
   canOperateSession,
+  canReviewSession,
+  canViewCompletedSession,
+  canViewSessionReport,
   isAttendableStatus,
   isSessionClosedForStudent,
   buildAssignableRoster,
@@ -28,6 +33,12 @@ describe("sessionPlayerPath", () => {
     expect(sessionPlayerPath("teacher", "s1")).not.toBe("/sessions/s1/player");
     expect(sessionPlayerPath("admin", "s1")).toBeNull();
     expect(sessionPlayerPath("teacher", null)).toBeNull();
+  });
+
+  it("staff Review opens the /review surface, not the student /player wizard", () => {
+    expect(sessionReviewPath("teacher", "s1")).toBe("/teacher/sessions/s1/review");
+    expect(sessionReviewPath("district", "s1")).toBe("/district/sessions/s1/review");
+    expect(sessionReviewPath("student", "s1")).toBe("/student/sessions/s1/player");
   });
 });
 
@@ -140,6 +151,26 @@ describe("staff Play / Pause / Operate exclusivity", () => {
     expect(canStartSession({ status: "completed" })).toBe(false);
     expect(canStartSession({ status: "submitted" })).toBe(false);
     expect(isSessionClosedForStudent({ status: "completed", isCompleted: true })).toBe(true);
+  });
+
+  it("Review is for live sessions; View/Report are for completed ones", () => {
+    expect(canReviewSession({ status: "in_progress" })).toBe(true);
+    expect(canOperateSession({ status: "in_progress" })).toBe(true);
+    expect(canViewCompletedSession({ status: "in_progress" })).toBe(false);
+    expect(canViewCompletedSession({ status: "completed", isCompleted: true })).toBe(true);
+    expect(canViewSessionReport({ status: "reviewed" })).toBe(true);
+    expect(canReviewSession({ status: "completed", isCompleted: true })).toBe(false);
+  });
+
+  it("closedSessionsForStudent returns only this student's closed work", () => {
+    const user = { username: "stud1", role: "student" };
+    const students = [{ id: "stu99", name: "stud1" }];
+    const sessions = [
+      { id: "live", studentId: "stu99", status: "in_progress" },
+      { id: "done", studentId: "stu99", status: "completed", isCompleted: true },
+      { id: "other", studentId: "stu-other", status: "completed", isCompleted: true },
+    ];
+    expect(closedSessionsForStudent(sessions, user, students).map((s) => s.id)).toEqual(["done"]);
   });
 });
 

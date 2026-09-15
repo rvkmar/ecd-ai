@@ -56,6 +56,12 @@ describe("GET /api/sessions/mine", () => {
     expect(res.body.map((s) => s.id)).toEqual(["s-mine"]);
   });
 
+  it("returns closed sessions for the student when scope=history", async () => {
+    const res = await request(app).get("/api/sessions/mine?scope=history");
+    expect(res.status).toBe(200);
+    expect(res.body.map((s) => s.id)).toEqual(["s-done"]);
+  });
+
   it("returns an empty list, not 404 Session not found, when nothing is assigned", async () => {
     loadDB.mockReturnValue({ students: [], sessions: [] });
     const res = await request(app).get("/api/sessions/mine");

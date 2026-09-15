@@ -105,10 +105,10 @@ describe("Staff Play navigation (D50 leftover)", () => {
   it("SessionBuilder no longer hard-navigates to the unprefixed Play URL", () => {
     const src = fs.readFileSync(path.resolve(__dirname, "../SessionBuilder.jsx"), "utf8");
     expect(src).not.toMatch(/window\.location\.href\s*=\s*[`'"]\/sessions\//);
-    expect(src).toMatch(/sessionPlayerPath/);
+    expect(src).toMatch(/sessionReviewPath/);
   });
 
-  it("Operate opens the teacher player without bouncing to /login or clearing auth", async () => {
+  it("Review opens the teacher review surface without bouncing to /login or clearing auth", async () => {
     seedTeacherAuth();
     render(
       <MemoryRouter initialEntries={["/teacher"]}>
@@ -118,8 +118,8 @@ describe("Staff Play navigation (D50 leftover)", () => {
             <Route path="/login" element={<div>Login page</div>} />
             <Route path="/teacher" element={<SessionBuilder />} />
             <Route
-              path="/teacher/sessions/:sessionId/player"
-              element={<div>Teacher player loaded</div>}
+              path="/teacher/sessions/:sessionId/review"
+              element={<div>Teacher review loaded</div>}
             />
             <Route path="/sessions/:sessionId/player" element={<SessionPlayRedirect />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
@@ -128,19 +128,20 @@ describe("Staff Play navigation (D50 leftover)", () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(screen.getByText("Operate")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Review")).toBeInTheDocument());
     expect(screen.queryByText("Play")).toBeNull();
-    await userEvent.click(screen.getByText("Operate"));
+    expect(screen.queryByText("Operate")).toBeNull();
+    await userEvent.click(screen.getByText("Review"));
 
     await waitFor(() => {
-      expect(screen.getByText("Teacher player loaded")).toBeInTheDocument();
+      expect(screen.getByText("Teacher review loaded")).toBeInTheDocument();
     });
     expect(screen.queryByText("Login page")).toBeNull();
-    expect(screen.getByTestId("location")).toHaveTextContent("/teacher/sessions/s1788/player");
+    expect(screen.getByTestId("location")).toHaveTextContent("/teacher/sessions/s1788/review");
     expect(sessionStorage.getItem(STORAGE_KEY)).toBeTruthy();
   });
 
-  it("district Operate uses the same list → player path as teacher", async () => {
+  it("district Review uses the same list → review path as teacher", async () => {
     seedRoleAuth("dist1", "district");
     render(
       <MemoryRouter initialEntries={["/district"]}>
@@ -150,8 +151,8 @@ describe("Staff Play navigation (D50 leftover)", () => {
             <Route path="/login" element={<div>Login page</div>} />
             <Route path="/district" element={<SessionBuilder />} />
             <Route
-              path="/district/sessions/:sessionId/player"
-              element={<div>District player loaded</div>}
+              path="/district/sessions/:sessionId/review"
+              element={<div>District review loaded</div>}
             />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
@@ -159,16 +160,16 @@ describe("Staff Play navigation (D50 leftover)", () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(screen.getByText("Operate")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Review")).toBeInTheDocument());
     expect(screen.queryByText("Play")).toBeNull();
-    await userEvent.click(screen.getByText("Operate"));
+    await userEvent.click(screen.getByText("Review"));
     await waitFor(() => {
-      expect(screen.getByText("District player loaded")).toBeInTheDocument();
+      expect(screen.getByText("District review loaded")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("location")).toHaveTextContent("/district/sessions/s1788/player");
+    expect(screen.getByTestId("location")).toHaveTextContent("/district/sessions/s1788/review");
   });
 
-  it("Play persists in_progress and stays on the list (Pause + Operate, no player)", async () => {
+  it("Play persists in_progress and stays on the list (Pause + Review, no player)", async () => {
     mockSessionApis([
       {
         id: "s1788",
@@ -187,8 +188,8 @@ describe("Staff Play navigation (D50 leftover)", () => {
             <Route path="/login" element={<div>Login page</div>} />
             <Route path="/teacher" element={<SessionBuilder />} />
             <Route
-              path="/teacher/sessions/:sessionId/player"
-              element={<div>Teacher player loaded</div>}
+              path="/teacher/sessions/:sessionId/review"
+              element={<div>Teacher review loaded</div>}
             />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
@@ -201,9 +202,9 @@ describe("Staff Play navigation (D50 leftover)", () => {
     await userEvent.click(screen.getByText("Play"));
 
     await waitFor(() => expect(screen.getByText("Pause")).toBeInTheDocument());
-    expect(screen.getByText("Operate")).toBeInTheDocument();
+    expect(screen.getByText("Review")).toBeInTheDocument();
     expect(screen.queryByText("Play")).toBeNull();
-    expect(screen.queryByText("Teacher player loaded")).toBeNull();
+    expect(screen.queryByText("Teacher review loaded")).toBeNull();
     expect(screen.getByTestId("location")).toHaveTextContent("/teacher");
     expect(global.fetch.mock.calls.some(([url, opts]) =>
       String(url).includes("/play") && (opts?.method || "").toUpperCase() === "POST"

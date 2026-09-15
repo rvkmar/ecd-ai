@@ -1,18 +1,17 @@
 import React, { useState } from "react";
 import Modal from "../ui/Modal";
 import { measurementStopHeading } from "./measurementStop";
-import { canPauseSession, canPlaySession, canOperateSession } from "@/utils/sessionPlay";
+import {
+  canPauseSession,
+  canPlaySession,
+  canReviewSession,
+  canViewCompletedSession,
+  canViewSessionReport,
+} from "@/utils/sessionPlay";
 
-// SessionList.jsx
-// Presentational list for sessions. Receives `sessions` and optional `students`.
-// Props:
-// - sessions: array of session objects
-// - students: array of student objects (optional)
-// - onPlay(session)
-// - onPause(sessionId)
-// - onResume(sessionId)
-// - onDelete(sessionId)
-// - onViewReport(sessionId)
+// Staff session list. Review = live examinee surface. View = completed
+// read-only. Report opens the session report panel. Teachers never Finish
+// or Submit from this list — that is the student's Submit session action.
 
 export default function SessionList({
   sessions = [],
@@ -21,13 +20,14 @@ export default function SessionList({
   onPlay = () => {},
   onPause = () => {},
   onOperate = () => {},
+  onView = () => {},
   onResume = () => {},
-  onDelete = () => { },
-  onArchive = () => {}, 
+  onDelete = () => {},
+  onArchive = () => {},
   onViewReport = () => {},
 }) {
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
-  const [expanded, setExpanded] = useState(null); // track which session preview is expanded
+  const [expanded, setExpanded] = useState(null);
 
   const getStudentName = (id) => {
     const s = (students || []).find((st) => st.id === id || st.username === id);
@@ -35,10 +35,7 @@ export default function SessionList({
   };
 
   const getAssigneeLabel = (session) => {
-    const ids = [
-      session.studentId,
-      ...(session.studentIds || []),
-    ].filter(Boolean);
+    const ids = [session.studentId, ...(session.studentIds || [])].filter(Boolean);
     const unique = [...new Set(ids.map(String))];
     if (unique.length === 0) return "(unassigned)";
     return unique.map(getStudentName).join(", ");
@@ -61,7 +58,7 @@ export default function SessionList({
   };
 
   const renderTaskPreview = (session) => {
-    const tasks = session.tasks || []; // if backend enriched
+    const tasks = session.tasks || [];
     const ids = session.taskIds || [];
     if (!ids.length) return <p className="text-xs text-gray-400">No tasks</p>;
 
@@ -79,21 +76,16 @@ export default function SessionList({
 
     return (
       <div className="mt-1 text-xs text-gray-600">
-        {expanded === session.id ? (
-          <ul className="list-disc ml-5 space-y-0.5">{preview}</ul>
-        ) : (
-          <ul className="list-disc ml-5 space-y-0.5">{preview}</ul>
-        )}
+        <ul className="list-disc ml-5 space-y-0.5">{preview}</ul>
         {ids.length > 3 && (
           <button
+            type="button"
             onClick={() =>
               setExpanded(expanded === session.id ? null : session.id)
             }
-            className="text-blue-600 hover:underline text-xs mt-1"
+            className="mt-1 text-xs text-blue-600 hover:underline"
           >
-            {expanded === session.id
-              ? "Show less"
-              : `+${ids.length - 3} more`}
+            {expanded === session.id ? "Show less" : `+${ids.length - 3} more`}
           </button>
         )}
       </div>
@@ -109,56 +101,55 @@ export default function SessionList({
       {sessions.map((s) => (
         <div
           key={s.id}
-          className="p-4 border rounded-md bg-white shadow-sm flex justify-between items-start"
+          className="flex items-start justify-between rounded-md border bg-white p-4 shadow-sm"
         >
           <div className="w-3/4">
             <div className="flex items-baseline justify-between">
               <h3 className="text-lg font-semibold">{s.id}</h3>
-              {/* Status badge with extended lifecycle support */}
               <span className="flex items-center gap-1">
                 {s.stopped?.rule && (
                   <span
-                    className="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-900"
+                    className="rounded bg-emerald-100 px-2 py-1 text-xs text-emerald-900"
                     data-testid={`session-stop-badge-${s.id}`}
                   >
                     {measurementStopHeading(s.stopped)}
                   </span>
                 )}
                 <span
-                  className={`text-xs px-2 py-1 rounded ${
+                  className={`rounded px-2 py-1 text-xs ${
                     s.status === "reviewed"
                       ? "bg-green-200 text-green-900"
                       : s.autoFinished
-                      ? "bg-yellow-100 text-yellow-800"
-                      : s.status === "submitted" || s.isCompleted
-                      ? "bg-blue-100 text-blue-800"
-                    : s.status === "paused"
-                    ? "bg-orange-100 text-orange-800"
-                    : s.status === "ready"
-                    ? "bg-slate-100 text-slate-800"
-                    : s.status === "archived"
-                    ? "bg-gray-300 text-gray-700"
-                    : "bg-yellow-100 text-yellow-800"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : s.status === "submitted" || s.isCompleted || s.status === "completed"
+                          ? "bg-blue-100 text-blue-800"
+                          : s.status === "paused"
+                            ? "bg-orange-100 text-orange-800"
+                            : s.status === "ready"
+                              ? "bg-slate-100 text-slate-800"
+                              : s.status === "archived"
+                                ? "bg-gray-300 text-gray-700"
+                                : "bg-yellow-100 text-yellow-800"
                   }`}
                 >
                   {s.status === "reviewed"
                     ? "Reviewed"
                     : s.autoFinished
-                    ? "Auto-finished"
-                    : s.status === "submitted" || s.isCompleted
-                    ? "Submitted"
-                    : s.status === "paused"
-                    ? "Paused"
-                    : s.status === "ready"
-                    ? "Ready"
-                    : s.status === "archived"
-                    ? "Archived"
-                    : "In Progress"}
+                      ? "Auto-finished"
+                      : s.status === "submitted" || s.isCompleted || s.status === "completed"
+                        ? "Submitted"
+                        : s.status === "paused"
+                          ? "Paused"
+                          : s.status === "ready"
+                            ? "Ready"
+                            : s.status === "archived"
+                              ? "Archived"
+                              : "In Progress"}
                 </span>
               </span>
             </div>
 
-            <div className="text-sm text-gray-600 mt-1">
+            <div className="mt-1 text-sm text-gray-600">
               <div>
                 Student: <strong>{getAssigneeLabel(s)}</strong>
                 {s.cohortId && (
@@ -180,7 +171,7 @@ export default function SessionList({
               {renderTaskPreview(s)}
             </div>
 
-            <div className="text-xs text-gray-400 mt-2">
+            <div className="mt-2 text-xs text-gray-400">
               {s.startedAt && (
                 <div>Started: {new Date(s.startedAt).toLocaleString()}</div>
               )}
@@ -190,12 +181,12 @@ export default function SessionList({
             </div>
           </div>
 
-          <div className="flex flex-col space-y-2 w-1/4 items-end">
+          <div className="flex w-1/4 flex-col items-end space-y-2">
             {canPlaySession(s) && (
               <button
                 type="button"
                 onClick={() => onPlay(s)}
-                className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                className="rounded bg-blue-500 px-3 py-1 text-white hover:bg-blue-600"
               >
                 Play
               </button>
@@ -204,79 +195,47 @@ export default function SessionList({
               <button
                 type="button"
                 onClick={() => onPause(s.id)}
-                className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
+                className="rounded bg-orange-500 px-3 py-1 text-white hover:bg-orange-600"
               >
                 Pause
               </button>
             )}
-            {canOperateSession(s) && (
+            {canReviewSession(s) && (
               <button
                 type="button"
                 onClick={() => onOperate(s)}
-                className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
+                className="rounded bg-indigo-500 px-3 py-1 text-white hover:bg-indigo-600"
               >
-                Operate
+                Review
               </button>
             )}
-
-            {/* When submitted or auto-finished, allow teacher review */}
-            {(s.status === "submitted" || s.autoFinished) && (
-              <>
-                {window.location.pathname.includes("/district/") ? (
-                  <a
-                    href={`/district/sessions/${s.id}/review`}
-                    className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600"
-                  >
-                    Review
-                  </a>
-                ) : (
-                  <a
-                    href={`/teacher/sessions/${s.id}/review`}
-                    className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600"
-                  >
-                    Review
-                  </a>
-                )}
-              </>         
-            )}
-        
-            {s.status === "completed" && (
+            {canViewCompletedSession(s) && (
               <button
+                type="button"
+                onClick={() => onView(s)}
+                className="rounded bg-slate-700 px-3 py-1 text-white hover:bg-slate-800"
+              >
+                View
+              </button>
+            )}
+            {canViewSessionReport(s) && (
+              <button
+                type="button"
                 onClick={() => onViewReport(s.id)}
-                className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
+                className="rounded bg-emerald-600 px-3 py-1 text-white hover:bg-emerald-700"
               >
                 Report
               </button>
             )}
-
-            {/* Reviewed sessions also get a report button */}
-            {s.status === "reviewed" && (
-              <button
-                onClick={() => onViewReport(s.id)}
-                className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
-              >
-                Report
-              </button>
-            )}
-        
-            {/* Always allow archive */}
             {s.status !== "archived" && (
               <button
+                type="button"
                 onClick={() => onArchive(s.id)}
-                className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700"
+                className="rounded bg-gray-600 px-3 py-1 text-white hover:bg-gray-700"
               >
                 Archive
               </button>
             )}
-
-            {/* Always allow delete
-            <button
-              onClick={() => openDelete(s.id)}
-              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-            >
-              Delete
-            </button> */}
-
           </div>
         </div>
       ))}

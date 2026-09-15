@@ -5,7 +5,7 @@ import SessionForm from "./SessionForm";
 import SessionReport from "./SessionReport";
 import NavBar from "../ui/NavBar";
 import { SESSION_STATUS } from "@/utils/sessionStatus";
-import { sessionPlayerPath } from "@/utils/sessionPlay";
+import { sessionReviewPath } from "@/utils/sessionPlay";
 import Modal from "../ui/Modal";
 import toast from "react-hot-toast";
 import { useAuth } from "@/auth/AuthProvider";
@@ -15,7 +15,7 @@ import { apiFetch, apiErrorMessage } from "@/api/apiClient";
 // SessionBuilder.jsx
 // Top-level manager for Sessions
 
-export default function SessionBuilder({ notify }) {
+export default function SessionBuilder({ notify: notifyProp }) {
   const { auth } = useAuth() || {};
   const navigate = useNavigate();
   const [sessions, setSessions] = useState([]);
@@ -32,11 +32,15 @@ export default function SessionBuilder({ notify }) {
 
   const [deleteModal, setDeleteModal] = useState({ open: false, sessionId: null });
 
-  // const notify = (msg, type = "info") => {
-  //   if (type === "success") toast.success(msg);
-  //   else if (type === "error") toast.error(msg);
-  //   else toast(msg);
-  // };
+  const notify = (msg, type = "info") => {
+    if (typeof notifyProp === "function") {
+      notifyProp(msg, type);
+      return;
+    }
+    if (type === "success") toast.success(msg);
+    else if (type === "error") toast.error(msg);
+    else toast(msg);
+  };
 
   // Load sessions + supporting collections. sessionTab is a dependency so
   // Active / Archived actually refetch (the previous [] mount-only effect
@@ -222,7 +226,7 @@ export default function SessionBuilder({ notify }) {
   const handlePlay = async (session) => {
     // Persist start/resume on the list. Do not navigate into the player —
     // that trapped staff in the finish flow so they could not run multiple
-    // sessions. Operate is the path into the player.
+    // sessions. Review is the path into the player.
     try {
       const updated = await apiFetch(
         `/api/sessions/${session.id}/play`,
@@ -230,21 +234,24 @@ export default function SessionBuilder({ notify }) {
         auth
       );
       setSessions((prev) => prev.map((s) => (s.id === session.id ? updated : s)));
-      notify?.("Session is in progress.");
+      notify("Session is in progress.", "success");
     } catch (e) {
       console.error(e);
-      notify?.("❌ Failed to play session");
+      notify(apiErrorMessage(e, "Failed to play session"), "error");
     }
   };
 
-  const handleOperate = (session) => {
-    const path = sessionPlayerPath(auth?.role, session.id);
+  const openStaffReview = (session) => {
+    const path = sessionReviewPath(auth?.role, session.id);
     if (!path) {
-      notify?.("Cannot open this session for your role.");
+      notify("Cannot open this session for your role.", "error");
       return;
     }
     navigate(path);
   };
+
+  const handleOperate = (session) => openStaffReview(session);
+  const handleView = (session) => openStaffReview(session);
 
   const handleViewReport = (sessionId) => {
     setReportSessionId(sessionId);
@@ -294,9 +301,9 @@ export default function SessionBuilder({ notify }) {
         onPlay={handlePlay}
         onPause={handlePause}
         onOperate={handleOperate}
+        onView={handleView}
         onResume={handlePlay}
-        // onDelete={confirmDeleteSession}
-        onArchive={handleArchive}   // ✅ instead of onDelete
+        onArchive={handleArchive}
         onViewReport={handleViewReport}
       />
 
@@ -318,13 +325,20 @@ export default function SessionBuilder({ notify }) {
         </div>
       )}
 
-      {/* Report viewer */}
+      {/* Report viewer — overlay so Report is visible above the list */}
       {reportSessionId && (
-        <div className="p-4 border rounded-md bg-gray-50">
-          <SessionReport
-            sessionId={reportSessionId}
-            onClose={() => setReportSessionId(null)}
-          />
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Session report"
+        >
+          <div className="my-8 w-full max-w-3xl rounded-xl border border-slate-200 bg-white shadow-xl">
+            <SessionReport
+              sessionId={reportSessionId}
+              onClose={() => setReportSessionId(null)}
+            />
+          </div>
         </div>
       )}
 

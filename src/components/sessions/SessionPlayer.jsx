@@ -92,7 +92,6 @@ export default function SessionPlayer({
   const { auth } = useAuth() || {};
   const { data: policies = [] } = usePolicies();
 
-  const [finalizeModalOpen, setFinalizeModalOpen] = useState(false);
   const [completeModal, setCompleteModal] = useState(false);
   // Student wizard lifecycle (client phase). Server status stays ready /
   // in_progress until Submit calls /finish → completed.
@@ -631,6 +630,8 @@ export default function SessionPlayer({
 
   async function handleSubmit(e) {
     e.preventDefault();
+    // Teachers review only — never submit examinee responses.
+    if (isTeacher) return;
     if (!currentTaskId) return;
     setSubmitting(true);
 
@@ -744,33 +745,6 @@ export default function SessionPlayer({
       setSubmitting(false);
     }
   }
-
-  // ----- teacher: finalize review -----
-  async function handleFinalizeReview() {
-    if (!sessionIdRef.current) return;
-    // open modal, let user confirm
-    setFinalizeModalOpen(true);
-  }
-
-  async function performFinalizeReview() {
-    if (!sessionIdRef.current) return setFinalizeModalOpen(false);
-    try {
-      await apiFetch(
-        `/api/sessions/${sessionIdRef.current}/finalize`,
-        { method: "POST" },
-        auth
-      );
-      notify?.("✅ Session finalized");
-      // optionally refresh session state
-      await loadNextTask(); // or reload session list as appropriate
-    } catch (err) {
-      console.error(err);
-      notify?.("❌ Failed to finalize review: " + apiErrorMessage(err, err.message));
-    } finally {
-      setFinalizeModalOpen(false);
-    }
-  }
-
 
   // ----- finish session -----
   const confirmCompleteSession = () => setCompleteModal(true);
@@ -910,6 +884,8 @@ export default function SessionPlayer({
     wizardPhase !== WIZARD_PHASE.DRAFT ||
     answeredIds.has(currentTaskId) ||
     session?.status === SESSION_STATUS.PAUSED;
+  // Staff Review/View never edits examinee answers or submits the session.
+  const staffReadOnly = isTeacher;
 
   if (!isTeacher) {
     const goBack = () => {
@@ -1136,16 +1112,9 @@ export default function SessionPlayer({
               : "Teacher"}
           </strong>
           <div className="text-xs text-gray-600 mt-1">
-            You can view all responses and assign rubric levels before finalizing.
+            Review is read-only. You can inspect responses and open the report for
+            completed sessions. Students submit their own sessions.
           </div>
-          <Modal
-            isOpen={finalizeModalOpen}
-            onClose={() => setFinalizeModalOpen(false)}
-            onConfirm={performFinalizeReview}
-            title="Finalize Review"
-            message="Finalize teacher review? This will mark the session as reviewed."
-            confirmClass="bg-blue-600 hover:bg-blue-700 text-white"
-          />
         </div>
       )}
 
@@ -1250,7 +1219,7 @@ export default function SessionPlayer({
             You can finish the session or review responses.
           </p>
           <div className="mt-3 space-x-2">
-            {session?.status !== "completed" && (
+            {!isTeacher && session?.status !== "completed" && (
               <button
                 type="button"
                 onClick={() => setFinishModalOpen(true)}
@@ -1276,7 +1245,7 @@ export default function SessionPlayer({
             You can finish the session or review responses.
           </p>
           <div className="mt-3 space-x-2">
-            {session?.status !== "completed" && (
+            {!isTeacher && session?.status !== "completed" && (
               <button
                 type="button"
                 onClick={() => setFinishModalOpen(true)}
@@ -1344,6 +1313,7 @@ export default function SessionPlayer({
                 value={itemResponse}
                 onChange={setItemResponse}
                 disabled={
+                  staffReadOnly ||
                   submitting ||
                   !(
                     session &&
@@ -1354,13 +1324,15 @@ export default function SessionPlayer({
                   )
                 }
               />
-              <button
-                type="submit"
-                disabled={submitting || !canPresentItem(deliveredItem)}
-                className="px-4 py-2 rounded-md bg-primary text-primary-foreground disabled:opacity-50"
-              >
-                {submitting ? "Submitting…" : "Submit"}
-              </button>
+              {!isTeacher && (
+                <button
+                  type="submit"
+                  disabled={submitting || !canPresentItem(deliveredItem)}
+                  className="px-4 py-2 rounded-md bg-primary text-primary-foreground disabled:opacity-50"
+                >
+                  {submitting ? "Submitting…" : "Submit"}
+                </button>
+              )}
             </form>
           ) : question ? (
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -1406,6 +1378,7 @@ export default function SessionPlayer({
                           checked={selectedOptionId === opt.id}
                           onChange={() => setSelectedOptionId(opt.id)}
                           disabled={
+                            staffReadOnly ||
                             // session is editable only when in-progress and not autoFinished/isCompleted
                             !(
                               session &&
@@ -1438,6 +1411,7 @@ export default function SessionPlayer({
                           value={selectedRubricLevel || ""}
                           onChange={(e) => setSelectedRubricLevel(e.target.value)}
                           disabled={
+                            staffReadOnly ||
                             !(
                               session &&
                               (session.status === SESSION_STATUS.IN_PROGRESS ||
@@ -1463,6 +1437,7 @@ export default function SessionPlayer({
                         value={textAnswer}
                         onChange={(e) => setTextAnswer(e.target.value)}
                         disabled={
+                          staffReadOnly ||
                           !(
                             session &&
                             (session.status === SESSION_STATUS.IN_PROGRESS ||
@@ -1487,6 +1462,7 @@ export default function SessionPlayer({
                     value={textAnswer}
                     onChange={(e) => setTextAnswer(e.target.value)}
                     disabled={
+                      staffReadOnly ||
                       !(
                         session &&
                         (session.status === SESSION_STATUS.IN_PROGRESS ||
@@ -1508,6 +1484,7 @@ export default function SessionPlayer({
                     value={textAnswer}
                     onChange={(e) => setTextAnswer(e.target.value)}
                     disabled={
+                      staffReadOnly ||
                       !(
                         session &&
                         (session.status === SESSION_STATUS.IN_PROGRESS ||
@@ -1521,7 +1498,7 @@ export default function SessionPlayer({
               )}
 
               <div className="flex items-center space-x-2">
-                {/* Student vs Teacher controls */}
+                {/* Students answer; teachers only navigate / inspect */}
                 {!isTeacher ? (
                   <>
                     <button
@@ -1579,10 +1556,10 @@ export default function SessionPlayer({
                 ) : (
                   <button
                     type="button"
-                    onClick={handleFinalizeReview}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    onClick={loadNextTask}
+                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
                   >
-                    ✅ Finalize Review
+                    Next activity
                   </button>
                 )}
 

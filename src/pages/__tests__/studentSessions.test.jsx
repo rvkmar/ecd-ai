@@ -39,6 +39,12 @@ describe("Student My Sessions (D50 leftover discovery)", () => {
     expect(src).toMatch(/StudentSessionList/);
   });
 
+  it("StudentDashboard Delivery includes a Reports tab for performance", () => {
+    const src = fs.readFileSync(path.resolve(__dirname, "../StudentDashboard.jsx"), "utf8");
+    expect(src).toMatch(/StudentSessionReports/);
+    expect(src).toMatch(/label: "Reports"/);
+  });
+
   it("lists attendable sessions and Play opens /student/sessions/:id/player", async () => {
     global.fetch = vi.fn((url) => {
       if (String(url).includes("/api/sessions/mine")) {
@@ -69,8 +75,8 @@ describe("Student My Sessions (D50 leftover discovery)", () => {
     );
 
     await waitFor(() => expect(screen.getByText("s-attend")).toBeInTheDocument());
-    expect(screen.getByText("Play")).toBeInTheDocument();
-    await userEvent.click(screen.getByText("Play"));
+    expect(screen.getByText("Continue")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Continue"));
     expect(screen.getByText("Student player")).toBeInTheDocument();
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/student/sessions/s-attend/player"

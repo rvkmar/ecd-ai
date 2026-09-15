@@ -5,6 +5,7 @@ import { validateEntity } from "../../src/utils/schema.js";
 import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
 import {
   attendableSessionsForStudent,
+  closedSessionsForStudent,
   buildAssignableRoster,
   isReservedSessionCollectionId,
   resolveSessionAssignees,
@@ -226,6 +227,11 @@ router.get("/mine", (req, res) => {
     const users = db.users || [];
     const user = req.user || {};
     if (user.role === "student") {
+      if (String(req.query.scope || "") === "history") {
+        return res.json(
+          closedSessionsForStudent(sessions, user, students, users)
+        );
+      }
       return res.json(attendableSessionsForStudent(sessions, user, students, users));
     }
     const live = sessions.filter((s) => s.status !== "archived");

@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 
 import RoleWorkbench from "../components/ui/RoleWorkbench";
 import StudentSessionList from "../components/sessions/StudentSessionList";
-import AnalyticsReports from "../components/reports/AnalyticsReports";
+import StudentSessionReports from "../components/sessions/StudentSessionReports";
 
 export default function StudentDashboard() {
   const { auth, logout } = useAuth();
@@ -29,7 +29,7 @@ export default function StudentDashboard() {
           label: "Delivery",
           tabs: [
             { id: "mysessions", label: "My Sessions", content: <StudentSessionList /> },
-            { id: "reports", label: "Reports", content: <AnalyticsReports /> },
+            { id: "reports", label: "Reports", content: <StudentSessionReports /> },
           ],
         },
       ]}

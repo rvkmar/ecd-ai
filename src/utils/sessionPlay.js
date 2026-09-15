@@ -29,6 +29,13 @@ export function sessionPlayerPath(role, sessionId) {
   return `/${role}/sessions/${sessionId}/player`;
 }
 
+// Staff open the review surface (mode=teacher). Students stay on /player.
+export function sessionReviewPath(role, sessionId) {
+  if (!sessionId || !PLAYABLE_ROLES.includes(role)) return null;
+  if (role === "student") return sessionPlayerPath(role, sessionId);
+  return `/${role}/sessions/${sessionId}/review`;
+}
+
 // Dashboard that hosts the sessions list (tab), not the player.
 export function sessionListPath(role) {
   if (!role) return "/";
@@ -161,10 +168,34 @@ export function canPauseSession(session, { reviewMode = false } = {}) {
   return isInProgressStatus(session.status) || session.status === SESSION_STATUS.REOPENED;
 }
 
-// Operate opens the player/finish surface. Only once the session is live.
+// Review (formerly Operate) opens the staff review player. Live sessions only.
 export function canOperateSession(session, { reviewMode = false } = {}) {
   if (reviewMode || !session || isClosedSession(session)) return false;
   return isInProgressStatus(session.status) || session.status === SESSION_STATUS.REOPENED;
+}
+
+export const canReviewSession = canOperateSession;
+
+// View a completed / submitted student session (read-only). Not archived.
+export function canViewCompletedSession(session) {
+  if (!session) return false;
+  const status = normalizeSessionStatus(session.status);
+  if (status === "archived") return false;
+  return isClosedSession(session);
+}
+
+export function canViewSessionReport(session) {
+  return canViewCompletedSession(session);
+}
+
+// Closed sessions assigned to this student (for Delivery → Reports).
+export function closedSessionsForStudent(sessions, user, students = [], users = []) {
+  return (sessions || []).filter(
+    (s) =>
+      sessionAssignedToStudent(s, user, students, users) &&
+      isClosedSession(s) &&
+      normalizeSessionStatus(s.status) !== "archived"
+  );
 }
 
 export function buildAssignableRoster(students = [], users = []) {
