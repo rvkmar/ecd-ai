@@ -40,7 +40,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D73b | product `6ba447d` + close `12dbca2`. nginx earlier `index-DZ0ps72F.js`; close build `index-CWS7Hg6h.js` 2,280.50 kB. Close: `claude/day73b-padi-tr9-admin-ia.md`. |
 | HEAD at 2026-09-15 day73c | product `e9e01ff`…`6f09fde` + close (gates + handoff). Close: `claude/day73c-session-delivery-home.md`. Build chunk `index-ND7fdpsk.js` 2,269.52 kB. |
 | HEAD at D74 | product `3a6415a` + this close. Close: `claude/day74-performance-bundle-split.md`. Largest JS chunk `recharts` 446.89 kB; entry `index-DVkk4-Lz.js` 31.23 kB. Suite close re-run **1439 passed / 6 skipped**. |
-| HEAD at D75 | ingest→active fix (this session) + close. Close: `claude/day75-w15-core-sign-off.md`. Suite **1439 passed / 6 skipped**; CI [34960900031](https://github.com/rvkmar/ecd-ai/actions/runs/34960900031) LSAT7+sim10GDINA green. |
+| HEAD at D75 | product+handoff `4d56191` + this close. Close: `claude/day75-w15-core-sign-off.md`. Suite close re-run **1439 passed / 6 skipped**; CI [34960900031](https://github.com/rvkmar/ecd-ai/actions/runs/34960900031) LSAT7+sim10GDINA green. |
 
 ## Session log
 
@@ -82,7 +82,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-15 | D73b close | 1 | Staff/student chrome aligned to the same TR9 groups (no Q-Matrix/Calibration on district/teacher). Suite **1399 passed / 6 skipped**; build `index-CWS7Hg6h.js` 2,280.50 kB. Live `dist1` / `teach1` / `stud1`. Next: D74. |
 | 2026-09-15 | off-cal day73c | 2 | Teacher Review/View/Report; student Reports + wizard timings (server); Home announcements. Suite **1439 passed / 6 skipped**; build `index-ND7fdpsk.js` 2,269.52 kB. Live Home walk not done. Next: D74. |
 | 2026-09-15 | D74 | 1, alone | Route + tab `lazyPanel` splits; vendor `manualChunks`. Chunk warning cleared (max 446.89 kB). Live dashboard median 15 ms @ 4 items; rebuild `tm-d56` 28 ms; synthetic library/dashboard through N=1000 recorded. Product `3a6415a`. Close re-run **1439 passed / 6 skipped**. Next: D75 (never-compress). |
-| 2026-09-15 | D75 | 3, alone | W15 never-compress sign-off. Five claims held on `:6060` + CI. Ingest misalignment: calibrated set now becomes `activeParameterSetId`. Four-role walk. Suite **1439 passed / 6 skipped**. Next: W16. |
+| 2026-09-15 | D75 | 3, alone | W15 never-compress sign-off. Five claims held on `:6060` + CI. Ingest misalignment: calibrated set now becomes `activeParameterSetId`. Four-role walk. Product+handoff `4d56191`. Close re-run **1439 passed / 6 skipped**. Next: W16. |
 
 ## Compression debt
 
@@ -132,6 +132,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | day73c Operate | Staff list “Operate” opens player finish flow | Teachers must not submit/finish examinee sessions | Review (active) / View + Report (closed); read-only staff player |
 | day73c timing | Client sessionStorage for wizard clocks | User required server persistence | `session.wizardPhaseTimings` + `POST /wizard-timing` |
 | D74 AdminPage | App-only route split would clear the warning | AdminPage (and staff dashboards) static-imported every heavy builder/tab | Lazy tab panels + active-leaf mount in RoleWorkbench; vendor manualChunks |
+| D75 | Plan row: Sonnet/low “handoff + update actuals” | Calendar exit check is five behavioural milestone claims (never-compress) | Assemble evidence for all five on `:6060` + CI; fix ingest→active misalignment; core handoff. Docs-only would be PARTIAL |
 
 ## Carried-forward gaps
 
@@ -155,3 +156,4 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 - ~~Staff Operate mislabeled / teachers could Finish student sessions~~ closed day73c (Review/View/Report + read-only teacher player)
 - Home announcements live `:6060` create/visibility walk — **open** (tests only this close)
 - Student wizard timing Continue across devices — **open** (API tests only this close)
+- ~~W15 five-claim core sign-off~~ closed D75 (`4d56191`)
