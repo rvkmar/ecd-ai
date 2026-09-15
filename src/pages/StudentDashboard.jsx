@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import RoleWorkbench from "../components/ui/RoleWorkbench";
 import StudentSessionList from "../components/sessions/StudentSessionList";
 import StudentSessionReports from "../components/sessions/StudentSessionReports";
+import { homeWorkbenchGroup } from "@/components/home/homeWorkbenchGroup";
 
 export default function StudentDashboard() {
   const { auth, logout } = useAuth();
@@ -24,6 +25,7 @@ export default function StudentDashboard() {
       title="Student Dashboard"
       subtitle="Delivery only — sit sessions and see your reports."
       groups={[
+        homeWorkbenchGroup(),
         {
           id: "delivery",
           label: "Delivery",

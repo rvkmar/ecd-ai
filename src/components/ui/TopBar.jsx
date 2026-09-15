@@ -9,10 +9,10 @@ import ThemeToggle from "../../theme/ThemeToggle";
 // also what gives every page (including Settings) a reliable way back to a
 // role's home screen, since not every page otherwise exposes one.
 const HOME_BY_ROLE = {
-  admin: "/admin",
-  district: "/district",
-  teacher: "/teacher",
-  student: "/student",
+  admin: "/admin?tab=home",
+  district: "/district?tab=home",
+  teacher: "/teacher?tab=home",
+  student: "/student?tab=home",
 };
 
 function initialsFor(username) {

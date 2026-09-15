@@ -25,7 +25,7 @@ export default function LoginPage() {
     try {
       await login({ username, password, role });
       toast.success(`Logged in as ${role}`);
-      navigate(`/${role}`, { replace: true });
+      navigate(`/${role}?tab=home`, { replace: true });
     } catch (err) {
       toast.error(err.message || "Login failed");
     } finally {

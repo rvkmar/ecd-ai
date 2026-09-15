@@ -54,6 +54,9 @@ vi.mock("@/components/delivery/EvidenceAccumulationInspector", () => ({
 vi.mock("@/components/delivery/PresentationModelStub", () => ({
   default: () => <div>Presentation stub</div>,
 }));
+vi.mock("@/components/home/HomeAnnouncements", () => ({
+  default: () => <div>Home announcements</div>,
+}));
 vi.mock("@/components/tasks/TasksManager", () => ({
   default: () => <div>Activities surface</div>,
 }));
@@ -104,7 +107,8 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(student).not.toMatch(/id: "analytics"/);
   });
 
-  it("shows Student Model, Assembly, and nested measurement tabs after load", async () => {
+  it("shows Home first, then Student Model after opening Models", async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter>
         <AdminPage />
@@ -112,9 +116,12 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("tab", { name: "Models" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Home" })).toBeInTheDocument();
     });
+    expect(screen.getByText("Home announcements")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Announcements" })).toBeInTheDocument();
 
+    await user.click(screen.getByRole("tab", { name: "Models" }));
     expect(screen.getByRole("tab", { name: "Student Model" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Assembly Model" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Q-Matrix" })).toBeInTheDocument();
@@ -131,8 +138,9 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
         <AdminPage />
       </MemoryRouter>
     );
-    await waitFor(() => screen.getByRole("tab", { name: "Models" }));
+    await waitFor(() => screen.getByRole("tab", { name: "Home" }));
 
+    await user.click(screen.getByRole("tab", { name: "Models" }));
     await user.click(screen.getByRole("tab", { name: "Assembly Model" }));
     expect(screen.getByText("Assembly builder")).toBeInTheDocument();
 

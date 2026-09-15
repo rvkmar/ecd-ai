@@ -20,6 +20,7 @@ import SessionBuilder from "@/components/sessions/SessionBuilder";
 import TasksManager from "@/components/tasks/TasksManager";
 import EvidenceAccumulationInspector from "@/components/delivery/EvidenceAccumulationInspector";
 import PresentationModelStub from "@/components/delivery/PresentationModelStub";
+import { homeWorkbenchGroup } from "@/components/home/homeWorkbenchGroup";
 
 export default function AdminPage() {
   const { auth, logout } = useAuth();
@@ -41,6 +42,7 @@ export default function AdminPage() {
       title="Admin Control Center"
       subtitle="Conceptual Assessment Framework, implementation, and delivery (PADI TR9). Settings stay under the profile menu."
       groups={[
+        homeWorkbenchGroup(),
         {
           id: "models",
           label: "Models",

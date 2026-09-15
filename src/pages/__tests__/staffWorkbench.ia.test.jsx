@@ -32,29 +32,36 @@ vi.mock("../../components/reports/AnalyticsReports", () => ({
 vi.mock("@/components/delivery/EvidenceAccumulationInspector", () => ({
   default: () => <div>Accumulation inspector</div>,
 }));
+vi.mock("@/components/home/HomeAnnouncements", () => ({
+  default: () => <div>Home announcements</div>,
+}));
 
 describe("District and teacher RoleWorkbench (D73c)", () => {
   beforeEach(() => {
     apiFetch.mockResolvedValue({});
   });
 
-  it("district has Implementation/Delivery, not Q-Matrix or Calibration", async () => {
+  it("district has Home first, then Implementation/Delivery", async () => {
     useAuth.mockReturnValue({
       auth: { role: "district", username: "dist1", token: "t" },
       logout: vi.fn(),
     });
+    const user = userEvent.setup();
     render(
       <MemoryRouter>
         <DistrictDashboard />
       </MemoryRouter>
     );
-    await waitFor(() => screen.getByRole("tab", { name: "Implementation" }));
+    await waitFor(() => screen.getByRole("tab", { name: "Home" }));
+    expect(screen.getByText("Home announcements")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Implementation" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Delivery" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Activities" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Q-Matrix" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Calibration" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Models" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Implementation" }));
     expect(screen.getByText("Item bank")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Activities" })).toBeInTheDocument();
   });
 
   it("teacher matches the same layers and can open Reports", async () => {
@@ -68,7 +75,8 @@ describe("District and teacher RoleWorkbench (D73c)", () => {
         <TeacherDashboard />
       </MemoryRouter>
     );
-    await waitFor(() => screen.getByRole("tab", { name: "Implementation" }));
+    await waitFor(() => screen.getByRole("tab", { name: "Home" }));
+    await user.click(screen.getByRole("tab", { name: "Implementation" }));
     await user.click(screen.getByRole("tab", { name: "Delivery" }));
     expect(screen.getByRole("tab", { name: "Sessions" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Evidence Accumulation" })).toBeInTheDocument();

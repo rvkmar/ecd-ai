@@ -29,6 +29,7 @@ import usersRoutes from "./routes/usersRoutes.js";
 import qMatrixModelsRoutes from "./routes/qMatrixModelsRoutes.js";
 import assemblyModelsRoutes from "./routes/assemblyModelsRoutes.js";
 import compositeLibraryRoutes from "./routes/compositeLibraryRoutes.js";
+import announcementsRoutes from "./routes/announcementsRoutes.js";
 import { authenticateToken, authorizeRole } from "./utils/authMiddleware.js";
 
 const app = express();
@@ -90,6 +91,7 @@ app.use("/api/users", usersRoutes);
 app.use("/api/qMatrixModels", qMatrixModelsRoutes);
 app.use("/api/assemblyModels", assemblyModelsRoutes);
 app.use("/api/compositeLibrary", compositeLibraryRoutes);
+app.use("/api/announcements", announcementsRoutes);
 
 // ------------------------------
 // No static serving here! Nginx handles frontend build

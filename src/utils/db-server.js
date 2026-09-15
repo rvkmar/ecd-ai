@@ -39,6 +39,7 @@ function defaultDB() {
     students: [],
     questions: [],      // ✅ added
     calibrationJobs: [],
+    announcements: [],
   };
 }
 

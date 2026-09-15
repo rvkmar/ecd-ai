@@ -511,6 +511,18 @@ export const schema = {
     wizardPhase: 'string',
   },
 
+  announcements: {
+    id: 'string',
+    title: 'string',
+    body: 'string',
+    authorRole: 'string',
+    createdBy: 'string',
+    visibility: 'string',
+    audienceRoles: 'array',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
   policies: {
     type: "object",
     required: ["id", "name", "type", "createdAt", "updatedAt"],

@@ -39,7 +39,8 @@ export const rolePermissions = {
       "compositeLibrary",
       // D62: calibration job queue. Admin authors; district may view
       // (a calibration run is a system-level measurement decision).
-      "calibrationJobs"
+      "calibrationJobs",
+      "announcements",
     ],
     canEdit: [
       "questions",
@@ -73,14 +74,15 @@ export const rolePermissions = {
       "students",
       "qMatrixModels",
       "assemblyModels",
-      "calibrationJobs"
+      "calibrationJobs",
+      "announcements",
     ],
     // "students" was declared in canView but never in canCreate/canDelete
     // on any role, while studentsRoutes.js accepted any authenticated
     // caller -- the RBAC sweep found this the same way it found items/
     // student being absent before. Admin-only until a real enrollment
     // workflow exists for district/teacher.
-    canCreate: ["students", "calibrationJobs"],
+    canCreate: ["students", "calibrationJobs", "announcements"],
   },
 
   district: {
@@ -102,7 +104,8 @@ export const rolePermissions = {
       // sessions run under without being able to change it.
       "qMatrixModels",
       "assemblyModels",
-      "calibrationJobs"
+      "calibrationJobs",
+      "announcements",
     ],
     canEdit: [
       "tasks",              // can create local tasks
@@ -110,7 +113,8 @@ export const rolePermissions = {
       "items"               // authors and governs bank items
     ],
     canApprove: ["questions", "items"],
-    canDelete: ["tasks"],      // local tasks only
+    canDelete: ["tasks", "announcements"],      // local tasks + own announcements
+    canCreate: ["announcements"],
     restrictions: {
       viewScope: "district",   // limits view to district data
       editableModels: "cloned", // can only edit cloned models
@@ -127,7 +131,8 @@ export const rolePermissions = {
       "tasks",
       "sessions",
       "reports",
-      "teacherReports"
+      "teacherReports",
+      "announcements",
     ],
     canEdit: [
       "tasks",
@@ -154,7 +159,7 @@ export const rolePermissions = {
   // the teacher-report payload (server: authorizeRole on those routes).
   student: {
     label: "Student",
-    canView: ["sessions", "reports"],
+    canView: ["sessions", "reports", "announcements"],
     canEdit: [],
     canCreate: [],
     canDelete: [],

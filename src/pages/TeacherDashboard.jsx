@@ -9,6 +9,7 @@ import TasksManager from "../components/tasks/TasksManager";
 import SessionBuilder from "../components/sessions/SessionBuilder";
 import AnalyticsReports from "../components/reports/AnalyticsReports";
 import EvidenceAccumulationInspector from "@/components/delivery/EvidenceAccumulationInspector";
+import { homeWorkbenchGroup } from "@/components/home/homeWorkbenchGroup";
 
 export default function TeacherDashboard() {
   const { auth, logout } = useAuth();
@@ -27,6 +28,7 @@ export default function TeacherDashboard() {
       title="Teacher Dashboard"
       subtitle="Implementation and delivery. CAF models stay with Admin."
       groups={[
+        homeWorkbenchGroup(),
         {
           id: "implementation",
           label: "Implementation",
