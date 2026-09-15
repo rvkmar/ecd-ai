@@ -34,7 +34,21 @@ const operationalCompetencyModel = {
   ],
 };
 
+const confirmedCompetencyModel = {
+  id: "cm-confirmed",
+  status: "confirmed",
+  locked: true,
+  versionNumber: 2,
+  smVariables: operationalCompetencyModel.smVariables,
+};
+
 const draftCompetencyModel = { id: "cm2", status: "draft", locked: false, versionNumber: 1 };
+
+const db = {
+  competencyModels: [operationalCompetencyModel, confirmedCompetencyModel, draftCompetencyModel],
+  assemblyModels: [],
+  qMatrixModels: [],
+};
 
 function makeAssemblyModel(overrides = {}) {
   return {
@@ -62,8 +76,6 @@ function makeQMatrix(overrides = {}) {
     ...overrides,
   };
 }
-
-const db = { competencyModels: [operationalCompetencyModel, draftCompetencyModel], assemblyModels: [], qMatrixModels: [] };
 
 describe("validateAssemblyModelLifecycle", () => {
   it("accepts a draft with nothing filled in yet", () => {
@@ -98,12 +110,25 @@ describe("validateAssemblyModelLifecycle", () => {
     expect(errors).toEqual([]);
   });
 
-  it("refuses activation when the bound competency model is not operational", () => {
+  it("activates cleanly when the bound competency model is confirmed and locked at the matching version", () => {
+    const errors = validateAssemblyModelLifecycle(
+      makeAssemblyModel({
+        status: "operational",
+        locked: true,
+        competencyModelId: "cm-confirmed",
+        competencyModelVersion: 2,
+      }),
+      db
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it("refuses activation when the bound competency model is not a frozen parent", () => {
     const errors = validateAssemblyModelLifecycle(
       makeAssemblyModel({ status: "operational", locked: true, competencyModelId: "cm2", competencyModelVersion: 1 }),
       db
     );
-    expect(errors.join(" ")).toMatch(/bound competency model must be operational first/);
+    expect(errors.join(" ")).toMatch(/locked, non-archived parent/);
   });
 
   it("refuses activation on a competencyModelVersion mismatch", () => {
@@ -172,12 +197,26 @@ describe("validateQMatrixModelLifecycle", () => {
     expect(validateQMatrixModelLifecycle(makeQMatrix({ status: "operational", locked: true }), db)).toEqual([]);
   });
 
-  it("refuses activation when the bound competency model is not operational", () => {
+  it("activates cleanly when the bound competency model is confirmed and locked at the matching version", () => {
+    expect(
+      validateQMatrixModelLifecycle(
+        makeQMatrix({
+          status: "operational",
+          locked: true,
+          competencyModelId: "cm-confirmed",
+          competencyModelVersion: 2,
+        }),
+        db
+      )
+    ).toEqual([]);
+  });
+
+  it("refuses activation when the bound competency model is not a frozen parent", () => {
     const errors = validateQMatrixModelLifecycle(
       makeQMatrix({ status: "operational", locked: true, competencyModelId: "cm2", competencyModelVersion: 1 }),
       db
     );
-    expect(errors.join(" ")).toMatch(/bound competency model must be operational first/);
+    expect(errors.join(" ")).toMatch(/locked, non-archived parent/);
   });
 
   it("refuses an illegal status transition (confirmed -> draft, a reviewer-only path)", () => {

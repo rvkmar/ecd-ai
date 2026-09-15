@@ -16,7 +16,7 @@
 import React, { useMemo, useState } from "react";
 import { useCompetencyModels, useCompetencies } from "@/api/queries/competencies";
 import { apiErrorMessage } from "@/api/apiClient";
-import ModelIngredientsCard from "../shared/ModelIngredientsCard";
+import LifecycleStatusBadge from "../ui/LifecycleStatusBadge";
 
 export default function CompetencyTable() {
     const { data: models = [], isLoading: loading, error: queryError } =
@@ -190,8 +190,8 @@ export default function CompetencyTable() {
                                 <tr key={m.id} className="border-t hover:bg-gray-50">
                                     <td className="px-4 py-3 font-medium">{m.id}</td>
                                     <td className="px-4 py-3 font-medium">{m.name}</td>
-                                    <td className="px-4 py-3 capitalize">
-                                        {m.locked ? "confirmed" : m.status || "draft"}
+                                    <td className="px-4 py-3">
+                                        <LifecycleStatusBadge status={m.status} />
                                     </td>
                                     <td className="px-4 py-3">{m.locked ? "Yes" : "No"}</td>
                                     <td className="px-4 py-3">v{m.versionNumber || 1}</td>

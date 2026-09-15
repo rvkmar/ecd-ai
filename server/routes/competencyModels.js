@@ -279,6 +279,43 @@ router.post("/models/:id/confirm", canAuthor, (req, res) => {
 });
 
 /* =====================================================
+   🔹 ARCHIVE MODEL (confirmed → archived)
+
+   Confirmation locks the Student Model. Archive withdraws it as a parent
+   for new Evidence Models / Q-matrices / assemblies. Structure stays;
+   clone is refused. Draft/reviewed models are deleted, not archived.
+===================================================== */
+router.post("/models/:id/archive", canAuthor, (req, res) => {
+  const db = loadDB();
+  const model = db.competencyModels?.find((m) => m.id === req.params.id);
+
+  if (!model) return res.status(404).json({ error: "Model not found" });
+  if (model.status === "archived") {
+    return res.status(409).json({ error: "Model is already archived." });
+  }
+
+  const prevStatus = model.status || "draft";
+  if (!model.locked || !canTransition(prevStatus, "archived") || prevStatus === "archived") {
+    return res.status(409).json({
+      error: "Only a confirmed (locked) competency model can be archived.",
+    });
+  }
+
+  const now = new Date().toISOString();
+  model.status = "archived";
+  model.locked = true;
+  model.updatedAt = now;
+  model.archiveMeta = {
+    ...(model.archiveMeta || {}),
+    archivedAt: now,
+    archivedFrom: prevStatus,
+  };
+
+  saveDB(db);
+  res.json(model);
+});
+
+/* =====================================================
    🔹 REVIEW GATE (draft <-> reviewed)
 
    Mirrors the evidence model's PATCH /:id/lifecycle for the two
@@ -337,8 +374,8 @@ router.post("/models/:id/clone", canAuthor, (req, res) => {
   const original = db.competencyModels?.find(m => m.id === req.params.id);
 
   if (!original) return res.status(404).json({ error: "Model not found." });
-  if (!original.locked) {
-    return res.status(400).json({ error: "Only confirmed models can be cloned." });
+  if (!original.locked || original.status === "archived") {
+    return res.status(400).json({ error: "Only locked, non-archived competency models can be cloned." });
   }
 
   const siblings = db.competencyModels.filter(

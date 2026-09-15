@@ -519,6 +519,30 @@ export function CompetencyWizardProvider({
     }
   }
 
+  async function archiveModel() {
+    if (!model?.id) return;
+
+    const toastId = toast.loading("Archiving model...");
+
+    try {
+      const archived = await apiFetch(
+        `/api/competencies/models/${model.id}/archive`,
+        { method: "POST" },
+        auth
+      );
+
+      setModel(archived);
+      setIsDirty(false);
+
+      queryClient.invalidateQueries({ queryKey: competencyModelsKey });
+      queryClient.invalidateQueries({ queryKey: competencyModelKey(model.id) });
+
+      toast.success("Model archived.", { id: toastId });
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Archive failed."), { id: toastId });
+    }
+  }
+
   const value = {
     model,
     competencies,
@@ -546,6 +570,7 @@ export function CompetencyWizardProvider({
     confirmModel,
     returnToDraft,
     cloneModel,
+    archiveModel,
   };
 
   return (

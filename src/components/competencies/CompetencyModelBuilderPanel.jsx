@@ -24,7 +24,9 @@ import {
     useCompetencyModels,
     useDeleteCompetencyModel,
     useCloneCompetencyModel,
+    useArchiveCompetencyModel,
 } from "@/api/queries/competencies";
+import { isLinkableCompetencyModel, canArchiveCompetencyModel } from "@/utils/schema";
 
 export default function CompetencyModelBuilderPanel() {
     const [mode, setMode] = useState("list"); // list | create | edit
@@ -33,6 +35,7 @@ export default function CompetencyModelBuilderPanel() {
     const { data: models = [], isLoading: loading } = useCompetencyModels();
     const deleteCompetencyModel = useDeleteCompetencyModel();
     const cloneCompetencyModel = useCloneCompetencyModel();
+    const archiveCompetencyModel = useArchiveCompetencyModel();
 
     function handleCreate() {
         setSelectedModelId(null);
@@ -63,9 +66,23 @@ export default function CompetencyModelBuilderPanel() {
         });
     }
 
+    function handleArchive(model) {
+        if (!canArchiveCompetencyModel(model)) {
+            toast.error("Only a confirmed competency model can be archived.");
+            return Promise.resolve();
+        }
+
+        const toastId = toast.loading("Archiving model...");
+        return archiveCompetencyModel.mutateAsync(model.id, {
+            onSuccess: () => toast.success("Model archived.", { id: toastId }),
+            onError: (err) =>
+                toast.error(apiErrorMessage(err, "Archive failed."), { id: toastId }),
+        });
+    }
+
     function handleClone(model) {
-        if (!model.locked) {
-            toast.error("Only confirmed models can be cloned.");
+        if (!isLinkableCompetencyModel(model)) {
+            toast.error("Only locked, non-archived competency models can be cloned.");
             return;
         }
 
@@ -148,6 +165,7 @@ export default function CompetencyModelBuilderPanel() {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onClone={handleClone}
+                onArchive={handleArchive}
             />
         </div>
     );

@@ -18,8 +18,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D73** — accessibility backfills F-A1–F-A6 (calendar D55 findings, source-verified). Handoff: `claude/day73-accessibility-backfills.md`. Prior: D72. |
+| Last completed unit | **D73** — accessibility backfills F-A1–F-A6. Handoff: `claude/day73-accessibility-backfills.md`. Prior: D72. |
 | Next queued | Calendar **D74** — bundle split (>500 kB). Then **D75** W15 close (never-compress). |
+| Off-calendar (2026-09-15) | Student Model lifecycle: Competency Models stay draft ↔ reviewed → confirmed (locked). Assembly/Q-matrix activation uses `isLinkableCompetencyModel`, not `cm.status === "operational"`. Decision: `claude/student-model-lifecycle.md` (PADI TR9). |
 | Block | **W15** — Core sign-off (D71–D73 done; D74–D75 remain) |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
@@ -69,6 +70,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-14 | D72 | 3, alone | Whole-core adversarial. No psychometric P0. P0: `/mine` fallback + ungated `GET /:id` `/submit`. Live 403 on foreign session. Suite **1379 passed / 6 skipped**. |
 | 2026-09-14 | D73 | 1, alone | Calendar D55 findings recovered (git never had the audit file). F-A1 Modal→Radix Dialog; F-A2 contrast; F-A3 cards; F-A4 labels; F-A5 scroll; F-A6 24px checkboxes. Suite **1382 passed / 6 skipped**. |
 | 2026-09-14 | close | — | D73 close verification. Suite re-run **1382 passed / 6 skipped** (53.85s). Build 12.97s. Tree clean at `ff71b21`. Next: D74. |
+| 2026-09-15 | decision + fix | — | PADI TR9: CM is Student Model, not a delivery object. No CM Activate/Suspend. Assembly/Q-matrix activation accepts confirmed+locked parents. `AGENTS.md` left as behavior rules only. Doc: `claude/student-model-lifecycle.md`. D74 not started. |
 
 ## Compression debt
 
@@ -110,6 +112,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D71 | First proof author → deliver → score → accumulate → calibrate → rescore even exists | Admin+student IRT already moved a posterior (D50). District/teacher Play, reports, and D68 freeze were the holes. `DB_MODE=mongo` does not mean sessions live in Mongo. | Four-role live sign-off. Session reports stay on `loadDB` (`ECD_DB_FILE`). Teacher-report must tolerate Evidence Models without `constructs`. |
 | D72 | Refute delivery, accumulation, selection, R pipeline, W10 reachability | Those surfaces exist and D60/D68/D39 hold. The uncalled production path was `sessionAssignedToStudent` (tests only + `/mine` leak-fallback). | Ranked findings. P0: student may not list/read/submit another examinee's session. P1s recorded, not all fixed. |
 | D73 | Execute only D55 numbered required backfills | `claude/day56-accessibility-audit.md` was never in git. Calendar D55 listed F-A1–F-A6. | Recover those six, re-verify in source, backfill only still-present defects. |
+| CM operational | Shared `lifecycleMatrix` + Assembly/Q-matrix activation required `cm.status === "operational"`; D71 treated that as a missing CM state | PADI TR9: Student Model is claim schema; delivery uses the task/evidence library. CM routes never offered Activate/Suspend. | Confirmed+locked remains the CM freeze. Linkable parent = locked non-archived. Activation gates use `isLinkableCompetencyModel`. No CM operational UI. |
 
 ## Carried-forward gaps
 
@@ -125,6 +128,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 - Dual-attribute *targetsMet* early stop ("1 of 1") — **closed** (D57 join + D60 re-run)
 - Dual-attribute *selection*: items for an attribute with no persisted posterior stay unrankable while measured-attribute items remain (D60 P1-4)
 - Chunk >500 kB — D74
+- Competency Model Operational/Suspended **not required** (PADI TR9; `claude/student-model-lifecycle.md`) — closed as a false requirement 2026-09-15
 - ~~Student My Sessions placeholder~~ closed D60
 - Dead-export guard can miss unused exports that share a name
 - ~~Session ownership-scoping (a student may only read their own session)~~ closed D72 on session + session-report routes; `GET /api/students` roster dump still open (D97-class)

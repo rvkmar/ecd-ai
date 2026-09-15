@@ -4,17 +4,20 @@
 // This step now focuses ONLY on review + acknowledgment
 
 import React, { useState } from "react";
-import { CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Info, Archive } from "lucide-react";
 import { useCompetencyWizard } from "../CompetencyWizardContext";
 import CompetencyPreviewPanel from "../components/CompetencyPreviewPanel";
 import VersionHistoryViewer from "../components/VersionHistoryViewer";
 import CloneModelDialog from "../components/CloneModelDialog";
+import Modal from "@/components/ui/Modal";
+import { canArchiveCompetencyModel, isLinkableCompetencyModel } from "@/utils/schema";
 
 export default function Step9Confirmation() {
-    const { model, competencies, cloneModel, allModels } =
+    const { model, competencies, cloneModel, archiveModel, allModels } =
         useCompetencyWizard();
 
     const [cloneOpen, setCloneOpen] = useState(false);
+    const [archiveOpen, setArchiveOpen] = useState(false);
 
     async function handleClone(newName) {
         await cloneModel(newName);
@@ -25,30 +28,52 @@ export default function Step9Confirmation() {
        LOCKED VIEW
     ===================================================== */
     if (model?.locked) {
+        const archived = model.status === "archived";
         return (
             <div className="space-y-6">
                 <h2 className="text-lg font-semibold text-slate-900">
                     Step 9 — Confirmation
                 </h2>
 
-                <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-sm text-emerald-800">
+                <div
+                    className={`flex items-start gap-3 rounded-lg border px-4 py-3.5 text-sm ${
+                        archived
+                            ? "border-slate-300 bg-slate-100 text-slate-800"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    }`}
+                >
                     <CheckCircle2 size={18} strokeWidth={2} className="mt-0.5 shrink-0" />
                     <div>
                         <strong className="block text-sm font-semibold">
-                            Model Confirmed
+                            {archived ? "Model Archived" : "Model Confirmed"}
                         </strong>
                         <p className="mt-2 text-sm">
-                            This Competency Model is locked and structurally frozen.
-                            To modify the latent architecture, clone this model to
-                            create a new draft version.
+                            {archived
+                                ? "This Competency Model is withdrawn as a parent for new Evidence Models. Structure remains frozen for historical sessions."
+                                : "This Competency Model is locked and structurally frozen. To modify the latent architecture, clone this model to create a new draft version."}
                         </p>
 
-                        <button
-                            onClick={() => setCloneOpen(true)}
-                            className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-                        >
-                            Clone Model
-                        </button>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {isLinkableCompetencyModel(model) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setCloneOpen(true)}
+                                    className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                                >
+                                    Clone Model
+                                </button>
+                            )}
+                            {canArchiveCompetencyModel(model) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setArchiveOpen(true)}
+                                    className="inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-900"
+                                >
+                                    <Archive size={14} strokeWidth={2} />
+                                    Archive
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -62,6 +87,16 @@ export default function Step9Confirmation() {
                     model={model}
                     onConfirmClone={handleClone}
                     onCancel={() => setCloneOpen(false)}
+                />
+
+                <Modal
+                    isOpen={archiveOpen}
+                    onClose={() => setArchiveOpen(false)}
+                    onConfirm={archiveModel}
+                    title="Archive Competency Model"
+                    message="This withdraws the model as a parent for new Evidence Models. Existing structure is kept. Continue?"
+                    confirmLabel="Archive"
+                    confirmClass="bg-slate-800 text-white"
                 />
             </div>
         );
@@ -121,8 +156,9 @@ export default function Step9Confirmation() {
                 <Info size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
                 <p>
                     <strong className="font-semibold">ECD Governance:</strong> Confirmation
-                    transitions this model from draft to operational status. Evidence
-                    Models may only reference confirmed Competency Models.
+                    locks this Student Model (claim structure). Evidence Models may
+                    reference a locked, non-archived Competency Model. Structural
+                    change requires cloning, not activation.
                 </p>
             </div>
 

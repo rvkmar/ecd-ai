@@ -2,6 +2,7 @@
 
 // Updated lifecycle validation aligned with latest ECD Task Model architecture
 import { canTransition, canTransitionCalibrationJob, CALIBRATION_JOB_STATUS } from "../utils/lifecycleMatrix.js";
+import { isLinkableCompetencyModel } from "../../src/utils/schema.js";
 import {
   CALIBRATION_JOB_KIND_VALUES,
   statisticalModelTypesForJobKind,
@@ -476,18 +477,24 @@ export function validateAssemblyModelLifecycle(assemblyModel, db = null, options
     }
   }
 
-  /* ACTIVATION — the competency model it targets must itself be live, and
-     at the exact version this assembly model was authored against. Mirrors
-     validateTaskModelLifecycle's "bound Evidence Models must be
-     operational" gate. */
+  /* ACTIVATION — the Student Model (competency model) must be a frozen
+     parent at the authored version. That is isLinkableCompetencyModel
+     (locked confirmed / operational / suspended), not "operational".
+     Requiring operational copied the Task Model ← Evidence Model rule
+     across the wrong ECD layer: the Student Model is the claim schema
+     evidence accumulation writes into, not an object in the
+     task/evidence composite library (Mislevy & Riconscente 2005, PADI
+     TR9 §§2.3.1, 2.5). See claude/student-model-lifecycle.md. */
   if (status === "operational" && db) {
     const cm = db.competencyModels?.find((m) => m.id === assemblyModel.competencyModelId);
 
     if (!cm) {
       errors.push(`Assembly model cannot be activated: competency model '${assemblyModel.competencyModelId}' not found.`);
     } else {
-      if (cm.status !== "operational") {
-        errors.push(`Assembly model cannot be activated: bound competency model must be operational first (found '${cm.status}').`);
+      if (!isLinkableCompetencyModel(cm)) {
+        errors.push(
+          `Assembly model cannot be activated: bound competency model must be a locked, non-archived parent (confirmed, operational, or suspended); found '${cm.status}'${cm.locked ? "" : ", unlocked"}.`
+        );
       }
       if (assemblyModel.competencyModelVersion !== cm.versionNumber) {
         errors.push(`Assembly model cannot be activated: competencyModelVersion (${assemblyModel.competencyModelVersion}) does not match the competency model's current version (${cm.versionNumber}).`);
@@ -621,8 +628,10 @@ export function validateQMatrixModelLifecycle(qMatrixModel, db = null, options =
     if (!cm) {
       errors.push(`Q-matrix cannot be activated: competency model '${qMatrixModel.competencyModelId}' not found.`);
     } else {
-      if (cm.status !== "operational") {
-        errors.push(`Q-matrix cannot be activated: bound competency model must be operational first (found '${cm.status}').`);
+      if (!isLinkableCompetencyModel(cm)) {
+        errors.push(
+          `Q-matrix cannot be activated: bound competency model must be a locked, non-archived parent (confirmed, operational, or suspended); found '${cm.status}'${cm.locked ? "" : ", unlocked"}.`
+        );
       }
       if (qMatrixModel.competencyModelVersion !== cm.versionNumber) {
         errors.push(`Q-matrix cannot be activated: competencyModelVersion (${qMatrixModel.competencyModelVersion}) does not match the competency model's current version (${cm.versionNumber}).`);

@@ -80,6 +80,18 @@ export function useCloneCompetencyModel() {
   });
 }
 
+export function useArchiveCompetencyModel() {
+  const { auth } = useAuth() || {};
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => apiFetch(`/api/competencies/models/${id}/archive`, { method: "POST" }, auth),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: competencyModelsKey });
+      queryClient.invalidateQueries({ queryKey: competencyModelKey(id) });
+    },
+  });
+}
+
 export function useDeleteCompetencyModel() {
   const { auth } = useAuth() || {};
   const queryClient = useQueryClient();

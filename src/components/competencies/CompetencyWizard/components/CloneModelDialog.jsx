@@ -9,6 +9,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { AlertTriangle } from "lucide-react";
+import { isLinkableCompetencyModel } from "@/utils/schema";
 
 export default function CloneModelDialog({
     isOpen,
@@ -20,7 +21,7 @@ export default function CloneModelDialog({
     const [submitting, setSubmitting] = useState(false);
     const inputRef = useRef(null);
 
-    const isConfirmed = model?.status === "confirmed" && model?.locked;
+    const isConfirmed = isLinkableCompetencyModel(model);
 
     /* =====================================================
        🔹 RESET STATE WHEN OPEN
@@ -94,7 +95,7 @@ export default function CloneModelDialog({
                         Clone Competency Model
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                        Create a new draft version based on the confirmed structure.
+                        Create a new draft version based on the locked Student Model structure.
                     </p>
                 </div>
 
@@ -102,7 +103,7 @@ export default function CloneModelDialog({
                 {!isConfirmed && (
                     <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-800">
                         <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
-                        <span>Only confirmed models should be cloned for structural revision.</span>
+                        <span>Only a locked, non-archived competency model can be cloned for structural revision.</span>
                     </div>
                 )}
 

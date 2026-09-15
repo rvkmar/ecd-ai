@@ -8,10 +8,10 @@
 // ✔ Enterprise Tailwind layout
 
 import React, { useMemo, useState } from "react";
-import toast from "react-hot-toast";
 import Modal from "../ui/Modal";
 import { openActionLabel } from "@/utils/modelActionLabel";
 import LifecycleStatusBadge from "../ui/LifecycleStatusBadge";
+import { canArchiveCompetencyModel, isLinkableCompetencyModel } from "@/utils/schema";
 
 export default function CompetencyModelList({
     models = [],
@@ -20,7 +20,7 @@ export default function CompetencyModelList({
     onEdit,
     onDelete,
     onClone,
-    onConfirm,
+    onArchive,
 }) {
     const [expandedId, setExpandedId] = useState(null);
 
@@ -34,7 +34,7 @@ export default function CompetencyModelList({
         model: null,
     });
 
-    const [confirmModal, setConfirmModal] = useState({
+    const [archiveModal, setArchiveModal] = useState({
         open: false,
         model: null,
     });
@@ -96,20 +96,14 @@ export default function CompetencyModelList({
         setDeleteModal({ open: false, model: null });
     };
 
-    /* =====================================================
-       🔹 CONFIRM MODEL
-    ===================================================== */
-    const confirmModel = async () => {
-        if (!confirmModal.model || !onConfirm) return;
-
+    const archiveModel = async () => {
+        if (!archiveModal.model || !onArchive) return;
         try {
-            await onConfirm(confirmModal.model);
-            toast.success("Model confirmed and locked.");
+            await onArchive(archiveModal.model);
         } catch {
-            toast.error("Confirmation failed.");
+            // onArchive's mutation already toasts.
         }
-
-        setConfirmModal({ open: false, model: null });
+        setArchiveModal({ open: false, model: null });
     };
 
     /* =====================================================
@@ -212,7 +206,11 @@ export default function CompetencyModelList({
 
                                     <div className="flex gap-2 pt-2">
                                         <button
-                                            onClick={() => onEdit?.(m)}
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onEdit?.(m);
+                                            }}
                                             className="bg-cyan-600 text-white px-3 py-1 rounded"
                                         >
                                             {openActionLabel(m)}
@@ -220,25 +218,15 @@ export default function CompetencyModelList({
 
                                         {!m.locked && (
                                             <>
-                                                {/* <button
-                                                    onClick={() =>
-                                                        setConfirmModal({
-                                                            open: true,
-                                                            model: m,
-                                                        })
-                                                    }
-                                                    className="bg-green-600 text-white px-3 py-1 rounded"
-                                                >
-                                                    Confirm
-                                                </button> */}
-
                                                 <button
-                                                    onClick={() =>
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         setDeleteModal({
                                                             open: true,
                                                             model: m,
-                                                        })
-                                                    }
+                                                        });
+                                                    }}
                                                     className="bg-red-600 text-white px-3 py-1 rounded"
                                                 >
                                                     Delete
@@ -246,12 +234,32 @@ export default function CompetencyModelList({
                                             </>
                                         )}
 
-                                        {m.locked && (
+                                        {isLinkableCompetencyModel(m) && (
                                             <button
-                                                onClick={() => onClone?.(m)}
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onClone?.(m);
+                                                }}
                                                 className="bg-purple-600 text-white px-3 py-1 rounded"
                                             >
                                                 Clone
+                                            </button>
+                                        )}
+
+                                        {canArchiveCompetencyModel(m) && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setArchiveModal({
+                                                        open: true,
+                                                        model: m,
+                                                    });
+                                                }}
+                                                className="bg-slate-800 text-white px-3 py-1 rounded"
+                                            >
+                                                Archive
                                             </button>
                                         )}
                                     </div>
@@ -273,17 +281,17 @@ export default function CompetencyModelList({
                 confirmClass="bg-red-600 text-white"
             />
 
-            {/* CONFIRM MODAL */}
-            {/* <Modal
-                isOpen={confirmModal.open}
+            <Modal
+                isOpen={archiveModal.open}
                 onClose={() =>
-                    setConfirmModal({ open: false, model: null })
+                    setArchiveModal({ open: false, model: null })
                 }
-                onConfirm={confirmModel}
-                title="Confirm Competency Model"
-                message="This will lock the structure. Continue?"
-                confirmClass="bg-green-600 text-white"
-            /> */}
+                onConfirm={archiveModel}
+                title="Archive Competency Model"
+                message="This withdraws the model as a parent for new Evidence Models. Existing structure is kept. Continue?"
+                confirmLabel="Archive"
+                confirmClass="bg-slate-800 text-white"
+            />
         </div>
     );
 }

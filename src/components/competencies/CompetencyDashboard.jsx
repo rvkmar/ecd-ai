@@ -31,10 +31,17 @@ export default function CompetencyDashboard() {
        🔹 Lifecycle Distribution
     ===================================================== */
     const lifecycleStats = useMemo(() => {
-        const base = { draft: 0, confirmed: 0 };
+        const base = {
+            draft: 0,
+            reviewed: 0,
+            confirmed: 0,
+            operational: 0,
+            suspended: 0,
+            archived: 0,
+        };
 
         models.forEach((m) => {
-            const status = m.locked ? "confirmed" : m.status || "draft";
+            const status = m.status || "draft";
             if (base[status] === undefined) base[status] = 0;
             base[status] += 1;
         });
@@ -100,6 +107,11 @@ export default function CompetencyDashboard() {
                     <div className="text-3xl font-bold mt-2">
                         {lifecycleStats.confirmed || 0}
                     </div>
+                    {(lifecycleStats.archived || 0) > 0 && (
+                        <div className="text-xs text-slate-500 mt-2">
+                            Archived {lifecycleStats.archived}
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-white rounded-2xl shadow p-6">

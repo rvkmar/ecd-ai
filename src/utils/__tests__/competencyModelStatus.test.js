@@ -73,4 +73,13 @@ describe("competencyModels status validation", () => {
     ).errors;
     expect(errors.join(" ")).toMatch(/Confirmed models must be locked/);
   });
+
+  it("still requires an archived model to be locked", () => {
+    const errors = validateEntity(
+      "competencyModels",
+      makeModel({ status: "archived", locked: false }),
+      {}
+    ).errors;
+    expect(errors.join(" ")).toMatch(/Archived models must be locked/);
+  });
 });

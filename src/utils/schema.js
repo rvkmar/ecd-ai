@@ -761,6 +761,13 @@ export function isLinkableCompetencyModel(cm) {
   );
 }
 
+/** Confirmed (also operational/suspended if those strings exist in data)
+    may be withdrawn. Archived is terminal. Draft/reviewed delete instead. */
+export function canArchiveCompetencyModel(cm) {
+  if (!cm?.locked || cm.status === "archived") return false;
+  return canTransition(cm.status, "archived");
+}
+
 // F14 (D53a live walk, session 10; fixed D53b): the same "locked,
 // structurally-frozen" set as LINKABLE_EVIDENCE_MODEL_STATUSES above,
 // applied to the Q-matrix a DINA/G-DINA statistical model binds to. Before
@@ -4093,6 +4100,9 @@ export function validateEntity(collection, obj, db = null, options = {}) {
     }
     if (obj.status === "confirmed" && !obj.locked) {
       errors.push("Confirmed models must be locked.");
+    }
+    if (obj.status === "archived" && !obj.locked) {
+      errors.push("Archived models must be locked.");
     }
 
     /* ---------------------------------------------------

@@ -8,7 +8,7 @@
 // - Governance-aligned messaging
 
 import React, { useMemo } from "react";
-import { Eye, CheckCircle2 } from "lucide-react";
+import LifecycleStatusBadge from "@/components/ui/LifecycleStatusBadge";
 
 export default function VersionHistoryViewer({
     currentModel,
@@ -71,14 +71,7 @@ export default function VersionHistoryViewer({
                                     </div>
 
                                     <div className="text-xs">
-                                        <span
-                                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${model.status === "confirmed"
-                                                    ? "bg-emerald-100 text-emerald-700"
-                                                    : "bg-amber-100 text-amber-700"
-                                                }`}
-                                        >
-                                            {model.status}
-                                        </span>
+                                        <LifecycleStatusBadge status={model.status} />
                                     </div>
 
                                     <div className="text-xs text-slate-500">
