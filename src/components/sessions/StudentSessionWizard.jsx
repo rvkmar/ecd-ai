@@ -1,8 +1,19 @@
 // Student session delivery chrome — wizard layout matching Item Wizard
 // structure: numbered questions on the left, the current item on the right.
 // Lifecycle phases: Draft → Review → Completed → Submit.
+// Tracks start/end and elapsed time per phase (no Pause — staff Pause stays
+// on the teacher session list).
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  normalizePhaseTimings,
+  syncPhaseTimings,
+  closePhaseTiming,
+  formatClockTime,
+  formatDurationHms,
+  phaseElapsedMs,
+  WIZARD_TIMING_PHASES,
+} from "@/utils/sessionWizardTiming";
 
 export const WIZARD_PHASE = Object.freeze({
   DRAFT: "draft",
@@ -48,6 +59,8 @@ const PHASES = [
   { id: WIZARD_PHASE.SUBMITTED, label: "Submit" },
 ];
 
+const PHASE_LABEL = Object.fromEntries(PHASES.map((p) => [p.id, p.label]));
+
 export function questionNavState({
   taskId,
   currentTaskId,
@@ -71,6 +84,134 @@ function phaseIndex(phase) {
   return i < 0 ? 0 : i;
 }
 
+function WizardPhaseTimer({
+  phase,
+  sessionClosed,
+  phaseTimings,
+  onPersistPhaseTiming,
+}) {
+  const [timings, setTimings] = useState(() =>
+    normalizePhaseTimings(phaseTimings)
+  );
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const persistKeyRef = useRef("");
+
+  useEffect(() => {
+    setTimings(normalizePhaseTimings(phaseTimings));
+  }, [phaseTimings]);
+
+  useEffect(() => {
+    const active = sessionClosed ? WIZARD_PHASE.SUBMITTED : phase;
+    const close = sessionClosed || active === WIZARD_PHASE.SUBMITTED;
+    const key = `${active}:${close ? "close" : "open"}`;
+    if (persistKeyRef.current === key) return;
+    persistKeyRef.current = key;
+
+    if (!onPersistPhaseTiming) {
+      setTimings((prev) => {
+        const base = normalizePhaseTimings(prev);
+        return close
+          ? closePhaseTiming(base, active)
+          : syncPhaseTimings(base, active);
+      });
+      return undefined;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const updated = await onPersistPhaseTiming(active, { close });
+        if (cancelled || !updated?.wizardPhaseTimings) return;
+        setTimings(normalizePhaseTimings(updated.wizardPhaseTimings));
+      } catch (err) {
+        console.error("Failed to persist wizard timing", err);
+        persistKeyRef.current = "";
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, sessionClosed, onPersistPhaseTiming]);
+
+  useEffect(() => {
+    if (sessionClosed) return undefined;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [sessionClosed]);
+
+  const activePhase = sessionClosed ? WIZARD_PHASE.SUBMITTED : phase;
+  const liveMs = phaseElapsedMs(timings[activePhase], nowMs);
+  const totalMs = WIZARD_TIMING_PHASES.reduce(
+    (sum, id) =>
+      sum +
+      phaseElapsedMs(
+        timings[id],
+        id === activePhase ? nowMs : Date.now()
+      ),
+    0
+  );
+
+  return (
+    <div
+      className="border-t border-slate-100 bg-slate-50 px-6 py-3"
+      data-testid="wizard-phase-timer"
+      aria-live="polite"
+    >
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          Phase timer
+        </div>
+        <div className="font-mono text-sm font-semibold text-slate-900">
+          Current ({PHASE_LABEL[activePhase] || activePhase}):{" "}
+          <span data-testid="wizard-live-elapsed">{formatDurationHms(liveMs)}</span>
+          <span className="ml-3 font-normal text-slate-500">
+            Total {formatDurationHms(totalMs)}
+          </span>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[28rem] text-left text-xs text-slate-700">
+          <thead>
+            <tr className="text-[10px] uppercase tracking-wide text-slate-400">
+              <th className="py-1 pr-3 font-semibold">Phase</th>
+              <th className="py-1 pr-3 font-semibold">Start</th>
+              <th className="py-1 pr-3 font-semibold">End</th>
+              <th className="py-1 font-semibold">Duration</th>
+            </tr>
+          </thead>
+          <tbody>
+            {PHASES.map((p) => {
+              const row = timings[p.id] || {};
+              const isActive = p.id === activePhase && !row.endedAt;
+              const elapsed = phaseElapsedMs(
+                row,
+                isActive ? nowMs : row.endedAt ? new Date(row.endedAt).getTime() : nowMs
+              );
+              return (
+                <tr
+                  key={p.id}
+                  className={isActive ? "font-semibold text-slate-900" : ""}
+                >
+                  <td className="py-1 pr-3">{p.label}</td>
+                  <td className="py-1 pr-3 font-mono">
+                    {formatClockTime(row.startedAt)}
+                  </td>
+                  <td className="py-1 pr-3 font-mono">
+                    {isActive ? "…" : formatClockTime(row.endedAt)}
+                  </td>
+                  <td className="py-1 font-mono">
+                    {row.startedAt ? formatDurationHms(elapsed) : "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function StudentSessionWizard({
   sessionId,
   phase,
@@ -78,13 +219,13 @@ export default function StudentSessionWizard({
   currentTaskId,
   answeredIds = new Set(),
   sessionClosed = false,
+  phaseTimings = null,
+  onPersistPhaseTiming,
   onSelectTask,
   onBack,
   onEnterReview,
   onMarkCompleted,
   onSubmitSession,
-  onPause,
-  showPause = false,
   submittingSession = false,
   canEnterReview = false,
   stopHeading = null,
@@ -189,15 +330,6 @@ export default function StudentSessionWizard({
               >
                 Back to sessions
               </button>
-              {showPause && (
-                <button
-                  type="button"
-                  onClick={onPause}
-                  className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-orange-600"
-                >
-                  Pause
-                </button>
-              )}
             </div>
 
             <ol className="flex flex-wrap items-center gap-1" aria-label="Session lifecycle">
@@ -223,6 +355,12 @@ export default function StudentSessionWizard({
               })}
             </ol>
           </div>
+          <WizardPhaseTimer
+            phase={phase}
+            sessionClosed={sessionClosed}
+            phaseTimings={phaseTimings}
+            onPersistPhaseTiming={onPersistPhaseTiming}
+          />
         </header>
 
         <main className="flex-1 overflow-y-auto px-6 py-6">{children}</main>

@@ -12,10 +12,29 @@ vi.mock("../../../api/queries/policies", () => ({
 }));
 
 beforeEach(() => {
-  global.fetch = vi.fn((url) => {
+  global.fetch = vi.fn((url, opts = {}) => {
     const href = String(url);
     let body = {};
-    if (href.includes("/next-task")) {
+    if (href.includes("/wizard-timing")) {
+      body = {
+        id: "s-play",
+        status: "in_progress",
+        taskIds: ["t1"],
+        responses: [],
+        studentId: "stud1",
+        wizardPhase: "draft",
+        wizardPhaseTimings: {
+          draft: {
+            startedAt: "2026-09-15T10:00:00.000Z",
+            endedAt: null,
+            durationMs: null,
+          },
+          review: { startedAt: null, endedAt: null, durationMs: null },
+          completed: { startedAt: null, endedAt: null, durationMs: null },
+          submitted: { startedAt: null, endedAt: null, durationMs: null },
+        },
+      };
+    } else if (href.includes("/next-task")) {
       body = { taskId: null };
     } else if (href.includes("/api/sessions/")) {
       body = {
@@ -39,13 +58,17 @@ beforeEach(() => {
 
 import SessionPlayer from "../SessionPlayer.jsx";
 
-describe("SessionPlayer — Pause on an in-progress session", () => {
-  it("shows Pause once the playable session has loaded", async () => {
+describe("SessionPlayer — student wizard has no Pause", () => {
+  it("does not show Pause once the playable session has loaded", async () => {
     render(
       <MemoryRouter>
         <SessionPlayer sessionId="s-play" />
       </MemoryRouter>
     );
-    await waitFor(() => expect(screen.getByText("Pause")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("session-player-back")).toBeInTheDocument()
+    );
+    expect(screen.queryByText("Pause")).toBeNull();
+    expect(screen.getByTestId("wizard-phase-timer")).toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import ItemPresenter, { canPresentItem } from "./ItemPresenter";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import Modal from "../ui/Modal";
 import toast from "react-hot-toast";
 import { usePolicies } from "../../api/queries/policies";
@@ -11,6 +11,7 @@ import {
   sessionListPath,
   isSessionClosedForStudent,
 } from "../../utils/sessionPlay";
+import { inferWizardPhase } from "../../utils/sessionWizardTiming";
 import { measurementStopHeading, measurementStopDetails } from "./measurementStop";
 import SessionReport from "./SessionReport";
 import StudentSessionWizard, {
@@ -98,6 +99,7 @@ export default function SessionPlayer({
   // in_progress until Submit calls /finish → completed.
   const [wizardPhase, setWizardPhase] = useState(WIZARD_PHASE.DRAFT);
   const sessionBootstrappedRef = useRef(false);
+  const wizardPhaseHydratedRef = useRef(false);
 
   const getPolicyName = (policyId) => {
     if (!policyId) return null;
@@ -263,15 +265,26 @@ export default function SessionPlayer({
 
   useEffect(() => {
     sessionBootstrappedRef.current = false;
+    wizardPhaseHydratedRef.current = false;
     setWizardPhase(WIZARD_PHASE.DRAFT);
   }, [sessionId]);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || wizardPhaseHydratedRef.current) return;
+    wizardPhaseHydratedRef.current = true;
     if (isSessionClosedForStudent(session)) {
       setWizardPhase(WIZARD_PHASE.SUBMITTED);
       return;
     }
+    const restored =
+      session.wizardPhase ||
+      inferWizardPhase(session.wizardPhaseTimings, false);
+    if (restored) setWizardPhase(restored);
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (isSessionClosedForStudent(session)) return;
     if (session.status === SESSION_STATUS.PAUSED) return;
     // First paint for this session id only — later setSession calls must
     // not yank the student back to next-task while they review a prior item.
@@ -864,6 +877,23 @@ export default function SessionPlayer({
     );
   }
 
+  const persistWizardTiming = useCallback(
+    async (phase, { close = false } = {}) => {
+      if (!sessionIdRef.current) return null;
+      const updated = await apiFetch(
+        `/api/sessions/${sessionIdRef.current}/wizard-timing`,
+        {
+          method: "POST",
+          body: JSON.stringify({ phase, close: !!close }),
+        },
+        auth
+      );
+      setSession((prev) => ({ ...(prev || {}), ...(updated || {}) }));
+      return updated;
+    },
+    [auth]
+  );
+
   const progressTotal = (session?.taskIds || []).length || 0;
   const progressDone = (session?.responses || []).length || 0;
 
@@ -906,10 +936,10 @@ export default function SessionPlayer({
           currentTaskId={currentTaskId}
           answeredIds={answeredIds}
           sessionClosed={sessionClosed}
+          phaseTimings={session?.wizardPhaseTimings}
+          onPersistPhaseTiming={persistWizardTiming}
           canEnterReview={canEnterReview}
           submittingSession={finishing}
-          showPause={canPauseSession(session, { reviewMode: false })}
-          onPause={handlePause}
           stopHeading={
             session?.stopped ? measurementStopHeading(session.stopped) : null
           }

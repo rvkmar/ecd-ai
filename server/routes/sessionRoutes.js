@@ -8,10 +8,12 @@ import {
   closedSessionsForStudent,
   buildAssignableRoster,
   isReservedSessionCollectionId,
+  isSessionClosedForStudent,
   resolveSessionAssignees,
   sessionsVisibleToUser,
   studentForbiddenFromSession,
 } from "../../src/utils/sessionPlay.js";
+import { applyWizardTimingToSession } from "../../src/utils/sessionWizardTiming.js";
 import { identifyEvidence } from "../delivery/evidenceIdentification.js";
 import {
   accumulateEvidence,
@@ -737,6 +739,44 @@ router.post("/:id/resume", (req, res) => {
 
 
 // ------------------------------
+// POST /api/sessions/:id/wizard-timing
+// Persist Draft → Review → Completed → Submit phase clocks for the examinee.
+// Body: { phase: "draft"|"review"|"completed"|"submitted", close?: boolean }
+// ------------------------------
+router.post("/:id/wizard-timing", (req, res) => {
+  const { id } = req.params;
+  const db = loadDB();
+  if (!db.sessions) db.sessions = [];
+  const idx = db.sessions.findIndex((s) => s.id === id);
+  if (idx === -1) return res.status(404).json({ error: "Session not found" });
+
+  const session = db.sessions[idx];
+  if (rejectUnassignedStudent(req, res, session, db)) return;
+
+  const phase = String(req.body?.phase || "").trim();
+  const close = Boolean(req.body?.close);
+  if (!["draft", "review", "completed", "submitted"].includes(phase)) {
+    return res.status(400).json({ error: "Invalid wizard phase" });
+  }
+
+  if (isSessionClosedForStudent(session)) {
+    // Idempotent: already finished with submit clock closed.
+    if (session.wizardPhaseTimings?.submitted?.endedAt) {
+      return res.json(session);
+    }
+    if (!(close && phase === "submitted")) {
+      return res.status(400).json({ error: "Session is closed" });
+    }
+  }
+
+  const now = new Date().toISOString();
+  applyWizardTimingToSession(session, { phase, close, atIso: now });
+  session.updatedAt = now;
+  saveDB(db);
+  res.json(session);
+});
+
+// ------------------------------
 // POST /api/sessions/:id/finish
 // ------------------------------
 router.post("/:id/finish", (req, res) => {
@@ -747,12 +787,20 @@ router.post("/:id/finish", (req, res) => {
   if (idx === -1) return res.status(404).json({ error: "Session not found" });
   if (rejectUnassignedStudent(req, res, db.sessions[idx], db)) return;
 
-  db.sessions[idx].status = "completed";   // ✅ mark completed
-  db.sessions[idx].isCompleted = true;     // keep legacy flag if used
-  db.sessions[idx].updatedAt = new Date().toISOString();
+  const session = db.sessions[idx];
+  const now = new Date().toISOString();
+  session.status = "completed"; // ✅ mark completed
+  session.isCompleted = true; // keep legacy flag if used
+  session.finishedAt = session.finishedAt || now;
+  session.updatedAt = now;
+  applyWizardTimingToSession(session, {
+    phase: "submitted",
+    close: true,
+    atIso: now,
+  });
 
   saveDB(db);
-  res.json(db.sessions[idx]);
+  res.json(session);
 });
 
 // ------------------------------

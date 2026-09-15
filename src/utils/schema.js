@@ -505,6 +505,10 @@ export const schema = {
     // until a stopping rule actually fires; finishing by hand does not invent
     // one.
     stopped: 'object',
+    // Student Session Wizard phase clock (Draft → Review → Completed → Submit).
+    // Shape: { draft|review|completed|submitted: { startedAt, endedAt, durationMs } }.
+    wizardPhaseTimings: 'object',
+    wizardPhase: 'string',
   },
 
   policies: {
