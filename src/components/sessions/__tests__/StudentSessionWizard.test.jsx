@@ -1,6 +1,6 @@
 import React from "react";
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import StudentSessionWizard, {
   questionNavState,
@@ -58,14 +58,10 @@ describe("questionNavState", () => {
 });
 
 describe("StudentSessionWizard chrome", () => {
-  beforeEach(() => {
-    sessionStorage.clear();
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-  });
-
+  // Do not use fake timers here: WizardPhaseTimer sets a 1s interval, and
+  // vi.useRealTimers() in afterEach then hangs waiting on that pending timer.
   afterEach(() => {
-    vi.useRealTimers();
-    sessionStorage.clear();
+    cleanup();
   });
 
   it("does not render a Pause button", () => {
@@ -103,7 +99,7 @@ describe("StudentSessionWizard chrome", () => {
   });
 
   it("records end of Draft when entering Review", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const user = userEvent.setup();
     const onEnterReview = vi.fn();
     const { rerender } = render(
       <StudentSessionWizard
