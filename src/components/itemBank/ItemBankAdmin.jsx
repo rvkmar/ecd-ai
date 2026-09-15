@@ -11,9 +11,10 @@
 // and Structure hands off to the authoring surface instead of navigating
 // to a route that does not exist.
 //
-// Authoring is gated by can(role, "edit", "items"): admin and district
-// author; teacher views Dashboard + Bank structure only (API writes are
-// already admin/district-only).
+// Authoring and the Item Wizard are gated by can(role, "edit", "items"):
+// admin and district author and open items from Bank structure. Teacher
+// views Dashboard + Bank structure only — no wizard, so no Suspend /
+// Archive. API writes are already admin/district-only.
 // ------------------------------------------------------------
 
 import React, { useState } from "react";
@@ -40,9 +41,9 @@ export default function ItemBankAdmin() {
   const activeView = view === "authoring" && !canAuthor ? "dashboard" : view;
 
   // Opening an item from the structure table mounts the wizard directly
-  // rather than routing. A locked item opens read-only; the wizard
-  // handles that itself.
-  if (inspecting) {
+  // rather than routing. Authors only — teacher must not reach Suspend /
+  // Archive (or any other wizard lifecycle control) from the list.
+  if (inspecting && canAuthor) {
     return (
       <ItemWizard item={inspecting} onClose={() => setInspecting(null)} />
     );
@@ -64,7 +65,9 @@ export default function ItemBankAdmin() {
 
       <div>
         {activeView === "dashboard" && <AdminDashboard />}
-        {activeView === "structure" && <ItemList onOpenItem={setInspecting} />}
+        {activeView === "structure" && (
+          <ItemList onOpenItem={canAuthor ? setInspecting : undefined} />
+        )}
         {activeView === "authoring" && canAuthor && <ItemBuilder />}
       </div>
     </div>
