@@ -9,8 +9,10 @@ import {
   sessionsVisibleToUser,
   canPauseSession,
   canPlaySession,
+  canStartSession,
   canOperateSession,
   isAttendableStatus,
+  isSessionClosedForStudent,
   buildAssignableRoster,
   resolveSessionAssignees,
 } from "../sessionPlay.js";
@@ -129,6 +131,15 @@ describe("staff Play / Pause / Operate exclusivity", () => {
       const session = { status };
       expect(canPlaySession(session) && canPauseSession(session)).toBe(false);
     }
+  });
+
+  it("student Start is available until the session is closed", () => {
+    expect(canStartSession({ status: "ready" })).toBe(true);
+    expect(canStartSession({ status: "in_progress" })).toBe(true);
+    expect(canStartSession({ status: "paused" })).toBe(true);
+    expect(canStartSession({ status: "completed" })).toBe(false);
+    expect(canStartSession({ status: "submitted" })).toBe(false);
+    expect(isSessionClosedForStudent({ status: "completed", isCompleted: true })).toBe(true);
   });
 });
 

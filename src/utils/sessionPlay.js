@@ -139,6 +139,23 @@ export function canPlaySession(session, { reviewMode = false } = {}) {
   return isReadyStatus(session.status) || isPausedStatus(session.status);
 }
 
+// Student My Sessions: Start / continue into the player. Ready, paused,
+// in_progress and reopened are startable; closed sessions are not.
+export function canStartSession(session, { reviewMode = false } = {}) {
+  if (reviewMode || !session || isClosedSession(session)) return false;
+  const status = normalizeSessionStatus(session.status);
+  return (
+    isReadyStatus(status) ||
+    isPausedStatus(status) ||
+    isInProgressStatus(status) ||
+    status === SESSION_STATUS.REOPENED
+  );
+}
+
+export function isSessionClosedForStudent(session) {
+  return isClosedSession(session);
+}
+
 export function canPauseSession(session, { reviewMode = false } = {}) {
   if (reviewMode || !session || isClosedSession(session)) return false;
   return isInProgressStatus(session.status) || session.status === SESSION_STATUS.REOPENED;

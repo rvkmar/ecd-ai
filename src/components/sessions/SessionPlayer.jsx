@@ -6,17 +6,22 @@ import { usePolicies } from "../../api/queries/policies";
 import { useAuth } from "../../auth/AuthProvider";
 import { apiFetch, apiErrorMessage } from "../../api/apiClient";
 import { SESSION_STATUS } from "../../utils/sessionStatus";
-import { canPauseSession, sessionListPath } from "../../utils/sessionPlay";
+import {
+  canPauseSession,
+  sessionListPath,
+  isSessionClosedForStudent,
+} from "../../utils/sessionPlay";
 import { measurementStopHeading, measurementStopDetails } from "./measurementStop";
 import SessionReport from "./SessionReport";
+import StudentSessionWizard, {
+  WIZARD_PHASE,
+} from "./StudentSessionWizard";
 
 import { useNavigate, useParams } from "react-router-dom";
 // SessionPlayer.jsx
 // Runtime delivery component for a session.
-// Refactor chunk 1/5:
-//  - imports, core state, helpers to enrich tasks with taskModel metadata
-//  - sessionId derivation and initial session+evidenceModels load
-
+// Student mode uses StudentSessionWizard (Draft → Review → Completed → Submit).
+// Staff review mode keeps the legacy layout.
 
 export default function SessionPlayer({
   sessionId: propSessionId,
@@ -89,6 +94,10 @@ export default function SessionPlayer({
 
   const [finalizeModalOpen, setFinalizeModalOpen] = useState(false);
   const [completeModal, setCompleteModal] = useState(false);
+  // Student wizard lifecycle (client phase). Server status stays ready /
+  // in_progress until Submit calls /finish → completed.
+  const [wizardPhase, setWizardPhase] = useState(WIZARD_PHASE.DRAFT);
+  const sessionBootstrappedRef = useRef(false);
 
   const getPolicyName = (policyId) => {
     if (!policyId) return null;
@@ -253,16 +262,28 @@ export default function SessionPlayer({
 
 
   useEffect(() => {
+    sessionBootstrappedRef.current = false;
+    setWizardPhase(WIZARD_PHASE.DRAFT);
+  }, [sessionId]);
+
+  useEffect(() => {
     if (!session) return;
+    if (isSessionClosedForStudent(session)) {
+      setWizardPhase(WIZARD_PHASE.SUBMITTED);
+      return;
+    }
     if (session.status === SESSION_STATUS.PAUSED) return;
+    // First paint for this session id only — later setSession calls must
+    // not yank the student back to next-task while they review a prior item.
+    if (sessionBootstrappedRef.current) return;
+    sessionBootstrappedRef.current = true;
     loadNextTask();
-    // reset UI inputs
     setSelectedOptionId(null);
     setTextAnswer("");
     setSelectedRubricLevel(null);
   }, [session]);
 
-  
+
   // ----- when session or its tasks change, compute deadline and start countdown -----
   useEffect(() => {
     let iv = null;
@@ -464,6 +485,106 @@ export default function SessionPlayer({
       }
     } catch (e) {
       console.error("Failed to load next activity:", e);
+    } finally {
+      setLoadingTask(false);
+    }
+  }
+
+  // Load a specific activity from the session's task list (wizard nav /
+  // review). Does not ask /next-task — that remains the adaptive path.
+  async function loadTaskById(tid) {
+    if (!tid) return;
+    setLoadingTask(true);
+    setMeasurementStop(null);
+    setNoMoreTasks(false);
+    try {
+      setCurrentTaskId(tid);
+      let taskObj = null;
+      try {
+        taskObj = await fetchJsonSafe(`/api/tasks/${tid}`);
+      } catch (e) {
+        console.error("Failed to fetch activity:", e);
+        setTask(null);
+        setTaskModel(null);
+        setQuestion(null);
+        setDeliveredItem(null);
+        return;
+      }
+
+      const enrichedTask = await enrichTaskWithModel(taskObj);
+      setTask(enrichedTask);
+      setTaskModel(enrichedTask.taskModel || null);
+
+      if (enrichedTask?.taskModel?.subTaskIds?.length > 0) {
+        setParentTaskModel(enrichedTask.taskModel);
+      } else if (enrichedTask?.taskModel?.parentTaskId) {
+        try {
+          const parentTm = await fetchJsonSafe(
+            `/api/taskModels/${enrichedTask.taskModel.parentTaskId}`
+          );
+          setParentTaskModel(parentTm);
+        } catch {
+          setParentTaskModel(null);
+        }
+      } else {
+        setParentTaskModel(null);
+      }
+
+      const existing = (session?.responses || []).find((r) => r.taskId === tid);
+      if (enrichedTask?.itemId) {
+        try {
+          const it = await fetchJsonSafe(`/api/items/${enrichedTask.itemId}`);
+          setDeliveredItem(it || null);
+        } catch {
+          setDeliveredItem(null);
+        }
+        setItemResponse(existing?.rawAnswer ?? null);
+        setQuestion(null);
+        setReadingPassage(null);
+        setActivePassageId(null);
+        setActivePassageQuestions([]);
+      } else if (enrichedTask?.questionId) {
+        setDeliveredItem(null);
+        setItemResponse(null);
+        try {
+          const q = await fetchJsonSafe(`/api/questions/${enrichedTask.questionId}`);
+          setQuestion(q || null);
+          if (existing) {
+            setSelectedOptionId(existing.rawAnswer || null);
+            setTextAnswer(existing.rawAnswer || "");
+            setSelectedRubricLevel(existing.rubricLevel || null);
+          } else {
+            setSelectedOptionId(null);
+            setTextAnswer("");
+            setSelectedRubricLevel(null);
+          }
+          if (q?.passageId) {
+            try {
+              const passage = await fetchJsonSafe(`/api/questions/${q.passageId}`);
+              if (passage?.type === "reading") {
+                setReadingPassage(passage);
+                setActivePassageId(passage.id);
+                setActivePassageQuestions(passage.subQuestionIds || []);
+              } else {
+                setReadingPassage(null);
+                setActivePassageId(null);
+                setActivePassageQuestions([]);
+              }
+            } catch {
+              setReadingPassage(null);
+            }
+          } else {
+            setReadingPassage(null);
+            setActivePassageId(null);
+            setActivePassageQuestions([]);
+          }
+        } catch {
+          setQuestion(null);
+        }
+      } else {
+        setQuestion(null);
+        setDeliveredItem(null);
+      }
     } finally {
       setLoadingTask(false);
     }
@@ -709,10 +830,18 @@ export default function SessionPlayer({
       );
       setSession(updated);
       setNoMoreTasks(true);
+      setWizardPhase(WIZARD_PHASE.SUBMITTED);
+      setFinishModalOpen(false);
       if (onFinished) onFinished(updated);
+      if (!isTeacher) {
+        notify("Session submitted.", "success");
+        const listPath = sessionListPath(auth?.role || "student");
+        if (listPath) navigate(listPath);
+      }
     } catch (e) {
       console.error(e);
-      alert("Failed to finish session: " + apiErrorMessage(e, e.message));
+      notify(apiErrorMessage(e, e.message || "Failed to submit session"), "error");
+    } finally {
       setFinishing(false);
     }
   }
@@ -764,6 +893,237 @@ export default function SessionPlayer({
 
   if (!sessionId) return <div className="p-6">Session id not provided.</div>;
   if (loading) return <div className="p-6">Loading session...</div>;
+
+  const sessionClosed = isSessionClosedForStudent(session);
+  const answeredIds = new Set(
+    (session?.responses || []).map((r) => r.taskId).filter(Boolean)
+  );
+  const wizardTaskIds = session?.taskIds || [];
+  const allAnswered =
+    wizardTaskIds.length > 0 &&
+    wizardTaskIds.every((id) => answeredIds.has(id));
+  const canEnterReview =
+    !sessionClosed &&
+    (allAnswered || noMoreTasks || !!measurementStop || !!session?.stopped);
+  const answerReadOnly =
+    sessionClosed ||
+    wizardPhase !== WIZARD_PHASE.DRAFT ||
+    answeredIds.has(currentTaskId) ||
+    session?.status === SESSION_STATUS.PAUSED;
+
+  if (!isTeacher) {
+    const goBack = () => {
+      const listPath = sessionListPath(auth?.role || "student");
+      if (listPath) navigate(listPath);
+      else navigate(-1);
+    };
+
+    return (
+      <div className="p-4 md:p-6">
+        {banner}
+        <StudentSessionWizard
+          sessionId={sessionId}
+          phase={wizardPhase}
+          taskIds={wizardTaskIds}
+          currentTaskId={currentTaskId}
+          answeredIds={answeredIds}
+          sessionClosed={sessionClosed}
+          canEnterReview={canEnterReview}
+          submittingSession={finishing}
+          showPause={canPauseSession(session, { reviewMode: false })}
+          onPause={handlePause}
+          stopHeading={
+            session?.stopped ? measurementStopHeading(session.stopped) : null
+          }
+          onBack={goBack}
+          onSelectTask={(tid) => {
+            if (sessionClosed && !answeredIds.has(tid)) return;
+            loadTaskById(tid);
+          }}
+          onEnterReview={() => {
+            if (!canEnterReview) return;
+            setWizardPhase(WIZARD_PHASE.REVIEW);
+            const firstAnswered = wizardTaskIds.find((id) => answeredIds.has(id));
+            if (firstAnswered) loadTaskById(firstAnswered);
+          }}
+          onMarkCompleted={() => setWizardPhase(WIZARD_PHASE.COMPLETED)}
+          onSubmitSession={() => setFinishModalOpen(true)}
+        >
+          {loadingTask ? (
+            <div className="text-sm text-slate-600">Loading question…</div>
+          ) : measurementStop || session?.stopped ? (
+            <div
+              className="rounded-lg border border-slate-200 bg-white p-5"
+              data-testid="measurement-stop-panel"
+            >
+              <p className="font-semibold text-slate-900">
+                {measurementStopHeading(measurementStop || session.stopped)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {(measurementStop || session.stopped)?.reason}
+              </p>
+              {measurementStopDetails(measurementStop || session.stopped).length > 0 && (
+                <ul className="mt-2 list-disc ml-5 text-sm text-slate-800">
+                  {measurementStopDetails(measurementStop || session.stopped).map((t) => (
+                    <li key={t.smvId || t.classification}>
+                      {t.smvId}
+                      {t.classification ? `: ${t.classification}` : ""}
+                      {Number.isFinite(t.expectedClassificationAccuracy)
+                        ? ` (confidence ${t.expectedClassificationAccuracy.toFixed(2)})`
+                        : ""}
+                      {Number.isFinite(t.requiredSEM)
+                        ? ` (SEM ${t.precision ?? "—"} ≤ ${t.requiredSEM})`
+                        : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-3 text-sm text-slate-500">
+                Enter review when you are ready, then submit the session.
+              </p>
+            </div>
+          ) : noMoreTasks && !task ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-5">
+              <p className="font-semibold text-slate-900">All questions are done.</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Enter review to check your answers, then submit the session.
+              </p>
+            </div>
+          ) : task ? (
+            <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-baseline justify-between gap-3 border-b border-slate-100 pb-3">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    Question
+                  </div>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    {task.id}
+                  </h2>
+                </div>
+                {answerReadOnly && (
+                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
+                    {sessionClosed ? "Submitted" : "Read only"}
+                  </span>
+                )}
+              </div>
+
+              {parentTaskModel?.description && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-slate-800 whitespace-pre-line">
+                  {parentTaskModel.description}
+                </div>
+              )}
+
+              {deliveredItem ? (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <ItemPresenter
+                    item={deliveredItem}
+                    value={itemResponse}
+                    onChange={setItemResponse}
+                    disabled={answerReadOnly || submitting}
+                  />
+                  {!answerReadOnly && (
+                    <button
+                      type="submit"
+                      disabled={submitting || !canPresentItem(deliveredItem)}
+                      className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                    >
+                      {submitting ? "Saving…" : "Save answer"}
+                    </button>
+                  )}
+                </form>
+              ) : question ? (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {readingPassage?.stem && (
+                    <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm whitespace-pre-line text-slate-800">
+                      {readingPassage.stem}
+                    </div>
+                  )}
+                  <div className="text-sm font-medium text-slate-900">
+                    {question.stem || question.prompt || question.id}
+                  </div>
+                  {question.type === "mcq" && (
+                    <div className="space-y-2">
+                      {(question.options || []).map((opt) => {
+                        const oid = typeof opt === "string" ? opt : opt.id;
+                        const label = typeof opt === "string" ? opt : opt.label || opt.text || oid;
+                        return (
+                          <label
+                            key={oid}
+                            className="flex cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+                          >
+                            <input
+                              type="radio"
+                              name={`q-${question.id}`}
+                              checked={selectedOptionId === oid}
+                              onChange={() => setSelectedOptionId(oid)}
+                              disabled={answerReadOnly || submitting}
+                            />
+                            {label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {question.type === "rubric" && (
+                    <input
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      placeholder="Enter rubric level or comment"
+                      value={textAnswer}
+                      onChange={(e) => setTextAnswer(e.target.value)}
+                      disabled={answerReadOnly || submitting}
+                    />
+                  )}
+                  {["constructed", "open"].includes(question.type) && (
+                    <textarea
+                      rows={6}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      value={textAnswer}
+                      onChange={(e) => setTextAnswer(e.target.value)}
+                      disabled={answerReadOnly || submitting}
+                    />
+                  )}
+                  {!question.type && (
+                    <input
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      value={textAnswer}
+                      onChange={(e) => setTextAnswer(e.target.value)}
+                      disabled={answerReadOnly || submitting}
+                    />
+                  )}
+                  {!answerReadOnly && (
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                    >
+                      {submitting ? "Saving…" : "Save answer"}
+                    </button>
+                  )}
+                </form>
+              ) : (
+                <p className="text-sm text-slate-600">
+                  No linked item for this activity.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+              Select a question on the left to begin.
+            </div>
+          )}
+        </StudentSessionWizard>
+
+        <Modal
+          isOpen={finishModalOpen}
+          onClose={() => setFinishModalOpen(false)}
+          onConfirm={confirmFinish}
+          title="Submit session"
+          message="Submit this session? You will not be able to change answers afterward."
+          confirmClass="bg-emerald-700 hover:bg-emerald-600 text-white"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-4">
