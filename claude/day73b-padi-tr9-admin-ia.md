@@ -29,7 +29,7 @@ Live exit check (behaviour, not only tests):
 | Teacher | `teach1` | Same chrome as District |
 | Student | `stud1` | Delivery only: My Sessions, Reports. No Analytics label |
 
-Product + this handoff land as `D73b completed`. HEAD hash is filled on the close commit.
+Product `6ba447d`. Close commit is this hash-record.
 
 ## What was delivered
 
