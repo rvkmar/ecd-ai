@@ -20,7 +20,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 |---|---|
 | Last completed unit | **D73** — accessibility backfills F-A1–F-A6. Handoff: `claude/day73-accessibility-backfills.md`. Prior: D72. |
 | Next queued | Calendar **D74** — bundle split (>500 kB). Then **D75** W15 close (never-compress). |
-| Off-calendar (2026-09-15) | Student Model lifecycle: Competency Models stay draft ↔ reviewed → confirmed (locked). Assembly/Q-matrix activation uses `isLinkableCompetencyModel`, not `cm.status === "operational"`. Decision: `claude/student-model-lifecycle.md` (PADI TR9). |
+| Off-calendar (2026-09-15) | Student Model lifecycle (PADI TR9) + **Archive** on confirmed CMs. Handoff: `claude/day73-followon-student-model-lifecycle.md`. Decision: `claude/student-model-lifecycle.md`. Product `55d4514`. Live `:6060` archive not walked. |
 | Block | **W15** — Core sign-off (D71–D73 done; D74–D75 remain) |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
@@ -35,7 +35,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D70 | first pass `0a2ff01` (hand Mean/Sigma) + plink `b96511a` + this close. Close: `claude/day70-equating.md`. Live path: local `:4000` (`plink` 1.5.1), not Hub CI. |
 | HEAD at D71 | `b9c6274`. Close: `claude/day71-core-browser-pass.md`. Live path: nginx `:6060` + node rebuilt that session. |
 | HEAD at D72 | `c2f387b`. Close: `claude/day72-adversarial-core.md`. |
-| HEAD at D73 | `ff71b21` + this close. Close: `claude/day73-accessibility-backfills.md`. |
+| HEAD at D73 | `ff71b21` + D73 close. Close: `claude/day73-accessibility-backfills.md`. |
+| HEAD at 2026-09-15 follow-on | `55d4514` (archive + parent gates) + this close. |
 
 ## Session log
 
@@ -70,7 +71,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-14 | D72 | 3, alone | Whole-core adversarial. No psychometric P0. P0: `/mine` fallback + ungated `GET /:id` `/submit`. Live 403 on foreign session. Suite **1379 passed / 6 skipped**. |
 | 2026-09-14 | D73 | 1, alone | Calendar D55 findings recovered (git never had the audit file). F-A1 Modal→Radix Dialog; F-A2 contrast; F-A3 cards; F-A4 labels; F-A5 scroll; F-A6 24px checkboxes. Suite **1382 passed / 6 skipped**. |
 | 2026-09-14 | close | — | D73 close verification. Suite re-run **1382 passed / 6 skipped** (53.85s). Build 12.97s. Tree clean at `ff71b21`. Next: D74. |
-| 2026-09-15 | decision + fix | — | PADI TR9: CM is Student Model, not a delivery object. No CM Activate/Suspend. Assembly/Q-matrix activation accepts confirmed+locked parents. `AGENTS.md` left as behavior rules only. Doc: `claude/student-model-lifecycle.md`. D74 not started. |
+| 2026-09-15 | decision + fix | — | PADI TR9: CM is Student Model, not a delivery object. No CM Activate/Suspend. Assembly/Q-matrix activation accepts confirmed+locked parents. Archive for confirmed CMs (`55d4514`). `AGENTS.md` left as behavior rules only. Doc: `claude/student-model-lifecycle.md`. D74 not started. |
+| 2026-09-15 | close | — | Follow-on close. Suite **1392 passed / 6 skipped** (82.06s). Build 18.32s, chunk 2,277.50 kB (D74 still open). Live `:6060` archive not walked. Next: D74. |
 
 ## Compression debt
 
@@ -92,6 +94,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D68 | Live mid-flight ingest + second submit on `:6060` | HTTP switchover tests; player regression only | D71 | **open** — no unstopped two-item session in the deployment this walk |
 | D69 | Live difR planted-item flags not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `difPipeline.test.js` | this PR's CI | **closed** — live job green (`difR 6.1.0`, unique ETS C on Item.5; first two live runs failed the unique-item rule, recorded in the handoff) |
 | D70 | Live known-equating not executed against Hub `rvkmar/r-backend:latest` | Local `:4000` has equate 2.0.9 / plink 1.5.1; CI still pulls Hub | Docker Hub push of the rebuilt image | **open** — local exit check closed; GitHub live equating waits on Hub |
+| CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open** |
 
 Debt against the never-compress list is not permitted. **D60** (this file's real unit) is closed.
 

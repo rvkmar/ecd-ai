@@ -30,9 +30,10 @@ D71’s “New Evidence Model disabled because the CM was operational” was a *
 - `validateAssemblyModelLifecycle` / `validateQMatrixModelLifecycle` no longer require `cm.status === "operational"`. They use `isLinkableCompetencyModel` plus version match.
 - Competency Wizard Step 9 copy no longer says confirmation “transitions to operational.”
 - Clone accepts any locked, non-archived Competency Model.
+- `POST /api/competencies/models/:id/archive` withdraws a locked confirmed (also operational/suspended) model. Badges use real `status`.
 
 ## What remains
 
-- Archived Competency Models still have no dedicated archive route (delete is draft-only).
-- Assembly / Q-matrix wizard readiness panels do not mention this parent rule (activation is a later status than those panels cover).
-- Do not start D74 in this change unless asked.
+- Live Archive walk on a rebuilt `:6060` (not this session). Do not archive the D56 walk CM while sessions still bind it.
+- Assembly / Q-matrix wizard readiness panels do not mention the frozen-parent rule (activation is a later status than those panels cover).
+- Calendar **D74** (bundle split) was not started.
