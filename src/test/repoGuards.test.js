@@ -115,6 +115,9 @@ describe("every write route declares a role gate", () => {
     "sessionRoutes.js:POST:/:id/finish",
     "sessionRoutes.js:POST:/:id/review",
     "sessionRoutes.js:POST:/:id/archive",
+    // Student Session Wizard Draft→Submit clocks — same ownership-scoped
+    // self-service as finish/play; role list would block the examinee.
+    "sessionRoutes.js:POST:/:id/wizard-timing",
   ]);
 
   const WRITE_METHODS = ["post", "put", "patch", "delete"];

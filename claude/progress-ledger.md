@@ -18,9 +18,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D73b** — Admin nested Models / Implementation / Delivery (PADI TR9). Live `:6060` after nginx rebuild. Handoff: `claude/day73b-padi-tr9-admin-ia.md`. Prior: D73 + Student Model lifecycle archive. |
-| Next queued | Calendar **D74** — bundle split (>500 kB; now 2,281.23 kB). Then **D75** W15 close (never-compress). |
-| Off-calendar (2026-09-15) | Student Model lifecycle + Archive. Product `55d4514` / close `c1b2f62`. Live archive click still not a dedicated Operate walk (dashboard loaded on the D73b Admin pass). |
+| Last completed unit | **D73b** — Admin nested Models / Implementation / Delivery (PADI TR9). Handoff: `claude/day73b-padi-tr9-admin-ia.md`. |
+| Off-calendar (2026-09-15, later) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
+| Next queued | Calendar **D74** — bundle split (chunk now 2,269.52 kB `index-ND7fdpsk.js`). Then **D75** W15 close (never-compress). |
 | Block | **W15** — Core sign-off (D71–D73b done; D74–D75 remain) |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
@@ -38,6 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D73 | `ff71b21` + D73 close. Close: `claude/day73-accessibility-backfills.md`. |
 | HEAD at 2026-09-15 follow-on | `55d4514` (archive + parent gates) + close `c1b2f62`. |
 | HEAD at D73b | product `6ba447d` + close `12dbca2`. nginx earlier `index-DZ0ps72F.js`; close build `index-CWS7Hg6h.js` 2,280.50 kB. Close: `claude/day73b-padi-tr9-admin-ia.md`. |
+| HEAD at 2026-09-15 day73c | product `e9e01ff`…`6f09fde` + close (gates + handoff). Close: `claude/day73c-session-delivery-home.md`. Build chunk `index-ND7fdpsk.js` 2,269.52 kB. |
 
 ## Session log
 
@@ -77,6 +78,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-15 | D73b plan | 1 (queued) | Full PADI TR9 read + Admin walk on `:6060`. IA decided: Models nest (Student, Evidence, Task, Assembly, Q-Matrix, Calibration); Item Bank stays implementation; Delivery workspace planned (not a CAF “Delivery Model”); Analytics → Reports. No tab code. Next: D73b then D74. |
 | 2026-09-15 | D73b | 1 | Nested Admin chrome live on `:6060`. Assembly tab; Student Model label; Reports under Delivery; EA inspector; Presentation stub. District unchanged *in the first wiring pass*. Operate has no admin player. Chunk ~2,281 kB. |
 | 2026-09-15 | D73b close | 1 | Staff/student chrome aligned to the same TR9 groups (no Q-Matrix/Calibration on district/teacher). Suite **1399 passed / 6 skipped**; build `index-CWS7Hg6h.js` 2,280.50 kB. Live `dist1` / `teach1` / `stud1`. Next: D74. |
+| 2026-09-15 | off-cal day73c | 2 | Teacher Review/View/Report; student Reports + wizard timings (server); Home announcements. Suite **1439 passed / 6 skipped**; build `index-ND7fdpsk.js` 2,269.52 kB. Live Home walk not done. Next: D74. |
 
 ## Compression debt
 
@@ -123,6 +125,8 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | CM operational | Shared `lifecycleMatrix` + Assembly/Q-matrix activation required `cm.status === "operational"`; D71 treated that as a missing CM state | PADI TR9: Student Model is claim schema; delivery uses the task/evidence library. CM routes never offered Activate/Suspend. | Confirmed+locked remains the CM freeze. Linkable parent = locked non-archived. Activation gates use `isLinkableCompetencyModel`. No CM operational UI. |
 | D74 next | After D73 close, D74 is the next product unit | TR9 walk showed Admin IA is a loud UI defect that will change `AdminPage` (and therefore the main chunk) | Insert **D73b** (nested Models / Implementation / Delivery) before D74. D74 exit check unchanged. |
 | D73b District | Calendar: District tabs unchanged unless a one-line note | Same TR9 reading made Q-Matrix/Calibration Admin-only; Activities ≠ Presentation | District/Teacher Implementation+Delivery; Student Delivery only. Bookmark q-matrix/calibration URLs may remain. |
+| day73c Operate | Staff list “Operate” opens player finish flow | Teachers must not submit/finish examinee sessions | Review (active) / View + Report (closed); read-only staff player |
+| day73c timing | Client sessionStorage for wizard clocks | User required server persistence | `session.wizardPhaseTimings` + `POST /wizard-timing` |
 
 ## Carried-forward gaps
 
@@ -143,3 +147,6 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 - ~~Student My Sessions placeholder~~ closed D60
 - Dead-export guard can miss unused exports that share a name
 - ~~Session ownership-scoping (a student may only read their own session)~~ closed D72 on session + session-report routes; `GET /api/students` roster dump still open (D97-class)
+- ~~Staff Operate mislabeled / teachers could Finish student sessions~~ closed day73c (Review/View/Report + read-only teacher player)
+- Home announcements live `:6060` create/visibility walk — **open** (tests only this close)
+- Student wizard timing Continue across devices — **open** (API tests only this close)

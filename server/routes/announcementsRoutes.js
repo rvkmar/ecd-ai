@@ -47,7 +47,9 @@ router.post("/", canAuthor, (req, res) => {
 });
 
 // DELETE /api/announcements/:id
-router.delete("/:id", (req, res) => {
+// Role gate first (admin/district only); canDeleteAnnouncement then
+// enforces admin-any vs district-own.
+router.delete("/:id", canAuthor, (req, res) => {
   const db = loadDB();
   if (!db.announcements) db.announcements = [];
   const idx = db.announcements.findIndex((a) => a.id === req.params.id);
