@@ -18,10 +18,10 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D74** — Performance pass (route/tab code split; chunk warning cleared). Handoff: `claude/day74-performance-bundle-split.md`. |
+| Last completed unit | **D75** — W15 core sign-off (never-compress). Handoff: `claude/day75-w15-core-sign-off.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
-| Next queued | Calendar **D75** — W15 core sign-off (**never-compress**). |
-| Block | **W15** — Core sign-off (D71–D74 done; D75 remains) |
+| Next queued | Calendar **D76+** — W16 (R analytics / reporting service). |
+| Block | **W15** — Core sign-off (**closed** at D75). |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -40,6 +40,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D73b | product `6ba447d` + close `12dbca2`. nginx earlier `index-DZ0ps72F.js`; close build `index-CWS7Hg6h.js` 2,280.50 kB. Close: `claude/day73b-padi-tr9-admin-ia.md`. |
 | HEAD at 2026-09-15 day73c | product `e9e01ff`…`6f09fde` + close (gates + handoff). Close: `claude/day73c-session-delivery-home.md`. Build chunk `index-ND7fdpsk.js` 2,269.52 kB. |
 | HEAD at D74 | product `3a6415a` + this close. Close: `claude/day74-performance-bundle-split.md`. Largest JS chunk `recharts` 446.89 kB; entry `index-DVkk4-Lz.js` 31.23 kB. Suite close re-run **1439 passed / 6 skipped**. |
+| HEAD at D75 | ingest→active fix (this session) + close. Close: `claude/day75-w15-core-sign-off.md`. Suite **1439 passed / 6 skipped**; CI [34960900031](https://github.com/rvkmar/ecd-ai/actions/runs/34960900031) LSAT7+sim10GDINA green. |
 
 ## Session log
 
@@ -81,6 +82,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-15 | D73b close | 1 | Staff/student chrome aligned to the same TR9 groups (no Q-Matrix/Calibration on district/teacher). Suite **1399 passed / 6 skipped**; build `index-CWS7Hg6h.js` 2,280.50 kB. Live `dist1` / `teach1` / `stud1`. Next: D74. |
 | 2026-09-15 | off-cal day73c | 2 | Teacher Review/View/Report; student Reports + wizard timings (server); Home announcements. Suite **1439 passed / 6 skipped**; build `index-ND7fdpsk.js` 2,269.52 kB. Live Home walk not done. Next: D74. |
 | 2026-09-15 | D74 | 1, alone | Route + tab `lazyPanel` splits; vendor `manualChunks`. Chunk warning cleared (max 446.89 kB). Live dashboard median 15 ms @ 4 items; rebuild `tm-d56` 28 ms; synthetic library/dashboard through N=1000 recorded. Product `3a6415a`. Close re-run **1439 passed / 6 skipped**. Next: D75 (never-compress). |
+| 2026-09-15 | D75 | 3, alone | W15 never-compress sign-off. Five claims held on `:6060` + CI. Ingest misalignment: calibrated set now becomes `activeParameterSetId`. Four-role walk. Suite **1439 passed / 6 skipped**. Next: W16. |
 
 ## Compression debt
 

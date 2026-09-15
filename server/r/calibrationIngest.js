@@ -113,10 +113,16 @@ export function ingestCalibrationJob(job, db, extras = {}) {
 
   sm.parameterSets = sm.parameterSets || [];
   sm.parameterSets.push(parameterSet);
+  // Same as POST /evidenceModels/:id/recalibrate: an ingested calibrated
+  // set becomes the live pointer so new sessions leave pilot. In-flight
+  // sessions stay on their opening freeze (D68); they do not retag.
+  const previousActiveParameterSetId = sm.activeParameterSetId ?? null;
+  sm.activeParameterSetId = parameterSetId;
 
   const { valid, errors } = validateEntity("evidenceModels", em, db, { strict: false });
   if (!valid) {
     sm.parameterSets = sm.parameterSets.filter((p) => p.parameterSetId !== parameterSetId);
+    sm.activeParameterSetId = previousActiveParameterSetId;
     return { ok: false, error: "Parameter set failed evidence-model validation", details: errors };
   }
 

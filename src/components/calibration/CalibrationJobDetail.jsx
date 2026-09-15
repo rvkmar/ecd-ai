@@ -162,7 +162,8 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
 
       {ingestResult?.parameterSetId && (
         <p className="text-sm" role="status">
-          Wrote parameter set <strong>{ingestResult.parameterSetId}</strong>.
+          Wrote parameter set <strong>{ingestResult.parameterSetId}</strong> and
+          set it active for new sessions.
         </p>
       )}
 

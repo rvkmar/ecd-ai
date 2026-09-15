@@ -276,6 +276,9 @@ describe("ingest refuses non-converged", () => {
     expect(ps.standardErrors.item_a.a).toBe(0.1);
     expect(ps.calibrationJobId).toBe("job_ok");
     expect(dbState.current.calibrationJobs[0].ingestedParameterSetId).toBe(ps.parameterSetId);
+    expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe(
+      ps.parameterSetId
+    );
   });
 });
 
