@@ -43,7 +43,7 @@ active set; the git change makes that behaviour durable.
 
 ## Verification
 
-Product + handoff commit: `4d56191`. Close re-run at session end:
+Product commit: `4d56191`. Close commit: `18eedc5`. Close re-run at session end:
 
 ```
 NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
@@ -60,7 +60,7 @@ npm run build
 CI (lsat7-pipeline @ 34960900031): LSAT7 + sim10GDINA success
   (also CTT, planted DIF, known equating steps success on this Hub image)
 
-git: master @ 4d56191 tracks main/master (clean after this close commit)
+git: master tracks main/master after push
 ```
 
 ## Honest remaining gaps (not D75 blockers)
