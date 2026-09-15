@@ -30,21 +30,22 @@ describe("calibration console wiring", () => {
 
   it("AdminPage exposes a Calibration tab that embeds the console", () => {
     const src = read("src/pages/AdminPage.jsx");
-    expect(src).toMatch(/value="calibration"/);
-    expect(src).toMatch(/>Calibration</);
-    expect(src).toMatch(/CalibrationConsole/);
-  });
-
-  it("DistrictDashboard exposes a read-only Calibration tab", () => {
-    const src = read("src/pages/DistrictDashboard.jsx");
     expect(src).toMatch(/id: "calibration"/);
     expect(src).toMatch(/label: "Calibration"/);
-    expect(src).toMatch(/CalibrationConsole readOnly/);
-    expect(src).toMatch(/entity="calibrationJobs"/);
+    expect(src).toMatch(/CalibrationConsole/);
+    expect(src).toMatch(/id: "models"/);
+  });
+
+  it("DistrictDashboard no longer ships a Calibration tab (bookmark route remains)", () => {
+    const dash = read("src/pages/DistrictDashboard.jsx");
+    expect(dash).not.toMatch(/CalibrationConsole/);
+    expect(dash).not.toMatch(/id: "calibration"/);
+    expect(read("src/App.jsx")).toMatch(/path="calibration"/);
   });
 
   it("teacher and student dashboards do not ship the console", () => {
-    expect(read("src/pages/TeacherDashboard.jsx")).not.toMatch(/calibration/i);
+    expect(read("src/pages/TeacherDashboard.jsx")).not.toMatch(/CalibrationConsole/);
+    expect(read("src/pages/StudentDashboard.jsx")).not.toMatch(/CalibrationConsole/);
     expect(read("src/pages/StudentDashboard.jsx")).not.toMatch(/calibration/i);
   });
 

@@ -118,6 +118,11 @@ export default function TasksManager({ notify }) {
   return (
     <div className="p-4 space-y-4">
       <h2 className="text-xl font-bold">Activities</h2>
+      <p className="text-sm text-gray-500">
+        Instantiated Task Models (PADI TR9 §2.4 task specs). Not the
+        Presentation process — that is SessionPlayer. Assembly and evidence
+        accumulation run when a session selects and scores these activities.
+      </p>
 
       {/* Add new task */}
       <form onSubmit={handleAdd} className="space-y-2 p-3 border rounded bg-gray-50">

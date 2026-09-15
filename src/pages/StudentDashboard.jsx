@@ -1,9 +1,9 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { apiFetch } from "../api/apiClient";
 import toast from "react-hot-toast";
 
-import DashboardLayout from "../components/ui/DashboardLayout";
+import RoleWorkbench from "../components/ui/RoleWorkbench";
 import StudentSessionList from "../components/sessions/StudentSessionList";
 import AnalyticsReports from "../components/reports/AnalyticsReports";
 
@@ -20,12 +20,19 @@ export default function StudentDashboard() {
   }, [auth]);
 
   return (
-      <DashboardLayout
-        title="Student Dashboard"
-        tabs={[
-          { id: "mysessions", label: "My Sessions", content: <StudentSessionList /> },
-          { id: "analytics", label: "Analytics", content: <AnalyticsReports />, entity: "reports" }
-        ]}
-      />
+    <RoleWorkbench
+      title="Student Dashboard"
+      subtitle="Delivery only — sit sessions and see your reports."
+      groups={[
+        {
+          id: "delivery",
+          label: "Delivery",
+          tabs: [
+            { id: "mysessions", label: "My Sessions", content: <StudentSessionList /> },
+            { id: "reports", label: "Reports", content: <AnalyticsReports /> },
+          ],
+        },
+      ]}
+    />
   );
 }

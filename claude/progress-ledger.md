@@ -18,10 +18,10 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D73** — accessibility backfills F-A1–F-A6. Handoff: `claude/day73-accessibility-backfills.md`. Prior: D72. |
-| Next queued | Calendar **D74** — bundle split (>500 kB). Then **D75** W15 close (never-compress). |
-| Off-calendar (2026-09-15) | Student Model lifecycle (PADI TR9) + **Archive** on confirmed CMs. Handoff: `claude/day73-followon-student-model-lifecycle.md`. Decision: `claude/student-model-lifecycle.md`. Product `55d4514`. Live `:6060` archive not walked. |
-| Block | **W15** — Core sign-off (D71–D73 done; D74–D75 remain) |
+| Last completed unit | **D73b** — Admin nested Models / Implementation / Delivery (PADI TR9). Live `:6060` after nginx rebuild. Handoff: `claude/day73b-padi-tr9-admin-ia.md`. Prior: D73 + Student Model lifecycle archive. |
+| Next queued | Calendar **D74** — bundle split (>500 kB; now 2,281.23 kB). Then **D75** W15 close (never-compress). |
+| Off-calendar (2026-09-15) | Student Model lifecycle + Archive. Product `55d4514` / close `c1b2f62`. Live archive click still not a dedicated Operate walk (dashboard loaded on the D73b Admin pass). |
+| Block | **W15** — Core sign-off (D71–D73b done; D74–D75 remain) |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -36,7 +36,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D71 | `b9c6274`. Close: `claude/day71-core-browser-pass.md`. Live path: nginx `:6060` + node rebuilt that session. |
 | HEAD at D72 | `c2f387b`. Close: `claude/day72-adversarial-core.md`. |
 | HEAD at D73 | `ff71b21` + D73 close. Close: `claude/day73-accessibility-backfills.md`. |
-| HEAD at 2026-09-15 follow-on | `55d4514` (archive + parent gates) + this close. |
+| HEAD at 2026-09-15 follow-on | `55d4514` (archive + parent gates) + close `c1b2f62`. |
+| HEAD at D73b | product+handoff this close (hash on D73b close commit). nginx earlier `index-DZ0ps72F.js`; close build `index-CWS7Hg6h.js` 2,280.50 kB. Close: `claude/day73b-padi-tr9-admin-ia.md`. |
 
 ## Session log
 
@@ -73,6 +74,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-14 | close | — | D73 close verification. Suite re-run **1382 passed / 6 skipped** (53.85s). Build 12.97s. Tree clean at `ff71b21`. Next: D74. |
 | 2026-09-15 | decision + fix | — | PADI TR9: CM is Student Model, not a delivery object. No CM Activate/Suspend. Assembly/Q-matrix activation accepts confirmed+locked parents. Archive for confirmed CMs (`55d4514`). `AGENTS.md` left as behavior rules only. Doc: `claude/student-model-lifecycle.md`. D74 not started. |
 | 2026-09-15 | close | — | Follow-on close. Suite **1392 passed / 6 skipped** (82.06s). Build 18.32s, chunk 2,277.50 kB (D74 still open). Live `:6060` archive not walked. Next: D74. |
+| 2026-09-15 | D73b plan | 1 (queued) | Full PADI TR9 read + Admin walk on `:6060`. IA decided: Models nest (Student, Evidence, Task, Assembly, Q-Matrix, Calibration); Item Bank stays implementation; Delivery workspace planned (not a CAF “Delivery Model”); Analytics → Reports. No tab code. Next: D73b then D74. |
+| 2026-09-15 | D73b | 1 | Nested Admin chrome live on `:6060`. Assembly tab; Student Model label; Reports under Delivery; EA inspector; Presentation stub. District unchanged *in the first wiring pass*. Operate has no admin player. Chunk ~2,281 kB. |
+| 2026-09-15 | D73b close | 1 | Staff/student chrome aligned to the same TR9 groups (no Q-Matrix/Calibration on district/teacher). Suite **1399 passed / 6 skipped**; build `index-CWS7Hg6h.js` 2,280.50 kB. Live `dist1` / `teach1` / `stud1`. Next: D74. |
 
 ## Compression debt
 
@@ -95,6 +99,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D69 | Live difR planted-item flags not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `difPipeline.test.js` | this PR's CI | **closed** — live job green (`difR 6.1.0`, unique ETS C on Item.5; first two live runs failed the unique-item rule, recorded in the handoff) |
 | D70 | Live known-equating not executed against Hub `rvkmar/r-backend:latest` | Local `:4000` has equate 2.0.9 / plink 1.5.1; CI still pulls Hub | Docker Hub push of the rebuilt image | **open** — local exit check closed; GitHub live equating waits on Hub |
 | CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open** |
+| Admin CAF IA | Live tabs do not match TR9 CAF/delivery | Walk 2026-09-15; wiring is D73b | D73b | **closed** — Admin nested Models / Implementation / Delivery on `:6060`; District/Teacher/Student chrome aligned same session |
 
 Debt against the never-compress list is not permitted. **D60** (this file's real unit) is closed.
 
@@ -116,6 +121,8 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D72 | Refute delivery, accumulation, selection, R pipeline, W10 reachability | Those surfaces exist and D60/D68/D39 hold. The uncalled production path was `sessionAssignedToStudent` (tests only + `/mine` leak-fallback). | Ranked findings. P0: student may not list/read/submit another examinee's session. P1s recorded, not all fixed. |
 | D73 | Execute only D55 numbered required backfills | `claude/day56-accessibility-audit.md` was never in git. Calendar D55 listed F-A1–F-A6. | Recover those six, re-verify in source, backfill only still-present defects. |
 | CM operational | Shared `lifecycleMatrix` + Assembly/Q-matrix activation required `cm.status === "operational"`; D71 treated that as a missing CM state | PADI TR9: Student Model is claim schema; delivery uses the task/evidence library. CM routes never offered Activate/Suspend. | Confirmed+locked remains the CM freeze. Linkable parent = locked non-archived. Activation gates use `isLinkableCompetencyModel`. No CM operational UI. |
+| D74 next | After D73 close, D74 is the next product unit | TR9 walk showed Admin IA is a loud UI defect that will change `AdminPage` (and therefore the main chunk) | Insert **D73b** (nested Models / Implementation / Delivery) before D74. D74 exit check unchanged. |
+| D73b District | Calendar: District tabs unchanged unless a one-line note | Same TR9 reading made Q-Matrix/Calibration Admin-only; Activities ≠ Presentation | District/Teacher Implementation+Delivery; Student Delivery only. Bookmark q-matrix/calibration URLs may remain. |
 
 ## Carried-forward gaps
 
@@ -130,7 +137,8 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 - Adaptive selection: nearest difficulty, not max information (held for benchmark work; D60 characterisation test pins it)
 - Dual-attribute *targetsMet* early stop ("1 of 1") — **closed** (D57 join + D60 re-run)
 - Dual-attribute *selection*: items for an attribute with no persisted posterior stay unrankable while measured-attribute items remain (D60 P1-4)
-- Chunk >500 kB — D74
+- Chunk >500 kB — D74 (after D73b IA, because AdminPage will move)
+- ~~Admin CAF/delivery chrome — Assembly URL-only; Q-Matrix/Calibration/Analytics are CAF peers; Student Model unlabeled; Evidence Accumulation has no inspector~~ closed D73b (Admin + District/Teacher/Student chrome; wizard copy still says Competency Model)
 - Competency Model Operational/Suspended **not required** (PADI TR9; `claude/student-model-lifecycle.md`) — closed as a false requirement 2026-09-15
 - ~~Student My Sessions placeholder~~ closed D60
 - Dead-export guard can miss unused exports that share a name
