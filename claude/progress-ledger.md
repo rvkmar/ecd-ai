@@ -39,7 +39,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-15 follow-on | `55d4514` (archive + parent gates) + close `c1b2f62`. |
 | HEAD at D73b | product `6ba447d` + close `12dbca2`. nginx earlier `index-DZ0ps72F.js`; close build `index-CWS7Hg6h.js` 2,280.50 kB. Close: `claude/day73b-padi-tr9-admin-ia.md`. |
 | HEAD at 2026-09-15 day73c | product `e9e01ff`…`6f09fde` + close (gates + handoff). Close: `claude/day73c-session-delivery-home.md`. Build chunk `index-ND7fdpsk.js` 2,269.52 kB. |
-| HEAD at D74 | product (lazy routes/tabs + manualChunks) + this close. Close: `claude/day74-performance-bundle-split.md`. Largest JS chunk `recharts` 446.89 kB; entry `index-DVkk4-Lz.js` 31.23 kB. |
+| HEAD at D74 | product `3a6415a` + this close. Close: `claude/day74-performance-bundle-split.md`. Largest JS chunk `recharts` 446.89 kB; entry `index-DVkk4-Lz.js` 31.23 kB. Suite close re-run **1439 passed / 6 skipped**. |
 
 ## Session log
 
@@ -80,7 +80,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-15 | D73b | 1 | Nested Admin chrome live on `:6060`. Assembly tab; Student Model label; Reports under Delivery; EA inspector; Presentation stub. District unchanged *in the first wiring pass*. Operate has no admin player. Chunk ~2,281 kB. |
 | 2026-09-15 | D73b close | 1 | Staff/student chrome aligned to the same TR9 groups (no Q-Matrix/Calibration on district/teacher). Suite **1399 passed / 6 skipped**; build `index-CWS7Hg6h.js` 2,280.50 kB. Live `dist1` / `teach1` / `stud1`. Next: D74. |
 | 2026-09-15 | off-cal day73c | 2 | Teacher Review/View/Report; student Reports + wizard timings (server); Home announcements. Suite **1439 passed / 6 skipped**; build `index-ND7fdpsk.js` 2,269.52 kB. Live Home walk not done. Next: D74. |
-| 2026-09-15 | D74 | 1, alone | Route + tab `lazyPanel` splits; vendor `manualChunks`. Chunk warning cleared (max 446.89 kB). Live dashboard median 15 ms @ 4 items; rebuild `tm-d56` 28 ms; synthetic library/dashboard through N=1000 recorded. Suite **1439 passed / 6 skipped**. Next: D75 (never-compress). |
+| 2026-09-15 | D74 | 1, alone | Route + tab `lazyPanel` splits; vendor `manualChunks`. Chunk warning cleared (max 446.89 kB). Live dashboard median 15 ms @ 4 items; rebuild `tm-d56` 28 ms; synthetic library/dashboard through N=1000 recorded. Product `3a6415a`. Close re-run **1439 passed / 6 skipped**. Next: D75 (never-compress). |
 
 ## Compression debt
 

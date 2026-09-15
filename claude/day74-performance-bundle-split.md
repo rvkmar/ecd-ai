@@ -13,18 +13,23 @@
 
 ## Verification
 
+Product commit: `3a6415a`. Close re-run at session end (this handoff update):
+
 ```
+NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
+  Test Files  105 passed (105)
+  Tests  1439 passed | 6 skipped (1445)
+  Duration  44.40s
+
 npm run build
   (no chunk-size warning)
   largest: recharts-BYECgA3H.js 446.89 kB
   entry:   index-DVkk4-Lz.js     31.23 kB
-  built in 7.57s
-
-NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
-  Test Files  105 passed (105)
-  Tests  1439 passed | 6 skipped (1445)
-  Duration  35.33s
+  built in 42.50s
 ```
+
+Earlier same-session product verification (before close commit): suite 35.33s / build 7.57s — same chunk sizes.
+Working tree was clean at `3a6415a` before this close commit. Remote: `main/master` (this clone).
 
 ### Measured costs
 
