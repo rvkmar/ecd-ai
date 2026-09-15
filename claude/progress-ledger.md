@@ -37,7 +37,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D72 | `c2f387b`. Close: `claude/day72-adversarial-core.md`. |
 | HEAD at D73 | `ff71b21` + D73 close. Close: `claude/day73-accessibility-backfills.md`. |
 | HEAD at 2026-09-15 follow-on | `55d4514` (archive + parent gates) + close `c1b2f62`. |
-| HEAD at D73b | product `6ba447d` + close commit following. nginx earlier `index-DZ0ps72F.js`; close build `index-CWS7Hg6h.js` 2,280.50 kB. Close: `claude/day73b-padi-tr9-admin-ia.md`. |
+| HEAD at D73b | product `6ba447d` + close `12dbca2`. nginx earlier `index-DZ0ps72F.js`; close build `index-CWS7Hg6h.js` 2,280.50 kB. Close: `claude/day73b-padi-tr9-admin-ia.md`. |
 
 ## Session log
 
