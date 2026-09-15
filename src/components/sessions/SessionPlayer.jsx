@@ -85,7 +85,8 @@ export default function SessionPlayer({
   const [finishing, setFinishing] = useState(false);
   const [finishModalOpen, setFinishModalOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+
   // Policy name resolution now goes through the shared usePolicies() cache
   // (see src/api/queries/policies.js) instead of its own fetch — Phase 2
   // data-layer migration.
@@ -601,10 +602,11 @@ export default function SessionPlayer({
   }
   // 🔹 Group responses by reading comprehension passage
   function groupResponsesByPassage(sessionObj) {
-    if (!sessionObj || !sessionObj.responses?.length) return [];
-
     const groups = [];
     const others = [];
+    if (!sessionObj || !sessionObj.responses?.length) {
+      return { groups, others };
+    }
 
     for (const resp of sessionObj.responses) {
       const qId = resp.questionId;
@@ -1101,6 +1103,19 @@ export default function SessionPlayer({
     );
   }
 
+  const { groups: responseGroups, others: otherResponses } =
+    groupResponsesByPassage(session);
+  const hasGroupedResponses =
+    responseGroups.length > 0 || otherResponses.length > 0;
+  const toggleResponseGroup = (id) => {
+    setCollapsedGroups((prev) => {
+      const updated = new Set(prev);
+      if (updated.has(id)) updated.delete(id);
+      else updated.add(id);
+      return updated;
+    });
+  };
+
   return (
     <div className="p-6 space-y-4">
       {isTeacher && (
@@ -1585,17 +1600,21 @@ export default function SessionPlayer({
           <span>Responses</span>
 
           {/* Top-level collapse/expand for teacher */}
-          {isTeacher && groups?.length > 0 && (
+          {isTeacher && responseGroups.length > 0 && (
             <div className="space-x-2">
               <button
+                type="button"
                 onClick={() => setCollapsedGroups(new Set())}
                 className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 Expand All
               </button>
               <button
+                type="button"
                 onClick={() =>
-                  setCollapsedGroups(new Set(groups.map((g) => g.passageId)))
+                  setCollapsedGroups(
+                    new Set(responseGroups.map((g) => g.passageId))
+                  )
                 }
                 className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
               >
@@ -1606,113 +1625,91 @@ export default function SessionPlayer({
         </h4>
 
         {isTeacher ? (
-          (() => {
-            // ✅ Group responses by passage
-            const { groups, others } = groupResponsesByPassage(session);
+          !hasGroupedResponses ? (
+            <p className="text-sm text-gray-500">No responses yet.</p>
+          ) : (
+            <div className="space-y-6">
+              {responseGroups.map((grp, gi) => {
+                const passage =
+                  session.questions?.find?.((q) => q.id === grp.passageId) ||
+                  null;
+                const isCollapsed = collapsedGroups.has(grp.passageId);
 
-            // ✅ Local collapse state (default: all collapsed)
-            const [collapsedGroups, setCollapsedGroups] = React.useState(
-              () => new Set(groups.map((g) => g.passageId))
-            );
-
-            // ✅ Toggle single passage collapse
-            const toggleGroup = (id) => {
-              setCollapsedGroups((prev) => {
-                const updated = new Set(prev);
-                if (updated.has(id)) updated.delete(id);
-                else updated.add(id);
-                return updated;
-              });
-            };
-
-            if ((!groups || groups.length === 0) && (!others || others.length === 0)) {
-              return <p className="text-sm text-gray-500">No responses yet.</p>;
-            }
-
-            return (
-              <div className="space-y-6">
-                {/* 🔹 Reading comprehension groups */}
-                {groups.map((grp, gi) => {
-                  const passage =
-                    session.questions?.find?.((q) => q.id === grp.passageId) || null;
-                  const isCollapsed = collapsedGroups.has(grp.passageId);
-
-                  return (
-                    <div
-                      key={grp.passageId || gi}
-                      className="border border-blue-200 bg-blue-50 rounded p-3 shadow-sm"
-                    >
-                      <div className="flex justify-between items-center">
-                        <h5
-                          className="font-semibold text-blue-800 cursor-pointer"
-                          onClick={() => toggleGroup(grp.passageId)}
-                        >
-                          📘 Passage {passage?.metadata?.topic || grp.passageId}
-                        </h5>
-                        <button
-                          onClick={() => toggleGroup(grp.passageId)}
-                          className="text-xs text-blue-600 underline"
-                        >
-                          {isCollapsed ? "Expand" : "Collapse"}
-                        </button>
-                      </div>
-
-                      {!isCollapsed && (
-                        <>
-                          <p className="text-sm text-gray-800 whitespace-pre-line mt-1 mb-3">
-                            {passage?.stem || "(passage text unavailable)"}
-                          </p>
-
-                          <div className="ml-3 border-l-4 border-blue-300 pl-3 space-y-2">
-                            {grp.subResponses.map((r, i) => (
-                              <div
-                                key={i}
-                                className="p-2 bg-white border rounded shadow-sm"
-                              >
-                                <div className="text-sm text-gray-700">
-                                  <strong>Q:</strong> {r.questionId}{" "}
-                                  <span className="text-gray-500 ml-1">
-                                    {new Date(r.timestamp).toLocaleString()}
-                                  </span>
-                                </div>
-                                <div className="text-gray-800">
-                                  <strong>Answer:</strong>{" "}
-                                  {r.rawAnswer ||
-                                    r.rubricLevel ||
-                                    r.scoredValue ||
-                                    "(none)"}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      )}
+                return (
+                  <div
+                    key={grp.passageId || gi}
+                    className="border border-blue-200 bg-blue-50 rounded p-3 shadow-sm"
+                  >
+                    <div className="flex justify-between items-center">
+                      <h5
+                        className="font-semibold text-blue-800 cursor-pointer"
+                        onClick={() => toggleResponseGroup(grp.passageId)}
+                      >
+                        📘 Passage {passage?.metadata?.topic || grp.passageId}
+                      </h5>
+                      <button
+                        type="button"
+                        onClick={() => toggleResponseGroup(grp.passageId)}
+                        className="text-xs text-blue-600 underline"
+                      >
+                        {isCollapsed ? "Expand" : "Collapse"}
+                      </button>
                     </div>
-                  );
-                })}
 
-                {/* 🔹 Non-reading responses */}
-                {others.length > 0 && (
-                  <div className="border border-gray-200 rounded p-3 bg-white shadow-sm">
-                    <h5 className="font-semibold mb-1 text-gray-800">
-                      Other Responses
-                    </h5>
-                    <ul className="list-disc ml-5 text-sm">
-                      {others.map((r, i) => (
-                        <li key={i} className="text-gray-700">
-                          <strong>Q:</strong> {r.questionId} —{" "}
-                          {r.rawAnswer ||
-                            r.rubricLevel ||
-                            r.scoredValue ||
-                            "(none)"}
-                        </li>
-                      ))}
-                    </ul>
+                    {!isCollapsed && (
+                      <>
+                        <p className="text-sm text-gray-800 whitespace-pre-line mt-1 mb-3">
+                          {passage?.stem || "(passage text unavailable)"}
+                        </p>
+
+                        <div className="ml-3 border-l-4 border-blue-300 pl-3 space-y-2">
+                          {grp.subResponses.map((r, i) => (
+                            <div
+                              key={i}
+                              className="p-2 bg-white border rounded shadow-sm"
+                            >
+                              <div className="text-sm text-gray-700">
+                                <strong>Q:</strong> {r.questionId}{" "}
+                                <span className="text-gray-500 ml-1">
+                                  {new Date(r.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="text-gray-800">
+                                <strong>Answer:</strong>{" "}
+                                {r.rawAnswer ||
+                                  r.rubricLevel ||
+                                  r.scoredValue ||
+                                  "(none)"}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })()
+                );
+              })}
+
+              {otherResponses.length > 0 && (
+                <div className="border border-gray-200 rounded p-3 bg-white shadow-sm">
+                  <h5 className="font-semibold mb-1 text-gray-800">
+                    Other Responses
+                  </h5>
+                  <ul className="list-disc ml-5 text-sm">
+                    {otherResponses.map((r, i) => (
+                      <li key={i} className="text-gray-700">
+                        <strong>Q:</strong> {r.questionId} —{" "}
+                        {r.rawAnswer ||
+                          r.rubricLevel ||
+                          r.scoredValue ||
+                          "(none)"}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )
         ) : (
           <>
             {session?.responses?.length ? (
