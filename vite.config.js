@@ -14,6 +14,39 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"), // 👈 add this
     },
   },
+  build: {
+    // D74: keep the Vite >500 kB warning meaningful — do not raise the
+    // limit; split heavy vendors so route chunks stay under it.
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("recharts") || id.includes("/d3-")) return "recharts";
+          if (
+            id.includes("reactflow") ||
+            id.includes("@reactflow") ||
+            id.includes("/dagre/")
+          ) {
+            return "reactflow";
+          }
+          if (id.includes("framer-motion")) return "framer-motion";
+          if (id.includes("mathjs")) return "mathjs";
+          if (id.includes("lucide-react")) return "lucide";
+          if (id.includes("@radix-ui")) return "radix";
+          if (id.includes("@tanstack")) return "query";
+          if (id.includes("@dnd-kit")) return "dnd";
+          if (
+            id.includes("react-dom") ||
+            id.includes("react-router") ||
+            id.includes("/react/") ||
+            id.includes("\\react\\")
+          ) {
+            return "react-vendor";
+          }
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

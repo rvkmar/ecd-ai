@@ -4,9 +4,15 @@ import { apiFetch } from "../api/apiClient";
 import toast from "react-hot-toast";
 
 import RoleWorkbench from "../components/ui/RoleWorkbench";
-import StudentSessionList from "../components/sessions/StudentSessionList";
-import StudentSessionReports from "../components/sessions/StudentSessionReports";
+import { lazyPanel } from "@/components/ui/lazyPanel";
 import { homeWorkbenchGroup } from "@/components/home/homeWorkbenchGroup";
+
+const StudentSessionList = lazyPanel(() =>
+  import("../components/sessions/StudentSessionList")
+);
+const StudentSessionReports = lazyPanel(() =>
+  import("../components/sessions/StudentSessionReports")
+);
 
 export default function StudentDashboard() {
   const { auth, logout } = useAuth();

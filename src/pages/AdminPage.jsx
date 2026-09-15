@@ -1,5 +1,6 @@
 // src/pages/AdminPage.jsx
 // D73b/D73c: Admin chrome follows PADI TR9 layers via RoleWorkbench.
+// D74: tab panels are lazy so opening Admin does not download every wizard.
 
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
@@ -7,20 +8,43 @@ import { apiFetch } from "../api/apiClient";
 import Spinner from "../components/ui/Spinner";
 import toast from "react-hot-toast";
 import RoleWorkbench from "@/components/ui/RoleWorkbench";
-
-import ItemBankAdmin from "@/components/itemBank/ItemBankAdmin";
-import CompetencyModelBuilder from "@/components/competencies/CompetencyModelBuilder";
-import EvidenceModelBuilder from "@/components/evidences/EvidenceModelBuilder";
-import TaskModelBuilder from "@/components/taskModels/TaskModelBuilder";
-import QMatrixModelBuilder from "@/components/qMatrix/QMatrixModelBuilder";
-import CalibrationConsole from "@/components/calibration/CalibrationConsole";
-import AssemblyModelBuilder from "@/components/assemblyModels/AssemblyModelBuilder";
-import AnalyticsReports from "@/components/reports/AnalyticsReports";
-import SessionBuilder from "@/components/sessions/SessionBuilder";
-import TasksManager from "@/components/tasks/TasksManager";
-import EvidenceAccumulationInspector from "@/components/delivery/EvidenceAccumulationInspector";
-import PresentationModelStub from "@/components/delivery/PresentationModelStub";
+import { lazyPanel } from "@/components/ui/lazyPanel";
 import { homeWorkbenchGroup } from "@/components/home/homeWorkbenchGroup";
+
+const ItemBankAdmin = lazyPanel(() =>
+  import("@/components/itemBank/ItemBankAdmin")
+);
+const CompetencyModelBuilder = lazyPanel(() =>
+  import("@/components/competencies/CompetencyModelBuilder")
+);
+const EvidenceModelBuilder = lazyPanel(() =>
+  import("@/components/evidences/EvidenceModelBuilder")
+);
+const TaskModelBuilder = lazyPanel(() =>
+  import("@/components/taskModels/TaskModelBuilder")
+);
+const QMatrixModelBuilder = lazyPanel(() =>
+  import("@/components/qMatrix/QMatrixModelBuilder")
+);
+const CalibrationConsole = lazyPanel(() =>
+  import("@/components/calibration/CalibrationConsole")
+);
+const AssemblyModelBuilder = lazyPanel(() =>
+  import("@/components/assemblyModels/AssemblyModelBuilder")
+);
+const AnalyticsReports = lazyPanel(() =>
+  import("@/components/reports/AnalyticsReports")
+);
+const SessionBuilder = lazyPanel(() =>
+  import("@/components/sessions/SessionBuilder")
+);
+const TasksManager = lazyPanel(() => import("@/components/tasks/TasksManager"));
+const EvidenceAccumulationInspector = lazyPanel(() =>
+  import("@/components/delivery/EvidenceAccumulationInspector")
+);
+const PresentationModelStub = lazyPanel(() =>
+  import("@/components/delivery/PresentationModelStub")
+);
 
 export default function AdminPage() {
   const { auth, logout } = useAuth();

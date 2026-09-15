@@ -3,13 +3,24 @@ import { useAuth } from "../auth/AuthProvider";
 import { apiFetch } from "../api/apiClient";
 import RoleWorkbench from "../components/ui/RoleWorkbench";
 import toast from "react-hot-toast";
-
-import ItemBankAdmin from "@/components/itemBank/ItemBankAdmin";
-import TasksManager from "../components/tasks/TasksManager";
-import SessionBuilder from "../components/sessions/SessionBuilder";
-import AnalyticsReports from "../components/reports/AnalyticsReports";
-import EvidenceAccumulationInspector from "@/components/delivery/EvidenceAccumulationInspector";
+import { lazyPanel } from "@/components/ui/lazyPanel";
 import { homeWorkbenchGroup } from "@/components/home/homeWorkbenchGroup";
+
+const ItemBankAdmin = lazyPanel(() =>
+  import("@/components/itemBank/ItemBankAdmin")
+);
+const TasksManager = lazyPanel(() =>
+  import("../components/tasks/TasksManager")
+);
+const SessionBuilder = lazyPanel(() =>
+  import("../components/sessions/SessionBuilder")
+);
+const AnalyticsReports = lazyPanel(() =>
+  import("../components/reports/AnalyticsReports")
+);
+const EvidenceAccumulationInspector = lazyPanel(() =>
+  import("@/components/delivery/EvidenceAccumulationInspector")
+);
 
 export default function TeacherDashboard() {
   const { auth, logout } = useAuth();

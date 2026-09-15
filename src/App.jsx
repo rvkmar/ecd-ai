@@ -1,35 +1,55 @@
 // src/App.jsx
-import React from "react";
+import React, { Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 
 import { AuthProvider } from "./auth/AuthProvider";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import TopBar from "./components/ui/TopBar";
-import LoginPage from "./pages/LoginPage";
-
-// New imports for dashboards
-import AdminPage from "./pages/AdminPage";
-import SettingsPage from "./pages/SettingsPage";
-import CalibrationConsolePage from "./pages/CalibrationConsolePage";
-import DistrictDashboard from "./pages/DistrictDashboard";
-import TeacherDashboard from "./pages/TeacherDashboard";
-import StudentDashboard from "./pages/StudentDashboard";
-
-// Existing feature pages
-import ItemBankAdmin from "./components/itemBank/ItemBankAdmin";
-import CompetencyModelBuilder from "./components/competencies/CompetencyModelBuilder";
-import EvidenceModelBuilder from "./components/evidences/EvidenceModelBuilder";
-import TaskModelBuilder from "./components/taskModels/TaskModelBuilder";
-import QMatrixModelBuilder from "./components/qMatrix/QMatrixModelBuilder";
-import AssemblyModelBuilder from "./components/assemblyModels/AssemblyModelBuilder";
-import TasksManager from "./components/tasks/TasksManager";
-import SessionBuilder from "./components/sessions/SessionBuilder";
-import SessionPlayer from "./components/sessions/SessionPlayer";
-import SessionPlayRedirect from "./components/sessions/SessionPlayRedirect";
-
 import Footer from "./components/ui/Footer";
-// import NavBar from "./components/ui/NavBar";
+import Spinner from "./components/ui/Spinner";
+import { lazyPanel } from "./components/ui/lazyPanel";
+
+// D74: route-level code splitting. Eager shell (auth, chrome, login) stays
+// in the entry chunk; role workspaces and builders load on demand.
+const LoginPage = lazyPanel(() => import("./pages/LoginPage"));
+const AdminPage = lazyPanel(() => import("./pages/AdminPage"));
+const SettingsPage = lazyPanel(() => import("./pages/SettingsPage"));
+const CalibrationConsolePage = lazyPanel(() =>
+  import("./pages/CalibrationConsolePage")
+);
+const DistrictDashboard = lazyPanel(() => import("./pages/DistrictDashboard"));
+const TeacherDashboard = lazyPanel(() => import("./pages/TeacherDashboard"));
+const StudentDashboard = lazyPanel(() => import("./pages/StudentDashboard"));
+
+const ItemBankAdmin = lazyPanel(() =>
+  import("./components/itemBank/ItemBankAdmin")
+);
+const CompetencyModelBuilder = lazyPanel(() =>
+  import("./components/competencies/CompetencyModelBuilder")
+);
+const EvidenceModelBuilder = lazyPanel(() =>
+  import("./components/evidences/EvidenceModelBuilder")
+);
+const TaskModelBuilder = lazyPanel(() =>
+  import("./components/taskModels/TaskModelBuilder")
+);
+const QMatrixModelBuilder = lazyPanel(() =>
+  import("./components/qMatrix/QMatrixModelBuilder")
+);
+const AssemblyModelBuilder = lazyPanel(() =>
+  import("./components/assemblyModels/AssemblyModelBuilder")
+);
+const TasksManager = lazyPanel(() => import("./components/tasks/TasksManager"));
+const SessionBuilder = lazyPanel(() =>
+  import("./components/sessions/SessionBuilder")
+);
+const SessionPlayer = lazyPanel(() =>
+  import("./components/sessions/SessionPlayer")
+);
+const SessionPlayRedirect = lazyPanel(() =>
+  import("./components/sessions/SessionPlayRedirect")
+);
 
 export default function App() {
   function EvidenceRoutes() {
@@ -84,6 +104,7 @@ export default function App() {
           />
 
         <div className="app-container">
+          <Suspense fallback={<Spinner />}>
           <Routes>
             {/* Public route */}
             <Route path="/login" element={<LoginPage />} />
@@ -216,6 +237,7 @@ export default function App() {
             {/* Default → landing/login */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
+          </Suspense>
         </div>
         <Footer />
       </AuthProvider>

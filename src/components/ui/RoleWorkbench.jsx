@@ -91,7 +91,9 @@ export default function RoleWorkbench({ title, subtitle, groups = [] }) {
                 </TabsList>
                 {g.tabs.map((t) => (
                   <TabsContent key={t.id} value={t.id} className={panelClass}>
-                    {t.content}
+                    {/* D74: only mount the active leaf so lazy tab panels
+                        do not fetch every builder on first paint. */}
+                    {groupId === g.id && tabId === t.id ? t.content : null}
                   </TabsContent>
                 ))}
               </Tabs>
