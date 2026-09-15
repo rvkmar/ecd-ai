@@ -1,6 +1,6 @@
 // src/components/itemBank/ItemBankAdmin.jsx
 // ------------------------------------------------------------
-// Item Bank admin shell.
+// Item Bank shell (Admin / District / Teacher).
 //
 // The three tabs were "Dashboard", "Item Bank Structure" and "Operate
 // Item" — the last two being two overlapping list views of the same
@@ -10,6 +10,10 @@
 // deliberately different lenses now — Structure reads, Authoring acts —
 // and Structure hands off to the authoring surface instead of navigating
 // to a route that does not exist.
+//
+// Authoring is gated by can(role, "edit", "items"): admin and district
+// author; teacher views Dashboard + Bank structure only (API writes are
+// already admin/district-only).
 // ------------------------------------------------------------
 
 import React, { useState } from "react";
@@ -18,6 +22,8 @@ import ItemList from "./ItemList";
 import ItemBuilder from "./ItemBuilder";
 import ItemWizard from "./ItemWizard/ItemWizard";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/auth/AuthProvider";
+import { can } from "@/config/rolePermissions";
 
 const TABS = [
   { key: "dashboard", label: "Dashboard" },
@@ -26,8 +32,12 @@ const TABS = [
 ];
 
 export default function ItemBankAdmin() {
+  const { auth } = useAuth() || {};
+  const canAuthor = can(auth?.role, "edit", "items");
+  const tabs = canAuthor ? TABS : TABS.filter((tab) => tab.key !== "authoring");
   const [view, setView] = useState("dashboard");
   const [inspecting, setInspecting] = useState(null);
+  const activeView = view === "authoring" && !canAuthor ? "dashboard" : view;
 
   // Opening an item from the structure table mounts the wizard directly
   // rather than routing. A locked item opens read-only; the wizard
@@ -41,10 +51,10 @@ export default function ItemBankAdmin() {
   return (
     <div className="space-y-8">
       <div className="flex gap-3 border-b pb-4">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <Button
             key={tab.key}
-            variant={view === tab.key ? "default" : "outline"}
+            variant={activeView === tab.key ? "default" : "outline"}
             onClick={() => setView(tab.key)}
           >
             {tab.label}
@@ -53,9 +63,9 @@ export default function ItemBankAdmin() {
       </div>
 
       <div>
-        {view === "dashboard" && <AdminDashboard />}
-        {view === "structure" && <ItemList onOpenItem={setInspecting} />}
-        {view === "authoring" && <ItemBuilder />}
+        {activeView === "dashboard" && <AdminDashboard />}
+        {activeView === "structure" && <ItemList onOpenItem={setInspecting} />}
+        {activeView === "authoring" && canAuthor && <ItemBuilder />}
       </div>
     </div>
   );

@@ -17,7 +17,7 @@ vi.mock("../../api/apiClient.js", () => ({
   apiErrorMessage: (e, fallback) => e?.message || fallback,
 }));
 
-vi.mock("@/components/questions/QuestionBankTabs", () => ({
+vi.mock("@/components/itemBank/ItemBankAdmin", () => ({
   default: () => <div>Item bank</div>,
 }));
 vi.mock("../../components/tasks/TasksManager", () => ({
@@ -54,6 +54,7 @@ describe("District and teacher RoleWorkbench (D73c)", () => {
     expect(screen.queryByRole("tab", { name: "Q-Matrix" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Calibration" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Models" })).not.toBeInTheDocument();
+    expect(screen.getByText("Item bank")).toBeInTheDocument();
   });
 
   it("teacher matches the same layers and can open Reports", async () => {

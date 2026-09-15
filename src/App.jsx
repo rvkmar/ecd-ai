@@ -17,8 +17,7 @@ import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 
 // Existing feature pages
-// import QuestionBank from "./components/questions/QuestionBank";
-import QuestionBankTabs from "./components/questions/QuestionBankTabs";
+import ItemBankAdmin from "./components/itemBank/ItemBankAdmin";
 import CompetencyModelBuilder from "./components/competencies/CompetencyModelBuilder";
 import EvidenceModelBuilder from "./components/evidences/EvidenceModelBuilder";
 import TaskModelBuilder from "./components/taskModels/TaskModelBuilder";
@@ -134,7 +133,7 @@ export default function App() {
                     {/* <Route path="evidence" element={<EvidenceModelBuilder />} /> */}
                     <Route path="evidence/*" element={<EvidenceRoutes />} />
                     <Route path="tasks" element={<TaskModelBuilder />} />
-                    <Route path="questions" element={<QuestionBankTabs />} />
+                    <Route path="questions" element={<ItemBankAdmin />} />
                     {/* Bookmark routes only. D73c: Q-matrix and calibration
                         are Admin Models surfaces, not district tabs. */}
                     <Route path="q-matrices" element={<QMatrixModelBuilder readOnly />} />

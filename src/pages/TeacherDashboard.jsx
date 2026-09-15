@@ -4,7 +4,7 @@ import { apiFetch } from "../api/apiClient";
 import RoleWorkbench from "../components/ui/RoleWorkbench";
 import toast from "react-hot-toast";
 
-import QuestionBankTabs from "@/components/questions/QuestionBankTabs";
+import ItemBankAdmin from "@/components/itemBank/ItemBankAdmin";
 import TasksManager from "../components/tasks/TasksManager";
 import SessionBuilder from "../components/sessions/SessionBuilder";
 import AnalyticsReports from "../components/reports/AnalyticsReports";
@@ -31,7 +31,7 @@ export default function TeacherDashboard() {
           id: "implementation",
           label: "Implementation",
           tabs: [
-            { id: "questions", label: "Item Bank", content: <QuestionBankTabs /> },
+            { id: "itembank", label: "Item Bank", content: <ItemBankAdmin /> },
             { id: "activities", label: "Activities", content: <TasksManager /> },
           ],
         },
