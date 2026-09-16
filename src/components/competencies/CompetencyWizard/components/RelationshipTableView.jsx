@@ -9,6 +9,7 @@
 
 import React, { useMemo, useState, useCallback } from "react";
 import { Plus, Trash2, AlertTriangle } from "lucide-react";
+import { relationshipAdvisories } from "@/utils/studentModelAudit";
 
 const REL_TYPES = [
     { value: "part-of", label: "Part-of" },
@@ -249,10 +250,22 @@ export default function RelationshipTableView({
             </div>
 
             {/* Governance */}
-            <div className="border-t border-slate-100 pt-4 text-xs text-slate-500">
-                <strong className="text-slate-600">Note:</strong> Structural relationships influence inferential
-                modeling. Cyclic prerequisite structures will be rejected during
-                confirmation.
+            <div className="border-t border-slate-100 pt-4 text-xs text-slate-500 space-y-2">
+                <p>
+                    <strong className="text-slate-600">Note:</strong> Structural
+                    relationships influence inferential modeling. Cyclic prerequisite
+                    structures will be rejected during confirmation. Multidimensional
+                    models require at least three relationships.
+                </p>
+                {relationshipAdvisories(competencies).map((text, i) => (
+                    <div
+                        key={i}
+                        className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900"
+                    >
+                        <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                        <span>{text}</span>
+                    </div>
+                ))}
             </div>
         </div>
     );

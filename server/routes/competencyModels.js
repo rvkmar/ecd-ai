@@ -8,6 +8,8 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
+import { syncSmVariablesFromCompetencies, buildStudentModelSpecification } from "../../src/utils/smVariableSync.js";
+import { computeStructuralAudit } from "../../src/utils/studentModelAudit.js";
 
 const router = express.Router();
 
@@ -70,6 +72,10 @@ function createCompetencyModelRecord(payload = {}, db, idSuffix = "") {
     description: payload.description || "",
     measurementIntent: payload.measurementIntent || "",
     constructFramework: payload.constructFramework || {},
+    // TR9 §2.3.1 — claim stance + SMV distribution. Previously dropped on
+    // create, which made the schema fields unreachable from bulk/POST.
+    psychologicalPerspective: payload.psychologicalPerspective || undefined,
+    smVariables: Array.isArray(payload.smVariables) ? payload.smVariables : [],
 
     status: "draft",
     locked: false,
@@ -224,7 +230,7 @@ router.put("/models/:id", canAuthor, (req, res) => {
 /* =====================================================
    🔹 CONFIRM MODEL (STRICT STRUCTURAL VALIDATION)
 ===================================================== */
-router.post("/models/:id/confirm", canAuthor, (req, res) => {
+router.post("/models/:id/confirm", authorizeRole(["admin", "district"]), (req, res) => {
   const db = loadDB();
   const model = db.competencyModels?.find(m => m.id === req.params.id);
 
@@ -253,15 +259,58 @@ router.post("/models/:id/confirm", canAuthor, (req, res) => {
     });
   }
 
+  // TR9 §2.3.1 — freeze SMVs from competencies before validation.
+  model.smVariables = syncSmVariablesFromCompetencies(
+    relatedCompetencies,
+    model.smVariables || []
+  );
+
+  const audit = computeStructuralAudit({
+    model,
+    competencies: relatedCompetencies,
+  });
+  if (!audit.allPassed) {
+    return res.status(400).json({
+      error: "Structural audit failed. Resolve checklist items before confirmation.",
+      checks: audit.checks,
+      advisories: audit.advisories,
+    });
+  }
+
+  // Two-person gate: submitter (reviewed) ≠ confirmer, unless an admin
+  // explicitly acknowledges same-author confirmation for solo lab use.
+  const submitter = model.reviewMeta?.submittedBy || null;
+  const confirmer = req.user?.username || null;
+  const sameAuthor = submitter && confirmer && submitter === confirmer;
+  const acknowledgeSameAuthor = req.body?.acknowledgeSameAuthor === true;
+  const sameAuthorReason =
+    typeof req.body?.sameAuthorReason === "string"
+      ? req.body.sameAuthorReason.trim()
+      : "";
+
+  if (sameAuthor) {
+    if (req.user?.role !== "admin" || !acknowledgeSameAuthor || sameAuthorReason.length < 10) {
+      return res.status(409).json({
+        error:
+          "Confirmer must differ from the reviewer who submitted this model. An admin may confirm their own submission only with acknowledgeSameAuthor and a sameAuthorReason (≥10 chars).",
+        submitter,
+        confirmer,
+      });
+    }
+  }
+
   // Validate model itself
-  const modelValidation = validateEntity("competencyModels", model, db);
+  const modelValidation = validateEntity("competencyModels", model, db, {
+    strict: true,
+    requireCafCompleteness: true,
+  });
   if (!modelValidation.valid) {
     return res.status(400).json({ errors: modelValidation.errors });
   }
 
   // Validate every competency strictly
   for (const comp of relatedCompetencies) {
-    const compValidation = validateEntity("competencies", comp, db);
+    const compValidation = validateEntity("competencies", comp, db, { strict: true });
     if (!compValidation.valid) {
       return res.status(400).json({
         error: `Competency validation failed for '${comp.name}'`,
@@ -270,9 +319,21 @@ router.post("/models/:id/confirm", canAuthor, (req, res) => {
     }
   }
 
+  const now = new Date().toISOString();
   model.status = "confirmed";
   model.locked = true;
-  model.updatedAt = new Date().toISOString();
+  model.updatedAt = now;
+  model.confirmMeta = {
+    ...(model.confirmMeta || {}),
+    confirmedAt: now,
+    confirmedBy: confirmer,
+    acknowledgeSameAuthor: sameAuthor ? true : false,
+    sameAuthorReason: sameAuthor ? sameAuthorReason : undefined,
+  };
+  model.specification = buildStudentModelSpecification({
+    model,
+    competencies: relatedCompetencies,
+  });
 
   saveDB(db);
   res.json(model);
@@ -356,9 +417,23 @@ router.patch("/models/:id/lifecycle", canAuthor, (req, res) => {
     model.reviewMeta = {
       ...(model.reviewMeta || {}),
       ...(nextStatus === "reviewed"
-        ? { submittedForReviewAt: now }
-        : { returnedToDraftAt: now }),
+        ? {
+            submittedForReviewAt: now,
+            submittedBy: req.user?.username || null,
+          }
+        : {
+            returnedToDraftAt: now,
+            returnedBy: req.user?.username || null,
+          }),
     };
+    // Keep SMVs aligned whenever a model enters review.
+    if (nextStatus === "reviewed") {
+      const related = (db.competencies || []).filter((c) => c.modelId === model.id);
+      model.smVariables = syncSmVariablesFromCompetencies(
+        related,
+        model.smVariables || []
+      );
+    }
     model.updatedAt = now;
     saveDB(db);
   }

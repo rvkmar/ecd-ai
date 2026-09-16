@@ -4331,13 +4331,36 @@ export function validateEntity(collection, obj, db = null, options = {}) {
     /* ---------------------------------------------------
        PHASE 6 — STEP 6
        STUDENT MODEL VARIABLES (SMVs)
-       Optional at every status (see the `smVariables` field comment
-       above) -- these checks validate the SHAPE of entries that ARE
-       present, they never require the array to be non-empty. This runs
-       unconditionally (not gated by `strict`) because, unlike wizard
-       step completeness, a malformed SMV that IS authored is wrong at
-       every status, not just at confirm time.
+       Optional at draft. When requireCafCompleteness is set
+       (confirm path), psychologicalPerspective and a non-empty
+       smVariables vector are required — TR9 §2.3.1.
     --------------------------------------------------- */
+
+    if (options.requireCafCompleteness) {
+      if (!PSYCHOLOGICAL_PERSPECTIVE_VALUES.includes(obj.psychologicalPerspective)) {
+        errors.push(
+          `psychologicalPerspective is required at confirmation. Must be one of: ${PSYCHOLOGICAL_PERSPECTIVE_VALUES.join(", ")}.`
+        );
+      }
+      if (!Array.isArray(obj.smVariables) || obj.smVariables.length === 0) {
+        errors.push(
+          "smVariables must be a non-empty array at confirmation (TR9 Student Model Variables)."
+        );
+      }
+      const fw = obj.constructFramework || {};
+      const grounded =
+        (fw.ungroundedWaiver === true &&
+          typeof fw.ungroundedReason === "string" &&
+          fw.ungroundedReason.trim().length >= 10) ||
+        (fw.policyId &&
+          Array.isArray(fw.curricularGoalCodes) &&
+          fw.curricularGoalCodes.length > 0);
+      if (!grounded) {
+        errors.push(
+          "Construct framework must cite a curricular policy with ≥1 goal, or set ungroundedWaiver with ungroundedReason (≥10 chars)."
+        );
+      }
+    }
 
     if (obj.psychologicalPerspective !== undefined && obj.psychologicalPerspective !== null) {
       if (!PSYCHOLOGICAL_PERSPECTIVE_VALUES.includes(obj.psychologicalPerspective)) {
@@ -4386,24 +4409,36 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           }
         } else if (smv.type === "binary" || smv.type === "ordinal" || smv.type === "categorical") {
           const states = scale.states;
-          if (!Array.isArray(states) || new Set(states).size !== states.length) {
+          // Draft authoring may sync SMVs before Step 5 fills states.
+          // Completeness is enforced at confirmation via requireCafCompleteness
+          // and computeStructuralAudit.
+          if (states !== undefined && states !== null) {
+            if (!Array.isArray(states) || new Set(states).size !== states.length) {
+              errors.push(`${tag} (${smv.type}) requires scale.states as an array of unique values.`);
+            } else if (smv.type === "binary" && states.length !== 2) {
+              errors.push(`${tag} (binary) requires exactly 2 scale.states.`);
+            } else if (smv.type !== "binary" && states.length < 2) {
+              errors.push(`${tag} (${smv.type}) requires at least 2 scale.states.`);
+            }
+          } else if (options.requireCafCompleteness) {
             errors.push(`${tag} (${smv.type}) requires scale.states as an array of unique values.`);
-          } else if (smv.type === "binary" && states.length !== 2) {
-            errors.push(`${tag} (binary) requires exactly 2 scale.states.`);
-          } else if (smv.type !== "binary" && states.length < 2) {
-            errors.push(`${tag} (${smv.type}) requires at least 2 scale.states.`);
           }
         }
 
         const prior = smv.priorDistribution;
-        if (!prior || typeof prior !== "object" || !prior.family) {
+        if (prior && typeof prior === "object" && prior.family) {
+          if (smv.type && !isPriorFamilyCompatible(smv.type, prior.family)) {
+            errors.push(
+              `${tag} (${smv.type}) has incompatible priorDistribution.family '${prior.family}'. Allowed: ${priorFamiliesForSmVariableType(smv.type).join(", ")}.`
+            );
+          } else if (!priorDistributionParamsAreValid(prior.family, prior.params)) {
+            // Soft on draft: dirichlet alpha length may lag states until Step 5.
+            if (options.requireCafCompleteness || prior.family !== "dirichlet") {
+              errors.push(`${tag} has invalid priorDistribution.params for family '${prior.family}'.`);
+            }
+          }
+        } else if (options.requireCafCompleteness) {
           errors.push(`${tag} requires a priorDistribution with a family.`);
-        } else if (smv.type && !isPriorFamilyCompatible(smv.type, prior.family)) {
-          errors.push(
-            `${tag} (${smv.type}) has incompatible priorDistribution.family '${prior.family}'. Allowed: ${priorFamiliesForSmVariableType(smv.type).join(", ")}.`
-          );
-        } else if (!priorDistributionParamsAreValid(prior.family, prior.params)) {
-          errors.push(`${tag} has invalid priorDistribution.params for family '${prior.family}'.`);
         }
       });
     }

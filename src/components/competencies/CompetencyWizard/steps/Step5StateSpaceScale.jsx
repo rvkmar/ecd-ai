@@ -13,6 +13,7 @@ import StateEditorBinary from "../components/StateEditorBinary";
 import StateEditorOrdinal from "../components/StateEditorOrdinal";
 import StateEditorCategorical from "../components/StateEditorCategorical";
 import ContinuousScaleEditor from "../components/ContinuousScaleEditor";
+import PriorDistributionEditor from "../components/PriorDistributionEditor";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, ChevronDown, ChevronUp, Info } from "lucide-react";
 
@@ -275,6 +276,11 @@ export default function Step5StateSpaceScale() {
                         renderStateEditor={renderStateEditor}
                     />
                 ))}
+            </div>
+
+            {/* PRIOR DISTRIBUTIONS */}
+            <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-5">
+                <PriorDistributionEditor />
             </div>
 
             {/* GOVERNANCE NOTE */}

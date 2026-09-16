@@ -1,20 +1,26 @@
 // CompetencyWizard/steps/Step9Confirmation.jsx
-// Step 9 — Confirmation & Lock (Lifecycle Clean Refactor)
-// WizardStepContainer controls Save Draft + Lock & Confirm
-// This step now focuses ONLY on review + acknowledgment
-
 import React, { useState } from "react";
-import { CheckCircle2, AlertTriangle, Info, Archive } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Info, Archive, Download } from "lucide-react";
 import { useCompetencyWizard } from "../CompetencyWizardContext";
+import { useAuth } from "@/auth/AuthProvider";
 import CompetencyPreviewPanel from "../components/CompetencyPreviewPanel";
 import VersionHistoryViewer from "../components/VersionHistoryViewer";
 import CloneModelDialog from "../components/CloneModelDialog";
 import Modal from "@/components/ui/Modal";
 import { canArchiveCompetencyModel, isLinkableCompetencyModel } from "@/utils/schema";
+import { buildStudentModelSpecification } from "../smVariableSync";
 
 export default function Step9Confirmation() {
-    const { model, competencies, cloneModel, archiveModel, allModels } =
-        useCompetencyWizard();
+    const {
+        model,
+        competencies,
+        cloneModel,
+        archiveModel,
+        allModels,
+        confirmAck,
+        setConfirmAck,
+    } = useCompetencyWizard();
+    const { auth } = useAuth() || {};
 
     const [cloneOpen, setCloneOpen] = useState(false);
     const [archiveOpen, setArchiveOpen] = useState(false);
@@ -24,9 +30,30 @@ export default function Step9Confirmation() {
         setCloneOpen(false);
     }
 
-    /* =====================================================
-       LOCKED VIEW
-    ===================================================== */
+    function downloadSpecification() {
+        const spec =
+            model?.specification ||
+            buildStudentModelSpecification({ model, competencies });
+        const blob = new Blob([JSON.stringify(spec, null, 2)], {
+            type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${(model?.name || "student-model")
+            .replace(/[^\w\-]+/g, "_")
+            .slice(0, 60)}_specification.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    const submitter = model?.reviewMeta?.submittedBy;
+    const sameAuthor =
+        model?.status === "reviewed" &&
+        submitter &&
+        auth?.username &&
+        submitter === auth.username;
+
     if (model?.locked) {
         const archived = model.status === "archived";
         return (
@@ -54,6 +81,14 @@ export default function Step9Confirmation() {
                         </p>
 
                         <div className="mt-4 flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={downloadSpecification}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                            >
+                                <Download size={14} strokeWidth={2} />
+                                Download specification
+                            </button>
                             {isLinkableCompetencyModel(model) && (
                                 <button
                                     type="button"
@@ -102,9 +137,6 @@ export default function Step9Confirmation() {
         );
     }
 
-    /* =====================================================
-       DRAFT REVIEW VIEW
-    ===================================================== */
     return (
         <div className="space-y-6">
             <div>
@@ -118,7 +150,6 @@ export default function Step9Confirmation() {
                 </p>
             </div>
 
-            {/* Structural Preview */}
             <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
                 <CompetencyPreviewPanel
                     model={model}
@@ -126,22 +157,72 @@ export default function Step9Confirmation() {
                 />
             </div>
 
-            {/* Consequences List */}
+            {model?.status === "reviewed" && (
+                <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700 space-y-2">
+                    <div>
+                        <strong>Submitted for review by:</strong>{" "}
+                        {submitter || "—"}
+                    </div>
+                    <div>
+                        <strong>Confirming as:</strong> {auth?.username || "—"} (
+                        {auth?.role || "—"})
+                    </div>
+                    {sameAuthor && (
+                        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2 text-amber-900">
+                            <p>
+                                You submitted this model for review. Enterprise
+                                practice prefers a different confirmer (e.g.
+                                district). Admins may confirm their own
+                                submission only with an explicit acknowledgment.
+                            </p>
+                            <label className="flex items-start gap-2">
+                                <input
+                                    type="checkbox"
+                                    className="mt-1"
+                                    checked={confirmAck.acknowledgeSameAuthor}
+                                    onChange={(e) =>
+                                        setConfirmAck((prev) => ({
+                                            ...prev,
+                                            acknowledgeSameAuthor: e.target.checked,
+                                        }))
+                                    }
+                                />
+                                <span>
+                                    I acknowledge same-author confirmation for this
+                                    lab / solo environment.
+                                </span>
+                            </label>
+                            <textarea
+                                rows={2}
+                                value={confirmAck.sameAuthorReason}
+                                onChange={(e) =>
+                                    setConfirmAck((prev) => ({
+                                        ...prev,
+                                        sameAuthorReason: e.target.value,
+                                    }))
+                                }
+                                placeholder="Reason (≥10 characters)"
+                                className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm"
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+
             <div className="space-y-3">
                 <div className="text-sm font-semibold text-slate-800">
                     After confirmation:
                 </div>
-
                 <ul className="list-disc pl-6 space-y-1 text-sm text-slate-700">
                     <li>Dimensionality cannot be changed</li>
                     <li>Latent variables cannot be added or removed</li>
                     <li>State space definitions cannot be altered</li>
                     <li>Structural relationships become immutable</li>
+                    <li>A governed specification JSON is frozen on the model</li>
                     <li>Evidence Models may reference this model</li>
                 </ul>
             </div>
 
-            {/* Warning Panel */}
             <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-800">
                 <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
                 <p>
@@ -151,7 +232,6 @@ export default function Step9Confirmation() {
                 </p>
             </div>
 
-            {/* Governance Panel */}
             <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm text-blue-800">
                 <Info size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
                 <p>
@@ -162,7 +242,6 @@ export default function Step9Confirmation() {
                 </p>
             </div>
 
-            {/* Version History */}
             <VersionHistoryViewer
                 currentModel={model}
                 allModels={allModels || []}

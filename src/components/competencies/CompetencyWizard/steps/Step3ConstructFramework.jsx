@@ -344,6 +344,43 @@ export default function Step3ConstructFramework() {
         </div>
       )}
 
+      {/* Explicit ungrounded waiver (enterprise) */}
+      <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 space-y-3">
+        <label className="flex items-start gap-3 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="mt-1"
+            disabled={isLocked}
+            checked={framework.ungroundedWaiver === true}
+            onChange={(e) => {
+              patchConstructFramework({
+                ungroundedWaiver: e.target.checked,
+                ungroundedReason: e.target.checked
+                  ? framework.ungroundedReason || ""
+                  : "",
+              });
+            }}
+          />
+          <span>
+            <strong className="font-semibold">Ungrounded waiver</strong> — no
+            curricular policy is available yet. Required for confirmation when
+            Policy Name / goals are empty (document why).
+          </span>
+        </label>
+        {framework.ungroundedWaiver === true && (
+          <textarea
+            value={framework.ungroundedReason || ""}
+            disabled={isLocked}
+            onChange={(e) =>
+              updateConstructFramework("ungroundedReason", e.target.value)
+            }
+            rows={3}
+            placeholder="Explain why this Student Model is authored without a curricular policy (≥10 characters)."
+            className="w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm"
+          />
+        )}
+      </div>
+
       {/* Informational Panel */}
       <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm text-blue-800">
         <Info size={16} strokeWidth={2} className="mt-0.5 shrink-0" />

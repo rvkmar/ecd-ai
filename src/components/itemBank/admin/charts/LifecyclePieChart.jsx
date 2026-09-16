@@ -26,12 +26,27 @@ export default function LifecyclePieChart({ lifecycleStats = {} }) {
     ===================================================== */
 
     const data = useMemo(() => {
-        return Object.entries(lifecycleStats)
-            .map(([status, count]) => ({
+        const order = [
+            "draft",
+            "reviewed",
+            "confirmed",
+            "operational",
+            "suspended",
+            "archived",
+        ];
+        const entries = Object.entries(lifecycleStats);
+        const known = new Set(order);
+        const ordered = order
+            .map((status) => ({
                 name: status,
-                value: count,
+                value: lifecycleStats[status] || 0,
             }))
             .filter((entry) => entry.value > 0);
+        const extras = entries
+            .filter(([status]) => !known.has(status))
+            .map(([status, count]) => ({ name: status, value: count }))
+            .filter((entry) => entry.value > 0);
+        return [...ordered, ...extras];
     }, [lifecycleStats]);
 
     const total = useMemo(() => {
@@ -66,7 +81,8 @@ export default function LifecyclePieChart({ lifecycleStats = {} }) {
                     Lifecycle Distribution
                 </h3>
                 <p className="text-sm text-gray-500">
-                    Distribution of items across lifecycle stages.
+                    Distribution of Student Models across lifecycle stages
+                    (draft → reviewed → confirmed → operational / archived).
                 </p>
             </div>
 

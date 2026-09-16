@@ -25,6 +25,8 @@ import {
   useCompetencyModels,
 } from "@/api/queries/competencies";
 import { computeStructuralAudit } from "./structuralAudit";
+import { syncSmVariablesFromCompetencies } from "./smVariableSync";
+import { PSYCHOLOGICAL_PERSPECTIVE_VALUES } from "@/utils/ecdVocabulary";
 
 const CompetencyWizardContext = createContext(null);
 
@@ -52,6 +54,11 @@ export function CompetencyWizardProvider({
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
+  const [confirmAck, setConfirmAck] = useState({
+    acknowledgeSameAuthor: false,
+    sameAuthorReason: "",
+  });
+
   const { auth } = useAuth() || {};
   const queryClient = useQueryClient();
 
@@ -72,7 +79,9 @@ export function CompetencyWizardProvider({
           name: "",
           description: "",
           measurementIntent: "",
+          psychologicalPerspective: "",
           constructFramework: {},
+          smVariables: [],
           status: "draft",
           locked: false,
         });
@@ -84,8 +93,15 @@ export function CompetencyWizardProvider({
 
       try {
         const data = await apiFetch(`/api/competencies/models/${modelId}`, {}, auth);
-        setModel(data);
-        setCompetencies(data.competencies || []);
+        const loadedCompetencies = data.competencies || [];
+        setCompetencies(loadedCompetencies);
+        setModel({
+          ...data,
+          smVariables: syncSmVariablesFromCompetencies(
+            loadedCompetencies,
+            data.smVariables || []
+          ),
+        });
         setIsDirty(false);
       } catch {
         toast.error("Failed to load model.");
@@ -111,6 +127,32 @@ export function CompetencyWizardProvider({
   function updateModelField(field, value) {
     if (model?.locked) return;
     setModel((prev) => ({ ...prev, [field]: value }));
+    markDirty();
+  }
+
+  function setCompetenciesAndSync(nextCompetencies) {
+    setCompetencies(nextCompetencies);
+    setModel((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        smVariables: syncSmVariablesFromCompetencies(
+          nextCompetencies,
+          prev.smVariables || []
+        ),
+      };
+    });
+    markDirty();
+  }
+
+  function updateSmVariablePrior(smvId, priorDistribution) {
+    if (model?.locked) return;
+    setModel((prev) => ({
+      ...prev,
+      smVariables: (prev.smVariables || []).map((s) =>
+        s.id === smvId ? { ...s, priorDistribution } : s
+      ),
+    }));
     markDirty();
   }
 
@@ -160,8 +202,8 @@ export function CompetencyWizardProvider({
 
     const tempId = `temp_${Date.now()}`;
 
-    setCompetencies((prev) => [
-      ...prev,
+    setCompetenciesAndSync([
+      ...competencies,
       {
         id: tempId,
         name: "",
@@ -176,22 +218,18 @@ export function CompetencyWizardProvider({
         modelId: model?.id || null,
       },
     ]);
-
-    markDirty();
   }
 
   function updateCompetency(id, updates) {
     if (model?.locked) return;
-    setCompetencies((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+    setCompetenciesAndSync(
+      competencies.map((c) => (c.id === id ? { ...c, ...updates } : c))
     );
-    markDirty();
   }
 
   function removeCompetency(id) {
     if (model?.locked) return;
-    setCompetencies((prev) => prev.filter((c) => c.id !== id));
-    markDirty();
+    setCompetenciesAndSync(competencies.filter((c) => c.id !== id));
   }
 
   function addRelationship(sourceId, relationship) {
@@ -244,10 +282,23 @@ export function CompetencyWizardProvider({
     // "wrapping up" past an incomplete step.
     validity[1] =
       model?.name?.trim().length >= 5 &&
-      model?.description?.trim().length >= 10;
+      model?.description?.trim().length >= 10 &&
+      PSYCHOLOGICAL_PERSPECTIVE_VALUES.includes(model?.psychologicalPerspective);
     validity[2] = ["unidimensional", "multidimensional"].includes(
       model?.measurementIntent
     );
+    {
+      const fw = model?.constructFramework || {};
+      validity[3] =
+        (fw.ungroundedWaiver === true &&
+          typeof fw.ungroundedReason === "string" &&
+          fw.ungroundedReason.trim().length >= 10) ||
+        Boolean(
+          fw.policyId &&
+            Array.isArray(fw.curricularGoalCodes) &&
+            fw.curricularGoalCodes.length > 0
+        );
+    }
     // The backend unconditionally rejects a competency without a
     // variableType (even on draft saves -- see schema.js's competencies
     // validation), but this used to only check count > 0. Adding a
@@ -257,7 +308,37 @@ export function CompetencyWizardProvider({
     // being caught here before ever leaving the step.
     validity[4] =
       competencies.length > 0 && competencies.every((c) => c.variableType);
-    validity[5] = competencies.every((c) => c.variableType);
+    validity[5] =
+      competencies.every((c) => c.variableType) &&
+      computeStructuralAudit({ model, competencies }).checks
+        .find((c) => c.label.includes("structurally valid"))
+        ?.passed !== false &&
+      competencies.every((c) => {
+        if (!c.variableType) return false;
+        if (c.variableType === "binary") return c.states?.length === 2;
+        if (c.variableType === "ordinal" || c.variableType === "categorical")
+          return c.states?.length >= 2;
+        if (c.variableType === "continuous")
+          return (
+            typeof c.scale?.min === "number" &&
+            typeof c.scale?.max === "number" &&
+            c.scale.min < c.scale.max
+          );
+        return false;
+      });
+    {
+      const relCount = competencies.reduce(
+        (n, c) => n + (c.relationships?.length || 0),
+        0
+      );
+      validity[6] =
+        model?.measurementIntent !== "multidimensional" || relCount >= 3;
+    }
+    validity[7] =
+      competencies.length > 0 &&
+      competencies.every(
+        (c) => c.domain?.trim() && c.strand?.trim() && c.facet?.trim()
+      );
     // Step 8's StructuralAuditChecklist visually promises "Final
     // confirmation will be blocked if any rule fails," but this used to
     // only check competencies.length > 0 -- every other row on that
@@ -305,7 +386,11 @@ export function CompetencyWizardProvider({
 
       const payload = {
         ...model,
-        status: "draft",
+        smVariables: syncSmVariablesFromCompetencies(
+          competencies,
+          model.smVariables || []
+        ),
+        status: model.status === "reviewed" ? "reviewed" : "draft",
       };
 
       if (!model.id) {
@@ -376,7 +461,26 @@ export function CompetencyWizardProvider({
         }
       }
 
+      const alignedSmVariables = syncSmVariablesFromCompetencies(
+        synced,
+        payload.smVariables || []
+      );
+      try {
+        savedModel = await apiFetch(`/api/competencies/models/${savedModel.id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            ...savedModel,
+            ...payload,
+            smVariables: alignedSmVariables,
+            status: savedModel.status === "reviewed" ? "reviewed" : "draft",
+          }),
+        }, auth);
+      } catch (err) {
+        throw new Error(apiErrorMessage(err, "Student Model SMV sync failed"));
+      }
+
       setCompetencies(synced);
+      setModel({ ...savedModel, smVariables: alignedSmVariables });
       setIsDirty(false);
 
       // Refresh every cache that reflects this model/its competencies --
@@ -410,6 +514,12 @@ export function CompetencyWizardProvider({
     const toastId = toast.loading("Saving model...");
 
     try {
+      const ok = await saveDraft();
+      if (!ok) {
+        toast.error("Save failed before review.", { id: toastId });
+        return;
+      }
+
       const saved = await apiFetch(
         `/api/competencies/models/${model.id}/lifecycle`,
         { method: "PATCH", body: JSON.stringify({ nextStatus: "reviewed" }) },
@@ -441,7 +551,13 @@ export function CompetencyWizardProvider({
     try {
       const confirmed = await apiFetch(
         `/api/competencies/models/${model.id}/confirm`,
-        { method: "POST" },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            acknowledgeSameAuthor: confirmAck.acknowledgeSameAuthor === true,
+            sameAuthorReason: confirmAck.sameAuthorReason || "",
+          }),
+        },
         auth
       );
 
@@ -552,10 +668,13 @@ export function CompetencyWizardProvider({
     loading,
     saving,
     isDirty,
+    confirmAck,
+    setConfirmAck,
 
     updateModelField,
     updateConstructFramework,
     patchConstructFramework,
+    updateSmVariablePrior,
 
     addCompetency,
     updateCompetency,
