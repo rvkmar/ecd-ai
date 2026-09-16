@@ -327,9 +327,16 @@ export const schema = {
       id: 'string',
       observableId: 'string',
       workProductType: 'string',
+      workProductId: 'string',   // shared WP identity (TR9: one WP → many OVs)
       method: 'string',          // key | rubric | auto | process_log
       description: 'string',
       artifactRef: 'string',
+      // Executable scoring asset baked into the composite library.
+      // kind: key → { correctPatterns: responsePattern[] }
+      // kind: rubric → { dimensions: [...] }
+      // kind: auto → { scorerId / config }
+      // kind: process_log → { eventSchema }
+      artifact: 'object',
     }],
     fairnessNotes: 'string',
     difReviewChecklist: [{
@@ -1198,6 +1205,11 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       errors.push("evaluationProcedures should be array");
     } else if (Array.isArray(obj.evaluationProcedures)) {
       const procsByObs = new Map();
+      const needsEvalArtifacts =
+        strict ||
+        ["reviewed", "confirmed", "operational", "suspended"].includes(obj.status);
+      const ARTIFACT_METHODS = ["key", "rubric", "auto"];
+
       for (const proc of obj.evaluationProcedures) {
         if (!proc?.id) errors.push("evaluationProcedure missing id.");
         if (!proc?.observableId) {
@@ -1217,16 +1229,97 @@ export function validateEntity(collection, obj, db = null, options = {}) {
             errors.push(`evaluationProcedure ${proc?.id || "(missing id)"} needs a meaningful description.`);
           }
         }
+        // G3: scoring artifacts required from reviewed onward for key/rubric/auto.
+        if (needsEvalArtifacts && proc?.method && ARTIFACT_METHODS.includes(proc.method)) {
+          const hasRef = proc.artifactRef && String(proc.artifactRef).trim().length > 0;
+          const art = proc.artifact;
+          let artifactOk = false;
+          if (art && typeof art === "object" && !Array.isArray(art) && art.kind) {
+            if (art.kind === "key") {
+              artifactOk = Array.isArray(art.correctPatterns) && art.correctPatterns.length > 0;
+            } else if (art.kind === "rubric") {
+              artifactOk = Array.isArray(art.dimensions) && art.dimensions.length > 0;
+            } else if (art.kind === "auto") {
+              artifactOk = !!(art.scorerId || art.config);
+            } else {
+              errors.push(
+                `evaluationProcedure ${proc.id} artifact.kind '${art.kind}' is invalid (use key, rubric, or auto).`
+              );
+            }
+          }
+          if (!hasRef && !artifactOk) {
+            errors.push(
+              `evaluationProcedure ${proc?.id || "(missing id)"} method '${proc.method}' requires artifactRef or a valid artifact object from reviewed onward.`
+            );
+          }
+          if (art && typeof art === "object" && art.kind === "key" && Array.isArray(art.correctPatterns)) {
+            // ok
+          } else if (hasRef && !art) {
+            // external ref alone is accepted at authoring; Identification needs
+            // inline artifact for delivery — warn only under strict confirm.
+            if (strict) {
+              errors.push(
+                `evaluationProcedure ${proc.id} has artifactRef but no inline artifact; confirm requires bakeable artifact payload.`
+              );
+            }
+          }
+        }
       }
       if (strict) {
         for (const oId of observableIdSet) {
           const n = procsByObs.get(oId) || 0;
+          // G2: at least one procedure per observable; multiple allowed when
+          // several extractions share a Work Product.
           if (n === 0) errors.push(`Observable ${oId} has no evaluationProcedure.`);
-          if (n > 1) errors.push(`Observable ${oId} has ${n} evaluationProcedures; exactly one is required.`);
+        }
+      }
+
+      /* ---------------------------------------------------
+         G5+G6: procedure → evidenceRule → active statistical model
+         pipeline (confirm / strict)
+      --------------------------------------------------- */
+      if (strict) {
+        const ruleByObs = new Map(
+          (obj.evidenceRules || []).map((r) => [r.observableId, r])
+        );
+        for (const o of obj.observables || []) {
+          if (!o?.id) continue;
+          const hasRule = !!(o.evidenceRule || ruleByObs.get(o.id));
+          if (!hasRule) {
+            errors.push(`Observable ${o.id} has no evidenceRule (pipeline broken).`);
+          }
+        }
+        const activeSm = (obj.statisticalModels || []).find((sm) => sm.active);
+        const modelObs = new Set(activeSm?.structureConfig?.observableIds || []);
+        if (activeSm && modelObs.size > 0) {
+          for (const oId of observableIdSet) {
+            if (!modelObs.has(oId)) {
+              errors.push(
+                `Observable ${oId} is not listed in the active statistical model's structureConfig.observableIds.`
+              );
+            }
+          }
+        }
+        // Shared workProductId: when present on >1 procedure, types should agree.
+        const byWp = new Map();
+        for (const proc of obj.evaluationProcedures) {
+          const wpId = proc?.workProductId && String(proc.workProductId).trim();
+          if (!wpId) continue;
+          if (!byWp.has(wpId)) byWp.set(wpId, []);
+          byWp.get(wpId).push(proc);
+        }
+        for (const [wpId, procs] of byWp) {
+          if (procs.length < 2) continue;
+          const types = new Set(procs.map((p) => p.workProductType || ""));
+          if (types.size > 1) {
+            errors.push(
+              `workProductId '${wpId}' is shared by evaluationProcedures with differing workProductType values.`
+            );
+          }
         }
       }
     } else if (strict) {
-      errors.push("evaluationProcedures are required (one per observable).");
+      errors.push("evaluationProcedures are required (at least one per observable).");
     }
 
     const needsFairness =

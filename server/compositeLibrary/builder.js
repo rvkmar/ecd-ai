@@ -15,10 +15,12 @@
 // What gets baked into each items[] entry, per ADR 0003: presentation
 // material (item.stimulus), interaction params (item.interaction), the
 // evidence-activation mapping (the item's own scoring.evidenceActivationMap
-// PLUS the bound Evidence Model observable's evidenceRule), and the weight
-// of evidence (from the Task Model's own expectedObservations[], not the
-// Evidence Model side -- weight is authored per Task Model, per the
-// referential-integrity chain CLAUDE.md documents).
+// PLUS the bound Evidence Model observable's evidenceRule), the TR9
+// evaluationProcedure for that observation (Work Product → Observable
+// Variable), and the weight of evidence (from the Task Model's own
+// expectedObservations[], not the Evidence Model side -- weight is
+// authored per Task Model, per the referential-integrity chain CLAUDE.md
+// documents).
 //
 // What is deliberately NEVER baked in, per ADR 0003: calibrated
 // statisticalModels[].parameterSets[] (resolved live, by pointer, at
@@ -28,6 +30,32 @@
 // it is reintroducing exactly the bug ADR 0003 exists to prevent.
 
 import { isInstantiableTaskModel, INSTANTIABLE_TASK_MODEL_STATUSES } from "../../src/utils/schema.js";
+
+/**
+ * Resolve the Evidence Model evaluation procedure for one observation.
+ * When several procedures share an observableId (multi-extraction), bake
+ * the first; Identification still receives the full baked object.
+ */
+export function resolveEvaluationProcedure(evidenceModel, observationId) {
+  if (!evidenceModel || !observationId) return null;
+  const matches = (evidenceModel.evaluationProcedures || []).filter(
+    (p) => p && p.observableId === observationId
+  );
+  if (matches.length === 0) return null;
+  const proc = matches[0];
+  // Bake a plain structural copy — including optional scoring artifact —
+  // so Identification never re-walks live EM records (ADR 0003a).
+  return {
+    id: proc.id ?? null,
+    observableId: proc.observableId,
+    workProductType: proc.workProductType ?? null,
+    workProductId: proc.workProductId ?? null,
+    method: proc.method ?? null,
+    description: proc.description ?? null,
+    artifactRef: proc.artifactRef ?? null,
+    artifact: proc.artifact ?? null,
+  };
+}
 
 /**
  * Compile a compositeLibrary record for one Task Model.
@@ -118,6 +146,17 @@ export function buildCompositeLibrary(taskModel, db) {
       ? observable.evidenceRule || evidenceRuleByObservableId.get(observable.id) || null
       : null;
 
+    const evaluationProcedure = resolveEvaluationProcedure(
+      evidenceModel,
+      item.observationId
+    );
+
+    if (evidenceModel && !evaluationProcedure) {
+      warnings.push(
+        `Item '${item.id}''s evidence model '${item.evidenceModelId}' has no evaluationProcedure for observable '${item.observationId}'.`
+      );
+    }
+
     return {
       itemId: item.id,
       observationId: item.observationId,
@@ -131,6 +170,7 @@ export function buildCompositeLibrary(taskModel, db) {
         evidenceActivationMap: item.scoring?.evidenceActivationMap || [],
       },
       evidenceRule,
+      evaluationProcedure,
       weight: expected?.weight ?? null,
       required: expected?.required ?? null,
     };
@@ -182,20 +222,34 @@ export function isCompositeLibraryStale(libraryRecord, { taskModel, evidenceMode
   const checkedEvidenceModelIds = new Set();
 
   for (const entry of libraryRecord.items || []) {
-    if (checkedEvidenceModelIds.has(entry.evidenceModelId)) continue;
-    checkedEvidenceModelIds.add(entry.evidenceModelId);
-
     const currentEm = evidenceModelsById.get(entry.evidenceModelId);
 
-    if (
-      currentEm &&
-      typeof currentEm.versionNumber === "number" &&
-      typeof entry.evidenceModelVersion === "number" &&
-      currentEm.versionNumber !== entry.evidenceModelVersion
-    ) {
-      reasons.push(
-        `Evidence model '${entry.evidenceModelId}' is now at version ${currentEm.versionNumber}; this package's items were compiled against version ${entry.evidenceModelVersion}.`
-      );
+    if (!checkedEvidenceModelIds.has(entry.evidenceModelId)) {
+      checkedEvidenceModelIds.add(entry.evidenceModelId);
+
+      if (
+        currentEm &&
+        typeof currentEm.versionNumber === "number" &&
+        typeof entry.evidenceModelVersion === "number" &&
+        currentEm.versionNumber !== entry.evidenceModelVersion
+      ) {
+        reasons.push(
+          `Evidence model '${entry.evidenceModelId}' is now at version ${currentEm.versionNumber}; this package's items were compiled against version ${entry.evidenceModelVersion}.`
+        );
+      }
+    }
+
+    // Evaluation procedures are baked structural facts (TR9 §2.3.2). A
+    // same-version edit to the procedure for this observation still
+    // invalidates the package so Identification cannot use a stale key/rubric.
+    if (currentEm) {
+      const currentProc = resolveEvaluationProcedure(currentEm, entry.observationId);
+      const baked = entry.evaluationProcedure ?? null;
+      if (JSON.stringify(currentProc) !== JSON.stringify(baked)) {
+        reasons.push(
+          `Evidence model '${entry.evidenceModelId}' evaluationProcedure for '${entry.observationId}' changed since this package was compiled.`
+        );
+      }
     }
   }
 

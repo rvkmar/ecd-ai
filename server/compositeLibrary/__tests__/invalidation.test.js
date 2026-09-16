@@ -86,6 +86,26 @@ describe("isCompositeLibraryStale", () => {
     expect(reasons).toEqual([]);
   });
 
+  it("is stale when an evaluationProcedure changes without a version bump", () => {
+    const record = compile();
+    const revised = {
+      ...evidenceModel,
+      evaluationProcedures: [
+        {
+          id: "ep-new",
+          observableId: "o1",
+          method: "key",
+          workProductType: "mcq_selection",
+          description: "Revised key after pilot.",
+          artifactRef: "keys/o1-v2.json",
+        },
+      ],
+    };
+    const { stale, reasons } = isCompositeLibraryStale(record, { taskModel, evidenceModels: [revised] });
+    expect(stale).toBe(true);
+    expect(reasons.join(" ")).toMatch(/evaluationProcedure for 'o1' changed/);
+  });
+
   it("does not evaluate an evidence model that no item in the package references", () => {
     const record = compile();
     const unrelatedRevisedModel = { id: "em-unrelated", versionNumber: 99 };

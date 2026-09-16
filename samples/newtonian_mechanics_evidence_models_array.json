@@ -85,21 +85,57 @@
         "observableId": "obs_force_pair",
         "workProductType": "mcq_selection",
         "method": "key",
-        "description": "Answer key maps the selected pair option to a dichotomous observable value for DINA/1PL scoring."
+        "description": "Answer key maps the selected pair option to a dichotomous observable value for DINA/1PL scoring.",
+        "workProductId": "wp_force_mcq_stem",
+        "artifactRef": "inline:key/obs_force_pair",
+        "artifact": {
+          "kind": "key",
+          "correctPatterns": [
+            {
+              "selected": "opt_correct"
+            }
+          ]
+        }
       },
       {
         "id": "ep_force_net",
         "observableId": "obs_force_net",
         "workProductType": "mcq_selection",
         "method": "key",
-        "description": "Answer key maps selected net-force direction to a dichotomous observable value."
+        "description": "Answer key maps selected net-force direction to a dichotomous observable value.",
+        "workProductId": "wp_force_mcq_stem",
+        "artifactRef": "inline:key/obs_force_net",
+        "artifact": {
+          "kind": "key",
+          "correctPatterns": [
+            {
+              "selected": "opt_correct"
+            }
+          ]
+        }
       },
       {
         "id": "ep_force_diagram",
         "observableId": "obs_force_diagram",
         "workProductType": "constructed_diagram",
         "method": "rubric",
-        "description": "Analytic rubric scores required force arrows for identity and direction; partial credit allowed for missing one contact force."
+        "description": "Analytic rubric scores required force arrows for identity and direction; partial credit allowed for missing one contact force.",
+        "workProductId": "wp_force_fbd",
+        "artifactRef": "inline:rubric/obs_force_diagram",
+        "artifact": {
+          "kind": "rubric",
+          "dimensions": [
+            {
+              "id": "accuracy",
+              "levels": [
+                0,
+                1,
+                2
+              ],
+              "description": "Feature accuracy on constructed work product"
+            }
+          ]
+        }
       }
     ],
     "statisticalModels": [
@@ -172,7 +208,36 @@
       "pilotSampleSize": 200,
       "method": "MCMC / EM for DINA slip-guess",
       "packageHint": "GDINA / CDM",
-      "targetFitNotes": "Target attribute classification accuracy ≥0.80 on holdout after pilot."
+      "targetFitNotes": "Target attribute classification accuracy ≥0.80 on holdout after pilot.",
+      "seedParameterSets": [
+        {
+          "statisticalModelId": "sm_force_dina",
+          "parameterSet": {
+            "parameterSetId": "ps_pilot_sm_force_dina",
+            "parameters": {
+              "obs_force_pair": {
+                "slip": 0.12,
+                "guess": 0.18
+              },
+              "obs_force_net": {
+                "slip": 0.12,
+                "guess": 0.18
+              },
+              "obs_force_diagram": {
+                "slip": 0.12,
+                "guess": 0.18
+              }
+            },
+            "packageVersion": "ecd-pilot-1.0.0",
+            "converged": true,
+            "sampleSize": 220,
+            "calibratedAt": "2026-09-01T00:00:00.000Z",
+            "calibratedBy": "newtonian-enterprise-seed",
+            "calibrationMethod": "pilot_seed",
+            "notes": "Synthetic pilot parameter set for enterprise gap-fix closeout; replace after live calibration."
+          }
+        }
+      ]
     }
   },
   {
@@ -261,21 +326,57 @@
         "observableId": "obs_kin_graph",
         "workProductType": "mcq_selection",
         "method": "key",
-        "description": "Answer key maps graph-feature selections to polytomous/binary scores for PCM."
+        "description": "Answer key maps graph-feature selections to polytomous/binary scores for PCM.",
+        "workProductId": "wp_obs_kin_graph",
+        "artifactRef": "inline:key/obs_kin_graph",
+        "artifact": {
+          "kind": "key",
+          "correctPatterns": [
+            {
+              "selected": "opt_correct"
+            }
+          ]
+        }
       },
       {
         "id": "ep_kin_eq",
         "observableId": "obs_kin_eq",
         "workProductType": "numeric_entry",
         "method": "key",
-        "description": "Numeric key with tolerance band produces the observable score."
+        "description": "Numeric key with tolerance band produces the observable score.",
+        "workProductId": "wp_obs_kin_eq",
+        "artifactRef": "inline:key/obs_kin_eq",
+        "artifact": {
+          "kind": "key",
+          "correctPatterns": [
+            {
+              "selected": "opt_correct"
+            }
+          ]
+        }
       },
       {
         "id": "ep_kin_transfer",
         "observableId": "obs_kin_transfer",
         "workProductType": "constructed_solution",
         "method": "rubric",
-        "description": "Process rubric awards ordered credit for coordinating graph and equation steps."
+        "description": "Process rubric awards ordered credit for coordinating graph and equation steps.",
+        "workProductId": "wp_obs_kin_transfer",
+        "artifactRef": "inline:rubric/obs_kin_transfer",
+        "artifact": {
+          "kind": "rubric",
+          "dimensions": [
+            {
+              "id": "accuracy",
+              "levels": [
+                0,
+                1,
+                2
+              ],
+              "description": "Feature accuracy on constructed work product"
+            }
+          ]
+        }
       }
     ],
     "statisticalModels": [
@@ -354,7 +455,48 @@
       "pilotSampleSize": 200,
       "method": "MML for PCM thresholds",
       "packageHint": "mirt",
-      "targetFitNotes": "Category thresholds monotonic; outfit within 0.7–1.3."
+      "targetFitNotes": "Category thresholds monotonic; outfit within 0.7–1.3.",
+      "seedParameterSets": [
+        {
+          "statisticalModelId": "sm_kin_pcm",
+          "parameterSet": {
+            "parameterSetId": "ps_pilot_sm_kin_pcm",
+            "parameters": {
+              "obs_kin_graph": {
+                "a": 1.0,
+                "b": [
+                  -1.0,
+                  0.2,
+                  1.1
+                ]
+              },
+              "obs_kin_eq": {
+                "a": 1.0,
+                "b": [
+                  -1.0,
+                  0.2,
+                  1.1
+                ]
+              },
+              "obs_kin_transfer": {
+                "a": 1.0,
+                "b": [
+                  -1.0,
+                  0.2,
+                  1.1
+                ]
+              }
+            },
+            "packageVersion": "ecd-pilot-1.0.0",
+            "converged": true,
+            "sampleSize": 220,
+            "calibratedAt": "2026-09-01T00:00:00.000Z",
+            "calibratedBy": "newtonian-enterprise-seed",
+            "calibrationMethod": "pilot_seed",
+            "notes": "Synthetic pilot parameter set for enterprise gap-fix closeout; replace after live calibration."
+          }
+        }
+      ]
     }
   },
   {
@@ -454,21 +596,60 @@
         "observableId": "obs_rep_diagram",
         "workProductType": "process_trace",
         "method": "process_log",
-        "description": "Interaction telemetry codes the first substantive tool/action as diagram when the free-body canvas is used before equation entry."
+        "description": "Interaction telemetry codes the first substantive tool/action as diagram when the free-body canvas is used before equation entry.",
+        "workProductId": "wp_obs_rep_diagram",
+        "artifactRef": "inline:process/obs_rep_diagram",
+        "artifact": {
+          "kind": "auto",
+          "scorerId": "process_log_v1",
+          "config": {
+            "events": [
+              "node_visit",
+              "edge_draw",
+              "finalize"
+            ]
+          }
+        }
       },
       {
         "id": "ep_rep_equation",
         "observableId": "obs_rep_equation",
         "workProductType": "process_trace",
         "method": "process_log",
-        "description": "Telemetry codes first equation-bank selection or equation text entry before any diagram stroke."
+        "description": "Telemetry codes first equation-bank selection or equation text entry before any diagram stroke.",
+        "workProductId": "wp_obs_rep_equation",
+        "artifactRef": "inline:process/obs_rep_equation",
+        "artifact": {
+          "kind": "auto",
+          "scorerId": "process_log_v1",
+          "config": {
+            "events": [
+              "node_visit",
+              "edge_draw",
+              "finalize"
+            ]
+          }
+        }
       },
       {
         "id": "ep_rep_narrative",
         "observableId": "obs_rep_narrative",
         "workProductType": "constructed_narrative",
         "method": "process_log",
-        "description": "Process log plus short-text coder marks narrative-first when text is submitted with no prior diagram/equation events."
+        "description": "Process log plus short-text coder marks narrative-first when text is submitted with no prior diagram/equation events.",
+        "workProductId": "wp_obs_rep_narrative",
+        "artifactRef": "inline:process/obs_rep_narrative",
+        "artifact": {
+          "kind": "auto",
+          "scorerId": "process_log_v1",
+          "config": {
+            "events": [
+              "node_visit",
+              "edge_draw",
+              "finalize"
+            ]
+          }
+        }
       }
     ],
     "statisticalModels": [
@@ -541,7 +722,33 @@
       "pilotSampleSize": 200,
       "method": "CPT estimation from pilot process logs",
       "packageHint": "custom BN / bnlearn",
-      "targetFitNotes": "MAP class accuracy ≥0.70 vs expert-coded first moves."
+      "targetFitNotes": "MAP class accuracy ≥0.70 vs expert-coded first moves.",
+      "seedParameterSets": [
+        {
+          "statisticalModelId": "sm_rep_bn",
+          "parameterSet": {
+            "parameterSetId": "ps_pilot_sm_rep_bn",
+            "parameters": {
+              "cpts": {
+                "pilot": true,
+                "note": "Seed CPTs for Problem Representation Mode — Latent Class Evidence Model"
+              },
+              "nodes": [
+                "obs_rep_diagram",
+                "obs_rep_equation",
+                "obs_rep_narrative"
+              ]
+            },
+            "packageVersion": "ecd-pilot-1.0.0",
+            "converged": true,
+            "sampleSize": 220,
+            "calibratedAt": "2026-09-01T00:00:00.000Z",
+            "calibratedBy": "newtonian-enterprise-seed",
+            "calibrationMethod": "pilot_seed",
+            "notes": "Synthetic pilot parameter set for enterprise gap-fix closeout; replace after live calibration."
+          }
+        }
+      ]
     }
   },
   {
@@ -630,21 +837,57 @@
         "observableId": "obs_theta_mixed",
         "workProductType": "mcq_selection",
         "method": "key",
-        "description": "Dichotomous answer key for mixed force-kinematics MCQ."
+        "description": "Dichotomous answer key for mixed force-kinematics MCQ.",
+        "workProductId": "wp_obs_theta_mixed",
+        "artifactRef": "inline:key/obs_theta_mixed",
+        "artifact": {
+          "kind": "key",
+          "correctPatterns": [
+            {
+              "selected": "opt_correct"
+            }
+          ]
+        }
       },
       {
         "id": "ep_theta_explain",
         "observableId": "obs_theta_explain",
         "workProductType": "short_constructed",
         "method": "rubric",
-        "description": "Analytic rubric for causal Newton/kinematics explanations."
+        "description": "Analytic rubric for causal Newton/kinematics explanations.",
+        "workProductId": "wp_obs_theta_explain",
+        "artifactRef": "inline:rubric/obs_theta_explain",
+        "artifact": {
+          "kind": "rubric",
+          "dimensions": [
+            {
+              "id": "accuracy",
+              "levels": [
+                0,
+                1,
+                2
+              ],
+              "description": "Feature accuracy on constructed work product"
+            }
+          ]
+        }
       },
       {
         "id": "ep_theta_numeric",
         "observableId": "obs_theta_numeric",
         "workProductType": "numeric_entry",
         "method": "key",
-        "description": "Numeric key with tolerance after multi-step calculation."
+        "description": "Numeric key with tolerance after multi-step calculation.",
+        "workProductId": "wp_obs_theta_numeric",
+        "artifactRef": "inline:key/obs_theta_numeric",
+        "artifact": {
+          "kind": "key",
+          "correctPatterns": [
+            {
+              "selected": "opt_correct"
+            }
+          ]
+        }
       }
     ],
     "statisticalModels": [
@@ -701,7 +944,36 @@
       "pilotSampleSize": 200,
       "method": "MML 2PL",
       "packageHint": "mirt",
-      "targetFitNotes": "SE target ≤0.35 at theta=0 after pilot; remove misfitting items."
+      "targetFitNotes": "SE target ≤0.35 at theta=0 after pilot; remove misfitting items.",
+      "seedParameterSets": [
+        {
+          "statisticalModelId": "sm_theta_2pl",
+          "parameterSet": {
+            "parameterSetId": "ps_pilot_sm_theta_2pl",
+            "parameters": {
+              "obs_theta_mixed": {
+                "a": 1.1,
+                "b": -0.2
+              },
+              "obs_theta_explain": {
+                "a": 1.1,
+                "b": -0.2
+              },
+              "obs_theta_numeric": {
+                "a": 1.1,
+                "b": -0.2
+              }
+            },
+            "packageVersion": "ecd-pilot-1.0.0",
+            "converged": true,
+            "sampleSize": 220,
+            "calibratedAt": "2026-09-01T00:00:00.000Z",
+            "calibratedBy": "newtonian-enterprise-seed",
+            "calibrationMethod": "pilot_seed",
+            "notes": "Synthetic pilot parameter set for enterprise gap-fix closeout; replace after live calibration."
+          }
+        }
+      ]
     }
   }
 ]

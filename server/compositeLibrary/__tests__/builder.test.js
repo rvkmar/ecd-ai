@@ -41,6 +41,29 @@ const evidenceModel = {
   evidenceRules: [
     { observableId: "o2", direction: "supports", strengthLevel: 3, activationCondition: "any", justification: "y" },
   ],
+  evaluationProcedures: [
+    {
+      id: "ep1",
+      observableId: "o1",
+      workProductType: "mcq_selection",
+      method: "key",
+      description: "Answer key maps selected option to dichotomous observable.",
+      artifactRef: "keys/o1.json",
+      artifact: { kind: "key", correctPatterns: [{ selected: "opt_a" }] },
+    },
+    {
+      id: "ep2",
+      observableId: "o2",
+      workProductType: "constructed_text",
+      method: "rubric",
+      description: "Analytic rubric for simplification steps.",
+      artifactRef: "rubrics/o2.json",
+      artifact: {
+        kind: "rubric",
+        dimensions: [{ id: "accuracy", levels: [0, 1, 2] }],
+      },
+    },
+  ],
   statisticalModels: [
     {
       id: "sm1",
@@ -107,6 +130,19 @@ describe("buildCompositeLibrary — happy path", () => {
     expect(entry.required).toBe(true);
     expect(entry.evidenceRule).toEqual({ direction: "supports", strengthLevel: 4, activationCondition: "any", justification: "x" });
     expect(entry.scoring.evidenceActivationMap).toHaveLength(1);
+  });
+
+  it("bakes the Evidence Model evaluationProcedure for the item observation", () => {
+    const { record } = buildCompositeLibrary(taskModel, makeDb());
+    const entry = record.items.find((i) => i.itemId === "i1");
+
+    expect(entry.evaluationProcedure).toMatchObject({
+      id: "ep1",
+      observableId: "o1",
+      method: "key",
+      artifactRef: "keys/o1.json",
+      artifact: { kind: "key", correctPatterns: [{ selected: "opt_a" }] },
+    });
   });
 
   it("falls back to evidenceModel.evidenceRules[] when the observable has no embedded evidenceRule", () => {

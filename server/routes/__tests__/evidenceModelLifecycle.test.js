@@ -645,6 +645,25 @@ function strictValidModel(overrides = {}) {
         },
       },
     ],
+    evaluationProcedures: [
+      {
+        id: "ep1",
+        observableId: "o1",
+        workProductId: "wp_o1",
+        workProductType: "mcq_selection",
+        method: "key",
+        description: "Answer key maps the selected option to a dichotomous observable.",
+        artifactRef: "inline:key/o1",
+        artifact: { kind: "key", correctPatterns: [{ selected: "opt_a" }] },
+      },
+    ],
+    fairnessNotes:
+      "Residual language-load risk accepted for Grade 10 numerical stems after orientation screen.",
+    difReviewChecklist: [
+      { id: "dif1", prompt: "Gender DIF reviewed?", status: "pass" },
+      { id: "dif2", prompt: "Language-load reviewed?", status: "pass" },
+      { id: "dif3", prompt: "Access reviewed?", status: "na" },
+    ],
     ...overrides,
   });
 }
@@ -697,13 +716,12 @@ describe("POST /api/evidenceModels/:id/confirm — review gate", () => {
 describe("PUT /api/evidenceModels/:id — status preservation", () => {
 
   it("keeps a reviewed model reviewed across an auto-save", async () => {
-    const { app, db } = await buildApp(
-      makeModel({ status: "reviewed", locked: false })
-    );
+    const reviewed = strictValidModel({ status: "reviewed", locked: false });
+    const { app, db } = await buildApp(reviewed);
 
     const res = await request(app)
       .put("/api/evidenceModels/em1")
-      .send({ ...makeModel({ status: "reviewed", locked: false }), name: "Renamed" });
+      .send({ ...reviewed, name: "Renamed" });
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("reviewed");

@@ -84,7 +84,6 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
     observables.forEach((obs) => {
       const n = byObs.get(obs.id) || 0;
       if (n === 0) issues.push(`Observable ${obs.id} needs an evaluationProcedure (TR9 evaluation component).`);
-      if (n > 1) issues.push(`Observable ${obs.id} has ${n} evaluationProcedures; keep exactly one.`);
     });
     evaluationProcedures.forEach((p) => {
       if (p.observableId && !observables.some((o) => o.id === p.observableId)) {
@@ -99,7 +98,34 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
       if (!p.description || String(p.description).trim().length < 10) {
         issues.push(`evaluationProcedure ${p.id || "?"} needs a meaningful description.`);
       }
+      if (["key", "rubric", "auto"].includes(p.method)) {
+        const hasRef = p.artifactRef && String(p.artifactRef).trim().length > 0;
+        const art = p.artifact;
+        const artifactOk =
+          art &&
+          typeof art === "object" &&
+          ((art.kind === "key" && Array.isArray(art.correctPatterns) && art.correctPatterns.length > 0) ||
+            (art.kind === "rubric" && Array.isArray(art.dimensions) && art.dimensions.length > 0) ||
+            (art.kind === "auto" && (art.scorerId || art.config)));
+        if (!hasRef && !artifactOk) {
+          issues.push(`evaluationProcedure ${p.id || "?"} needs artifactRef or inline artifact for method '${p.method}'.`);
+        }
+      }
     });
+
+    // G6 pipeline: procedure → evidenceRule → active model observableIds
+    const activeSm = models.find((m) => m.active);
+    const modelObs = new Set(activeSm?.structureConfig?.observableIds || []);
+    observables.forEach((obs) => {
+      const hasRule =
+        evidenceRules.some((r) => r.observableId === obs.id) ||
+        !!obs.evidenceRule;
+      if (!hasRule) issues.push(`Observable ${obs.id}: pipeline missing evidenceRule.`);
+      if (activeSm && modelObs.size > 0 && !modelObs.has(obs.id)) {
+        issues.push(`Observable ${obs.id}: not in active statistical model observableIds.`);
+      }
+    });
+
     if (!draftModel?.fairnessNotes || String(draftModel.fairnessNotes).trim().length < 20) {
       issues.push("fairnessNotes must be at least 20 characters before leaving this step.");
     }
@@ -107,7 +133,40 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
       issues.push("difReviewChecklist needs at least 3 entries.");
     }
     return { valid: issues.length === 0, issues };
-  }, [observables, evaluationProcedures, draftModel?.fairnessNotes, difReviewChecklist]);
+  }, [observables, evaluationProcedures, draftModel?.fairnessNotes, difReviewChecklist, evidenceRules, models]);
+
+  const assemblySufficiency = useMemo(() => {
+    const warnings = [];
+    const competencyName = selectedCompetency?.name || selectedCompetency?.label;
+    const competencyId = draftModel?.competencyId || selectedCompetency?.id;
+    const assemblies = db?.assemblyModels || [];
+    for (const am of assemblies) {
+      for (const t of am.targetsBySMV || []) {
+        const matches =
+          (t.smvId && competencyId && t.smvId === competencyId) ||
+          (t.smvName && competencyName && String(t.smvName).trim() === String(competencyName).trim());
+        if (!matches) continue;
+        if (typeof t.requiredSEM === "number" && observables.length < 3) {
+          warnings.push(
+            `Assembly '${am.name || am.id}' requires SEM≤${t.requiredSEM}; ${observables.length} observable(s) may be thin — expand evidence or calibrationPlan.`
+          );
+        }
+        if (typeof t.requiredClassificationAccuracy === "number") {
+          if (!draftModel?.calibrationPlan || !draftModel.calibrationPlan.pilotSampleSize) {
+            warnings.push(
+              `Assembly '${am.name || am.id}' requires classification accuracy ${t.requiredClassificationAccuracy}; set calibrationPlan.pilotSampleSize before confirm.`
+            );
+          }
+          if (observables.length < 2) {
+            warnings.push(
+              `Assembly '${am.name || am.id}' classification target with only ${observables.length} observable(s) is likely under-powered.`
+            );
+          }
+        }
+      }
+    }
+    return warnings;
+  }, [db?.assemblyModels, selectedCompetency, draftModel?.competencyId, draftModel?.calibrationPlan, observables.length]);
 
   const allErrors = [
     ...(schemaAudit?.errors || []),
@@ -143,10 +202,12 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
       return {
         id: `ep_${obs.id}`,
         observableId: obs.id,
+        workProductId: `wp_${obs.id}`,
         workProductType: obs.type === "selected_response" ? "mcq_selection" : obs.type || "work_product",
         method: obs.type === "performance" ? "process_log" : obs.type === "constructed_response" ? "rubric" : "key",
         description: "",
         artifactRef: "",
+        artifact: null,
       };
     });
     if (changed || next.length !== existing.length) {
@@ -159,6 +220,29 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
       p.observableId === observableId ? { ...p, ...patch } : p
     );
     updateField("evaluationProcedures", next);
+  }
+
+  function ensureKeyArtifact(observableId) {
+    const proc = (draftModel?.evaluationProcedures || []).find((p) => p.observableId === observableId);
+    const existing = proc?.artifact?.kind === "key" ? proc.artifact : { kind: "key", correctPatterns: [{ selected: "opt_a" }] };
+    patchProcedure(observableId, {
+      artifactRef: proc?.artifactRef || `inline:key/${observableId}`,
+      artifact: existing,
+      method: proc?.method || "key",
+    });
+  }
+
+  function ensureRubricArtifact(observableId) {
+    const proc = (draftModel?.evaluationProcedures || []).find((p) => p.observableId === observableId);
+    const existing =
+      proc?.artifact?.kind === "rubric"
+        ? proc.artifact
+        : { kind: "rubric", dimensions: [{ id: "accuracy", levels: [0, 1, 2], description: "Accuracy of response features" }] };
+    patchProcedure(observableId, {
+      artifactRef: proc?.artifactRef || `inline:rubric/${observableId}`,
+      artifact: existing,
+      method: proc?.method || "rubric",
+    });
   }
 
   function patchDif(id, patch) {
@@ -244,7 +328,9 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Evaluation procedures (TR9 §2.3.2)</h3>
           <p className="mt-1 text-xs text-slate-500">
-            How each Work Product becomes an Observable Variable value (key, rubric, auto, or process log).
+            How each Work Product becomes an Observable Variable value. Attach a bakeable key/rubric
+            artifact (or artifactRef + inline artifact) before review. Multiple observables may share
+            one workProductId.
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -252,8 +338,10 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
             <thead>
               <tr className="text-left text-slate-500 border-b border-slate-200">
                 <th className="py-2 pr-3 font-medium">Observable</th>
+                <th className="py-2 pr-3 font-medium">WP id</th>
                 <th className="py-2 pr-3 font-medium">Work product</th>
                 <th className="py-2 pr-3 font-medium">Method</th>
+                <th className="py-2 pr-3 font-medium">Artifact</th>
                 <th className="py-2 font-medium">Description</th>
               </tr>
             </thead>
@@ -263,6 +351,14 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
                 return (
                   <tr key={obs.id} className="border-b border-slate-100 align-top">
                     <td className="py-2 pr-3 font-mono text-xs text-slate-700">{obs.id}</td>
+                    <td className="py-2 pr-3">
+                      <input
+                        className={fieldClass}
+                        value={proc.workProductId || ""}
+                        onChange={(e) => patchProcedure(obs.id, { workProductId: e.target.value })}
+                        placeholder="wp_shared"
+                      />
+                    </td>
                     <td className="py-2 pr-3">
                       <input
                         className={fieldClass}
@@ -283,6 +379,41 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
                         ))}
                       </select>
                     </td>
+                    <td className="py-2 pr-3 space-y-1">
+                      <input
+                        className={fieldClass}
+                        value={proc.artifactRef || ""}
+                        onChange={(e) => patchProcedure(obs.id, { artifactRef: e.target.value })}
+                        placeholder="artifactRef"
+                      />
+                      <div className="flex flex-wrap gap-1">
+                        <button
+                          type="button"
+                          className="text-xs px-2 py-1 rounded border border-slate-200 text-slate-700 hover:bg-slate-50"
+                          onClick={() => ensureKeyArtifact(obs.id)}
+                        >
+                          Seed key
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs px-2 py-1 rounded border border-slate-200 text-slate-700 hover:bg-slate-50"
+                          onClick={() => ensureRubricArtifact(obs.id)}
+                        >
+                          Seed rubric
+                        </button>
+                      </div>
+                      {proc.artifact?.kind && (
+                        <div className="text-[11px] text-slate-500">
+                          {proc.artifact.kind}
+                          {proc.artifact.kind === "key"
+                            ? ` · ${(proc.artifact.correctPatterns || []).length} pattern(s)`
+                            : ""}
+                          {proc.artifact.kind === "rubric"
+                            ? ` · ${(proc.artifact.dimensions || []).length} dimension(s)`
+                            : ""}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-2">
                       <textarea
                         className={fieldClass}
@@ -299,6 +430,54 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
           </table>
         </div>
       </div>
+
+      <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-slate-900">Inferential pipeline health</h3>
+        <p className="text-xs text-slate-500">
+          Each observable needs evaluationProcedure → evidenceRule → active statistical model.
+        </p>
+        <ul className="space-y-1 text-sm">
+          {observables.map((obs) => {
+            const proc = evaluationProcedures.find((p) => p.observableId === obs.id);
+            const rule = evidenceRules.find((r) => r.observableId === obs.id) || obs.evidenceRule;
+            const activeSm = models.find((m) => m.active);
+            const inModel = (activeSm?.structureConfig?.observableIds || []).includes(obs.id);
+            const ok = !!(proc?.method && rule && inModel);
+            return (
+              <li key={obs.id} className="flex items-center gap-2 font-mono text-xs">
+                {ok ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                )}
+                <span>{obs.id}</span>
+                <span className="text-slate-400">
+                  {[
+                    proc?.method || "no-proc",
+                    rule ? "rule" : "no-rule",
+                    inModel ? "in-model" : "not-in-model",
+                    proc?.workProductId || "no-wp-id",
+                  ].join(" · ")}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {assemblySufficiency.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+            <AlertTriangle className="w-4 h-4" />
+            Assembly sufficiency warnings
+          </div>
+          <ul className="list-disc pl-5 text-sm text-amber-900 space-y-1">
+            {assemblySufficiency.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-5 space-y-4">
         <div>
@@ -343,7 +522,9 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
       <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-5 space-y-3">
         <h3 className="text-sm font-semibold text-slate-900">Calibration plan (draft)</h3>
         <p className="text-xs text-slate-500">
-          Drafts cannot store parameterSets. Record the intended pilot here; attach calibrated sets after confirmation.
+          Drafts cannot store parameterSets. Record the intended pilot here (including
+          calibrationPlan.seedParameterSets). After confirm, call
+          POST /api/evidenceModels/:id/attach-seed-parameter-sets to attach them.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <input

@@ -348,6 +348,14 @@ Files (name-remappable where noted):
 
 **Promote gate for Force→DINA:** confirm and lock the Q-matrix before confirming the Force Evidence Model. Confirm-time schema requires a linkable (`confirmed` / `operational` / `suspended`) Q-matrix for active `dina`/`gdina`.
 
-**What this pack implements (enterprise solutions S1–S10):** evaluationProcedures, calibrationPlan, Force DINA + inactive 1PL, Kinematics PCM + inactive threshold, specialized rebuttals, fairnessNotes + difReviewChecklist, Task Models with process capture for representation mode, Assembly targets + prerequisite-gated policy.
+**Gap-fix closeout (evaluation → identification → accumulation)**
 
-Regenerate from `samples/_build_newtonian_enterprise_pack.py` if you edit the generator.
+1. Upload pack in the order above (drafts). Evaluation procedures now include inline `artifact` payloads and `workProductId`; `calibrationPlan.seedParameterSets` holds pilot params (drafts still forbid live `parameterSets`).
+2. Confirm Q-matrix → Review → Confirm each Evidence Model (strict: artifacts, pipeline, DIF).
+3. `POST /api/evidenceModels/:id/attach-seed-parameter-sets` (empty body uses `calibrationPlan.seedParameterSets`) — or upload `newtonian_mechanics_evidence_models_confirm_ready.json` shapes via recalibrate after confirm.
+4. Confirm Task Models / Items; activate Task Model (rebuilds composite library — bakes `evaluationProcedure`).
+5. Operational Evidence Model only after readiness (`parameterSets` + confirmed Task Model binding).
+
+Regenerate authoring drafts from `samples/_build_newtonian_enterprise_pack.py`, then re-run `samples/_upgrade_em_gap_fix.py` for artifacts/seeds.
+
+**What this pack implements (enterprise solutions S1–S10):** evaluationProcedures, calibrationPlan, Force DINA + inactive 1PL, Kinematics PCM + inactive threshold, specialized rebuttals, fairnessNotes + difReviewChecklist, Task Models with process capture for representation mode, Assembly targets + prerequisite-gated policy.

@@ -26,6 +26,26 @@ const evidenceModel = {
   evidenceRules: [
     { observableId: "o2", direction: "supports", strengthLevel: 3, activationCondition: "any", justification: "Magnitude comparison evidence." },
   ],
+  evaluationProcedures: [
+    {
+      id: "ep-o1",
+      observableId: "o1",
+      workProductType: "mcq_selection",
+      method: "key",
+      description: "Key for equivalent fractions.",
+      artifactRef: "keys/o1.json",
+      artifact: { kind: "key", correctPatterns: [{ selected: "opt_a" }] },
+    },
+    {
+      id: "ep-o2",
+      observableId: "o2",
+      workProductType: "mcq_selection",
+      method: "key",
+      description: "Key for fraction comparison.",
+      artifactRef: "keys/o2.json",
+      artifact: { kind: "key", correctPatterns: [{ selected: "opt_b" }] },
+    },
+  ],
 };
 
 const taskModel = {
@@ -106,6 +126,8 @@ describe("identifyEvidence — happy path against the repo's own worked example"
       direction: "supports",
       strength: 4, // strengthOverride wins over evidenceRule.strengthLevel
       rationale: "1/2 is equivalent to 2/4.",
+      evaluationMethod: "key",
+      evaluationProcedureId: "ep-o1",
     });
   });
 
@@ -177,9 +199,18 @@ describe("identifyEvidence — degrades gracefully rather than throwing", () => 
 
   it("handles an item with no evidenceActivationMap at all (empty, not missing)", () => {
     const item = { ...equivalentFractionsItem, scoring: {} };
+    // Empty map falls back to baked evaluationProcedure key artifact.
     const result = identify({ selected: "opt_a" }, item);
-    expect(result.activated).toBeNull();
-    expect(result.warning).toMatch(/did not match any declared responsePattern/);
+    expect(result.activated).toBe(true);
+    expect(result.evaluationMethod).toBe("key");
+    expect(result.evaluationProcedureId).toBe("ep-o1");
+  });
+
+  it("falls back to evaluationProcedure key when activation map is empty and pattern misses", () => {
+    const item = { ...equivalentFractionsItem, scoring: { evidenceActivationMap: [] } };
+    const result = identify({ selected: "opt_z" }, item);
+    expect(result.activated).toBe(false);
+    expect(result.evaluationMethod).toBe("key");
   });
 
   it("throws for a missing item", () => {

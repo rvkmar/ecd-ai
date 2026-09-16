@@ -153,8 +153,33 @@
               "obs_force_diagram"
             ]
           },
-          "parameterSets": [],
-          "activeParameterSetId": null
+          "parameterSets": [
+            {
+              "parameterSetId": "ps_pilot_sm_force_dina",
+              "parameters": {
+                "obs_force_pair": {
+                  "slip": 0.12,
+                  "guess": 0.18
+                },
+                "obs_force_net": {
+                  "slip": 0.12,
+                  "guess": 0.18
+                },
+                "obs_force_diagram": {
+                  "slip": 0.12,
+                  "guess": 0.18
+                }
+              },
+              "packageVersion": "ecd-pilot-1.0.0",
+              "converged": true,
+              "sampleSize": 220,
+              "calibratedAt": "2026-09-01T00:00:00.000Z",
+              "calibratedBy": "newtonian-enterprise-seed",
+              "calibrationMethod": "pilot_seed",
+              "notes": "Synthetic pilot parameter set for enterprise gap-fix closeout; replace after live calibration."
+            }
+          ],
+          "activeParameterSetId": "ps_pilot_sm_force_dina"
         },
         {
           "id": "sm_force_1pl",
@@ -399,8 +424,45 @@
               "sd": 1
             }
           },
-          "parameterSets": [],
-          "activeParameterSetId": null
+          "parameterSets": [
+            {
+              "parameterSetId": "ps_pilot_sm_kin_pcm",
+              "parameters": {
+                "obs_kin_graph": {
+                  "a": 1.0,
+                  "b": [
+                    -1.0,
+                    0.2,
+                    1.1
+                  ]
+                },
+                "obs_kin_eq": {
+                  "a": 1.0,
+                  "b": [
+                    -1.0,
+                    0.2,
+                    1.1
+                  ]
+                },
+                "obs_kin_transfer": {
+                  "a": 1.0,
+                  "b": [
+                    -1.0,
+                    0.2,
+                    1.1
+                  ]
+                }
+              },
+              "packageVersion": "ecd-pilot-1.0.0",
+              "converged": true,
+              "sampleSize": 220,
+              "calibratedAt": "2026-09-01T00:00:00.000Z",
+              "calibratedBy": "newtonian-enterprise-seed",
+              "calibrationMethod": "pilot_seed",
+              "notes": "Synthetic pilot parameter set for enterprise gap-fix closeout; replace after live calibration."
+            }
+          ],
+          "activeParameterSetId": "ps_pilot_sm_kin_pcm"
         },
         {
           "id": "sm_kin_threshold",
@@ -688,8 +750,30 @@
               "qualitative": 0.3
             }
           },
-          "parameterSets": [],
-          "activeParameterSetId": null
+          "parameterSets": [
+            {
+              "parameterSetId": "ps_pilot_sm_rep_bn",
+              "parameters": {
+                "cpts": {
+                  "pilot": true,
+                  "note": "Seed CPTs for Problem Representation Mode — Latent Class Evidence Model"
+                },
+                "nodes": [
+                  "obs_rep_diagram",
+                  "obs_rep_equation",
+                  "obs_rep_narrative"
+                ]
+              },
+              "packageVersion": "ecd-pilot-1.0.0",
+              "converged": true,
+              "sampleSize": 220,
+              "calibratedAt": "2026-09-01T00:00:00.000Z",
+              "calibratedBy": "newtonian-enterprise-seed",
+              "calibrationMethod": "pilot_seed",
+              "notes": "Synthetic pilot parameter set for enterprise gap-fix closeout; replace after live calibration."
+            }
+          ],
+          "activeParameterSetId": "ps_pilot_sm_rep_bn"
         }
       ],
       "decisionRule": {
@@ -910,8 +994,33 @@
               "sd": 1
             }
           },
-          "parameterSets": [],
-          "activeParameterSetId": null
+          "parameterSets": [
+            {
+              "parameterSetId": "ps_pilot_sm_theta_2pl",
+              "parameters": {
+                "obs_theta_mixed": {
+                  "a": 1.1,
+                  "b": -0.2
+                },
+                "obs_theta_explain": {
+                  "a": 1.1,
+                  "b": -0.2
+                },
+                "obs_theta_numeric": {
+                  "a": 1.1,
+                  "b": -0.2
+                }
+              },
+              "packageVersion": "ecd-pilot-1.0.0",
+              "converged": true,
+              "sampleSize": 220,
+              "calibratedAt": "2026-09-01T00:00:00.000Z",
+              "calibratedBy": "newtonian-enterprise-seed",
+              "calibrationMethod": "pilot_seed",
+              "notes": "Synthetic pilot parameter set for enterprise gap-fix closeout; replace after live calibration."
+            }
+          ],
+          "activeParameterSetId": "ps_pilot_sm_theta_2pl"
         }
       ],
       "decisionRule": {

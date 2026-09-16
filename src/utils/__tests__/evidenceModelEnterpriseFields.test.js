@@ -93,8 +93,11 @@ function baseEm(overrides = {}) {
         id: "ep1",
         observableId: "obs1",
         workProductType: "mcq_selection",
+        workProductId: "wp_force_mcq",
         method: "key",
         description: "Answer key maps selected option to dichotomous observable value.",
+        artifactRef: "inline:key/obs1",
+        artifact: { kind: "key", correctPatterns: [{ selected: "opt_a" }] },
       },
     ],
     fairnessNotes:
@@ -136,6 +139,128 @@ describe("evidence model enterprise fields", () => {
     const em = baseEm({ evaluationProcedures: [] });
     const { errors } = validateEntity("evidenceModels", em, db(), { strict: true });
     expect(errors.some((e) => /evaluationProcedure/i.test(e))).toBe(true);
+  });
+
+  it("reviewed status requires a bakeable scoring artifact for key methods", () => {
+    const em = baseEm({
+      status: "reviewed",
+      evaluationProcedures: [
+        {
+          id: "ep1",
+          observableId: "obs1",
+          workProductType: "mcq_selection",
+          method: "key",
+          description: "Answer key maps selected option to dichotomous observable value.",
+        },
+      ],
+    });
+    const { errors } = validateEntity("evidenceModels", em, db(), { strict: false });
+    expect(errors.some((e) => /artifact/i.test(e))).toBe(true);
+  });
+
+  it("allows multiple evaluationProcedures that share a workProductId (TR9 multi-OV)", () => {
+    const em = baseEm({
+      observables: [
+        {
+          id: "obs1",
+          statement: "The learner selects both members of an action-reaction pair.",
+          type: "selected_response",
+          warrantId: "w1",
+          boundaryNote: "Qualitative equality only.",
+          evidenceRule: {
+            direction: "supports",
+            strengthLevel: 4,
+            activationCondition: "Both members named.",
+            justification: "Supports the third-law warrant.",
+          },
+        },
+        {
+          id: "obs2",
+          statement: "The learner names the interaction objects correctly.",
+          type: "selected_response",
+          warrantId: "w1",
+          boundaryNote: "Labels only.",
+          evidenceRule: {
+            direction: "supports",
+            strengthLevel: 3,
+            activationCondition: "Objects named.",
+            justification: "Converging evidence for the same warrant.",
+          },
+        },
+      ],
+      evidenceRules: [
+        {
+          id: "er1",
+          observableId: "obs1",
+          direction: "supports",
+          strengthLevel: 4,
+          activationCondition: "Both members named.",
+          justification: "Supports the third-law warrant.",
+        },
+        {
+          id: "er2",
+          observableId: "obs2",
+          direction: "supports",
+          strengthLevel: 3,
+          activationCondition: "Objects named.",
+          justification: "Converging evidence.",
+        },
+      ],
+      statisticalModels: [
+        {
+          id: "sm1",
+          type: "irt",
+          subtype: "1pl",
+          active: true,
+          structureConfig: { observableIds: ["obs1", "obs2"], dimensions: 1 },
+          parameterSets: [],
+          activeParameterSetId: null,
+        },
+      ],
+      evaluationProcedures: [
+        {
+          id: "ep1",
+          observableId: "obs1",
+          workProductId: "wp_shared",
+          workProductType: "mcq_selection",
+          method: "key",
+          description: "Key scores pair selection from the shared stem.",
+          artifactRef: "inline:key/obs1",
+          artifact: { kind: "key", correctPatterns: [{ selected: "opt_a" }] },
+        },
+        {
+          id: "ep2",
+          observableId: "obs2",
+          workProductId: "wp_shared",
+          workProductType: "mcq_selection",
+          method: "key",
+          description: "Key scores object labels from the same stem.",
+          artifactRef: "inline:key/obs2",
+          artifact: { kind: "key", correctPatterns: [{ labeled: "both" }] },
+        },
+      ],
+    });
+    const { valid, errors } = validateEntity("evidenceModels", em, db(), { strict: true });
+    expect(errors).toEqual([]);
+    expect(valid).toBe(true);
+  });
+
+  it("strict mode refuses observables missing from the active statistical model", () => {
+    const em = baseEm({
+      statisticalModels: [
+        {
+          id: "sm1",
+          type: "irt",
+          subtype: "1pl",
+          active: true,
+          structureConfig: { observableIds: ["other"], dimensions: 1 },
+          parameterSets: [],
+          activeParameterSetId: null,
+        },
+      ],
+    });
+    const { errors } = validateEntity("evidenceModels", em, db(), { strict: true });
+    expect(errors.some((e) => /structureConfig\.observableIds/i.test(e))).toBe(true);
   });
 
   it("strict mode refuses pending DIF checklist rows", () => {

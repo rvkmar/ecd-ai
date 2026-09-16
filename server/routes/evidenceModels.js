@@ -702,20 +702,37 @@ router.post("/:id/recalibrate", canAuthor, (req, res) => {
     });
   }
 
-  const { statisticalModelId, parameters, calibrationMethod, sampleSize, notes } = req.body;
+  const {
+    statisticalModelId,
+    parameters,
+    calibrationMethod,
+    sampleSize,
+    notes,
+    packageVersion,
+    converged,
+    calibratedAt,
+    calibratedBy,
+    parameterSetId,
+    fitStatistics,
+    standardErrors,
+  } = req.body;
 
   const sm = model.statisticalModels.find(m => m.id === statisticalModelId);
   if (!sm) return res.status(400).json({ error: "Invalid statisticalModelId." });
 
   const newParamSet = {
-    parameterSetId: genId("ps"),
+    parameterSetId: parameterSetId || genId("ps"),
     parameters,
-    calibratedAt: new Date().toISOString(),
-    calibratedBy: req.body.calibratedBy || "system",
+    calibratedAt: calibratedAt || new Date().toISOString(),
+    calibratedBy: calibratedBy || req.body.calibratedBy || "system",
     calibrationMethod: calibrationMethod || "manual",
     sampleSize: sampleSize || 0,
-    notes: notes || ""
+    notes: notes || "",
+    packageVersion: packageVersion || "manual-unspecified",
+    converged: typeof converged === "boolean" ? converged : true,
   };
+  if (fitStatistics !== undefined) newParamSet.fitStatistics = fitStatistics;
+  if (standardErrors !== undefined) newParamSet.standardErrors = standardErrors;
 
   sm.parameterSets = sm.parameterSets || [];
   sm.parameterSets.push(newParamSet);
@@ -725,6 +742,71 @@ router.post("/:id/recalibrate", canAuthor, (req, res) => {
 
   saveDB(db);
   res.json({ message: "Recalibration successful.", parameterSet: newParamSet });
+});
+
+/* =====================================================
+   🔹 ATTACH SEED PARAMETER SETS FROM calibrationPlan
+   Confirmed/suspended only. Copies calibrationPlan.seedParameterSets
+   onto the named statistical models (enterprise G4 closeout).
+===================================================== */
+router.post("/:id/attach-seed-parameter-sets", canAuthor, (req, res) => {
+  const db = loadDB();
+  const model = db.evidenceModels?.find(m => m.id === req.params.id);
+
+  if (!model) return res.status(404).json({ error: "Model not found." });
+
+  const blocked = calibrationGate(model, "Attaching seed parameter sets");
+  if (blocked) {
+    return res.status(400).json({ error: blocked });
+  }
+
+  const seeds =
+    (Array.isArray(req.body?.seedParameterSets) && req.body.seedParameterSets.length
+      ? req.body.seedParameterSets
+      : model.calibrationPlan?.seedParameterSets) || [];
+
+  if (!Array.isArray(seeds) || seeds.length === 0) {
+    return res.status(400).json({
+      error: "No seedParameterSets on the request body or model.calibrationPlan.",
+    });
+  }
+
+  const attached = [];
+  for (const seed of seeds) {
+    const statisticalModelId = seed.statisticalModelId;
+    const parameterSet = seed.parameterSet;
+    if (!statisticalModelId || !parameterSet || typeof parameterSet !== "object") {
+      return res.status(400).json({
+        error: "Each seed must include statisticalModelId and parameterSet.",
+      });
+    }
+    const sm = model.statisticalModels.find((m) => m.id === statisticalModelId);
+    if (!sm) {
+      return res.status(400).json({
+        error: `Invalid statisticalModelId '${statisticalModelId}'.`,
+      });
+    }
+    const ps = {
+      ...parameterSet,
+      parameterSetId: parameterSet.parameterSetId || genId("ps"),
+      calibratedAt: parameterSet.calibratedAt || new Date().toISOString(),
+      packageVersion: parameterSet.packageVersion || "ecd-pilot-1.0.0",
+      converged: parameterSet.converged !== false,
+      sampleSize: parameterSet.sampleSize || 1,
+    };
+    sm.parameterSets = sm.parameterSets || [];
+    const existingIdx = sm.parameterSets.findIndex(
+      (p) => p.parameterSetId === ps.parameterSetId
+    );
+    if (existingIdx >= 0) sm.parameterSets[existingIdx] = ps;
+    else sm.parameterSets.push(ps);
+    if (sm.active) sm.activeParameterSetId = ps.parameterSetId;
+    attached.push({ statisticalModelId, parameterSetId: ps.parameterSetId });
+  }
+
+  model.updatedAt = new Date().toISOString();
+  saveDB(db);
+  res.json({ message: "Seed parameter sets attached.", attached });
 });
 
 /* =====================================================

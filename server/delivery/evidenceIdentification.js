@@ -105,6 +105,8 @@ function emptyIdentification(observationId, extras = {}) {
  *   direction: string|null,
  *   strength: number|null,
  *   rationale: string|null,
+ *   evaluationMethod?: string|null,
+ *   evaluationProcedureId?: string|null,
  *   warning?: string,
  *   refused?: boolean,
  *   error?: string,
@@ -136,11 +138,40 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
   // observableId field.
   const observableId = observationId;
   const evidenceRule = entry.evidenceRule || null;
+  const evaluationProcedure = entry.evaluationProcedure || null;
   const activationMap = entry.scoring?.evidenceActivationMap || [];
 
-  const matchedEntry = activationMap.find((entryRow) =>
+  // Prefer item activation map. Only when the map is empty, fall back to
+  // key artifact correctPatterns from the baked evaluation procedure (G3).
+  // A non-empty map that fails to match stays a "no pattern" warning — do
+  // not reinterpret it as key-based non-activation.
+  let matchedEntry = activationMap.find((entryRow) =>
     matchesResponsePattern(entryRow.responsePattern, workProduct)
   );
+
+  if (!matchedEntry && activationMap.length === 0 && evaluationProcedure?.artifact?.kind === "key") {
+    const patterns = evaluationProcedure.artifact.correctPatterns || [];
+    const hit = patterns.find((p) => matchesResponsePattern(p, workProduct));
+    if (hit) {
+      matchedEntry = {
+        responsePattern: hit,
+        activatesObservable: true,
+        rationale: evaluationProcedure.description || "Matched evaluationProcedure key artifact.",
+      };
+    } else if (patterns.length > 0) {
+      return {
+        observationId,
+        observableId,
+        activated: false,
+        direction: evidenceRule?.direction ?? null,
+        strength: evidenceRule?.strengthLevel ?? null,
+        rationale:
+          evaluationProcedure.description || "Work product did not match evaluationProcedure key.",
+        evaluationMethod: evaluationProcedure.method ?? null,
+        evaluationProcedureId: evaluationProcedure.id ?? null,
+      };
+    }
+  }
 
   if (!matchedEntry) {
     return {
@@ -150,6 +181,8 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
       direction: evidenceRule?.direction ?? null,
       strength: null,
       rationale: null,
+      evaluationMethod: evaluationProcedure?.method ?? null,
+      evaluationProcedureId: evaluationProcedure?.id ?? null,
       warning: `Work product did not match any declared responsePattern on item '${item.id}'.`,
     };
   }
@@ -167,6 +200,8 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
       direction: evidenceRule?.direction ?? null,
       strength: null,
       rationale: matchedEntry.rationale ?? null,
+      evaluationMethod: evaluationProcedure?.method ?? null,
+      evaluationProcedureId: evaluationProcedure?.id ?? null,
       warning: `Item '${item.id}''s matched activation rule does not declare activatesObservable as a boolean.`,
     };
   }
@@ -177,6 +212,12 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
     activated: matchedEntry.activatesObservable,
     direction: evidenceRule?.direction ?? null,
     strength: matchedEntry.strengthOverride ?? evidenceRule?.strengthLevel ?? null,
-    rationale: matchedEntry.rationale ?? evidenceRule?.justification ?? null,
+    rationale:
+      matchedEntry.rationale ??
+      evidenceRule?.justification ??
+      evaluationProcedure?.description ??
+      null,
+    evaluationMethod: evaluationProcedure?.method ?? null,
+    evaluationProcedureId: evaluationProcedure?.id ?? null,
   };
 }
