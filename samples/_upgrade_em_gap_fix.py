@@ -32,13 +32,35 @@ def rubric_artifact(dims, ref):
     }
 
 
-def process_artifact(ref):
+def process_log_config(activate_on):
+    """EM-R1: process_log_v1 needs an explicit activation rule (never invent
+    from observableId). classByEvent derives firstMove from events[]."""
+    return {
+        "events": [
+            "node_visit",
+            "edge_draw",
+            "finalize",
+            "equation_entry",
+            "text_submit",
+        ],
+        "activateOnFirstMove": activate_on,
+        "classByEvent": {
+            "edge_draw": "diagram",
+            "node_visit": "equation",
+            "equation_entry": "equation",
+            "text_submit": "narrative",
+            "finalize": "diagram",
+        },
+    }
+
+
+def process_artifact(ref, activate_on="diagram"):
     return {
         "artifactRef": ref,
         "artifact": {
             "kind": "auto",
             "scorerId": "process_log_v1",
-            "config": {"events": ["node_visit", "edge_draw", "finalize"]},
+            "config": process_log_config(activate_on),
         },
     }
 
@@ -66,19 +88,29 @@ def attach_proc_fields(proc):
                 )
             )
     elif method in ("auto", "process_log"):
-        if not proc.get("artifact"):
-            # process_log uses auto-shaped artifact for bakeability under G3
-            # methods that require artifact; process_log itself is exempt from
-            # G3 ARTIFACT_METHODS but we still attach for Identification.
-            if method == "process_log":
+        # process_log uses auto-shaped artifact for bakeability under G3
+        # (process_log itself is exempt from ARTIFACT_METHODS) but still
+        # needs activateOnFirstMove for Identification (EM-R1).
+        if method == "process_log":
+            activate = {
+                "obs_rep_diagram": "diagram",
+                "obs_rep_equation": "equation",
+                "obs_rep_narrative": "narrative",
+            }.get(oid, "diagram")
+            art = proc.get("artifact") or {}
+            cfg = dict(art.get("config") or {})
+            if not art or art.get("scorerId") == "process_log_v1" or not art.get("kind"):
                 proc["artifactRef"] = proc.get("artifactRef") or f"inline:process/{oid}"
+                if "activateOnFirstMove" not in cfg:
+                    cfg = {**process_log_config(activate), **cfg}
+                    cfg["activateOnFirstMove"] = activate
                 proc["artifact"] = {
                     "kind": "auto",
                     "scorerId": "process_log_v1",
-                    "config": {"events": ["node_visit", "edge_draw", "finalize"]},
+                    "config": cfg,
                 }
-            else:
-                proc.update(process_artifact(f"inline:auto/{oid}"))
+        elif not proc.get("artifact"):
+            proc.update(process_artifact(f"inline:auto/{oid}"))
     return proc
 
 

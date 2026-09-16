@@ -606,8 +606,18 @@
             "events": [
               "node_visit",
               "edge_draw",
-              "finalize"
-            ]
+              "finalize",
+              "equation_entry",
+              "text_submit"
+            ],
+            "activateOnFirstMove": "diagram",
+            "classByEvent": {
+              "edge_draw": "diagram",
+              "node_visit": "equation",
+              "equation_entry": "equation",
+              "text_submit": "narrative",
+              "finalize": "diagram"
+            }
           }
         }
       },
@@ -626,8 +636,18 @@
             "events": [
               "node_visit",
               "edge_draw",
-              "finalize"
-            ]
+              "finalize",
+              "equation_entry",
+              "text_submit"
+            ],
+            "activateOnFirstMove": "equation",
+            "classByEvent": {
+              "edge_draw": "diagram",
+              "node_visit": "equation",
+              "equation_entry": "equation",
+              "text_submit": "narrative",
+              "finalize": "diagram"
+            }
           }
         }
       },
@@ -646,8 +666,18 @@
             "events": [
               "node_visit",
               "edge_draw",
-              "finalize"
-            ]
+              "finalize",
+              "equation_entry",
+              "text_submit"
+            ],
+            "activateOnFirstMove": "narrative",
+            "classByEvent": {
+              "edge_draw": "diagram",
+              "node_visit": "equation",
+              "equation_entry": "equation",
+              "text_submit": "narrative",
+              "finalize": "diagram"
+            }
           }
         }
       }

@@ -333,9 +333,11 @@ export const schema = {
       artifactRef: 'string',
       // Executable scoring asset baked into the composite library.
       // kind: key → { correctPatterns: responsePattern[] }
-      // kind: rubric → { dimensions: [...] }
-      // kind: auto → { scorerId / config }
-      // kind: process_log → { eventSchema }
+      // kind: rubric → { dimensions: [{ id, levels, activatesAt? }] }
+      // kind: auto → { scorerId, config } (process_log_v1: activateOnFirstMove /
+      //   activatingPatterns + optional classByEvent; or activatingPatterns alone)
+      // kind: process_log → { eventSchema } (treated like process_log_v1 config)
+      // Work-product contracts: see server/delivery/evaluationArtifacts.js (EM-R1).
       artifact: 'object',
     }],
     fairnessNotes: 'string',

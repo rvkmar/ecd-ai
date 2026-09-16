@@ -27,6 +27,10 @@
 // classicalCalibration.js: takes data in, returns data out.
 
 import { resolveIdentificationStructure } from "../compositeLibrary/activePackage.js";
+import {
+  applyEvaluationArtifact,
+  matchesResponsePattern,
+} from "./evaluationArtifacts.js";
 
 /**
  * True if `pattern`'s keys all match the corresponding keys on
@@ -52,19 +56,10 @@ import { resolveIdentificationStructure } from "../compositeLibrary/activePackag
  * RESPONSE_PATTERN_FIELDS comments) but had not, before this check, guarded
  * against on the matching side too. Caught by an adversarial review of this
  * module (Day 27).
+ *
+ * Pattern matching lives in evaluationArtifacts.js (shared with key /
+ * auto activatingPatterns); re-exported here only via the import above.
  */
-function matchesResponsePattern(pattern, workProduct) {
-  if (!pattern || typeof pattern !== "object") return false;
-  if (Object.keys(pattern).length === 0) return false;
-  if (!workProduct || typeof workProduct !== "object") return false;
-
-  return Object.entries(pattern).every(([key, expected]) => {
-    const actual = workProduct[key];
-    const expectedValues = Array.isArray(expected) ? expected : [expected];
-    const actualValues = Array.isArray(actual) ? actual : [actual];
-    return actualValues.some((a) => expectedValues.includes(a));
-  });
-}
 
 function emptyIdentification(observationId, extras = {}) {
   return {
@@ -142,33 +137,34 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
   const activationMap = entry.scoring?.evidenceActivationMap || [];
 
   // Prefer item activation map. Only when the map is empty, fall back to
-  // key artifact correctPatterns from the baked evaluation procedure (G3).
-  // A non-empty map that fails to match stays a "no pattern" warning — do
-  // not reinterpret it as key-based non-activation.
+  // the baked evaluationProcedure artifact (EM-R1: key | rubric | auto |
+  // process_log). A non-empty map that fails to match stays a "no pattern"
+  // warning — do not reinterpret it as artifact-based non-activation.
   let matchedEntry = activationMap.find((entryRow) =>
     matchesResponsePattern(entryRow.responsePattern, workProduct)
   );
 
-  if (!matchedEntry && activationMap.length === 0 && evaluationProcedure?.artifact?.kind === "key") {
-    const patterns = evaluationProcedure.artifact.correctPatterns || [];
-    const hit = patterns.find((p) => matchesResponsePattern(p, workProduct));
-    if (hit) {
-      matchedEntry = {
-        responsePattern: hit,
-        activatesObservable: true,
-        rationale: evaluationProcedure.description || "Matched evaluationProcedure key artifact.",
-      };
-    } else if (patterns.length > 0) {
+  if (!matchedEntry && activationMap.length === 0 && evaluationProcedure?.artifact) {
+    const artifactResult = applyEvaluationArtifact(evaluationProcedure, workProduct);
+    if (artifactResult?.matched) {
+      if (typeof artifactResult.activatesObservable === "boolean") {
+        matchedEntry = {
+          responsePattern: artifactResult.responsePattern ?? null,
+          activatesObservable: artifactResult.activatesObservable,
+          rationale: artifactResult.rationale,
+        };
+      }
+    } else if (artifactResult?.warning) {
       return {
         observationId,
         observableId,
-        activated: false,
+        activated: null,
         direction: evidenceRule?.direction ?? null,
-        strength: evidenceRule?.strengthLevel ?? null,
-        rationale:
-          evaluationProcedure.description || "Work product did not match evaluationProcedure key.",
+        strength: null,
+        rationale: null,
         evaluationMethod: evaluationProcedure.method ?? null,
         evaluationProcedureId: evaluationProcedure.id ?? null,
+        warning: artifactResult.warning,
       };
     }
   }
