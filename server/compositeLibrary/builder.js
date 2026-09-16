@@ -36,7 +36,7 @@ import { isInstantiableTaskModel, INSTANTIABLE_TASK_MODEL_STATUSES } from "../..
  * When several procedures share an observableId (multi-extraction), bake
  * the first; Identification still receives the full baked object.
  */
-export function resolveEvaluationProcedure(evidenceModel, observationId) {
+function resolveEvaluationProcedure(evidenceModel, observationId) {
   if (!evidenceModel || !observationId) return null;
   const matches = (evidenceModel.evaluationProcedures || []).filter(
     (p) => p && p.observableId === observationId
@@ -151,7 +151,12 @@ export function buildCompositeLibrary(taskModel, db) {
       item.observationId
     );
 
-    if (evidenceModel && !evaluationProcedure) {
+    if (
+      evidenceModel &&
+      Array.isArray(evidenceModel.evaluationProcedures) &&
+      evidenceModel.evaluationProcedures.length > 0 &&
+      !evaluationProcedure
+    ) {
       warnings.push(
         `Item '${item.id}''s evidence model '${item.evidenceModelId}' has no evaluationProcedure for observable '${item.observationId}'.`
       );

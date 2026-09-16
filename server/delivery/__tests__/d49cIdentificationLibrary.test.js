@@ -92,6 +92,8 @@ describe("D49c — happy path: package matching the authoring graph scores ident
       direction: "supports",
       strength: 4,
       rationale: "Correct.",
+      evaluationMethod: null,
+      evaluationProcedureId: null,
     });
   });
 

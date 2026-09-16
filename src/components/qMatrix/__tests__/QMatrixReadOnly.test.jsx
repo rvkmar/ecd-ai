@@ -100,7 +100,7 @@ vi.mock("@/api/queries/items", () => ({ useItems: () => ({ data: fx.empty }) }))
 describe("district read-only list", () => {
   it("offers no way to create a Q-matrix", () => {
     render(<QMatrixList readOnly onCreate={vi.fn()} onEdit={vi.fn()} />);
-    expect(screen.queryByRole("button", { name: /new q-matrix/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /new diagnostic design/i })).not.toBeInTheDocument();
   });
 
   it("offers no way to delete one, even an unlocked draft", () => {
@@ -130,7 +130,7 @@ describe("district read-only list", () => {
     // it is a bug. Assert the converse explicitly.
     render(<QMatrixList onCreate={vi.fn()} onEdit={vi.fn()} />);
 
-    expect(screen.getByRole("button", { name: /new q-matrix/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /new diagnostic design/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^review$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
@@ -189,7 +189,7 @@ describe("the surface threads readOnly end to end", () => {
 
   it("opens the editor editable after Edit is clicked, for an author", () => {
     render(<QMatrixModelBuilder />);
-    expect(screen.getByRole("button", { name: /new q-matrix/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /new diagnostic design/i })).toBeInTheDocument();
   });
 });
 
