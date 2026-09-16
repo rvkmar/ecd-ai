@@ -25,6 +25,14 @@ export const LSAT7_ITEM_ANALYSIS_JOB_KIND = "item-analysis";
 // parameter-set authority (ingest is analysisArtefacts only).
 export const LSAT7_ITEM_ANALYSIS_STATISTICAL_MODEL_TYPES = ["ctt", "irt", "rasch"];
 
+export const KNOWN_2PL_TESTINFO_JOB_KIND = "test-information";
+
+export const KNOWN_2PL_TESTINFO_STATISTICAL_MODEL_TYPES = ["irt", "rasch"];
+
+export const LSAT7_TEST_INFORMATION_JOB_KIND = "test-information";
+
+export const LSAT7_TEST_INFORMATION_STATISTICAL_MODEL_TYPES = ["irt", "rasch"];
+
 export const PLANTED_DIF_JOB_KIND = "dif-analysis";
 
 export const PLANTED_DIF_STATISTICAL_MODEL_TYPES = ["irt", "rasch"];
@@ -85,6 +93,32 @@ export const NAMED_CALIBRATION_FIXTURES = [
     successToast: "LSAT7 item-analysis job queued.",
     description:
       "LSAT section 7 via TAM::tam.ctt2 as a dashboard analysisArtefact: pValue, pointBiserial, n; distractors null on dichotomous data. Same classical engine as CTT parameter sets where p and rpb overlap — informs only; never sets activeParameterSetId. Bound SM is provenance, not operational readiness.",
+  },
+  {
+    id: "known-2pl-testinfo",
+    label: "Known 2PL test info",
+    kind: KNOWN_2PL_TESTINFO_JOB_KIND,
+    statisticalModelTypes: KNOWN_2PL_TESTINFO_STATISTICAL_MODEL_TYPES,
+    buttonLabel: "Enqueue known 2PL test info",
+    choosePrompt: "Choose an evidence model and an IRT or Rasch statistical model (provenance bind only).",
+    emptyBind:
+      "No evidence model has an IRT or Rasch statistical model to bind. Author one before enqueueing known 2PL test information.",
+    successToast: "Known 2PL test-information job queued.",
+    description:
+      "Synthetic three-item 2PL set with fixed a,b (c=0). Computes I(θ) from those known parameters (analytic Fisher, irtEngine.js parity) — not a published table and not LSAT7 a/b. Checkpoints at θ=−1,0,1 are hand-verified. Writes analysisArtefacts only; never sets activeParameterSetId.",
+  },
+  {
+    id: "lsat7-test-information",
+    label: "LSAT7 test information",
+    kind: LSAT7_TEST_INFORMATION_JOB_KIND,
+    statisticalModelTypes: LSAT7_TEST_INFORMATION_STATISTICAL_MODEL_TYPES,
+    buttonLabel: "Enqueue LSAT7 test information",
+    choosePrompt: "Choose an evidence model and an IRT or Rasch statistical model (provenance bind only).",
+    emptyBind:
+      "No evidence model has an IRT or Rasch statistical model to bind. Author one before enqueueing LSAT7 test information.",
+    successToast: "LSAT7 test-information job queued.",
+    description:
+      "LSAT section 7 matrix through test-information: live path fits mirt 2PL then analytic I(θ). KR-20 on the same matrix overlaps classical CTT reliability; I(θ)/marginal reliability are IRT. Informs only — do not pin LSAT7 I(θ) numerically.",
   },
   {
     id: "planted-dif",

@@ -562,7 +562,7 @@ export const CALIBRATION_JOB_KINDS = [
   { value: "dif-analysis", label: "DIF Analysis", package: "difR", ingests: "analysisArtefact", statisticalModelTypes: ["irt", "rasch"] },
   { value: "equating", label: "Equating", package: "plink", ingests: "analysisArtefact", statisticalModelTypes: ["irt", "rasch"] },
   { value: "item-analysis", label: "Item Analysis", package: "TAM", ingests: "analysisArtefact", statisticalModelTypes: ["ctt", "irt", "rasch"] },
-  { value: "test-information", label: "Test Information", package: "mirt", ingests: "analysisArtefact", statisticalModelTypes: [] },
+  { value: "test-information", label: "Test Information", package: "mirt", ingests: "analysisArtefact", statisticalModelTypes: ["irt", "rasch"] },
 ];
 
 export const CALIBRATION_JOB_KIND_VALUES = CALIBRATION_JOB_KINDS.map((k) => k.value);

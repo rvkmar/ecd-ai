@@ -82,6 +82,23 @@ describe("request envelope", () => {
     expect(body.model.family).toBe("item-analysis");
     expect(body.responseMatrix.personIds).toHaveLength(1000);
   });
+
+  it("accepts the committed known-2pl-testinfo request (D78)", async () => {
+    const { applyNamedCalibrationFixture } = await import("../calibrationFixtures.js");
+    const body = applyNamedCalibrationFixture({ fixture: "known-2pl-testinfo" }).request;
+    expect(validateCalibrationRequest(body)).toEqual([]);
+    expect(body.model.family).toBe("test-information");
+    expect(body.model.itemIds).toEqual(["Item.A", "Item.B", "Item.C"]);
+    expect(body.model.parameters["Item.A"].a).toBe(1);
+  });
+
+  it("accepts the committed lsat7-test-information request (D78)", async () => {
+    const { applyNamedCalibrationFixture } = await import("../calibrationFixtures.js");
+    const body = applyNamedCalibrationFixture({ fixture: "lsat7-test-information" }).request;
+    expect(validateCalibrationRequest(body)).toEqual([]);
+    expect(body.model.family).toBe("test-information");
+    expect(body.responseMatrix.personIds).toHaveLength(1000);
+  });
 });
 
 describe("response envelope", () => {

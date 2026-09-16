@@ -1,0 +1,39 @@
+{
+  "source": {
+    "note": "D78 synthetic known 2PL set. Hand I(θ)=Σ a²P(1−P) with P=1/(1+exp(−a(θ−b))) at θ∈{−1,0,1}; c=0. Matches src/.../irtEngine.js itemInformation when c=0. Not LSAT7 — do not invent published a/b.",
+    "formula": "I(θ)=Σ a² P(1−P), P=1/(1+exp(−a(θ−b))) (2PL Fisher; c=0)",
+    "parity": "irtEngine.js testInformation / itemInformation with c=0"
+  },
+  "itemIds": ["Item.A", "Item.B", "Item.C"],
+  "parameters": {
+    "Item.A": { "a": 1, "b": 0, "c": 0 },
+    "Item.B": { "a": 1.5, "b": -0.5, "c": 0 },
+    "Item.C": { "a": 0.8, "b": 0.5, "c": 0 }
+  },
+  "handInformation": {
+    "-1": 0.800728111220,
+    "0": 0.894030613239,
+    "1": 0.544459185512
+  },
+  "handKr20": 0.35,
+  "responseMatrix": {
+    "personIds": [
+      "p0001", "p0002", "p0003", "p0004", "p0005",
+      "p0006", "p0007", "p0008", "p0009", "p0010"
+    ],
+    "itemIds": ["Item.A", "Item.B", "Item.C"],
+    "data": [
+      [1, 1, 0],
+      [1, 1, 1],
+      [0, 1, 0],
+      [1, 0, 0],
+      [0, 1, 1],
+      [1, 1, 0],
+      [0, 0, 0],
+      [1, 1, 1],
+      [0, 1, 0],
+      [1, 0, 1]
+    ]
+  },
+  "seed": 20261121
+}

@@ -9,9 +9,11 @@
 //
 // mirt::LSAT7 is LSAT *section* 7: 1000 examinees × 5 items. The 7 is not
 // the item count. Enqueue with `{ fixture: "lsat7" }` (IRT 2PL),
-// `{ fixture: "lsat7-ctt" }` (CTT / TAM::tam.ctt), or
+// `{ fixture: "lsat7-ctt" }` (CTT / TAM::tam.ctt),
 // `{ fixture: "lsat7-item-analysis" }` (dashboard item analysis →
-// analysisArtefacts; same TAM classical engine, remapped field names)
+// analysisArtefacts; same TAM classical engine, remapped field names), or
+// `{ fixture: "lsat7-test-information" }` (D78 curves → analysisArtefacts;
+// live fits mirt 2PL then analytic I(θ) — do not pin LSAT7 I(θ) numerically)
 // and the job route fills request.model / responseMatrix / options.seed via
 // applyNamedCalibrationFixture in calibrationFixtures.js.
 // There is no published KR-20 / point-biserial table for this matrix in
@@ -63,7 +65,9 @@ export function lsat7CalibrationRequest({
   const table = loadLsat7FrequencyTable();
   const data = expandLsat7Responses();
   const resolvedFamily =
-    family === "ctt" || family === "item-analysis" ? family : "irt";
+    family === "ctt" || family === "item-analysis" || family === "test-information"
+      ? family
+      : "irt";
   const model =
     resolvedFamily === "irt"
       ? { family: "irt", subtype: "2PL", itemIds: [...table.itemIds] }
@@ -78,7 +82,8 @@ export function lsat7CalibrationRequest({
       data,
     },
     options: {
-      maxIterations: resolvedFamily === "irt" ? 200 : 1,
+      maxIterations:
+        resolvedFamily === "irt" || resolvedFamily === "test-information" ? 200 : 1,
       convergenceTolerance: 0.0001,
       seed,
     },

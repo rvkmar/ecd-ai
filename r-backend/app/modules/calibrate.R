@@ -133,6 +133,18 @@ calibrate_dispatch <- function(req, res, family) {
     return(calibrate_item_analysis(body, res))
   }
 
+  if (identical(family, "test-information")) {
+    if (!identical(requested_family, "test-information")) {
+      res$status <- 400
+      return(.failure(
+        body$jobId,
+        paste0("This endpoint calibrates family 'test-information', not '", requested_family, "'"),
+        "FamilyMismatch"
+      ))
+    }
+    return(calibrate_test_information(body, res))
+  }
+
   res$status <- 501
   .failure(body$jobId, paste0("Unsupported family: ", family), "NotImplemented")
 }
@@ -866,6 +878,321 @@ calibrate_item_analysis <- function(body, res) {
       distractorsNote = distractors_note,
       scoreForDiscrimination = "raw total (rowSums), not an IRT WLE",
       reliability = "KR-20 (Kuder & Richardson 1937); equals Cronbach's alpha for dichotomous complete data",
+      warnings = as.list(warnings_acc)
+    )
+  )
+}
+
+# D78 helpers: Fisher information matching irtEngine.js itemInformation
+# (3PL-aware). When c=0 this is a² P(1−P) with P = 1/(1+exp(−a(θ−b))).
+.item_information_fisher <- function(theta, a, b, c = 0) {
+  a <- as.numeric(a)
+  b <- as.numeric(b)
+  c <- as.numeric(c)
+  if (!is.finite(c)) c <- 0
+  if (c < 0) c <- 0
+  if (c > 1) c <- 1
+  expo <- a * (theta - b)
+  L <- 1 / (1 + exp(-expo))
+  p <- c + (1 - c) * L
+  # Clamp for numerical safety at extremes
+  p <- pmin(pmax(p, 1e-12), 1 - 1e-12)
+  q <- 1 - p
+  if (abs(1 - c) < 1e-12) return(0)
+  Lstar <- (p - c) / (1 - c)
+  as.numeric((a * a) * (q / p) * (Lstar * Lstar))
+}
+
+.test_information_at_theta <- function(theta, params) {
+  sum(vapply(params, function(p) {
+    .item_information_fisher(theta, p$a, p$b, if (is.null(p$c)) 0 else p$c)
+  }, numeric(1)))
+}
+
+.coerce_abc_row <- function(row) {
+  if (is.null(row)) return(NULL)
+  get_num <- function(x, keys, default = 0) {
+    for (k in keys) {
+      if (!is.null(row[[k]]) && length(row[[k]]) >= 1) {
+        v <- as.numeric(unlist(row[[k]], use.names = FALSE)[[1]])
+        if (is.finite(v)) return(v)
+      }
+    }
+    default
+  }
+  list(
+    a = get_num(row, c("a", "a1"), 1),
+    b = get_num(row, c("b"), 0),
+    c = get_num(row, c("c", "g"), 0)
+  )
+}
+
+.extract_source_parameters <- function(body, item_ids) {
+  src <- body$model$parameters
+  if (is.null(src)) src <- body$options$sourceParameters
+  if (is.null(src)) return(NULL)
+
+  out <- list()
+  if (is.data.frame(src)) {
+    ids <- rownames(src)
+    if (is.null(ids) || !length(ids)) ids <- item_ids
+    for (i in seq_len(nrow(src))) {
+      id <- .as_char(ids[[i]])
+      row <- as.list(src[i, , drop = FALSE])
+      abc <- .coerce_abc_row(row)
+      if (!is.null(abc)) out[[id]] <- abc
+    }
+  } else if (is.list(src)) {
+    nms <- names(src)
+    if (is.null(nms) || !any(nzchar(nms))) {
+      if (length(src) == length(item_ids)) names(src) <- item_ids
+      nms <- names(src)
+    }
+    for (nm in nms) {
+      abc <- .coerce_abc_row(src[[nm]])
+      if (!is.null(abc)) out[[.as_char(nm)]] <- abc
+    }
+  }
+  if (!length(out)) return(NULL)
+  out
+}
+
+.fit_2pl_parameters_from_matrix <- function(resp_mat, item_ids, seed) {
+  if (!requireNamespace("mirt", quietly = TRUE)) {
+    stop("Package mirt is not installed")
+  }
+  suppressPackageStartupMessages(library(mirt, quietly = TRUE))
+  set.seed(seed)
+  fit <- mirt::mirt(as.data.frame(resp_mat), 1, itemtype = "2PL", verbose = FALSE)
+  converged <- isTRUE(tryCatch(mirt::extract.mirt(fit, "converged"), error = function(e) FALSE))
+  if (!converged) stop("mirt did not converge")
+  coefs <- mirt::coef(fit, IRTpars = TRUE, simplify = TRUE)$items
+  ids <- rownames(coefs)
+  if (is.null(ids)) ids <- item_ids
+  parameters <- list()
+  for (i in seq_len(nrow(coefs))) {
+    id <- .as_char(ids[[i]])
+    a <- if ("a" %in% colnames(coefs)) unname(coefs[i, "a"]) else if ("a1" %in% colnames(coefs)) unname(coefs[i, "a1"]) else 1
+    b <- if ("b" %in% colnames(coefs)) unname(coefs[i, "b"]) else 0
+    c <- if ("g" %in% colnames(coefs)) unname(coefs[i, "g"]) else 0
+    parameters[[id]] <- list(a = as.numeric(a), b = as.numeric(b), c = as.numeric(c))
+  }
+  list(parameters = parameters, packageVersion = paste("mirt", as.character(utils::packageVersion("mirt"))))
+}
+
+.marginal_reliability_from_info <- function(theta, information) {
+  # Under N(0,1) prior: ρ ≈ 1 − E[1/I(θ)]. Discrete grid weights = φ(θ).
+  dens <- stats::dnorm(theta, mean = 0, sd = 1)
+  ok <- is.finite(information) & information > 1e-12 & is.finite(dens)
+  if (!any(ok)) return(NA_real_)
+  w <- dens[ok]
+  inv_i <- 1 / information[ok]
+  e_inv <- sum(w * inv_i) / sum(w)
+  as.numeric(1 - e_inv)
+}
+
+# D78: test information curve + conditional SEM + optional KR-20.
+# Prefer known model.parameters / options.sourceParameters (no mirt fit).
+# Else fit mirt 2PL on responseMatrix and compute I(θ) from fitted coefs
+# with the same analytic Fisher formula (parity with irtEngine.js).
+# Writes analysisArtefacts only — never activeParameterSetId.
+calibrate_test_information <- function(body, res) {
+  started <- proc.time()[["elapsed"]]
+  stderr_lines <- character(0)
+  warnings_acc <- character(0)
+
+  opts <- body$options
+  .first <- function(x) unlist(x, use.names = FALSE)[[1]]
+  seed <- as.integer(.first(opts$seed))
+
+  request_item_ids <- vapply(as.list(body$model$itemIds), .as_char, character(1))
+
+  resp_mat <- NULL
+  n_persons <- NA_integer_
+  if (!is.null(body$responseMatrix)) {
+    resp_df <- tryCatch(
+      response_matrix_to_df(body$responseMatrix),
+      error = function(e) {
+        stderr_lines <<- c(stderr_lines, conditionMessage(e))
+        NULL
+      }
+    )
+    if (is.null(resp_df)) {
+      res$status <- 400
+      return(.failure(body$jobId, "Could not coerce responseMatrix.data", "MatrixError", paste(stderr_lines, collapse = "\n")))
+    }
+    colnames(resp_df) <- request_item_ids
+    resp_mat <- as.matrix(resp_df)
+    storage.mode(resp_mat) <- "numeric"
+    n_persons <- nrow(resp_mat)
+  }
+
+  source_params <- tryCatch(
+    .extract_source_parameters(body, request_item_ids),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+
+  method <- "analytic-2PL-Fisher (irtEngine.js parity)"
+  pkg_ver <- "analytic-2PL Fisher"
+  known_path <- !is.null(source_params) && length(source_params) >= 2L
+
+  if (known_path) {
+    params <- source_params
+  } else {
+    if (is.null(resp_mat)) {
+      res$status <- 400
+      return(.failure(
+        body$jobId,
+        "test-information requires model.parameters (or options.sourceParameters) or a responseMatrix to fit",
+        "MissingParameters"
+      ))
+    }
+    fit_try <- try(.fit_2pl_parameters_from_matrix(resp_mat, request_item_ids, seed), silent = TRUE)
+    if (inherits(fit_try, "try-error")) {
+      stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+      res$status <- 200
+      return(.failure(
+        body$jobId,
+        paste0(paste(stderr_lines, collapse = "; "), sprintf(" [%dx%d]", nrow(resp_mat), ncol(resp_mat))),
+        "mirtError",
+        paste(stderr_lines, collapse = "\n")
+      ))
+    }
+    params <- fit_try$parameters
+    pkg_ver <- fit_try$packageVersion
+    method <- "mirt 2PL fit then analytic Fisher I(θ) (irtEngine.js parity; not mirt::testinfo)"
+  }
+
+  theta_min <- if (!is.null(opts$thetaMin)) as.numeric(.first(opts$thetaMin)) else -3
+  theta_max <- if (!is.null(opts$thetaMax)) as.numeric(.first(opts$thetaMax)) else 3
+  theta_step <- if (!is.null(opts$thetaStep)) as.numeric(.first(opts$thetaStep)) else 0.1
+  if (!is.finite(theta_min) || !is.finite(theta_max) || !is.finite(theta_step) || theta_step <= 0) {
+    theta_min <- -3; theta_max <- 3; theta_step <- 0.1
+  }
+  theta <- seq(theta_min, theta_max, by = theta_step)
+  # Guarantee checkpoints −1, 0, 1 are on the grid
+  for (cp in c(-1, 0, 1)) {
+    if (!any(abs(theta - cp) < 1e-12)) theta <- sort(unique(c(theta, cp)))
+  }
+
+  information <- vapply(theta, function(th) .test_information_at_theta(th, params), numeric(1))
+  conditional_sem <- lapply(information, function(ii) {
+    if (!is.finite(ii) || ii < 1e-12) return(NULL)
+    as.numeric(1 / sqrt(ii))
+  })
+
+  checkpoint_thetas <- c(-1, 0, 1)
+  checkpoints <- list()
+  for (th in checkpoint_thetas) {
+    idx <- which.min(abs(theta - th))
+    key <- as.character(th)
+    ii <- information[[idx]]
+    checkpoints[[key]] <- list(
+      information = as.numeric(ii),
+      conditionalSEM = if (!is.finite(ii) || ii < 1e-12) NULL else as.numeric(1 / sqrt(ii))
+    )
+  }
+
+  source_out <- lapply(params, function(p) {
+    list(a = as.numeric(p$a), b = as.numeric(p$b), c = as.numeric(if (is.null(p$c)) 0 else p$c))
+  })
+
+  kr20 <- if (!is.null(resp_mat)) .kr20(resp_mat) else NA_real_
+  marg_rel <- .marginal_reliability_from_info(theta, information)
+
+  elapsed <- proc.time()[["elapsed"]] - started
+  sample_size <- if (is.finite(n_persons)) as.integer(n_persons) else length(params)
+
+  authority_note <- paste(
+    "Operational IRT readiness and activeParameterSetId come only from job kind",
+    "irt-parameters -> parameterSets. test-information writes analysisArtefacts",
+    "(D76/D78) and informs only; it never gates lifecycle or sets activeParameterSetId."
+  )
+  reliability_note <- paste(
+    "fitStatistics.kr20 is classical KR-20 on the response matrix (same formula as",
+    "ctt-statistics / item-analysis via .kr20). I(theta) and marginalReliability are IRT",
+    "quantities from the Fisher information curve -- state both; do not conflate them."
+  )
+  formula_note <- paste(
+    "I(theta)=sum a^2 (q/p) L^2 with L=(p-c)/(1-c), p=c+(1-c)/(1+exp(-a(theta-b))).",
+    "When c=0 this is sum a^2 P(1-P). Matches src/.../irtEngine.js itemInformation / testInformation.",
+    "Not mirt::testinfo."
+  )
+
+  converged <- all(is.finite(information)) &&
+    all(vapply(checkpoint_thetas, function(th) {
+      idx <- which.min(abs(theta - th))
+      is.finite(information[[idx]]) && information[[idx]] > 0
+    }, logical(1)))
+
+  message(sprintf(
+    "calibrate_test_information job=%s known=%s nItems=%d nPersons=%s",
+    .as_char(body$jobId), known_path, length(params),
+    if (is.finite(n_persons)) as.character(n_persons) else "NA"
+  ))
+
+  if (!converged) {
+    res$status <- 200
+    out <- .failure(
+      body$jobId,
+      "Test information curve was not identified (non-finite I(θ) at required checkpoints)",
+      "NotConverged",
+      paste(stderr_lines, collapse = "\n")
+    )
+    out$packageVersion <- pkg_ver
+    out$sampleSize <- sample_size
+    out$calibratedAt <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+    out$diagnostics <- list(
+      iterations = 1L,
+      elapsedSeconds = elapsed,
+      method = method,
+      formula = formula_note,
+      authority = authority_note,
+      reliabilityNote = reliability_note,
+      warnings = as.list(warnings_acc)
+    )
+    return(out)
+  }
+
+  parameters <- list(
+    theta = as.numeric(theta),
+    information = as.numeric(information),
+    conditionalSEM = conditional_sem,
+    sourceParameters = source_out,
+    checkpoints = checkpoints
+  )
+
+  fit_stats <- list(
+    nItems = length(params),
+    nPersons = if (is.finite(n_persons)) as.integer(n_persons) else NULL
+  )
+  if (is.finite(kr20)) fit_stats$kr20 <- as.numeric(kr20)
+  if (is.finite(marg_rel) && marg_rel > 0 && marg_rel < 1) {
+    fit_stats$marginalReliability <- as.numeric(marg_rel)
+  }
+
+  list(
+    contractVersion = CALIBRATION_CONTRACT_VERSION,
+    jobId = .as_char(body$jobId),
+    converged = TRUE,
+    packageVersion = pkg_ver,
+    sampleSize = sample_size,
+    calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    parameters = parameters,
+    standardErrors = NULL,
+    fitStatistics = fit_stats,
+    diagnostics = list(
+      iterations = 1L,
+      elapsedSeconds = elapsed,
+      method = method,
+      formula = formula_note,
+      authority = authority_note,
+      reliabilityNote = reliability_note,
+      sourceParameterSetId = if (!is.null(opts$sourceParameterSetId)) .as_char(.first(opts$sourceParameterSetId)) else NULL,
+      knownParameterPath = known_path,
       warnings = as.list(warnings_acc)
     )
   )

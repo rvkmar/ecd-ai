@@ -1,6 +1,7 @@
 // server/r/calibrationFixtures.js
 // Named-fixture enqueue: `{ fixture: "lsat7" | "sim10gdina" | "lsat7-ctt" |
-// "lsat7-item-analysis" | "planted-dif" | "known-equating" }`.
+// "lsat7-item-analysis" | "known-2pl-testinfo" | "lsat7-test-information" |
+// "planted-dif" | "known-equating" }`.
 // Production caller is POST /api/calibrationJobs. Keep this list in
 // lockstep with the fixture modules; unknown names 400.
 
@@ -8,12 +9,15 @@ import { lsat7CalibrationRequest } from "./lsat7Fixture.js";
 import { sim10gdinaCalibrationRequest } from "./sim10gdinaFixture.js";
 import { plantedDifCalibrationRequest } from "./plantedDifFixture.js";
 import { knownEquatingCalibrationRequest } from "./knownEquatingFixture.js";
+import { known2plTestinfoCalibrationRequest } from "./known2plTestinfoFixture.js";
 
 export const CALIBRATION_NAMED_FIXTURES = [
   "lsat7",
   "sim10gdina",
   "lsat7-ctt",
   "lsat7-item-analysis",
+  "known-2pl-testinfo",
+  "lsat7-test-information",
   "planted-dif",
   "known-equating",
 ];
@@ -80,6 +84,14 @@ export function applyNamedCalibrationFixture(body, db = null) {
       })
     );
   }
+  if (body.fixture === "known-2pl-testinfo") {
+    return mergeFixtureRequest(
+      body,
+      known2plTestinfoCalibrationRequest({
+        jobId: body.request?.jobId,
+      })
+    );
+  }
   if (body.fixture === "planted-dif") {
     return mergeFixtureRequest(
       body,
@@ -88,9 +100,20 @@ export function applyNamedCalibrationFixture(body, db = null) {
       })
     );
   }
-  if (body.fixture === "lsat7" || body.fixture === "lsat7-ctt" || body.fixture === "lsat7-item-analysis") {
+  if (
+    body.fixture === "lsat7" ||
+    body.fixture === "lsat7-ctt" ||
+    body.fixture === "lsat7-item-analysis" ||
+    body.fixture === "lsat7-test-information"
+  ) {
     let family = "irt";
     if (
+      body.fixture === "lsat7-test-information" ||
+      body.kind === "test-information" ||
+      body.request?.model?.family === "test-information"
+    ) {
+      family = "test-information";
+    } else if (
       body.fixture === "lsat7-item-analysis" ||
       body.kind === "item-analysis" ||
       body.request?.model?.family === "item-analysis"

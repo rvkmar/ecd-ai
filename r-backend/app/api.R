@@ -31,7 +31,7 @@ library(plumber)
 # boxed form from the published image's plumber.
 # jsonlite's default null="list" turns R NULL into JSON {}. ADR 0002 and
 # D77 distractors: null need real JSON null.
-.json_unboxed <- plumber::serializer_unboxed_json(null = "null")
+.json_unboxed <- plumber::serializer_unboxed_json(null = "null", digits = 16)
 
 api <- plumber::Plumber$new()
 api$setSerializer(.json_unboxed)
@@ -98,6 +98,16 @@ api$handle("POST", "/calibrate/item-analysis", function(req, res) {
 # Calendar alias for the same handler (exit-check name /analyse/item).
 api$handle("POST", "/analyse/item", function(req, res) {
   calibrate_dispatch(req, res, family = "item-analysis")
+}, serializer = .json_unboxed)
+
+# D78: test information curves → analysisArtefacts (never parameterSets).
+api$handle("POST", "/calibrate/test-information", function(req, res) {
+  calibrate_dispatch(req, res, family = "test-information")
+}, serializer = .json_unboxed)
+
+# Calendar alias for the same handler (exit-check name /analyse/test-information).
+api$handle("POST", "/analyse/test-information", function(req, res) {
+  calibrate_dispatch(req, res, family = "test-information")
 }, serializer = .json_unboxed)
 
 # Legacy path kept as an alias of /calibrate/irt so a leftover client that

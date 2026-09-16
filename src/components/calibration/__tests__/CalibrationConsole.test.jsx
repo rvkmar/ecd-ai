@@ -212,6 +212,34 @@ vi.mock("@/api/queries/calibrationJobs", () => ({
           })
         );
       }
+      if (payload.fixture === "known-2pl-testinfo") {
+        return fx.addJob(
+          queuedJob({
+            id: "job-known-2pl-testinfo",
+            kind: "test-information",
+            evidenceModelId: payload.evidenceModelId,
+            statisticalModelId: payload.statisticalModelId,
+            request: {
+              contractVersion: "1.0",
+              jobId: "job-known-2pl-testinfo",
+              model: {
+                family: "test-information",
+                itemIds: ["Item.A", "Item.B", "Item.C"],
+                parameters: {
+                  "Item.A": { a: 1, b: 0, c: 0 },
+                  "Item.B": { a: 1.5, b: -0.5, c: 0 },
+                  "Item.C": { a: 0.8, b: 0.5, c: 0 },
+                },
+              },
+              responseMatrix: {
+                personIds: Array.from({ length: 10 }, (_, i) => `p${i}`),
+                itemIds: ["Item.A", "Item.B", "Item.C"],
+              },
+              options: { seed: 20261121 },
+            },
+          })
+        );
+      }
       if (payload.fixture === "planted-dif") {
         return fx.addJob(
           queuedJob({
@@ -436,6 +464,31 @@ describe("admin start → process → watch → ingest", () => {
     ]);
     expect(screen.getByRole("heading", { name: /inspect job-lsat7-item-analysis/i })).toBeInTheDocument();
     expect(screen.getByText(/5 × 8/)).toBeInTheDocument();
+  });
+
+  it("enqueues known 2PL test info bound to an IRT statistical model", async () => {
+    const user = userEvent.setup();
+    render(<CalibrationConsole />);
+
+    await user.selectOptions(screen.getByLabelText(/published fixture/i), "known-2pl-testinfo");
+    expect(screen.getByRole("button", { name: /enqueue known 2pl test info/i })).toBeInTheDocument();
+    expect(screen.getByText(/analysisArtefact/)).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /LSAT CTT evidence/ })).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/evidence model/i), "em1");
+    await user.selectOptions(screen.getByLabelText(/statistical model/i), "sm1");
+    await user.click(screen.getByRole("button", { name: /enqueue known 2pl test info/i }));
+
+    expect(fx.enqueuePayloads).toEqual([
+      {
+        fixture: "known-2pl-testinfo",
+        kind: "test-information",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+      },
+    ]);
+    expect(screen.getByRole("heading", { name: /inspect job-known-2pl-testinfo/i })).toBeInTheDocument();
+    expect(screen.getByText(/3 × 10/)).toBeInTheDocument();
   });
 
   it("enqueues planted DIF bound to an IRT statistical model", async () => {

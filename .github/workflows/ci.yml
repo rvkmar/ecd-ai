@@ -34,7 +34,8 @@ jobs:
   # This job uses the same published image + repo app bind-mount as
   # compose — not a second psychometric stack — and runs the live
   # LSAT7 (mirt), sim10GDINA (GDINA), LSAT7 CTT (TAM), planted DIF
-  # (difR), known equating (plink), and LSAT7 item-analysis (TAM)
+  # (difR), known equating (plink), LSAT7 item-analysis (TAM), and
+  # known-2pl / LSAT7 test-information (analytic Fisher / mirt)
   # enqueue → process → ingest paths.
   lsat7-pipeline:
     runs-on: ubuntu-latest
@@ -102,6 +103,11 @@ jobs:
         env:
           R_BACKEND_URL: http://127.0.0.1:4000
         run: npx vitest run server/r/__tests__/itemAnalysisPipeline.test.js
+
+      - name: test-information full pipeline against live R
+        env:
+          R_BACKEND_URL: http://127.0.0.1:4000
+        run: npx vitest run server/r/__tests__/testInformationPipeline.test.js
 
       - name: Dump R logs on failure
         if: failure()

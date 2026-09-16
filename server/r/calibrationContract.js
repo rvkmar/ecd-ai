@@ -15,6 +15,7 @@ const CALIBRATION_MODEL_FAMILIES = [
   "dif",
   "equating",
   "item-analysis",
+  "test-information",
 ];
 const CALIBRATION_IRT_SUBTYPES = ["2PL", "3PL", "Rasch"];
 
@@ -25,6 +26,7 @@ const KIND_TO_R_PATH = {
   "dif-analysis": "/calibrate/dif",
   equating: "/calibrate/equating",
   "item-analysis": "/calibrate/item-analysis",
+  "test-information": "/calibrate/test-information",
 };
 
 export function rPathForJobKind(kind) {
