@@ -18,11 +18,11 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D79** — attribute-profile cohort summaries → analysisArtefacts (W16). Handoff: `claude/day79-attribute-profile-cohort-summaries.md`. |
+| Last completed unit | **D80** — scheduled calibration enqueue (W16 close). Handoff: `claude/day80-scheduled-recalibration.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual work order EM-R1…EM-R5. |
-| Next queued | Calendar **D80** — Scheduled recalibration + W16 handoff (enqueue only; never ingest). |
-| Block | **W16** — R analytics and reporting service (**in progress**; D76–D79 done). Off-cal EM residual does not advance the W16 gate. |
+| Next queued | Calendar **D81** — W17 psychometric dashboards (first unit). |
+| Block | **W16** — R analytics and reporting service (**closed** at D80). Off-cal EM residual does not reopen the gate. |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -48,6 +48,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-16 W16 close | this close at session end. Suite re-run **1468 passed / 9 skipped**; build green (max recharts 446.89 kB). Units D76–D78 done; next D79. |
 | HEAD at 2026-09-16 off-cal EM | product `e3d6595` + `28fd9f0` + this close. Suite **1498 passed / 9 skipped**; build green (recharts 446.89 kB). Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. |
 | HEAD at D79 | product + `claude/day79-attribute-profile-cohort-summaries.md`. Suite **1504 passed / 9 skipped**; Node-only known cohort hand rates; tenancy scope shaped. |
+| HEAD at D80 | product + `claude/day80-scheduled-recalibration.md`. Suite **1510 passed / 9 skipped**; enqueue-only cron; W16 gate closed. |
 
 ## Session log
 
@@ -97,6 +98,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-16 | off-cal EM | 1–2 | Newtonian enterprise pack + TR9 EM gap-fix G1–G6/G8. Product `e3d6595` + `28fd9f0`. Not D79. |
 | 2026-09-16 | close | — | Off-cal EM close. Suite **1498 passed / 9 skipped**; build green. Close-gate: unexport `resolveEvaluationProcedure`; soften eval-proc warn; d49c fields; QMatrix “Diagnostic design” test label. Handoff: `day79-offcal-em-enterprise-gap-fix.md`. Residual EM-R1…EM-R5. Next: D79 or EM-R1. |
 | 2026-09-16 | D79 | 2, alone | Attribute-profile cohort summaries (Node-only) → analysisArtefacts. Premise rewritten: not an R path. Both estimands labelled; tenancy scope shaped. Fixture `known-attribute-profile-cohort`. Suite **1504 passed / 9 skipped**. Next: D80. |
+| 2026-09-16 | D80 | 2, alone | Scheduled calibration enqueue (never ingest). Min-sample gate; opt-in cron; W16 gate closed. Suite **1510 passed / 9 skipped**. Next: W17 / D81. |
 
 ## Compression debt
 
@@ -152,6 +154,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D78 | Test information curves + conditional SE + reliability as remaining W16 analytics | Kind already declared with empty bind list; no R path; no fixture; D76 owns artefacts; D64 forbids inventing LSAT7 a/b | Synthetic known 2PL fixture with hand I(θ); analytic Fisher (irtEngine parity) from `model.parameters`; LSAT7 structural mirt-then-formula without pinning I(θ); KR-20 via `.kr20`; bind `irt|rasch`; plumber `digits=16` |
 | off-cal EM G3 | Scoring artifacts close TR9 evaluation at delivery | Artifacts author + bake; Identification only executes `key` when activation map empty | Residual **EM-R1** (rubric/process_log/auto). Pilot seeds ≠ live R (**EM-R2**). |
 | D79 | Attribute-profile cohort summaries as remaining W16 R analytics | No job kind; no R path needed; D57/`classifyAttributeProfile` already owns the rule; scope lacked tenancy fields | Node-only job kind `attribute-profile-summary` via worker branch; both estimands labelled; scope gains tenant/district/school/cohort; population CA explicitly not claimed |
+| D80 | Cron enqueues recalibration/analysis; artefact produced on schedule | Only autoFinishCron existed (unmounted); no scheduled calibration; live session matrices not built | `calibrationPlan.scheduledEnqueue` + enqueue-only cron (opt-in); fixture-backed sample gate; never ingest; W16 gate closed |
 
 ## Carried-forward gaps
 

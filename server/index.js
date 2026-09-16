@@ -22,6 +22,7 @@ import calibrationJobsRoutes from "./routes/calibrationJobsRoutes.js";
 import analysisArtefactsRoutes from "./routes/analysisArtefactsRoutes.js";
 import { recoverRunningJobs, processQueuedJobs } from "./r/calibrationWorker.js";
 import { getRHealth, rBackendUrl } from "./r/rClient.js";
+import startScheduledCalibrationCron from "./cron/scheduledCalibrationCron.js";
 import usersRoutes from "./routes/usersRoutes.js";
 // D48: the three collections that had schema, lifecycle validators and no
 // HTTP surface at all -- artefacts 4 and 6 of the seven-artefact contract
@@ -117,5 +118,15 @@ app.listen(PORT, () => {
     processQueuedJobs().catch((err) => {
       console.error("calibration queue start failed:", err);
     });
+  }
+  // D80: enqueue-only recalibration/analysis schedule. Opt-in so a timer
+  // never surprises a deployment that has not authored scheduledEnqueue.
+  if (process.env.SCHEDULED_CALIBRATION_ENABLED === "1") {
+    try {
+      startScheduledCalibrationCron();
+      console.log("scheduledCalibrationCron started (enqueue only; never ingests)");
+    } catch (err) {
+      console.error("scheduledCalibrationCron failed to start:", err);
+    }
   }
 });

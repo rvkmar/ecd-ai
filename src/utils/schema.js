@@ -1360,6 +1360,16 @@ export function validateEntity(collection, obj, db = null, options = {}) {
     if (obj.calibrationPlan !== undefined && obj.calibrationPlan !== null) {
       if (typeof obj.calibrationPlan !== "object" || Array.isArray(obj.calibrationPlan)) {
         errors.push("calibrationPlan should be object");
+      } else if (
+        obj.calibrationPlan.scheduledEnqueue !== undefined &&
+        obj.calibrationPlan.scheduledEnqueue !== null
+      ) {
+        const se = obj.calibrationPlan.scheduledEnqueue;
+        if (typeof se !== "object" || Array.isArray(se)) {
+          errors.push("calibrationPlan.scheduledEnqueue should be object");
+        } else if (se.jobs !== undefined && se.jobs !== null && !Array.isArray(se.jobs)) {
+          errors.push("calibrationPlan.scheduledEnqueue.jobs should be an array");
+        }
       }
     }
 
