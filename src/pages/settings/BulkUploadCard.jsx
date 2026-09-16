@@ -15,14 +15,21 @@ import { UploadCloud, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useBulkUpload } from "@/api/queries/bulkUpload";
 import { apiErrorMessage } from "@/api/apiClient";
+import { normalizeStudentModelBulkRows } from "@/utils/studentModelBulkNormalize";
 
 // A file is normally just a bare JSON array of entity objects. As a
 // convenience, also accept a single wrapper object whose only property is
 // that array -- e.g. { "competencyModels": [...] } -- so exports/samples
 // that name the collection at the top level don't need hand-editing before
-// upload. Returns the array to use, or null if the shape doesn't match
-// either case.
-function unwrapToArray(parsed) {
+// upload. Student Model cards additionally accept a Step 9 specification
+// export ({ model, competencies, smVariables }). Returns the array to use,
+// or null if the shape doesn't match.
+function unwrapToArray(parsed, { studentModel = false } = {}) {
+  if (studentModel) {
+    return normalizeStudentModelBulkRows(parsed, {
+      assumeArrayIsStudentModel: true,
+    });
+  }
   if (Array.isArray(parsed)) return parsed;
   if (parsed && typeof parsed === "object") {
     const values = Object.values(parsed);
@@ -37,6 +44,7 @@ export default function BulkUploadCard({
   endpoint,
   invalidateKey,
   sampleHint,
+  studentModel = false,
 }) {
   const fileInputRef = useRef(null);
   const [fileName, setFileName] = useState("");
@@ -67,12 +75,16 @@ export default function BulkUploadCard({
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result);
-        const rows = unwrapToArray(parsed);
-        if (!rows) {
-          setParseError("File must contain a JSON array of objects.");
+        const nextRows = unwrapToArray(parsed, { studentModel });
+        if (!nextRows) {
+          setParseError(
+            studentModel
+              ? "File must be a Student Model array, { competencyModels: [...] }, a single model, or a Step 9 specification export ({ model, competencies })."
+              : "File must contain a JSON array of objects."
+          );
           return;
         }
-        setRows(rows);
+        setRows(nextRows);
       } catch (err) {
         setParseError(`Invalid JSON: ${err.message}`);
       }
@@ -89,7 +101,9 @@ export default function BulkUploadCard({
       if (result.failed === 0) {
         toast.success(`✅ ${title}: ${result.created} row(s) created`);
       } else {
-        toast(`⚠️ ${title}: ${result.created} created, ${result.failed} failed`, { icon: "⚠️" });
+        toast(`⚠️ ${title}: ${result.created} created, ${result.failed} failed`, {
+          icon: "⚠️",
+        });
       }
     } catch (err) {
       toast.error(`❌ Bulk upload failed: ${apiErrorMessage(err, err.message)}`);
@@ -100,7 +114,9 @@ export default function BulkUploadCard({
     <div className="rounded-xl border border-border p-4 space-y-3">
       <div>
         <div className="font-medium">{title}</div>
-        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+        {description && (
+          <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -115,9 +131,15 @@ export default function BulkUploadCard({
             onChange={handleFileChange}
           />
         </label>
-        {fileName && <span className="text-xs text-muted-foreground truncate max-w-[200px]">{fileName}</span>}
+        {fileName && (
+          <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+            {fileName}
+          </span>
+        )}
         {rows && !parseError && (
-          <span className="text-xs text-muted-foreground">{rows.length} row(s) detected</span>
+          <span className="text-xs text-muted-foreground">
+            {rows.length} row(s) detected
+          </span>
         )}
       </div>
 

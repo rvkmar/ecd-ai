@@ -46,6 +46,7 @@ import { competencyModelsKey } from "@/api/queries/competencies";
 import { evidenceModelsKey } from "@/api/queries/evidenceModels";
 import { taskModelsKey } from "@/api/queries/taskModels";
 import { itemsKey } from "@/api/queries/items";
+import { normalizeStudentModelBulkRows } from "@/utils/studentModelBulkNormalize";
 
 // Fixed dependency order. Index in this array IS the upload order.
 const STAGES = [
@@ -83,8 +84,13 @@ const STAGE_BY_KEY = Object.fromEntries(STAGES.map((s) => [s.key, s]));
 
 // Accept either a bare JSON array or a single-key wrapper object
 // ({ "evidenceModels": [...] }), matching BulkUploadCard's tolerance.
-// Returns { rows, wrapperKey } or null when the shape is neither.
+// Student Model files additionally accept a Step 9 specification export.
+// Returns { rows, wrapperKey, kindHint } or null when the shape is neither.
 function unwrapToArray(parsed) {
+  const asStudentModel = normalizeStudentModelBulkRows(parsed);
+  if (asStudentModel) {
+    return { rows: asStudentModel, wrapperKey: "competencyModels", kindHint: "competencyModels" };
+  }
   if (Array.isArray(parsed)) return { rows: parsed, wrapperKey: "" };
   if (parsed && typeof parsed === "object") {
     const entries = Object.entries(parsed);
@@ -107,7 +113,7 @@ function detectKind(rows, fileName, wrapperKey) {
     if (has("evidenceModelIds") || has("primaryEvidenceModelId") || has("expectedObservations"))
       return "taskModels";
     if (has("taskModelId") || has("observationId")) return "items";
-    if (has("measurementIntent") || has("competencies") || has("constructFramework"))
+    if (has("measurementIntent") || has("competencies") || has("constructFramework") || has("smVariables") || has("psychologicalPerspective"))
       return "competencyModels";
   }
 
@@ -116,14 +122,15 @@ function detectKind(rows, fileName, wrapperKey) {
     if (wrapper.includes("evidence")) return "evidenceModels";
     if (wrapper.includes("task")) return "taskModels";
     if (wrapper.includes("item")) return "items";
-    if (wrapper.includes("competenc")) return "competencyModels";
+    if (wrapper.includes("competenc") || wrapper.includes("studentmodel")) return "competencyModels";
   }
 
   const name = String(fileName || "").toLowerCase();
   if (name.includes("item")) return "items";
   if (name.includes("task")) return "taskModels";
   if (name.includes("evidence")) return "evidenceModels";
-  if (name.includes("competenc")) return "competencyModels";
+  if (name.includes("competenc") || name.includes("student") || name.includes("specification"))
+    return "competencyModels";
 
   return "";
 }
@@ -141,7 +148,9 @@ function readJsonFile(file) {
         resolve({
           fileName: file.name,
           rows: unwrapped.rows,
-          kind: detectKind(unwrapped.rows, file.name, unwrapped.wrapperKey),
+          kind:
+            unwrapped.kindHint ||
+            detectKind(unwrapped.rows, file.name, unwrapped.wrapperKey),
         });
       } catch (err) {
         resolve({ fileName: file.name, error: `Invalid JSON: ${err.message}` });

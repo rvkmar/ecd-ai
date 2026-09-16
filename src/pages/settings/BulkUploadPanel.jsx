@@ -72,10 +72,11 @@ export default function BulkUploadPanel() {
 
         <BulkUploadCard
           title="Student Models"
-          description='Array of { name, description?, measurementIntent?, constructFramework?, competencies? }. Each model may include a nested "competencies" array (each needs at least a variableType: binary | ordinal | continuous | categorical) to create the model and its competencies together. Also accepts a file shaped as { "competencyModels": [...] }.'
+          description='Array of { name, description?, measurementIntent, psychologicalPerspective?, constructFramework?, smVariables?, competencies? }. Nested competencies may cite sibling targets by export id or targetCompetencyName; SMVs/priors are remapped on import. Also accepts { "competencyModels": [...] } or a Step 9 specification export ({ model, competencies, smVariables }).'
           endpoint="/api/competencies/models/bulk"
           invalidateKey={competencyModelsKey}
-          sampleHint='e.g. [{ "name": "Grade 6 Numeracy", "measurementIntent": "unidimensional", "competencies": [{ "name": "Fraction Reasoning", "variableType": "ordinal" }] }]'
+          studentModel
+          sampleHint='See samples/competency_models_bulk_upload_sample.json — or re-upload a Step 9 *_specification.json download.'
         />
 
         <BulkUploadCard

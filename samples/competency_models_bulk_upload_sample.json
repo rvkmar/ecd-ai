@@ -3,65 +3,156 @@
     {
       "name": "Grade 6 Numeracy",
       "description": "Core numeracy competencies expected of a Grade 6 learner, covering number sense, fractions, and basic algebraic reasoning.",
-      "measurementIntent": "unidimensional",
+      "measurementIntent": "multidimensional",
+      "psychologicalPerspective": "information_processing",
       "constructFramework": {
         "reference": "National Numeracy Framework",
         "citation": "",
-        "notes": "Draft model for bulk-import testing."
+        "notes": "Draft model for bulk-import testing.",
+        "ungroundedWaiver": true,
+        "ungroundedReason": "Sample upload — no curricular policy bound in this lab file; waive until a policyId is available."
       },
       "competencies": [
         {
+          "id": "sample_num_whole",
           "name": "Whole Number Operations",
           "description": "Ability to add, subtract, multiply, and divide multi-digit whole numbers accurately.",
           "variableType": "binary",
           "states": [
-            { "value": "not_mastered", "label": "Not Mastered", "description": "Cannot reliably perform multi-digit operations.", "order": 0 },
-            { "value": "mastered", "label": "Mastered", "description": "Performs multi-digit operations accurately.", "order": 1 }
+            {
+              "value": "not_mastered",
+              "label": "Not Mastered",
+              "description": "Cannot reliably perform multi-digit operations.",
+              "order": 0
+            },
+            {
+              "value": "mastered",
+              "label": "Mastered",
+              "description": "Performs multi-digit operations accurately.",
+              "order": 1
+            }
           ],
           "domain": "Mathematics",
           "strand": "Number",
-          "facet": "Computation"
+          "facet": "Computation",
+          "relationships": [
+            {
+              "targetCompetencyName": "Quantitative Reasoning Ability",
+              "type": "part-of"
+            }
+          ]
         },
         {
+          "id": "sample_num_frac",
           "name": "Fraction Reasoning",
           "description": "Ability to compare, order, and perform operations with fractions.",
           "variableType": "ordinal",
           "states": [
-            { "value": "beginning", "label": "Beginning", "description": "Identifies fractions only with support.", "order": 1 },
-            { "value": "developing", "label": "Developing", "description": "Compares and orders simple fractions.", "order": 2 },
-            { "value": "proficient", "label": "Proficient", "description": "Performs operations with unlike denominators.", "order": 3 }
+            {
+              "value": "beginning",
+              "label": "Beginning",
+              "description": "Identifies fractions only with support.",
+              "order": 1
+            },
+            {
+              "value": "developing",
+              "label": "Developing",
+              "description": "Compares and orders simple fractions.",
+              "order": 2
+            },
+            {
+              "value": "proficient",
+              "label": "Proficient",
+              "description": "Performs operations with unlike denominators.",
+              "order": 3
+            }
           ],
           "domain": "Mathematics",
           "strand": "Number",
-          "facet": "Fractions"
+          "facet": "Fractions",
+          "relationships": [
+            {
+              "targetCompetencyId": "sample_num_whole",
+              "type": "prerequisite"
+            },
+            {
+              "targetCompetencyName": "Quantitative Reasoning Ability",
+              "type": "part-of"
+            }
+          ]
         },
         {
+          "id": "sample_num_alg",
           "name": "Pre-Algebraic Reasoning",
           "description": "Ability to recognize patterns and represent simple unknowns in equations.",
           "variableType": "ordinal",
           "states": [
-            { "value": "beginning", "label": "Beginning", "description": "Extends simple repeating patterns.", "order": 1 },
-            { "value": "developing", "label": "Developing", "description": "Solves one-step equations with a single unknown.", "order": 2 },
-            { "value": "proficient", "label": "Proficient", "description": "Solves two-step equations and generalizes patterns.", "order": 3 }
+            {
+              "value": "beginning",
+              "label": "Beginning",
+              "description": "Extends simple repeating patterns.",
+              "order": 1
+            },
+            {
+              "value": "developing",
+              "label": "Developing",
+              "description": "Solves one-step equations with a single unknown.",
+              "order": 2
+            },
+            {
+              "value": "proficient",
+              "label": "Proficient",
+              "description": "Solves two-step equations and generalizes patterns.",
+              "order": 3
+            }
           ],
           "domain": "Mathematics",
           "strand": "Algebra",
-          "facet": "Patterns & Equations"
+          "facet": "Patterns & Equations",
+          "relationships": [
+            {
+              "targetCompetencyName": "Quantitative Reasoning Ability",
+              "type": "part-of"
+            }
+          ]
         },
         {
+          "id": "sample_num_meas",
           "name": "Measurement & Data",
           "description": "Ability to measure quantities accurately and interpret simple data displays.",
           "variableType": "categorical",
           "states": [
-            { "value": "length_mass", "label": "Length & Mass", "description": "Measures length and mass using standard units.", "order": 1 },
-            { "value": "data_display", "label": "Data Display", "description": "Reads and interprets bar graphs and tables.", "order": 2 },
-            { "value": "unit_conversion", "label": "Unit Conversion", "description": "Converts between related units of measure.", "order": 3 }
+            {
+              "value": "length_mass",
+              "label": "Length & Mass",
+              "description": "Measures length and mass using standard units.",
+              "order": 1
+            },
+            {
+              "value": "data_display",
+              "label": "Data Display",
+              "description": "Reads and interprets bar graphs and tables.",
+              "order": 2
+            },
+            {
+              "value": "unit_conversion",
+              "label": "Unit Conversion",
+              "description": "Converts between related units of measure.",
+              "order": 3
+            }
           ],
           "domain": "Mathematics",
           "strand": "Measurement & Data",
-          "facet": "Application"
+          "facet": "Application",
+          "relationships": [
+            {
+              "targetCompetencyName": "Quantitative Reasoning Ability",
+              "type": "correlates-with"
+            }
+          ]
         },
         {
+          "id": "sample_num_theta",
           "name": "Quantitative Reasoning Ability",
           "description": "Overall latent ability to reason quantitatively across numeracy tasks, reported on a continuous scale.",
           "variableType": "continuous",
@@ -72,7 +163,78 @@
           },
           "domain": "Mathematics",
           "strand": "Cross-Strand",
-          "facet": "Overall Ability"
+          "facet": "Overall Ability",
+          "relationships": []
+        }
+      ],
+      "smVariables": [
+        {
+          "id": "sample_num_whole",
+          "label": "Whole Number Operations",
+          "type": "binary",
+          "priorDistribution": {
+            "family": "bernoulli",
+            "params": {
+              "p": 0.45
+            }
+          }
+        },
+        {
+          "id": "sample_num_frac",
+          "label": "Fraction Reasoning",
+          "type": "ordinal",
+          "priorDistribution": {
+            "family": "dirichlet",
+            "params": {
+              "alpha": [
+                1,
+                2,
+                1
+              ]
+            }
+          }
+        },
+        {
+          "id": "sample_num_alg",
+          "label": "Pre-Algebraic Reasoning",
+          "type": "ordinal",
+          "priorDistribution": {
+            "family": "dirichlet",
+            "params": {
+              "alpha": [
+                1,
+                1,
+                1
+              ]
+            }
+          }
+        },
+        {
+          "id": "sample_num_meas",
+          "label": "Measurement & Data",
+          "type": "categorical",
+          "priorDistribution": {
+            "family": "dirichlet",
+            "params": {
+              "alpha": [
+                1,
+                1,
+                1
+              ]
+            }
+          }
+        },
+        {
+          "id": "sample_num_theta",
+          "label": "Quantitative Reasoning Ability",
+          "type": "continuous",
+          "priorDistribution": {
+            "family": "normal",
+            "params": {
+              "mean": 0,
+              "sd": 1
+            }
+          }
         }
       ]
     },
@@ -80,64 +242,155 @@
       "name": "Middle School Scientific Inquiry",
       "description": "Competencies related to scientific inquiry practices expected of middle school students.",
       "measurementIntent": "multidimensional",
+      "psychologicalPerspective": "information_processing",
       "constructFramework": {
         "reference": "Next Generation Science Standards (adapted)",
         "citation": "",
-        "notes": "Draft model for bulk-import testing."
+        "notes": "Draft model for bulk-import testing.",
+        "ungroundedWaiver": true,
+        "ungroundedReason": "Sample upload — no curricular policy bound in this lab file; waive until a policyId is available."
       },
       "competencies": [
         {
+          "id": "sample_sci_hyp",
           "name": "Hypothesis Formation",
           "description": "Ability to formulate testable hypotheses based on observations.",
           "variableType": "binary",
           "states": [
-            { "value": "not_mastered", "label": "Not Mastered", "description": "Cannot form a testable hypothesis.", "order": 0 },
-            { "value": "mastered", "label": "Mastered", "description": "Forms clear, testable hypotheses.", "order": 1 }
+            {
+              "value": "not_mastered",
+              "label": "Not Mastered",
+              "description": "Cannot form a testable hypothesis.",
+              "order": 0
+            },
+            {
+              "value": "mastered",
+              "label": "Mastered",
+              "description": "Forms clear, testable hypotheses.",
+              "order": 1
+            }
           ],
           "domain": "Science",
           "strand": "Inquiry",
-          "facet": "Hypothesis Formation"
+          "facet": "Hypothesis Formation",
+          "relationships": [
+            {
+              "targetCompetencyName": "Model-Based Reasoning",
+              "type": "part-of"
+            }
+          ]
         },
         {
+          "id": "sample_sci_exp",
           "name": "Experimental Design",
           "description": "Ability to design a fair test that isolates a single variable.",
           "variableType": "ordinal",
           "states": [
-            { "value": "beginning", "label": "Beginning", "description": "Designs experiments with uncontrolled variables.", "order": 1 },
-            { "value": "developing", "label": "Developing", "description": "Controls one variable at a time with guidance.", "order": 2 },
-            { "value": "proficient", "label": "Proficient", "description": "Independently designs controlled experiments.", "order": 3 }
+            {
+              "value": "beginning",
+              "label": "Beginning",
+              "description": "Designs experiments with uncontrolled variables.",
+              "order": 1
+            },
+            {
+              "value": "developing",
+              "label": "Developing",
+              "description": "Controls one variable at a time with guidance.",
+              "order": 2
+            },
+            {
+              "value": "proficient",
+              "label": "Proficient",
+              "description": "Independently designs controlled experiments.",
+              "order": 3
+            }
           ],
           "domain": "Science",
           "strand": "Inquiry",
-          "facet": "Experimental Design"
+          "facet": "Experimental Design",
+          "relationships": [
+            {
+              "targetCompetencyId": "sample_sci_hyp",
+              "type": "prerequisite"
+            },
+            {
+              "targetCompetencyName": "Model-Based Reasoning",
+              "type": "part-of"
+            }
+          ]
         },
         {
+          "id": "sample_sci_data",
           "name": "Data Interpretation",
           "description": "Ability to interpret experimental data and draw evidence-based conclusions.",
           "variableType": "ordinal",
           "states": [
-            { "value": "beginning", "label": "Beginning", "description": "Restates data without interpretation.", "order": 1 },
-            { "value": "developing", "label": "Developing", "description": "Identifies basic trends in data.", "order": 2 },
-            { "value": "proficient", "label": "Proficient", "description": "Draws well-supported conclusions from data.", "order": 3 }
+            {
+              "value": "beginning",
+              "label": "Beginning",
+              "description": "Restates data without interpretation.",
+              "order": 1
+            },
+            {
+              "value": "developing",
+              "label": "Developing",
+              "description": "Identifies basic trends in data.",
+              "order": 2
+            },
+            {
+              "value": "proficient",
+              "label": "Proficient",
+              "description": "Draws well-supported conclusions from data.",
+              "order": 3
+            }
           ],
           "domain": "Science",
           "strand": "Inquiry",
-          "facet": "Data Interpretation"
+          "facet": "Data Interpretation",
+          "relationships": [
+            {
+              "targetCompetencyName": "Model-Based Reasoning",
+              "type": "part-of"
+            }
+          ]
         },
         {
+          "id": "sample_sci_comm",
           "name": "Scientific Communication",
           "description": "Ability to communicate scientific findings clearly using appropriate terminology and evidence.",
           "variableType": "categorical",
           "states": [
-            { "value": "written_report", "label": "Written Report", "description": "Communicates findings in written lab reports.", "order": 1 },
-            { "value": "oral_presentation", "label": "Oral Presentation", "description": "Communicates findings orally with visual aids.", "order": 2 },
-            { "value": "peer_critique", "label": "Peer Critique", "description": "Gives and responds to constructive scientific critique.", "order": 3 }
+            {
+              "value": "written_report",
+              "label": "Written Report",
+              "description": "Communicates findings in written lab reports.",
+              "order": 1
+            },
+            {
+              "value": "oral_presentation",
+              "label": "Oral Presentation",
+              "description": "Communicates findings orally with visual aids.",
+              "order": 2
+            },
+            {
+              "value": "peer_critique",
+              "label": "Peer Critique",
+              "description": "Gives and responds to constructive scientific critique.",
+              "order": 3
+            }
           ],
           "domain": "Science",
           "strand": "Communication",
-          "facet": "Reporting"
+          "facet": "Reporting",
+          "relationships": [
+            {
+              "targetCompetencyName": "Model-Based Reasoning",
+              "type": "correlates-with"
+            }
+          ]
         },
         {
+          "id": "sample_sci_theta",
           "name": "Model-Based Reasoning",
           "description": "Ability to use and revise scientific models to explain phenomena.",
           "variableType": "continuous",
@@ -148,7 +401,8 @@
           },
           "domain": "Science",
           "strand": "Modeling",
-          "facet": "Overall Ability"
+          "facet": "Overall Ability",
+          "relationships": []
         }
       ]
     }

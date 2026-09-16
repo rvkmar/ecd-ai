@@ -10,6 +10,10 @@ import { validateEntity } from "../../src/utils/schema.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
 import { syncSmVariablesFromCompetencies, buildStudentModelSpecification } from "../../src/utils/smVariableSync.js";
 import { computeStructuralAudit } from "../../src/utils/studentModelAudit.js";
+import {
+  normalizeStudentModelBulkRows,
+  stripStudentModelImportIdentity,
+} from "../../src/utils/studentModelBulkNormalize.js";
 
 const router = express.Router();
 
@@ -102,12 +106,22 @@ function createCompetencyModelRecord(payload = {}, db, idSuffix = "") {
    later at /models/:id/confirm.
 ===================================================== */
 function createCompetencyRecord(payload = {}, db, modelId, idSuffix = "") {
+  const {
+    id: _ignoreId,
+    modelId: _ignoreModelId,
+    createdAt: _ignoreCreatedAt,
+    updatedAt: _ignoreUpdatedAt,
+    relationships: _ignoreRelationships,
+    ...rest
+  } = payload || {};
+
   const newComp = {
-    ...payload,
+    ...rest,
     id: `c${Date.now()}${idSuffix}`,
     modelId,
+    relationships: [],
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 
   const { valid, errors } = validateEntity("competencies", newComp, db, { strict: false });
@@ -117,6 +131,205 @@ function createCompetencyRecord(payload = {}, db, modelId, idSuffix = "") {
   db.competencies.push(newComp);
 
   return { ok: true, status: 201, record: newComp };
+}
+
+/**
+ * Remap relationship targets after a nested bulk create.
+ * Accepts targetCompetencyId (old export id or already-new id) or
+ * targetCompetencyName (case-insensitive match within the batch).
+ * Targets that are neither remapped nor named are left as-is so a
+ * reference to an already-existing competency outside the batch can
+ * still validate against db.
+ */
+function remapRelationships(rawRelationships, idMap, nameMap) {
+  if (!Array.isArray(rawRelationships) || rawRelationships.length === 0) {
+    return { ok: true, relationships: [] };
+  }
+
+  const relationships = [];
+  const errors = [];
+
+  rawRelationships.forEach((r, i) => {
+    if (!r || typeof r !== "object") {
+      errors.push(`relationships[${i}] must be an object.`);
+      return;
+    }
+    let targetId = r.targetCompetencyId || null;
+    if (targetId && idMap.has(targetId)) {
+      targetId = idMap.get(targetId);
+    }
+    if (!targetId && r.targetCompetencyName) {
+      targetId = nameMap.get(String(r.targetCompetencyName).trim().toLowerCase()) || null;
+    }
+    if (!targetId) {
+      errors.push(
+        `relationships[${i}] could not resolve targetCompetencyId/targetCompetencyName.`
+      );
+      return;
+    }
+    relationships.push({
+      targetCompetencyId: targetId,
+      type: r.type,
+    });
+  });
+
+  return { ok: errors.length === 0, relationships, errors };
+}
+
+/**
+ * Create nested competencies for one bulk model row: two-pass so
+ * intra-model relationships can cite sibling ids (or names) from the
+ * same file. Then sync smVariables (TR9) from the created competencies,
+ * preserving priors from the payload when ids/labels still match.
+ */
+function createNestedCompetenciesForModel({
+  competencies,
+  model,
+  db,
+  rowIndex,
+  existingSmVariables = [],
+}) {
+  if (!Array.isArray(competencies) || competencies.length === 0) {
+    return {
+      ok: true,
+      competenciesCreated: 0,
+      competenciesFailed: 0,
+      competencyResults: [],
+      createdCompetencies: [],
+    };
+  }
+
+  if (
+    model.measurementIntent === "unidimensional" &&
+    competencies.length > 1
+  ) {
+    return {
+      ok: false,
+      error: "Schema validation failed",
+      details: [
+        "Unidimensional Student Model cannot include multiple nested competencies in one bulk row. Use measurementIntent \"multidimensional\" or upload a single competency.",
+      ],
+      competenciesCreated: 0,
+      competenciesFailed: competencies.length,
+      competencyResults: [],
+      createdCompetencies: [],
+    };
+  }
+
+  const idMap = new Map();
+  const nameMap = new Map();
+  const created = [];
+  const competencyResults = [];
+  const pendingRelationships = [];
+
+  competencies.forEach((comp, j) => {
+    const oldId = comp?.id;
+    const result = createCompetencyRecord(
+      comp || {},
+      db,
+      model.id,
+      `_${rowIndex}_${j}`
+    );
+    if (!result.ok) {
+      competencyResults.push({
+        index: j,
+        ok: false,
+        error: result.error,
+        details: result.details,
+      });
+      return;
+    }
+
+    const record = result.record;
+    created.push(record);
+    if (oldId) idMap.set(oldId, record.id);
+    idMap.set(record.id, record.id);
+    if (record.name) {
+      nameMap.set(String(record.name).trim().toLowerCase(), record.id);
+    }
+    pendingRelationships.push({
+      record,
+      raw: Array.isArray(comp?.relationships) ? comp.relationships : [],
+    });
+    competencyResults.push({
+      index: j,
+      ok: true,
+      id: record.id,
+      name: record.name,
+    });
+  });
+
+  if (created.length !== competencies.length) {
+    // Roll back this model's competencies so a partial nest doesn't leave
+    // an inconsistent draft (e.g. unidimensional sibling collision mid-batch).
+    const createdIds = new Set(created.map((c) => c.id));
+    db.competencies = (db.competencies || []).filter((c) => !createdIds.has(c.id));
+    return {
+      ok: false,
+      error: "Nested competency validation failed",
+      details: competencyResults
+        .filter((r) => !r.ok)
+        .flatMap((r) => r.details || [r.error]),
+      competenciesCreated: 0,
+      competenciesFailed: competencies.length,
+      competencyResults,
+      createdCompetencies: [],
+    };
+  }
+
+  for (const { record, raw } of pendingRelationships) {
+    const remapped = remapRelationships(raw, idMap, nameMap);
+    if (!remapped.ok) {
+      const createdIds = new Set(created.map((c) => c.id));
+      db.competencies = (db.competencies || []).filter((c) => !createdIds.has(c.id));
+      return {
+        ok: false,
+        error: "Relationship remapping failed",
+        details: remapped.errors,
+        competenciesCreated: 0,
+        competenciesFailed: competencies.length,
+        competencyResults,
+        createdCompetencies: [],
+      };
+    }
+    record.relationships = remapped.relationships;
+    // Re-validate with relationships now that sibling targets exist.
+    const { valid, errors } = validateEntity("competencies", record, db, {
+      strict: false,
+    });
+    if (!valid) {
+      const createdIds = new Set(created.map((c) => c.id));
+      db.competencies = (db.competencies || []).filter((c) => !createdIds.has(c.id));
+      return {
+        ok: false,
+        error: "Schema validation failed",
+        details: errors,
+        competenciesCreated: 0,
+        competenciesFailed: competencies.length,
+        competencyResults,
+        createdCompetencies: [],
+      };
+    }
+  }
+
+  // Remap payload SMV ids → new competency ids, then sync scale/priors.
+  const remappedExisting = (existingSmVariables || [])
+    .filter((s) => s && typeof s === "object")
+    .map((s) => {
+      const nextId = s.id && idMap.has(s.id) ? idMap.get(s.id) : s.id;
+      return { ...s, id: nextId };
+    });
+
+  model.smVariables = syncSmVariablesFromCompetencies(created, remappedExisting);
+  model.updatedAt = new Date().toISOString();
+
+  return {
+    ok: true,
+    competenciesCreated: created.length,
+    competenciesFailed: 0,
+    competencyResults,
+    createdCompetencies: created,
+  };
 }
 
 /* =====================================================
@@ -133,52 +346,77 @@ router.post("/models", canAuthor, (req, res) => {
 
 /* =====================================================
    🔹 CREATE MODELS IN BULK (DRAFT ONLY, WITH OPTIONAL NESTED COMPETENCIES)
-   body: CompetencyModel[] -- each row is a model shell ({ name,
-   description?, measurementIntent?, constructFramework? }), validated and
-   inserted with the exact same rules as POST /models above. A row may
-   optionally include a `competencies` array; each entry is created as a
-   flat competency attached to that row's new model, using the same
-   relaxed draft-time rules as POST / (single competency) below -- only
-   variableType is required, state/scale completeness is enforced later
-   at /models/:id/confirm. A competency that fails validation is reported
-   per-item without failing the parent model row.
+   Accepts a JSON array, { competencyModels: [...] }, a single model
+   object, or a Step 9 specification export ({ model, competencies,
+   smVariables }). Nested competencies are created in two passes so
+   intra-model relationships remap old ids / names onto generated ids,
+   then smVariables are synced (TR9 §2.3.1).
 ===================================================== */
 router.post("/models/bulk", canAuthor, (req, res) => {
-  const rows = req.body;
-  if (!Array.isArray(rows)) {
-    return res.status(400).json({ error: "Request body must be a JSON array of competency models." });
+  const rows = normalizeStudentModelBulkRows(req.body, {
+    assumeArrayIsStudentModel: true,
+  });
+  if (!rows) {
+    return res.status(400).json({
+      error:
+        "Request body must be a JSON array of Student Models, { competencyModels: [...] }, a single model object, or a Step 9 specification export ({ model, competencies }).",
+    });
   }
 
   const db = loadDB();
   const results = rows.map((row, i) => {
-    const { competencies, ...modelPayload } = row || {};
-    const modelResult = createCompetencyModelRecord(modelPayload, db, `_${i}`);
+    const stripped = stripStudentModelImportIdentity(row || {});
+    const { competencies, smVariables, ...modelPayload } = stripped;
+    const modelResult = createCompetencyModelRecord(
+      {
+        ...modelPayload,
+        // Priors/SMVs are synced after nested comps land; avoid validating
+        // stale export ids on the empty model shell.
+        smVariables: [],
+      },
+      db,
+      `_${i}`
+    );
     if (!modelResult.ok) {
       return { index: i, ok: false, error: modelResult.error, details: modelResult.details };
     }
 
     const newModel = modelResult.record;
-    let competencyResults = [];
-    if (Array.isArray(competencies) && competencies.length > 0) {
-      competencyResults = competencies.map((comp, j) => {
-        const compResult = createCompetencyRecord(comp || {}, db, newModel.id, `_${i}_${j}`);
-        return compResult.ok
-          ? { index: j, ok: true, id: compResult.record.id, name: compResult.record.name }
-          : { index: j, ok: false, error: compResult.error, details: compResult.details };
-      });
-    }
+    const nest = createNestedCompetenciesForModel({
+      competencies,
+      model: newModel,
+      db,
+      rowIndex: i,
+      existingSmVariables: Array.isArray(smVariables) ? smVariables : [],
+    });
 
-    const competenciesCreated = competencyResults.filter((r) => r.ok).length;
-    const competenciesFailed = competencyResults.length - competenciesCreated;
+    if (!nest.ok) {
+      // Remove the orphan model shell if nested create failed.
+      db.competencyModels = (db.competencyModels || []).filter(
+        (m) => m.id !== newModel.id
+      );
+      return {
+        index: i,
+        ok: false,
+        error: nest.error,
+        details: nest.details,
+        competenciesCreated: nest.competenciesCreated,
+        competenciesFailed: nest.competenciesFailed,
+        competencyResults: nest.competencyResults,
+      };
+    }
 
     return {
       index: i,
       ok: true,
       id: newModel.id,
       name: newModel.name,
-      competenciesCreated,
-      competenciesFailed,
-      competencyResults,
+      competenciesCreated: nest.competenciesCreated,
+      competenciesFailed: nest.competenciesFailed,
+      competencyResults: nest.competencyResults,
+      smVariableCount: Array.isArray(newModel.smVariables)
+        ? newModel.smVariables.length
+        : 0,
     };
   });
   saveDB(db);

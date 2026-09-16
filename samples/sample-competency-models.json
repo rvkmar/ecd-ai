@@ -3,20 +3,26 @@
     "name": "Grade 6 Numeracy - Fractions",
     "description": "Construct model covering Grade 6 students' understanding of fraction equivalence, comparison, and operations.",
     "measurementIntent": "unidimensional",
+    "psychologicalPerspective": "trait",
     "constructFramework": {
       "reference": "CCSS.MATH.CONTENT.6.NS",
       "citation": "National Council of Teachers of Mathematics (NCTM) Numeracy Standards, 2023",
-      "notes": "Single latent construct: fraction number sense. Competencies are added after this model is created, via the Competency Model Builder."
+      "notes": "Single latent construct: fraction number sense. Competencies are added after this model is created, via the Competency Model Builder.",
+      "ungroundedWaiver": true,
+      "ungroundedReason": "Sample shell — bind a curricular policy in Step 3 before confirmation."
     }
   },
   {
     "name": "Grade 6 Literacy - Reading Comprehension",
     "description": "Multidimensional construct model covering literal, inferential, and evaluative reading comprehension.",
     "measurementIntent": "multidimensional",
+    "psychologicalPerspective": "information_processing",
     "constructFramework": {
       "reference": "CCSS.ELA-LITERACY.RL.6",
       "citation": "State Council of Educational Research and Training (SCERT) Literacy Framework, 2024",
-      "notes": "Three related sub-constructs: literal recall, inference, evaluation. Competencies are added after this model is created."
+      "notes": "Three related sub-constructs: literal recall, inference, evaluation. Competencies are added after this model is created.",
+      "ungroundedWaiver": true,
+      "ungroundedReason": "Sample shell — bind a curricular policy in Step 3 before confirmation."
     }
   }
 ]
