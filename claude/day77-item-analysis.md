@@ -64,17 +64,17 @@ docker compose up -d --build node; docker compose restart r-backend
 Live R:
   POST /calibrate/item-analysis → 200 converged, distractors null, overlap/authority present
   POST /analyse/item            → 200 same handler
-Live :6060:
-  GET /api/analysisArtefacts unauthenticated → 401 (gate present)
-  Admin enqueue walk blocked by seed-password gap (same as D61/D65)
+Live :6060 (admin1 / WalkPass!2026):
+  GET /api/analysisArtefacts → 200
+  Enqueue lsat7-item-analysis → 201; worker auto-processed against R
+  Ingest → 200; artefact Item.4 pValue 0.606, Item.5 0.843 (TAM 4.3.25)
 ```
 
 ## Honest gaps (not D77 blockers)
 
 - No dashboard UI list for item-analysis artefacts yet (W17).
 - `test-information` still enqueueable with no R path (D78).
-- Calendar event `ka8j70orrva6umu249oacan7ns` not found via Google Calendar tool (optional mark skipped).
 
 ## Next
 
-**D78** — Test information endpoint / remaining W16 analytics surface.
+**D78** — Test information curves + conditional SE + reliability.
