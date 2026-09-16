@@ -81,6 +81,8 @@ NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
 npm run build
   largest JS chunk recharts 446.89 kB
   built in 17.21s
+
+git: d95d93a D79: wire attribute-profile cohort summaries as analysis artefacts.
 ```
 
 ## What remains
