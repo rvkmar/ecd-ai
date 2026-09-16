@@ -86,6 +86,31 @@ Live :6060 (admin1 / WalkPass!2026, role=admin):
 - Hub image still needs republish for `digits=16` if operators hit a
   non-bind-mount R; local compose bind-mounts `./r-backend/app`.
 
+## Session-close verification (2026-09-16 IST)
+
+This session delivered **D76**, **D77**, and **D78** (W16 analytics start).
+No half-applied work. Exit checks for all three were executed (not suite-
+green alone): collection round-trip + immutability; TAM item-analysis
+pValues vs published LSAT7 means; hand-verified I(θ) at −1/0/1.
+
+```
+NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
+  Test Files  108 passed (108)
+  Tests  1468 passed | 9 skipped (1477)
+  Duration  36.96s
+
+npm run build
+  (no chunk-size warning)
+  largest: recharts-BYECgA3H.js 446.89 kB
+  built in 9.79s
+
+git: clean at 76cb112; master matches main/master after prior pushes
+```
+
+Product commits this session: `594f9c0` (D76), `69e545b`/`e540003` (D77),
+`76cb112` (D78). Calendars D76–D78 marked ✅ (dates unchanged).
+
 ## Next
 
-**D79** — remaining W16 analytics / classification reporting (per calendar).
+**D79** — Attribute-profile cohort summaries (probability-averaged and
+classification-counted figures both labelled; tenancy scope shaped).

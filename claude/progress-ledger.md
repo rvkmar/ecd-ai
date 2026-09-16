@@ -20,7 +20,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 |---|---|
 | Last completed unit | **D78** — test-information → analysisArtefacts (W16). Handoff: `claude/day78-test-information.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
-| Next queued | Calendar **D79** — remaining W16 analytics / classification reporting. |
+| Next queued | Calendar **D79** — Attribute-profile cohort summaries. |
 | Block | **W16** — R analytics and reporting service (**in progress**; D76–D78 done). |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
@@ -44,6 +44,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D76 | product + `claude/day76-analysis-artefacts.md`. Suite **1447 passed / 6 skipped**; live `:6060` GET 200 / PUT 405 / student 403. |
 | HEAD at D77 | product + `claude/day77-item-analysis.md`. Suite **1456 passed / 7 skipped**; live TAM item-analysis + both R path aliases. |
 | HEAD at D78 | product + `claude/day78-test-information.md`. Suite **1468 passed / 9 skipped**; live analytic Fisher known-2pl + LSAT7 structural. |
+| HEAD at 2026-09-16 W16 close | this close at session end. Suite re-run **1468 passed / 9 skipped**; build green (max recharts 446.89 kB). Units D76–D78 done; next D79. |
 
 ## Session log
 
@@ -89,6 +90,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-16 | D76 | 2, alone | W16 start. Premise rewritten: nested EM artefacts already existed. Top-level `analysisArtefacts` collection + migrate DIF/equating ingest; immutable HTTP surface. Suite **1447 passed / 6 skipped**. Live GET 200 / PUT 405 / stud 403. Next: D77. |
 | 2026-09-16 | D77 | 2, alone | Item-analysis via TAM::tam.ctt2 → analysisArtefacts. Authority vs CTT parameter sets in diagnostics; distractors null on dichotomous LSAT7. Fixture `lsat7-item-analysis`; routes `/calibrate/item-analysis` + `/analyse/item`. Suite **1456 passed / 7 skipped**. Live TAM 4.3.25. Next: D78. |
 | 2026-09-16 | D78 | 2, alone | Test-information via analytic Fisher (irtEngine parity) → analysisArtefacts. Known 2PL hand I(θ) at −1/0/1; KR-20 overlap with CTT stated in diagnostics. Fixtures `known-2pl-testinfo` + `lsat7-test-information`. Suite **1468 passed / 9 skipped**. Next: D79. |
+| 2026-09-16 | close | — | W16 session close (D76–D78). Suite re-run **1468 passed / 9 skipped**; build green, no >500 kB warning. Tree clean at product `76cb112` then this close. No half-applied work; no new compression debt. Next: D79. |
 
 ## Compression debt
 
