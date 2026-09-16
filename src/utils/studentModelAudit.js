@@ -4,7 +4,10 @@
 // Grounded on PADI TR9 §2.3.1 (Student Model = SMVs + claim distribution)
 // and §2.3 CAF coherence before Implementation.
 
-import { PSYCHOLOGICAL_PERSPECTIVE_VALUES } from "./ecdVocabulary.js";
+import {
+  PSYCHOLOGICAL_PERSPECTIVE_VALUES,
+  isSmVariablePriorComplete,
+} from "./ecdVocabulary.js";
 import { typeCoherenceAdvisories } from "./smVariableSync.js";
 
 function buildPrerequisiteGraph(competencies) {
@@ -218,6 +221,15 @@ export function computeStructuralAudit({ model, competencies = [] }) {
   checks.push({
     label: "smVariables synchronized with competencies (id + type)",
     passed: smvParityOk(model, competencies),
+  });
+
+  const smvs = Array.isArray(model?.smVariables) ? model.smVariables : [];
+  checks.push({
+    label: "All SMV prior distributions complete (family + params)",
+    passed:
+      competencies.length > 0 &&
+      smvParityOk(model, competencies) &&
+      smvs.every((smv) => isSmVariablePriorComplete(smv)),
   });
 
   const advisories = [

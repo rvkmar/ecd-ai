@@ -421,6 +421,29 @@ export function priorDistributionParamsAreValid(family, params) {
   });
 }
 
+/**
+ * Structural completeness for one SMV prior (TR9 claim distribution).
+ * Dirichlet α must match the authored state count when states are known.
+ */
+export function isSmVariablePriorComplete(smv) {
+  if (!smv?.type) return false;
+  const prior = smv.priorDistribution;
+  if (!prior?.family) return false;
+  if (!isPriorFamilyCompatible(smv.type, prior.family)) return false;
+  if (!priorDistributionParamsAreValid(prior.family, prior.params)) return false;
+
+  if (
+    prior.family === "dirichlet" &&
+    (smv.type === "ordinal" || smv.type === "categorical" || smv.type === "binary")
+  ) {
+    const n = Array.isArray(smv.scale?.states) ? smv.scale.states.length : 0;
+    if (n < 2) return false;
+    const alpha = prior.params?.alpha;
+    if (!Array.isArray(alpha) || alpha.length !== n) return false;
+  }
+  return true;
+}
+
 /* =====================================================
    7. Declared psychological perspective (Competency Model level)
    -----------------------------------------------------

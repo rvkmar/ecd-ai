@@ -37,6 +37,7 @@ import {
   isPriorFamilyCompatible,
   priorFamiliesForSmVariableType,
   priorDistributionParamsAreValid,
+  isSmVariablePriorComplete,
   PSYCHOLOGICAL_PERSPECTIVE_VALUES,
   CALIBRATION_FILE_KIND_VALUES,
   statisticalModelTypesForCalibrationKind,
@@ -4426,19 +4427,23 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         }
 
         const prior = smv.priorDistribution;
-        if (prior && typeof prior === "object" && prior.family) {
+        if (options.requireCafCompleteness) {
+          if (!isSmVariablePriorComplete(smv)) {
+            errors.push(
+              `${tag} requires a complete priorDistribution (compatible family + valid params; Dirichlet α length must match scale.states).`
+            );
+          }
+        } else if (prior && typeof prior === "object" && prior.family) {
           if (smv.type && !isPriorFamilyCompatible(smv.type, prior.family)) {
             errors.push(
               `${tag} (${smv.type}) has incompatible priorDistribution.family '${prior.family}'. Allowed: ${priorFamiliesForSmVariableType(smv.type).join(", ")}.`
             );
           } else if (!priorDistributionParamsAreValid(prior.family, prior.params)) {
             // Soft on draft: dirichlet alpha length may lag states until Step 5.
-            if (options.requireCafCompleteness || prior.family !== "dirichlet") {
+            if (prior.family !== "dirichlet") {
               errors.push(`${tag} has invalid priorDistribution.params for family '${prior.family}'.`);
             }
           }
-        } else if (options.requireCafCompleteness) {
-          errors.push(`${tag} requires a priorDistribution with a family.`);
         }
       });
     }

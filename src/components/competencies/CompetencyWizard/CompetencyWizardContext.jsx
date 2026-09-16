@@ -308,12 +308,9 @@ export function CompetencyWizardProvider({
     // being caught here before ever leaving the step.
     validity[4] =
       competencies.length > 0 && competencies.every((c) => c.variableType);
-    validity[5] =
-      competencies.every((c) => c.variableType) &&
-      computeStructuralAudit({ model, competencies }).checks
-        .find((c) => c.label.includes("structurally valid"))
-        ?.passed !== false &&
-      competencies.every((c) => {
+    {
+      const audit = computeStructuralAudit({ model, competencies });
+      const scaleOk = competencies.every((c) => {
         if (!c.variableType) return false;
         if (c.variableType === "binary") return c.states?.length === 2;
         if (c.variableType === "ordinal" || c.variableType === "categorical")
@@ -326,6 +323,16 @@ export function CompetencyWizardProvider({
           );
         return false;
       });
+      const priorsOk = audit.checks.find((c) =>
+        c.label.includes("prior distributions complete")
+      )?.passed;
+      validity[5] =
+        competencies.every((c) => c.variableType) &&
+        audit.checks.find((c) => c.label.includes("structurally valid"))
+          ?.passed !== false &&
+        scaleOk &&
+        priorsOk === true;
+    }
     {
       const relCount = competencies.reduce(
         (n, c) => n + (c.relationships?.length || 0),

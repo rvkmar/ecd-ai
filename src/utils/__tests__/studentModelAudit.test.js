@@ -125,4 +125,34 @@ describe("studentModelAudit + smVariableSync", () => {
       checks.find((c) => c.label.includes("≥3 structural relationships"))?.passed
     ).toBe(false);
   });
+
+  it("fails structural completeness when an SMV prior is incomplete", () => {
+    const competencies = comps();
+    const smVariables = syncSmVariablesFromCompetencies(competencies, []);
+    smVariables[0] = {
+      ...smVariables[0],
+      priorDistribution: { family: "bernoulli", params: {} },
+    };
+    const model = baseModel({ smVariables });
+    const { allPassed, checks } = computeStructuralAudit({ model, competencies });
+    expect(allPassed).toBe(false);
+    expect(
+      checks.find((c) => c.label.includes("prior distributions complete"))?.passed
+    ).toBe(false);
+  });
+
+  it("fails when Dirichlet α length does not match states", () => {
+    const competencies = comps();
+    const smVariables = syncSmVariablesFromCompetencies(competencies, []);
+    // c2 is ordinal with 2 states; truncate alpha
+    smVariables[1] = {
+      ...smVariables[1],
+      priorDistribution: { family: "dirichlet", params: { alpha: [1] } },
+    };
+    const model = baseModel({ smVariables });
+    const { checks } = computeStructuralAudit({ model, competencies });
+    expect(
+      checks.find((c) => c.label.includes("prior distributions complete"))?.passed
+    ).toBe(false);
+  });
 });

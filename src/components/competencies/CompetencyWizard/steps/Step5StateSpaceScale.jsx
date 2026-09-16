@@ -14,6 +14,7 @@ import StateEditorOrdinal from "../components/StateEditorOrdinal";
 import StateEditorCategorical from "../components/StateEditorCategorical";
 import ContinuousScaleEditor from "../components/ContinuousScaleEditor";
 import PriorDistributionEditor from "../components/PriorDistributionEditor";
+import { isSmVariablePriorComplete } from "@/utils/ecdVocabulary";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, ChevronDown, ChevronUp, Info } from "lucide-react";
 
@@ -113,32 +114,35 @@ export default function Step5StateSpaceScale() {
 
     const structuralMeta = useMemo(() => {
         let completeCount = 0;
+        const smvById = new Map(
+            (model?.smVariables || []).map((s) => [s.id, s])
+        );
 
         const map = new Map();
 
         orderedCompetencies.forEach((comp) => {
-            let valid = false;
+            let scaleValid = false;
             let summary = "Not defined";
 
             if (!comp.variableType) {
-                valid = false;
+                scaleValid = false;
                 summary = "No variable type declared";
             } else if (comp.variableType === "binary") {
                 const count = comp.states?.length || 0;
-                valid = count === 2;
+                scaleValid = count === 2;
                 summary = `${count} state${count !== 1 ? "s" : ""} defined`;
             } else if (comp.variableType === "ordinal") {
                 const count = comp.states?.length || 0;
-                valid = count >= 2;
+                scaleValid = count >= 2;
                 summary = `${count} ordered level${count !== 1 ? "s" : ""}`;
             } else if (comp.variableType === "categorical") {
                 const count = comp.states?.length || 0;
-                valid = count >= 2;
+                scaleValid = count >= 2;
                 summary = `${count} category${count !== 1 ? "ies" : "y"}`;
             } else if (comp.variableType === "continuous") {
                 const min = comp.scale?.min;
                 const max = comp.scale?.max;
-                valid =
+                scaleValid =
                     typeof min === "number" &&
                     typeof max === "number" &&
                     min < max;
@@ -146,6 +150,17 @@ export default function Step5StateSpaceScale() {
                     typeof min === "number" && typeof max === "number"
                         ? `Range: ${min} to ${max}`
                         : "Range not defined";
+            }
+
+            const smv = smvById.get(comp.id);
+            const priorValid = isSmVariablePriorComplete(smv);
+            const valid = scaleValid && priorValid;
+            if (!scaleValid) {
+                // keep scale summary
+            } else if (!priorValid) {
+                summary = `${summary} · prior incomplete`;
+            } else {
+                summary = `${summary} · prior set`;
             }
 
             if (valid) completeCount++;
@@ -159,7 +174,7 @@ export default function Step5StateSpaceScale() {
                 : 0;
 
         return { map, percent };
-    }, [orderedCompetencies]);
+    }, [orderedCompetencies, model?.smVariables]);
 
     /* =====================================================
        🔹 RENDER EDITOR BY TYPE
@@ -288,9 +303,8 @@ export default function Step5StateSpaceScale() {
                 <Info size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
                 <p>
                     <strong>ECD Principle:</strong> Every latent variable must declare
-                    its state space or scale range. This determines statistical
-                    compatibility and interpretive validity within the Student Model
-                    layer.
+                    its state space or scale range and a complete prior distribution
+                    over claims. Structural completeness on this step requires both.
                 </p>
             </div>
         </div>
