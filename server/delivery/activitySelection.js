@@ -522,6 +522,151 @@ function candidatesFor(session, db) {
 }
 
 /**
+ * Selection policy for prerequisite gating: Assembly Model's
+ * selectionAlgorithm.policyId when a governing AM exists. Does not override
+ * session.selectionStrategy (that remains advisory-only per D56).
+ */
+function resolveGatingPolicy(session, db) {
+  const { assemblyModel } = resolveAssemblyModelForSession(session, db);
+  const policyId = assemblyModel?.selectionAlgorithm?.policyId;
+  if (!policyId) return null;
+  return (db.policies || []).find((p) => p.id === policyId) || null;
+}
+
+function normalizeSmvKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Resolve SMV id + display names for a candidate task's Evidence Model.
+ */
+function smvIdentityForCandidate(task, db) {
+  if (!task?.itemId) return null;
+  const item = (db.items || []).find((it) => it.id === task.itemId);
+  const emId = item?.evidenceModelId;
+  if (!emId) {
+    const pkg = activePackageFor(task.taskModelId, db);
+    const entry = (pkg?.items || []).find((e) => e.itemId === task.itemId);
+    if (!entry?.evidenceModelId) return null;
+    return smvIdentityForEvidenceModel(entry.evidenceModelId, db);
+  }
+  return smvIdentityForEvidenceModel(emId, db);
+}
+
+function smvIdentityForEvidenceModel(evidenceModelId, db) {
+  const em = (db.evidenceModels || []).find((m) => m.id === evidenceModelId);
+  if (!em) return null;
+  const competency = (db.competencies || []).find((c) => c.id === em.competencyId);
+  const cm = (db.competencyModels || []).find(
+    (m) => m.id === (competency?.modelId || em.competencyModelId)
+  );
+  const smv =
+    (cm?.smVariables || []).find((v) => v.id === em.competencyId) ||
+    (cm?.smVariables || []).find(
+      (v) => normalizeSmvKey(v.label) === normalizeSmvKey(competency?.name || em.competencyName)
+    ) ||
+    null;
+  const names = [
+    smv?.id,
+    smv?.label,
+    competency?.name,
+    competency?.label,
+    em.competencyName,
+    em.competencyId,
+  ].filter(Boolean);
+  return {
+    smvId: smv?.id || em.competencyId || null,
+    names,
+    evidenceModelId: em.id,
+  };
+}
+
+function masteryEstimateForRef(session, db, ref) {
+  const key = normalizeSmvKey(ref);
+  if (!key) return null;
+  const posteriors = session.studentModel?.smvPosteriors || {};
+
+  for (const [smvId, p] of Object.entries(posteriors)) {
+    const labels = [smvId, p?.smvId, p?.label, p?.name].filter(Boolean);
+    // Also match competency / SMV labels from the competency model.
+    for (const cm of db.competencyModels || []) {
+      const v = (cm.smVariables || []).find((sv) => sv.id === smvId || sv.id === p?.smvId);
+      if (v?.label) labels.push(v.label);
+    }
+    for (const c of db.competencies || []) {
+      if (c.id === smvId || c.id === p?.smvId) {
+        if (c.name) labels.push(c.name);
+        if (c.label) labels.push(c.label);
+      }
+    }
+    if (!labels.some((l) => normalizeSmvKey(l) === key)) continue;
+    if (typeof p?.estimate === "number" && Number.isFinite(p.estimate)) {
+      return p.estimate;
+    }
+  }
+  return null;
+}
+
+function identityMatchesRef(identity, ref) {
+  if (!identity || !ref) return false;
+  const key = normalizeSmvKey(ref);
+  return (identity.names || []).some((n) => normalizeSmvKey(n) === key);
+}
+
+/**
+ * EM-R4: drop (or leave unrankable) candidates whose SMV is gated behind an
+ * unmet prerequisite mastery. Unmet = no posterior yet, or estimate below
+ * threshold. Fixed forms do not consult this (byte-identical contract).
+ *
+ * @returns {{ candidates: object[], blocked: object[] }}
+ */
+function applyPrerequisiteGating(candidates, session, db, warnings) {
+  const policy = resolveGatingPolicy(session, db);
+  const gating = policy?.config?.prerequisiteGating;
+  if (!Array.isArray(gating) || gating.length === 0) {
+    return { candidates, blocked: [] };
+  }
+
+  const blocked = [];
+  const kept = [];
+
+  for (const candidate of candidates) {
+    const identity = smvIdentityForCandidate(candidate.task, db);
+    let blockReason = null;
+    for (const rule of gating) {
+      if (!rule?.before || !rule?.requireMasteryOf) continue;
+      if (!identityMatchesRef(identity, rule.before)) continue;
+      const threshold =
+        typeof rule.threshold === "number" && Number.isFinite(rule.threshold)
+          ? rule.threshold
+          : 0.7;
+      const mastery = masteryEstimateForRef(session, db, rule.requireMasteryOf);
+      if (mastery == null || mastery < threshold) {
+        blockReason = `Prerequisite gating: '${rule.before}' blocked until mastery of '${rule.requireMasteryOf}' ≥ ${threshold} (have ${mastery == null ? "no posterior" : mastery}).`;
+        break;
+      }
+    }
+    if (blockReason) {
+      blocked.push({ taskId: candidate.taskId, reason: blockReason });
+    } else {
+      kept.push(candidate);
+    }
+  }
+
+  if (blocked.length > 0) {
+    warnings.push(
+      `Prerequisite gating held back ${blocked.length} candidate(s): ${blocked
+        .map((b) => b.taskId)
+        .join(", ")}.`
+    );
+  }
+
+  return { candidates: kept, blocked };
+}
+
+/**
  * LEGACY. The only remaining reader of db.questions in the selection path.
  * Unchanged in substance from the pre-D56 branch, deliberately: a session
  * whose tasks name `questionId` predates items entirely and has no other
@@ -603,7 +748,7 @@ function selectIrt(session, db, warnings) {
      resolved silently by whichever number happened to be smaller. */
   const itemCandidates = all.filter((c) => !!c.task.itemId);
   const legacyCandidates = all.filter((c) => !c.task.itemId);
-  const candidates = itemCandidates.length > 0 ? itemCandidates : legacyCandidates;
+  let candidates = itemCandidates.length > 0 ? itemCandidates : legacyCandidates;
 
   if (itemCandidates.length > 0 && legacyCandidates.length > 0) {
     warnings.push(
@@ -611,8 +756,11 @@ function selectIrt(session, db, warnings) {
     );
   }
 
+  const gated = applyPrerequisiteGating(candidates, session, db, warnings);
+  candidates = gated.candidates;
+  const skipped = gated.blocked.map((b) => ({ taskId: b.taskId, reason: b.reason }));
+
   let best = null;
-  const skipped = [];
 
   for (const { taskId, task } of candidates) {
     if (!task.itemId) {
@@ -705,11 +853,13 @@ function selectIrt(session, db, warnings) {
  * selection the strategy always claimed to make.
  */
 function selectBayesianNetwork(session, db, warnings) {
-  const candidates = candidatesFor(session, db);
+  let candidates = candidatesFor(session, db);
+  const gated = applyPrerequisiteGating(candidates, session, db, warnings);
+  candidates = gated.candidates;
   const posteriors = session.studentModel?.smvPosteriors || {};
 
   let best = null;
-  const unrankable = [];
+  const unrankable = gated.blocked.map((b) => ({ taskId: b.taskId, reason: b.reason }));
 
   for (const { taskId, task } of candidates) {
     if (!task.itemId) {
@@ -941,6 +1091,8 @@ export const __testing__ = {
   resolveAssemblyModelForSession,
   evaluateStoppingRules,
   candidatesFor,
+  applyPrerequisiteGating,
+  resolveGatingPolicy,
   liveThetaFor,
   selectFixed,
   GOVERNING_ASSEMBLY_MODEL_STATUSES,
