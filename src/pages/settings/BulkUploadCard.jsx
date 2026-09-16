@@ -2,12 +2,11 @@
 // ------------------------------------------------------------
 // One self-contained card: pick a .json file containing an array of
 // entity objects, preview the row count, upload, and show a per-row
-// success/failure table. Every entity type gets its own independent
-// instance of this card (per the "independent uploaders, same rules as
-// manual creation" decision) -- each row is validated and inserted with
-// the exact same logic the single-create form/API already enforces, so
-// a row referencing a parent that isn't confirmed+locked yet just fails
-// that row rather than being smart about ordering.
+// success/failure table.
+//
+// Evidence Model cards additionally ask for a Student Model
+// (competencyModelId). Upload stays manual: choose id + file, then click
+// Upload. competencyName remapping is scoped to that model.
 // ------------------------------------------------------------
 
 import React, { useRef, useState } from "react";
@@ -16,24 +15,26 @@ import toast from "react-hot-toast";
 import { useBulkUpload } from "@/api/queries/bulkUpload";
 import { apiErrorMessage } from "@/api/apiClient";
 import { normalizeStudentModelBulkRows } from "@/utils/studentModelBulkNormalize";
+import { useCompetencyModels } from "@/api/queries/competencies";
 
-// A file is normally just a bare JSON array of entity objects. As a
-// convenience, also accept a single wrapper object whose only property is
-// that array -- e.g. { "competencyModels": [...] } -- so exports/samples
-// that name the collection at the top level don't need hand-editing before
-// upload. Student Model cards additionally accept a Step 9 specification
-// export ({ model, competencies, smVariables }). Returns the array to use,
-// or null if the shape doesn't match.
-function unwrapToArray(parsed, { studentModel = false } = {}) {
+function unwrapToArray(parsed, { studentModel = false, evidenceModel = false } = {}) {
   if (studentModel) {
     return normalizeStudentModelBulkRows(parsed, {
       assumeArrayIsStudentModel: true,
     });
   }
-  if (Array.isArray(parsed)) return parsed;
+  if (Array.isArray(parsed)) return { rows: parsed, competencyModelId: null };
   if (parsed && typeof parsed === "object") {
+    if (evidenceModel && Array.isArray(parsed.evidenceModels)) {
+      return {
+        rows: parsed.evidenceModels,
+        competencyModelId: parsed.competencyModelId || null,
+      };
+    }
     const values = Object.values(parsed);
-    if (values.length === 1 && Array.isArray(values[0])) return values[0];
+    if (values.length === 1 && Array.isArray(values[0])) {
+      return { rows: values[0], competencyModelId: null };
+    }
   }
   return null;
 }
@@ -45,14 +46,19 @@ export default function BulkUploadCard({
   invalidateKey,
   sampleHint,
   studentModel = false,
+  evidenceModel = false,
 }) {
   const fileInputRef = useRef(null);
   const [fileName, setFileName] = useState("");
-  const [rows, setRows] = useState(null); // parsed array, null until a valid file is picked
+  const [rows, setRows] = useState(null);
   const [parseError, setParseError] = useState("");
-  const [response, setResponse] = useState(null); // { created, failed, results }
+  const [response, setResponse] = useState(null);
+  const [studentModelId, setStudentModelId] = useState("");
 
   const bulkUpload = useBulkUpload(endpoint, invalidateKey);
+  const { data: competencyModels = [] } = useCompetencyModels({
+    enabled: evidenceModel,
+  });
 
   const resetFile = () => {
     setFileName("");
@@ -75,16 +81,26 @@ export default function BulkUploadCard({
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result);
-        const nextRows = unwrapToArray(parsed, { studentModel });
-        if (!nextRows) {
+        const unwrapped = unwrapToArray(parsed, { studentModel, evidenceModel });
+        if (!unwrapped) {
           setParseError(
             studentModel
               ? "File must be a Student Model array, { competencyModels: [...] }, a single model, or a Step 9 specification export ({ model, competencies })."
-              : "File must contain a JSON array of objects."
+              : evidenceModel
+                ? 'File must be an evidence-model array or { evidenceModels: [...], competencyModelId? }.'
+                : "File must contain a JSON array of objects."
           );
           return;
         }
-        setRows(nextRows);
+        // Student Model unwrap returns a bare array; EM/other return { rows }.
+        if (Array.isArray(unwrapped)) {
+          setRows(unwrapped);
+        } else {
+          setRows(unwrapped.rows);
+          if (evidenceModel && unwrapped.competencyModelId) {
+            setStudentModelId(unwrapped.competencyModelId);
+          }
+        }
       } catch (err) {
         setParseError(`Invalid JSON: ${err.message}`);
       }
@@ -95,18 +111,27 @@ export default function BulkUploadCard({
 
   const handleUpload = async () => {
     if (!rows || rows.length === 0) return;
+    const scopedId = studentModelId.trim();
+    if (evidenceModel && !scopedId) {
+      toast.error("Select or enter a Student Model id before uploading Evidence Models.");
+      return;
+    }
     try {
-      const result = await bulkUpload.mutateAsync(rows);
+      const body =
+        evidenceModel
+          ? { competencyModelId: scopedId, evidenceModels: rows }
+          : rows;
+      const result = await bulkUpload.mutateAsync(body);
       setResponse(result);
       if (result.failed === 0) {
-        toast.success(`✅ ${title}: ${result.created} row(s) created`);
+        toast.success(`${title}: ${result.created} row(s) created`);
       } else {
-        toast(`⚠️ ${title}: ${result.created} created, ${result.failed} failed`, {
-          icon: "⚠️",
+        toast(`${title}: ${result.created} created, ${result.failed} failed`, {
+          icon: "!",
         });
       }
     } catch (err) {
-      toast.error(`❌ Bulk upload failed: ${apiErrorMessage(err, err.message)}`);
+      toast.error(`Bulk upload failed: ${apiErrorMessage(err, err.message)}`);
     }
   };
 
@@ -118,6 +143,56 @@ export default function BulkUploadCard({
           <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
         )}
       </div>
+
+      {evidenceModel && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-foreground">
+            Student Model id
+          </label>
+          <select
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={
+              competencyModels.some((m) => m.id === studentModelId)
+                ? studentModelId
+                : studentModelId
+                  ? "__custom__"
+                  : ""
+            }
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "__custom__") return;
+              setStudentModelId(v);
+              setResponse(null);
+            }}
+          >
+            <option value="">Select a Student Model…</option>
+            {competencyModels.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name || m.id} ({m.id})
+                {m.status ? ` · ${m.status}` : ""}
+              </option>
+            ))}
+            {studentModelId &&
+              !competencyModels.some((m) => m.id === studentModelId) && (
+                <option value="__custom__">Custom: {studentModelId}</option>
+              )}
+          </select>
+          <input
+            type="text"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+            placeholder="Or paste competencyModelId…"
+            value={studentModelId}
+            onChange={(e) => {
+              setStudentModelId(e.target.value);
+              setResponse(null);
+            }}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Required. Scopes <code>competencyName</code> remapping to this Student
+            Model. Choose a JSON file, then click Upload.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-2 px-3 py-2 text-sm border border-input rounded-md cursor-pointer hover:bg-muted">
@@ -153,16 +228,28 @@ export default function BulkUploadCard({
         <button
           type="button"
           onClick={handleUpload}
-          disabled={!rows || rows.length === 0 || bulkUpload.isPending}
+          disabled={
+            !rows ||
+            rows.length === 0 ||
+            bulkUpload.isPending ||
+            (evidenceModel && !studentModelId.trim())
+          }
           className="flex items-center gap-2 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md disabled:opacity-50"
         >
           {bulkUpload.isPending && <Loader2 size={14} className="animate-spin" />}
-          {bulkUpload.isPending ? "Uploading..." : "Upload"}
+          {bulkUpload.isPending
+            ? "Uploading..."
+            : evidenceModel && !studentModelId.trim()
+              ? "Enter Student Model id to upload"
+              : "Upload"}
         </button>
-        {(fileName || response) && (
+        {(fileName || response || studentModelId) && (
           <button
             type="button"
-            onClick={resetFile}
+            onClick={() => {
+              resetFile();
+              if (evidenceModel) setStudentModelId("");
+            }}
             className="px-3 py-2 text-sm border border-input rounded-md"
           >
             Clear

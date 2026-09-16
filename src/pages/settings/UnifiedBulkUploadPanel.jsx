@@ -46,6 +46,9 @@ import { competencyModelsKey } from "@/api/queries/competencies";
 import { evidenceModelsKey } from "@/api/queries/evidenceModels";
 import { taskModelsKey } from "@/api/queries/taskModels";
 import { itemsKey } from "@/api/queries/items";
+import { policiesKey } from "@/api/queries/policies";
+import { qMatrixModelsKey } from "@/api/queries/qMatrixModels";
+import { assemblyModelsKey } from "@/api/queries/assemblyModels";
 import { normalizeStudentModelBulkRows } from "@/utils/studentModelBulkNormalize";
 
 // Fixed dependency order. Index in this array IS the upload order.
@@ -54,16 +57,22 @@ const STAGES = [
     key: "competencyModels",
     title: "Student Models",
     endpoint: "/api/competencies/models/bulk",
-    // What the user must do after this stage before the next one can succeed.
     gate:
       "Copy the competency ids you need into the evidence model file's competencyId (or give a competencyName that matches exactly one competency). The Student Model does not have to be confirmed first.",
+  },
+  {
+    key: "policies",
+    title: "Selection Policies",
+    endpoint: "/api/policies/bulk",
+    gate:
+      "Copy the policy id (or keep policyName) into the assembly model file's selectionAlgorithm.",
   },
   {
     key: "evidenceModels",
     title: "Evidence Models",
     endpoint: "/api/evidenceModels/bulk",
     gate:
-      "Copy these ids into the task model file's evidenceModelIds (and primaryEvidenceModelId). They are drafts and may stay drafts -- confirm them later, in the Evidence Model builder.",
+      "Copy these ids into the task model file's evidenceModelIds (and primaryEvidenceModelId). For Force→DINA, re-upload Evidence Models after the Q-matrix stage so qMatrixName resolves.",
   },
   {
     key: "taskModels",
@@ -76,6 +85,20 @@ const STAGES = [
     key: "items",
     title: "Items",
     endpoint: "/api/items/bulk",
+    gate:
+      "Copy item ids (or keep itemName) into the Q-matrix entries before uploading the Q-matrix file.",
+  },
+  {
+    key: "qMatrixModels",
+    title: "Q-matrix Models",
+    endpoint: "/api/qMatrixModels/bulk",
+    gate:
+      "Confirm the Q-matrix before confirming a DINA Evidence Model. Optionally re-upload Evidence Models so structureConfig.qMatrixName remaps to qMatrixId.",
+  },
+  {
+    key: "assemblyModels",
+    title: "Assembly Models",
+    endpoint: "/api/assemblyModels/bulk",
     gate: "",
   },
 ];
@@ -113,6 +136,12 @@ function detectKind(rows, fileName, wrapperKey) {
     if (has("evidenceModelIds") || has("primaryEvidenceModelId") || has("expectedObservations"))
       return "taskModels";
     if (has("taskModelId") || has("observationId")) return "items";
+    if (has("attributeIds") || has("attributeNames") || (has("entries") && (has("competencyModelId") || has("competencyModelName"))))
+      return "qMatrixModels";
+    if (has("targetsBySMV") || has("stoppingRules") || has("selectionAlgorithm"))
+      return "assemblyModels";
+    if (has("type") && (sample.type === "fixed" || sample.type === "IRT" || sample.type === "BayesianNetwork" || sample.type === "MarkovChain"))
+      return "policies";
     if (has("measurementIntent") || has("competencies") || has("constructFramework") || has("smVariables") || has("psychologicalPerspective"))
       return "competencyModels";
   }
@@ -122,10 +151,18 @@ function detectKind(rows, fileName, wrapperKey) {
     if (wrapper.includes("evidence")) return "evidenceModels";
     if (wrapper.includes("task")) return "taskModels";
     if (wrapper.includes("item")) return "items";
+    if (wrapper.includes("qmatrix") || wrapper.includes("q-matrix") || wrapper.includes("q_matrix"))
+      return "qMatrixModels";
+    if (wrapper.includes("assembly")) return "assemblyModels";
+    if (wrapper.includes("polic")) return "policies";
     if (wrapper.includes("competenc") || wrapper.includes("studentmodel")) return "competencyModels";
   }
 
   const name = String(fileName || "").toLowerCase();
+  if (name.includes("qmatrix") || name.includes("q-matrix") || name.includes("q_matrix"))
+    return "qMatrixModels";
+  if (name.includes("assembly")) return "assemblyModels";
+  if (name.includes("polic")) return "policies";
   if (name.includes("item")) return "items";
   if (name.includes("task")) return "taskModels";
   if (name.includes("evidence")) return "evidenceModels";
@@ -185,9 +222,12 @@ export default function UnifiedBulkUploadPanel() {
   // Four unconditional hooks in a fixed order — one per bulk endpoint.
   const uploaders = {
     competencyModels: useBulkUpload("/api/competencies/models/bulk", competencyModelsKey),
+    policies: useBulkUpload("/api/policies/bulk", policiesKey),
     evidenceModels: useBulkUpload("/api/evidenceModels/bulk", evidenceModelsKey),
     taskModels: useBulkUpload("/api/taskModels/bulk", taskModelsKey),
     items: useBulkUpload("/api/items/bulk", itemsKey),
+    qMatrixModels: useBulkUpload("/api/qMatrixModels/bulk", qMatrixModelsKey),
+    assemblyModels: useBulkUpload("/api/assemblyModels/bulk", assemblyModelsKey),
   };
 
   // Assigned files, deduplicated by kind, sorted into dependency order.

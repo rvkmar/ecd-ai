@@ -199,7 +199,7 @@ router.get("/:id", (req, res) => {
    persists once, so bulk import writes the file once per batch instead
    of once per row.
 ===================================================== */
-function createEvidenceModelRecord(payload = {}, db, idSuffix = "") {
+function createEvidenceModelRecord(payload = {}, db, idSuffix = "", options = {}) {
   // Cross-layer existence check. `competencyId` is the preferred, unambiguous
   // reference. A bulk-upload row that doesn't know the internal id yet (it's
   // server-generated, e.g. "c1787128144166_1_4" from a positional bulk
@@ -208,26 +208,49 @@ function createEvidenceModelRecord(payload = {}, db, idSuffix = "") {
   // This exists specifically so bulk files don't have to guess an id by
   // counting rows in a separate upload; guessing positionally is exactly how
   // an evidence model can end up silently bound to the wrong competency.
+  //
+  // When `competencyModelId` is supplied (Settings EM uploader / pack wrapper),
+  // name resolution is scoped to that Student Model's competencies so two
+  // models that share a competency label (e.g. "Force Concept Mastery") do
+  // not collide.
   let competencyId = payload.competencyId;
+  const scopeModelId =
+    options.competencyModelId ||
+    payload.competencyModelId ||
+    null;
+
+  if (scopeModelId && !(db.competencyModels || []).some((m) => m.id === scopeModelId)) {
+    return {
+      ok: false,
+      status: 400,
+      error: `Student Model (competencyModelId) '${scopeModelId}' was not found.`,
+    };
+  }
 
   if (!competencyId && payload.competencyName) {
     const needle = String(payload.competencyName).trim().toLowerCase();
-    const matches = (db.competencies || []).filter(
-      c => (c.name || "").trim().toLowerCase() === needle
+    let pool = db.competencies || [];
+    if (scopeModelId) {
+      pool = pool.filter((c) => c.modelId === scopeModelId);
+    }
+    const matches = pool.filter(
+      (c) => (c.name || "").trim().toLowerCase() === needle
     );
 
     if (matches.length === 0) {
       return {
         ok: false,
         status: 400,
-        error: `No competency found named "${payload.competencyName}".`
+        error: scopeModelId
+          ? `No competency named "${payload.competencyName}" on Student Model '${scopeModelId}'.`
+          : `No competency found named "${payload.competencyName}".`,
       };
     }
     if (matches.length > 1) {
       return {
         ok: false,
         status: 400,
-        error: `"${payload.competencyName}" matches ${matches.length} competencies; specify competencyId explicitly.`
+        error: `"${payload.competencyName}" matches ${matches.length} competencies; specify competencyId or a Student Model id to scope the match.`,
       };
     }
 
@@ -241,6 +264,14 @@ function createEvidenceModelRecord(payload = {}, db, idSuffix = "") {
   const competency = db.competencies?.find(c => c.id === competencyId);
   if (!competency) {
     return { ok: false, status: 400, error: "Referenced competency does not exist." };
+  }
+
+  if (scopeModelId && competency.modelId !== scopeModelId) {
+    return {
+      ok: false,
+      status: 400,
+      error: `Competency '${competencyId}' does not belong to Student Model '${scopeModelId}'.`,
+    };
   }
 
   const competencyModel = db.competencyModels?.find(
@@ -285,18 +316,55 @@ function createEvidenceModelRecord(payload = {}, db, idSuffix = "") {
     competencyId: w.competencyId || competencyId
   }));
 
+  // Resolve structureConfig.qMatrixName → qMatrixId when a unique Q-matrix
+  // exists (Force→DINA bulk path). If the Q-matrix is not uploaded yet,
+  // keep qMatrixName and omit qMatrixId so draft dina models remain valid.
+  const statisticalModels = (payload.statisticalModels || []).map((sm) => {
+    const cfg = sm?.structureConfig && typeof sm.structureConfig === "object"
+      ? { ...sm.structureConfig }
+      : sm?.structureConfig;
+    if (
+      cfg &&
+      !cfg.qMatrixId &&
+      cfg.qMatrixName &&
+      (sm.type === "dina" || sm.type === "gdina")
+    ) {
+      const needle = String(cfg.qMatrixName).trim().toLowerCase();
+      const matches = (db.qMatrixModels || []).filter(
+        (q) => (q.name || "").trim().toLowerCase() === needle
+      );
+      if (matches.length === 1) {
+        cfg.qMatrixId = matches[0].id;
+      }
+    }
+    return cfg ? { ...sm, structureConfig: cfg } : sm;
+  });
+
   const newModel = {
     id: `${genId()}${idSuffix}`,
     name: payload.name || "",
     description: payload.description || "",
+    // Authoring / governance notes (coherence advisories, CAF rationale).
+    // Not schema-gated at draft; preserved so bulk imports and wizard
+    // reviews keep TR9 design intent visible beside the claim chain.
+    authoringNotes: payload.authoringNotes || null,
+    studentModelCoherenceNotes: payload.studentModelCoherenceNotes || null,
     competencyId,
     competencyModelVersion: competencyModel.versionNumber,
     claimStatement: payload.claimStatement || "",
     warrants,
     observables,
     evidenceRules,
-    statisticalModels: payload.statisticalModels || [],
+    statisticalModels,
     decisionRule: payload.decisionRule || null,
+    evaluationProcedures: Array.isArray(payload.evaluationProcedures)
+      ? payload.evaluationProcedures
+      : [],
+    fairnessNotes: payload.fairnessNotes || "",
+    difReviewChecklist: Array.isArray(payload.difReviewChecklist)
+      ? payload.difReviewChecklist
+      : [],
+    calibrationPlan: payload.calibrationPlan || null,
     status: "draft",
     locked: false,
     versionNumber: 1,
@@ -324,20 +392,33 @@ router.post("/", canAuthor, (req, res) => {
 
 /* =====================================================
    🔹 CREATE IN BULK (DRAFT ONLY)
-   body: EvidenceModel[] -- each row validated and inserted with the exact
-   same rules as POST / above (including the competencyId existence
-   check). A row whose competency isn't created/confirmed yet just fails
-   that row, same as a manual POST / would.
+   body: EvidenceModel[]
+      OR { competencyModelId?, evidenceModels: EvidenceModel[] }
+
+   When competencyModelId (Student Model id) is supplied, competencyName
+   remapping is scoped to that model's competencies.
 ===================================================== */
 router.post("/bulk", canAuthor, (req, res) => {
-  const rows = req.body;
-  if (!Array.isArray(rows)) {
-    return res.status(400).json({ error: "Request body must be a JSON array of evidence models." });
+  let rows;
+  let competencyModelId = null;
+
+  if (Array.isArray(req.body)) {
+    rows = req.body;
+  } else if (req.body && typeof req.body === "object" && Array.isArray(req.body.evidenceModels)) {
+    rows = req.body.evidenceModels;
+    competencyModelId = req.body.competencyModelId || null;
+  } else {
+    return res.status(400).json({
+      error:
+        'Request body must be a JSON array of evidence models, or { competencyModelId?, evidenceModels: [...] }.',
+    });
   }
 
   const db = loadDB();
   const results = rows.map((row, i) => {
-    const result = createEvidenceModelRecord(row || {}, db, `_${i}`);
+    const result = createEvidenceModelRecord(row || {}, db, `_${i}`, {
+      competencyModelId,
+    });
     return result.ok
       ? { index: i, ok: true, id: result.record.id, name: result.record.name }
       : { index: i, ok: false, error: result.error };

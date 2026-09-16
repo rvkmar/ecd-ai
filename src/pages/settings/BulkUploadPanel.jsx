@@ -18,6 +18,8 @@ import { competencyModelsKey } from "@/api/queries/competencies";
 import { evidenceModelsKey } from "@/api/queries/evidenceModels";
 import { taskModelsKey } from "@/api/queries/taskModels";
 import { itemsKey } from "@/api/queries/items";
+import { qMatrixModelsKey } from "@/api/queries/qMatrixModels";
+import { assemblyModelsKey } from "@/api/queries/assemblyModels";
 
 export default function BulkUploadPanel() {
   return (
@@ -81,10 +83,11 @@ export default function BulkUploadPanel() {
 
         <BulkUploadCard
           title="Evidence Models"
-          description={'Array of full evidence model objects, each requiring an existing competencyId -- or, if you don\'t know the generated id, a competencyName that matches exactly one existing competency by name (case-insensitive); the row fails if zero or more than one competency shares that name, rather than silently guessing. Needs a claimStatement (20+ chars), at least one warrant ({ id, reasoningStatement, cognitiveAttribute, performanceCondition, limitationClause }) -- a warrant without its own competencyId is bound to the model\'s competency automatically -- at least one observable ({ id, statement, type, warrantId }) referencing a warrant id, one evidenceRule per observable in a top-level evidenceRules array ({ id, observableId, direction: supports|weakens|neutral, strengthLevel: 1-5, activationCondition, justification }), and at least one statisticalModel with exactly one marked active: true. Also accepts a file shaped as { "evidenceModels": [...] }.'}
+          description={'Array of full evidence model objects (or { evidenceModels: [...] }). Enter a Student Model id to scope competencyName remapping to that model, then choose a file and click Upload. Also accepts newtonian_mechanics_evidence_models.json.'}
           endpoint="/api/evidenceModels/bulk"
           invalidateKey={evidenceModelsKey}
-          sampleHint='See the sample-evidence-model.json template for a complete, ready-to-edit example (swap in a real competencyId, or a competencyName exactly matching an existing Student Model competency).'
+          evidenceModel
+          sampleHint='See samples/newtonian_mechanics_evidence_models.json — pick your Newtonian Student Model id, then choose the file.'
         />
 
         <BulkUploadCard
@@ -101,6 +104,22 @@ export default function BulkUploadPanel() {
           endpoint="/api/items/bulk"
           invalidateKey={itemsKey}
           sampleHint='e.g. [{ "taskModelId": "tm1699999999", "observationId": "obs1", ... }]'
+        />
+
+        <BulkUploadCard
+          title="Q-matrix Models"
+          description='Array of { name, competencyModelId|competencyModelName, attributeIds|attributeNames, entries: [{ itemId|itemName, attributeId|attributeName, required? }] }. Used by DINA/G-DINA Evidence Models.'
+          endpoint="/api/qMatrixModels/bulk"
+          invalidateKey={qMatrixModelsKey}
+          sampleHint="See samples/newtonian_force_qmatrix.json"
+        />
+
+        <BulkUploadCard
+          title="Assembly Models"
+          description='Array of { name, competencyModelId|competencyModelName, targetsBySMV: [{ smvId|smvName, requiredSEM|requiredClassificationAccuracy }], stoppingRules, selectionAlgorithm: { policyId|policyName } }.'
+          endpoint="/api/assemblyModels/bulk"
+          invalidateKey={assemblyModelsKey}
+          sampleHint="See samples/newtonian_mechanics_assembly.json"
         />
       </div>
     </div>

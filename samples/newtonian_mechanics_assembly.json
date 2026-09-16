@@ -1,0 +1,33 @@
+[
+  {
+    "name": "Grade 10 Newtonian Mechanics Assembly",
+    "description": "TR9 §2.3.4 Assembly Model: per-SMV accuracy targets and stopping rules for the Newtonian multidimensional SM.",
+    "competencyModelName": "Grade 10 Newtonian Mechanics Multidimensional SM",
+    "targetsBySMV": [
+      {
+        "smvName": "Force Concept Mastery",
+        "requiredClassificationAccuracy": 0.8
+      },
+      {
+        "smvName": "Kinematic Reasoning",
+        "requiredClassificationAccuracy": 0.75
+      },
+      {
+        "smvName": "Problem Representation Mode",
+        "requiredClassificationAccuracy": 0.7
+      },
+      {
+        "smvName": "Newtonian Proficiency Theta",
+        "requiredSEM": 0.35
+      }
+    ],
+    "stoppingRules": {
+      "minItems": 12,
+      "maxItems": 30,
+      "targetsMet": true
+    },
+    "selectionAlgorithm": {
+      "policyName": "Newtonian Mechanics Adaptive — Prerequisite Gated"
+    }
+  }
+]

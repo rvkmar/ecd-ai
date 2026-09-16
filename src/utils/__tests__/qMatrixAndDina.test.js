@@ -409,6 +409,22 @@ describe("evidenceModels — confirmed-status compatibility for gdina", () => {
         direction: "above",
         justification: "Cut derived from the 2026 calibration study establishing mastery classification accuracy.",
       },
+      fairnessNotes:
+        "Confirmed G-DINA fixture: residual DIF risk accepted after gender and language review on the calibration sample.",
+      evaluationProcedures: [
+        {
+          id: "ep1",
+          observableId: "o1",
+          workProductType: "mcq_selection",
+          method: "key",
+          description: "Answer key maps response to dichotomous observable for G-DINA.",
+        },
+      ],
+      difReviewChecklist: [
+        { id: "dif1", prompt: "Gender DIF reviewed?", status: "pass" },
+        { id: "dif2", prompt: "Language-load reviewed?", status: "pass" },
+        { id: "dif3", prompt: "Access reviewed?", status: "na" },
+      ],
       ...overrides,
     };
   }

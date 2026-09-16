@@ -1,0 +1,712 @@
+{
+  "evidenceModels": [
+    {
+      "name": "Force Concept Mastery — Diagnostic Evidence Model",
+      "description": "Evidence Model for Force Concept Mastery (binary SMV). TR9 §2.3.2 Evaluation + Measurement: evaluationProcedures score work products; active DINA measurement binds a Q-matrix. Inactive 1PL retained as interim reporting fallback.",
+      "competencyName": "Force Concept Mastery",
+      "authoringNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only. Statistical family: binary → active dina (qMatrixName remapped on bulk); inactive irt/1pl fallback until Q-matrix is confirmed.",
+      "studentModelCoherenceNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only.",
+      "claimStatement": "The student can identify action-reaction force pairs and net-force directions in Force Concepts contexts within Newtonian Mechanics across textbook and slightly novel diagrams, with reasoning sufficient to distinguish impetus misconceptions from Newton second and third laws at mastery level.",
+      "warrants": [
+        {
+          "id": "w_force_pair",
+          "reasoningStatement": "Naming equal-and-opposite action-reaction pairs on interacting objects requires applying Newton third law rather than attributing a single force of motion to the moving body.",
+          "cognitiveAttribute": "Concept Differentiation",
+          "performanceCondition": "Given a static or low-friction interacting-pair diagram with forces to be labeled, without a calculator.",
+          "limitationClause": "Does not by itself demonstrate quantitative net-force composition or continuous proficiency across kinematics.",
+          "rebuttalCondition": "Pair labels may reflect memorized diagram templates rather than third-law reasoning, especially when stems reuse textbook figures the learner has seen.",
+          "observableEvidence": "Observable evidence includes labeled force-pair selections and constructed pair statements that name both members of the interaction.",
+          "warrantRule": "If the learner identifies both members of an interaction pair with equal magnitude and opposite direction under the stated conditions, treat the observation as supporting evidence for third-law mastery.",
+          "backingEvidence": "Backing: NCERT Class 10 Force and Laws of Motion; Hestenes FCI action-reaction literature (PADI TR9 Toulmin warrant/backing)."
+        },
+        {
+          "id": "w_force_net",
+          "reasoningStatement": "Selecting the net-force direction when multiple forces act on one body requires composing force vectors according to Newton second law rather than equating velocity with force.",
+          "cognitiveAttribute": "Concept Integration",
+          "performanceCondition": "Given a one-body free-body diagram with at least two labeled forces and a requested net-force direction.",
+          "limitationClause": "Does not alone prove third-law pairing skill or multi-step kinematic transfer.",
+          "rebuttalCondition": "Net-force choices may follow a larger-arrow heuristic or conflate force with velocity when the stem shows motion.",
+          "observableEvidence": "Observable evidence includes selected net-force direction and brief justification that references unbalanced forces.",
+          "warrantRule": "If the learner net-force choice matches vector composition of the given forces, count the observation as supporting evidence for second-law force identification.",
+          "backingEvidence": "Backing: Grade 10 Newtonian targets; Mislevy & Riconscente (2005) TR9 §2.3.2 measurement-model link from observables to claims."
+        }
+      ],
+      "observables": [
+        {
+          "id": "obs_force_pair",
+          "statement": "The learner selects or states both members of an action-reaction force pair with equal magnitude and opposite direction on an interacting-pair item.",
+          "type": "selected_response",
+          "warrantId": "w_force_pair",
+          "boundaryNote": "Does not score quantitative magnitude calculation beyond qualitative equality."
+        },
+        {
+          "id": "obs_force_net",
+          "statement": "The learner identifies the net-force direction on a one-body free-body diagram with two or more concurrent forces.",
+          "type": "selected_response",
+          "warrantId": "w_force_net",
+          "boundaryNote": "Excludes multi-body systems not shown in the stem."
+        },
+        {
+          "id": "obs_force_diagram",
+          "statement": "The learner constructs or completes a free-body diagram that places force arrows consistent with contact and field forces described in the stem.",
+          "type": "constructed_response",
+          "warrantId": "w_force_net",
+          "boundaryNote": "Diagram completeness is scored for force identity and direction, not artistic quality."
+        }
+      ],
+      "evidenceRules": [
+        {
+          "id": "er_force_pair",
+          "observableId": "obs_force_pair",
+          "direction": "supports",
+          "strengthLevel": 5,
+          "activationCondition": "Both pair members are named with opposite direction and equal magnitude.",
+          "justification": "Correct action-reaction pairing is strong direct evidence for the third-law warrant because chance agreement on both members is low under these stems."
+        },
+        {
+          "id": "er_force_net",
+          "observableId": "obs_force_net",
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "Selected net-force direction matches composition of the labeled forces.",
+          "justification": "Net-force direction supports the second-law warrant by showing the learner treats force as the cause of acceleration change under the linked warrant."
+        },
+        {
+          "id": "er_force_diagram",
+          "observableId": "obs_force_diagram",
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "Constructed diagram includes required force arrows with qualitatively correct directions.",
+          "justification": "A free-body diagram provides converging process evidence for force identification under the linked warrant."
+        }
+      ],
+      "evaluationProcedures": [
+        {
+          "id": "ep_force_pair",
+          "observableId": "obs_force_pair",
+          "workProductType": "mcq_selection",
+          "method": "key",
+          "description": "Answer key maps the selected pair option to a dichotomous observable value for DINA/1PL scoring."
+        },
+        {
+          "id": "ep_force_net",
+          "observableId": "obs_force_net",
+          "workProductType": "mcq_selection",
+          "method": "key",
+          "description": "Answer key maps selected net-force direction to a dichotomous observable value."
+        },
+        {
+          "id": "ep_force_diagram",
+          "observableId": "obs_force_diagram",
+          "workProductType": "constructed_diagram",
+          "method": "rubric",
+          "description": "Analytic rubric scores required force arrows for identity and direction; partial credit allowed for missing one contact force."
+        }
+      ],
+      "statisticalModels": [
+        {
+          "id": "sm_force_dina",
+          "type": "dina",
+          "subtype": null,
+          "active": true,
+          "structureConfig": {
+            "qMatrixName": "Newtonian Force Concept Q-matrix",
+            "observableIds": [
+              "obs_force_pair",
+              "obs_force_net",
+              "obs_force_diagram"
+            ]
+          },
+          "parameterSets": [],
+          "activeParameterSetId": null
+        },
+        {
+          "id": "sm_force_1pl",
+          "type": "irt",
+          "subtype": "1pl",
+          "active": false,
+          "structureConfig": {
+            "observableIds": [
+              "obs_force_pair",
+              "obs_force_net",
+              "obs_force_diagram"
+            ],
+            "scoringMode": "binary",
+            "dimensions": 1,
+            "prior": {
+              "mean": 0,
+              "sd": 1
+            }
+          },
+          "parameterSets": [],
+          "activeParameterSetId": null
+        }
+      ],
+      "decisionRule": {
+        "type": "mastery",
+        "threshold": 0.7,
+        "direction": "above",
+        "justification": "Mastery is declared when the posterior probability of the mastered state exceeds 0.70 after calibration on a Grade 10 pilot sample; threshold chosen to balance false mastery against instructional opportunity."
+      },
+      "fairnessNotes": "Force-diagram vocabulary is introduced in an orientation screen. Residual risk: learners without prior FBD exposure may underperform relative to peers with lab practice; mitigated by worked example before operational forms.",
+      "difReviewChecklist": [
+        {
+          "id": "dif_gender",
+          "prompt": "Gender DIF review planned or completed for bound items?",
+          "status": "pass",
+          "note": "Pilot plan includes Mantel-Haenszel DIF by gender."
+        },
+        {
+          "id": "dif_language",
+          "prompt": "Language-load / translation review completed?",
+          "status": "pass",
+          "note": "Grade 10 English medium; glossary for force vocabulary."
+        },
+        {
+          "id": "dif_access",
+          "prompt": "Accessibility / sensory-motor demands reviewed?",
+          "status": "na",
+          "note": "Text-only alt forms planned for diagram-heavy stems."
+        }
+      ],
+      "calibrationPlan": {
+        "pilotSampleSize": 200,
+        "method": "MCMC / EM for DINA slip-guess",
+        "packageHint": "GDINA / CDM",
+        "targetFitNotes": "Target attribute classification accuracy ≥0.80 on holdout after pilot."
+      }
+    },
+    {
+      "name": "Kinematic Reasoning — Ordered Levels Evidence Model",
+      "description": "Evidence Model for Kinematic Reasoning (ordinal SMV L1–L4). Active polytomous IRT (PCM) maps cumulative evidence to ordered levels; inactive threshold retained as classroom fallback (TR9 §2.3.2).",
+      "competencyName": "Kinematic Reasoning",
+      "authoringNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only. Statistical family: ordinal → active irt/pcm; inactive threshold fallback. Prerequisite Force Concept Mastery should have its own EM confirmed before operational activation.",
+      "studentModelCoherenceNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only.",
+      "claimStatement": "The student can relate displacement, velocity, and acceleration through graphs and equations in Kinematics contexts within Newtonian Mechanics across qualitative, graphical, and algebraic problem forms, with reasoning sufficient to support ordered level classification at progressively higher developmental levels.",
+      "warrants": [
+        {
+          "id": "w_kin_graph",
+          "reasoningStatement": "Interpretation of slope and area features on x-t and v-t graphs requires mapping graphical representations to kinematic quantities rather than reading graphs as pictures of paths.",
+          "cognitiveAttribute": "Concept Relationship Mapping",
+          "performanceCondition": "Given Grade 10 style x-t or v-t graphs with labeled axes and questions about velocity, acceleration, or displacement intervals.",
+          "limitationClause": "Does not alone establish algebraic equation fluency or cross-representation transfer.",
+          "rebuttalCondition": "Graph answers may reflect picture-reading of the curve shape as a path rather than slope/area quantity mapping.",
+          "observableEvidence": "Observable evidence includes selected graph-feature interpretations and short constructed explanations of slope/area meaning.",
+          "warrantRule": "If graph-feature responses match the kinematic definitions encoded in the stem, treat them as supporting evidence for at least Level 2 graphical reasoning.",
+          "backingEvidence": "Backing: Representational competence literature; TR9 multiple data sources under shared warrant structure."
+        },
+        {
+          "id": "w_kin_eq",
+          "reasoningStatement": "Substitution into constant-acceleration kinematic equations with coherent units demonstrates Level 3 equation use beyond qualitative or purely graphical reasoning.",
+          "cognitiveAttribute": "Algorithm Execution",
+          "performanceCondition": "Given a one-dimensional motion problem with known values sufficient for a single kinematic equation application.",
+          "limitationClause": "Does not prove multi-step transfer across representations.",
+          "rebuttalCondition": "Numeric answers may be obtained by unit cancellation tricks or calculator replay of a worked isomorphic example without equation understanding.",
+          "observableEvidence": "Observable evidence includes numeric responses and equation selection traces.",
+          "warrantRule": "If the numeric result matches the keyed value within tolerance and the equation choice is appropriate, count support for Level 3 equation use.",
+          "backingEvidence": "Backing: NCERT kinematics outcomes; TR9 measurement model quantifying weight and direction of observable evidence."
+        }
+      ],
+      "observables": [
+        {
+          "id": "obs_kin_graph",
+          "statement": "The learner interprets slope or area on an x-t or v-t graph to recover the requested kinematic quantity.",
+          "type": "selected_response",
+          "warrantId": "w_kin_graph",
+          "boundaryNote": "Limited to constant-acceleration segments shown; excludes 2D motion."
+        },
+        {
+          "id": "obs_kin_eq",
+          "statement": "The learner computes the numeric result for a one-step constant-acceleration problem using an appropriate kinematic equation.",
+          "type": "numeric_response",
+          "warrantId": "w_kin_eq",
+          "boundaryNote": "Rounding tolerance is stated in the item key."
+        },
+        {
+          "id": "obs_kin_transfer",
+          "statement": "The learner solves a multi-step kinematics problem that requires coordinating graph and equation information in one response chain.",
+          "type": "constructed_response",
+          "warrantId": "w_kin_eq",
+          "boundaryNote": "Scores process coordination; isolated final answers without process may be capped below full credit."
+        }
+      ],
+      "evidenceRules": [
+        {
+          "id": "er_kin_graph",
+          "observableId": "obs_kin_graph",
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "Selected interpretation matches the keyed slope/area mapping.",
+          "justification": "Graph-feature mapping is strong evidence for ordered graphical reasoning under the linked warrant."
+        },
+        {
+          "id": "er_kin_eq",
+          "observableId": "obs_kin_eq",
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "Numeric answer matches key within stated tolerance and equation choice is valid.",
+          "justification": "Equation application supports Level 3 claims under the linked warrant."
+        },
+        {
+          "id": "er_kin_transfer",
+          "observableId": "obs_kin_transfer",
+          "direction": "supports",
+          "strengthLevel": 5,
+          "activationCondition": "Response chain coordinates at least two representations to a final result.",
+          "justification": "Transfer across representations is strong evidence for Level 4 under the linked warrant."
+        }
+      ],
+      "evaluationProcedures": [
+        {
+          "id": "ep_kin_graph",
+          "observableId": "obs_kin_graph",
+          "workProductType": "mcq_selection",
+          "method": "key",
+          "description": "Answer key maps graph-feature selections to polytomous/binary scores for PCM."
+        },
+        {
+          "id": "ep_kin_eq",
+          "observableId": "obs_kin_eq",
+          "workProductType": "numeric_entry",
+          "method": "key",
+          "description": "Numeric key with tolerance band produces the observable score."
+        },
+        {
+          "id": "ep_kin_transfer",
+          "observableId": "obs_kin_transfer",
+          "workProductType": "constructed_solution",
+          "method": "rubric",
+          "description": "Process rubric awards ordered credit for coordinating graph and equation steps."
+        }
+      ],
+      "statisticalModels": [
+        {
+          "id": "sm_kin_pcm",
+          "type": "irt",
+          "subtype": "pcm",
+          "active": true,
+          "structureConfig": {
+            "observableIds": [
+              "obs_kin_graph",
+              "obs_kin_eq",
+              "obs_kin_transfer"
+            ],
+            "scoringMode": "polytomous",
+            "dimensions": 1,
+            "prior": {
+              "mean": 0,
+              "sd": 1
+            }
+          },
+          "parameterSets": [],
+          "activeParameterSetId": null
+        },
+        {
+          "id": "sm_kin_threshold",
+          "type": "threshold",
+          "subtype": null,
+          "active": false,
+          "structureConfig": {
+            "observableIds": [
+              "obs_kin_graph",
+              "obs_kin_eq",
+              "obs_kin_transfer"
+            ],
+            "weights": {
+              "obs_kin_graph": 1,
+              "obs_kin_eq": 1,
+              "obs_kin_transfer": 1.5
+            },
+            "threshold": 2.0,
+            "normalization": "sum"
+          },
+          "parameterSets": [],
+          "activeParameterSetId": null
+        }
+      ],
+      "decisionRule": {
+        "type": "classification",
+        "threshold": 2.0,
+        "direction": "above",
+        "justification": "Ordered level classification uses PCM category thresholds aligned to L2/L3/L4 descriptors after calibration; cuts refined from pilot frequency data."
+      },
+      "fairnessNotes": "Graph items assume prior exposure to x-t/v-t conventions. Learners without graphing practice may be disadvantaged; mitigated by a non-scored orientation graph item.",
+      "difReviewChecklist": [
+        {
+          "id": "dif_gender",
+          "prompt": "Gender DIF review planned or completed for bound items?",
+          "status": "pass",
+          "note": "Pilot plan includes Mantel-Haenszel DIF by gender."
+        },
+        {
+          "id": "dif_language",
+          "prompt": "Language-load / translation review completed?",
+          "status": "pass",
+          "note": "Grade 10 English medium; glossary for force vocabulary."
+        },
+        {
+          "id": "dif_access",
+          "prompt": "Accessibility / sensory-motor demands reviewed?",
+          "status": "na",
+          "note": "Text-only alt forms planned for diagram-heavy stems."
+        }
+      ],
+      "calibrationPlan": {
+        "pilotSampleSize": 200,
+        "method": "MML for PCM thresholds",
+        "packageHint": "mirt",
+        "targetFitNotes": "Category thresholds monotonic; outfit within 0.7–1.3."
+      }
+    },
+    {
+      "name": "Problem Representation Mode — Latent Class Evidence Model",
+      "description": "Evidence Model for Problem Representation Mode (categorical SMV). Observables capture first-move representation; BN measurement links to unordered classes. Process_log evaluation required (TR9 strategy features).",
+      "competencyName": "Problem Representation Mode",
+      "authoringNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only. Statistical family: categorical → bayesian_network only. Task Models must capture first substantive move telemetry.",
+      "studentModelCoherenceNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only.",
+      "claimStatement": "The student can initiate Newtonian problem solving through a recognizable representation mode in Problem Representation contexts within Newtonian Mechanics across varied stems, with first-move work products sufficient to classify the latent class as a dominant strategy profile.",
+      "warrants": [
+        {
+          "id": "w_rep_diagram",
+          "reasoningStatement": "Beginning with a free-body or force diagram before equations indicates a force-diagram-first representation strategy rather than immediate equation hunting.",
+          "cognitiveAttribute": "Schema Construction",
+          "performanceCondition": "Given a mechanics word problem that affords diagram, equation, or narrative starts, with process capture of the learner first substantive move.",
+          "limitationClause": "Does not measure correctness of later force calculations or overall theta.",
+          "rebuttalCondition": "A forced UI default that opens the diagram tool first can invent diagram-first evidence that does not reflect learner strategy.",
+          "observableEvidence": "Observable evidence is the coded first move when it is a force/free-body diagram.",
+          "warrantRule": "If the first substantive work product is a force diagram, treat it as supporting evidence for the force_diagram latent class.",
+          "backingEvidence": "Backing: Problem-representation research; TR9 latent-class measurement for categorical SMVs."
+        },
+        {
+          "id": "w_rep_equation",
+          "reasoningStatement": "Selecting a kinematic or dynamic equation as the first move indicates an equation-first representation mode distinct from diagram-first or narrative-first.",
+          "cognitiveAttribute": "Strategy Selection",
+          "performanceCondition": "Same affordance conditions as diagram-first items, with logging of first equation selection or written equation before diagramming.",
+          "limitationClause": "Does not imply the equation is optimal or correctly solved.",
+          "rebuttalCondition": "Formula-sheet prominence or equation banks as the only enabled control can inflate equation-first classifications.",
+          "observableEvidence": "Observable evidence is first-move equation selection events.",
+          "warrantRule": "If the first substantive move is equation selection, support the equation_first class.",
+          "backingEvidence": "Backing: Strategy choice literature; TR9 measurement models quantify direction/weight of observables for SMVs."
+        },
+        {
+          "id": "w_rep_narrative",
+          "reasoningStatement": "Beginning with a qualitative causal narrative before diagrams or equations indicates a narrative-first representation strategy.",
+          "cognitiveAttribute": "Qualitative Causal Framing",
+          "performanceCondition": "Given a mechanics word problem that affords diagram, equation, or narrative starts, with process capture of the first substantive move.",
+          "limitationClause": "Does not measure scientific completeness of the narrative or later solution accuracy.",
+          "rebuttalCondition": "Learners may narrate while already sketching; without time-synced process logs, narrative-first coding can be unreliable.",
+          "observableEvidence": "Observable evidence is the coded first move when it is a qualitative causal narrative without an initial diagram or equation.",
+          "warrantRule": "If the first substantive work product is a qualitative narrative, treat it as supporting evidence for the qualitative latent class.",
+          "backingEvidence": "Backing: Problem-representation research; TR9 latent-class formalization of categorical SMVs."
+        }
+      ],
+      "observables": [
+        {
+          "id": "obs_rep_diagram",
+          "statement": "The learner first substantive work product is a free-body or force diagram before writing equations.",
+          "type": "performance",
+          "warrantId": "w_rep_diagram",
+          "boundaryNote": "Ignores later diagramming after an equation-first start."
+        },
+        {
+          "id": "obs_rep_equation",
+          "statement": "The learner first substantive work product is selection or writing of a kinematic or dynamic equation before diagramming.",
+          "type": "selected_response",
+          "warrantId": "w_rep_equation",
+          "boundaryNote": "Does not score algebraic correctness of the chosen equation."
+        },
+        {
+          "id": "obs_rep_narrative",
+          "statement": "The learner first substantive work product is a qualitative causal narrative without an initial diagram or equation.",
+          "type": "constructed_response",
+          "warrantId": "w_rep_narrative",
+          "boundaryNote": "Narrative quality is coded for mode membership, not scientific completeness."
+        }
+      ],
+      "evidenceRules": [
+        {
+          "id": "er_rep_diagram",
+          "observableId": "obs_rep_diagram",
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "Process log marks force/free-body diagram as first substantive move.",
+          "justification": "First-move diagramming supports the force_diagram class under the linked warrant."
+        },
+        {
+          "id": "er_rep_equation",
+          "observableId": "obs_rep_equation",
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "Process log marks equation selection/writing as first substantive move.",
+          "justification": "Equation-first starts support the equation_first latent class under the strategy warrant."
+        },
+        {
+          "id": "er_rep_narrative",
+          "observableId": "obs_rep_narrative",
+          "direction": "supports",
+          "strengthLevel": 3,
+          "activationCondition": "Process log marks qualitative narrative as first substantive move.",
+          "justification": "Narrative-first starts support the qualitative class under the linked warrant; strength is moderate because some learners narrate while sketching."
+        }
+      ],
+      "evaluationProcedures": [
+        {
+          "id": "ep_rep_diagram",
+          "observableId": "obs_rep_diagram",
+          "workProductType": "process_trace",
+          "method": "process_log",
+          "description": "Interaction telemetry codes the first substantive tool/action as diagram when the free-body canvas is used before equation entry."
+        },
+        {
+          "id": "ep_rep_equation",
+          "observableId": "obs_rep_equation",
+          "workProductType": "process_trace",
+          "method": "process_log",
+          "description": "Telemetry codes first equation-bank selection or equation text entry before any diagram stroke."
+        },
+        {
+          "id": "ep_rep_narrative",
+          "observableId": "obs_rep_narrative",
+          "workProductType": "constructed_narrative",
+          "method": "process_log",
+          "description": "Process log plus short-text coder marks narrative-first when text is submitted with no prior diagram/equation events."
+        }
+      ],
+      "statisticalModels": [
+        {
+          "id": "sm_rep_bn",
+          "type": "bayesian_network",
+          "subtype": null,
+          "active": true,
+          "structureConfig": {
+            "latentNodes": [
+              "CLAIM_REP_MODE"
+            ],
+            "observableIds": [
+              "obs_rep_diagram",
+              "obs_rep_equation",
+              "obs_rep_narrative"
+            ],
+            "edges": [
+              {
+                "from": "CLAIM_REP_MODE",
+                "to": "obs_rep_diagram"
+              },
+              {
+                "from": "CLAIM_REP_MODE",
+                "to": "obs_rep_equation"
+              },
+              {
+                "from": "CLAIM_REP_MODE",
+                "to": "obs_rep_narrative"
+              }
+            ],
+            "prior": {
+              "force_diagram": 0.4,
+              "equation_first": 0.3,
+              "qualitative": 0.3
+            }
+          },
+          "parameterSets": [],
+          "activeParameterSetId": null
+        }
+      ],
+      "decisionRule": {
+        "type": "classification",
+        "threshold": 0.5,
+        "direction": "above",
+        "justification": "Latent class is the MAP class when its posterior exceeds 0.50 after evidence accumulation; ties fall back to prior mode until calibration sharpens CPTs."
+      },
+      "fairnessNotes": "Strategy logging must not force a default tool. UI defaults that open the diagram canvas first are a fairness risk for equation-first solvers; mitigated by neutral blank start state.",
+      "difReviewChecklist": [
+        {
+          "id": "dif_gender",
+          "prompt": "Gender DIF review planned or completed for bound items?",
+          "status": "pass",
+          "note": "Pilot plan includes Mantel-Haenszel DIF by gender."
+        },
+        {
+          "id": "dif_language",
+          "prompt": "Language-load / translation review completed?",
+          "status": "pass",
+          "note": "Grade 10 English medium; glossary for force vocabulary."
+        },
+        {
+          "id": "dif_access",
+          "prompt": "Accessibility / sensory-motor demands reviewed?",
+          "status": "na",
+          "note": "Text-only alt forms planned for diagram-heavy stems."
+        }
+      ],
+      "calibrationPlan": {
+        "pilotSampleSize": 200,
+        "method": "CPT estimation from pilot process logs",
+        "packageHint": "custom BN / bnlearn",
+        "targetFitNotes": "MAP class accuracy ≥0.70 vs expert-coded first moves."
+      }
+    },
+    {
+      "name": "Newtonian Proficiency Theta — IRT Evidence Model",
+      "description": "Evidence Model for Newtonian Proficiency Theta (continuous SMV). Unidimensional 2PL IRT updates proficiency; part-of children retain their own EMs (TR9 §2.3.1–2.3.2).",
+      "competencyName": "Newtonian Proficiency Theta",
+      "authoringNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only. Statistical family: continuous → IRT 2PL. Part-of children (Force, Kinematics) retain their own EMs; this EM reports overall proficiency only.",
+      "studentModelCoherenceNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only.",
+      "claimStatement": "The student can apply Newtonian force and one-dimensional kinematics ideas in Overall Proficiency contexts within Newtonian Mechanics across a range of Grade 10 problem situations, with performance patterns sufficient to support a continuous proficiency estimate along a continuous proficiency continuum.",
+      "warrants": [
+        {
+          "id": "w_theta_mixed",
+          "reasoningStatement": "Performance on mixed force-and-motion items that sample both force concepts and kinematics provides convergent evidence for a general Newtonian proficiency dimension rather than an isolated subskill.",
+          "cognitiveAttribute": "Concept Integration",
+          "performanceCondition": "Given multi-part items that jointly require force identification and kinematic reasoning under Grade 10 constraints.",
+          "limitationClause": "Does not replace attribute-level diagnostic claims owned by the binary/ordinal EMs.",
+          "rebuttalCondition": "Mixed items may be solved by strong performance on only one facet if the other facet is weakly weighted in the key.",
+          "observableEvidence": "Observable evidence includes scored outcomes on mixed items.",
+          "warrantRule": "If mixed-item responses meet keyed rubrics, treat them as supporting evidence for higher theta.",
+          "backingEvidence": "Backing: TR9 SMVs inferred via probability distributions; IRT as formal measurement model."
+        },
+        {
+          "id": "w_theta_explain",
+          "reasoningStatement": "Coherent written explanations that invoke Newton laws and kinematic relations indicate deeper proficiency than selected-response alone.",
+          "cognitiveAttribute": "Deductive Inference",
+          "performanceCondition": "Given short constructed-response prompts requiring causal explanation of a mechanics outcome.",
+          "limitationClause": "Excludes lengthy essays outside the Task Model length constraints.",
+          "rebuttalCondition": "Explanations may be rehearsed phrases from tutoring without transfer to novel stems.",
+          "observableEvidence": "Observable evidence is rubric-scored explanations.",
+          "warrantRule": "If explanation rubrics meet the proficient band, count support for higher theta.",
+          "backingEvidence": "Backing: TR9 evaluation procedures producing Observables from Work Products."
+        }
+      ],
+      "observables": [
+        {
+          "id": "obs_theta_mixed",
+          "statement": "The learner solves a mixed force-and-kinematics selected-response item sampling both claim facets.",
+          "type": "selected_response",
+          "warrantId": "w_theta_mixed",
+          "boundaryNote": "Single-skill pure items are reserved for the attribute-specific EMs."
+        },
+        {
+          "id": "obs_theta_explain",
+          "statement": "The learner produces a short explanation that applies Newton laws and/or kinematic relations to the described situation.",
+          "type": "constructed_response",
+          "warrantId": "w_theta_explain",
+          "boundaryNote": "Rubric focuses on causal coherence, not grammar."
+        },
+        {
+          "id": "obs_theta_numeric",
+          "statement": "The learner produces the numeric result on a multi-step Newtonian calculation item within tolerance.",
+          "type": "numeric_response",
+          "warrantId": "w_theta_mixed",
+          "boundaryNote": "Symbolic-only answers without numeric evaluation are scored separately if at all."
+        }
+      ],
+      "evidenceRules": [
+        {
+          "id": "er_theta_mixed",
+          "observableId": "obs_theta_mixed",
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "Selected option matches the keyed Newtonian solution.",
+          "justification": "Mixed-item responses support higher theta under the integration warrant."
+        },
+        {
+          "id": "er_theta_explain",
+          "observableId": "obs_theta_explain",
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "Explanation rubric meets the proficient band for causal Newtonian reasoning.",
+          "justification": "Proficient explanations strengthen the continuous proficiency claim under the linked warrant."
+        },
+        {
+          "id": "er_theta_numeric",
+          "observableId": "obs_theta_numeric",
+          "direction": "supports",
+          "strengthLevel": 5,
+          "activationCondition": "Numeric answer matches key within tolerance after a multi-step solution path.",
+          "justification": "Multi-step numeric results are strong evidence for higher theta under the linked warrant."
+        }
+      ],
+      "evaluationProcedures": [
+        {
+          "id": "ep_theta_mixed",
+          "observableId": "obs_theta_mixed",
+          "workProductType": "mcq_selection",
+          "method": "key",
+          "description": "Dichotomous answer key for mixed force-kinematics MCQ."
+        },
+        {
+          "id": "ep_theta_explain",
+          "observableId": "obs_theta_explain",
+          "workProductType": "short_constructed",
+          "method": "rubric",
+          "description": "Analytic rubric for causal Newton/kinematics explanations."
+        },
+        {
+          "id": "ep_theta_numeric",
+          "observableId": "obs_theta_numeric",
+          "workProductType": "numeric_entry",
+          "method": "key",
+          "description": "Numeric key with tolerance after multi-step calculation."
+        }
+      ],
+      "statisticalModels": [
+        {
+          "id": "sm_theta_2pl",
+          "type": "irt",
+          "subtype": "2pl",
+          "active": true,
+          "structureConfig": {
+            "observableIds": [
+              "obs_theta_mixed",
+              "obs_theta_explain",
+              "obs_theta_numeric"
+            ],
+            "scoringMode": "binary",
+            "dimensions": 1,
+            "prior": {
+              "mean": 0,
+              "sd": 1
+            }
+          },
+          "parameterSets": [],
+          "activeParameterSetId": null
+        }
+      ],
+      "decisionRule": {
+        "type": "posterior_threshold",
+        "threshold": 0.0,
+        "direction": "above",
+        "justification": "Reporting band at or above typical Grade 10 proficiency uses EAP theta above 0.0 on the calibrated scale after calibration; cut may be shifted once pilot norms are known."
+      },
+      "fairnessNotes": "Mixed items combine force and kinematics; learners who missed Force instruction may appear low on theta for curriculum sequencing reasons. Assembly prerequisite gating mitigates premature exposure.",
+      "difReviewChecklist": [
+        {
+          "id": "dif_gender",
+          "prompt": "Gender DIF review planned or completed for bound items?",
+          "status": "pass",
+          "note": "Pilot plan includes Mantel-Haenszel DIF by gender."
+        },
+        {
+          "id": "dif_language",
+          "prompt": "Language-load / translation review completed?",
+          "status": "pass",
+          "note": "Grade 10 English medium; glossary for force vocabulary."
+        },
+        {
+          "id": "dif_access",
+          "prompt": "Accessibility / sensory-motor demands reviewed?",
+          "status": "na",
+          "note": "Text-only alt forms planned for diagram-heavy stems."
+        }
+      ],
+      "calibrationPlan": {
+        "pilotSampleSize": 200,
+        "method": "MML 2PL",
+        "packageHint": "mirt",
+        "targetFitNotes": "SE target ≤0.35 at theta=0 after pilot; remove misfitting items."
+      }
+    }
+  ],
+  "sourceStudentModel": "Grade_10_Newtonian_Mechanics_Multidimensional_SM_specification.json",
+  "padiReference": "Mislevy & Riconscente (2005) PADI TR9 §2.3.2",
+  "enterprisePack": "newtonian-enterprise-v1"
+}

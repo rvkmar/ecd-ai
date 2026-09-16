@@ -1,0 +1,394 @@
+[
+  {
+    "name": "Force Concept — Pair and Net Force Tasks",
+    "description": "Force Concept — Pair and Net Force Tasks",
+    "designRationale": "Hybrid selected/constructed forms elicit pair, net-force, and diagram observables for the Force EM.",
+    "evidenceModelName": "Force Concept Mastery — Diagnostic Evidence Model",
+    "primaryEvidenceModelName": "Force Concept Mastery — Diagnostic Evidence Model",
+    "expectedObservations": [
+      {
+        "observationId": "obs_force_pair",
+        "evidenceModelName": "Force Concept Mastery — Diagnostic Evidence Model",
+        "required": true,
+        "weight": 1
+      },
+      {
+        "observationId": "obs_force_net",
+        "evidenceModelName": "Force Concept Mastery — Diagnostic Evidence Model",
+        "required": true,
+        "weight": 1
+      },
+      {
+        "observationId": "obs_force_diagram",
+        "evidenceModelName": "Force Concept Mastery — Diagnostic Evidence Model",
+        "required": true,
+        "weight": 1
+      }
+    ],
+    "taskStructure": {
+      "presentationMode": "interactive",
+      "responseFormat": "hybrid",
+      "stimulusPolicy": "parameterized",
+      "timingConstraint": {
+        "timeLimitSeconds": 120,
+        "pacingPolicy": "examinee-paced"
+      },
+      "resourceConstraints": {
+        "maxAttempts": 1,
+        "toolsAllowed": "",
+        "collaborationAllowed": false
+      },
+      "administration": {
+        "environment": "online_supervised",
+        "assessor": "automated",
+        "supportLevel": "none",
+        "affectiveLoad": "low",
+        "socialExposure": "low"
+      }
+    },
+    "blueprintConstraints": {
+      "difficultyRange": {
+        "min": -2,
+        "max": 2
+      },
+      "cognitiveDemand": {
+        "bloomLevel": "apply",
+        "reasoningType": "conceptual"
+      },
+      "domainAlignment": {
+        "subject": "Physics",
+        "gradeBand": "Grade 10"
+      },
+      "exposurePolicy": {
+        "maxUses": 500,
+        "cooldownPolicy": "form"
+      },
+      "allowedInteractionTypes": [
+        "mcq",
+        "constructed"
+      ],
+      "allowedScoringMethods": [
+        "dichotomous",
+        "analytic_rubric"
+      ]
+    },
+    "taskCompositionType": "atomic",
+    "subTaskIds": [],
+    "actions": [
+      "select",
+      "construct"
+    ],
+    "fairnessRisks": [
+      {
+        "category": "linguistic",
+        "description": "Free-body diagram vocabulary may be unfamiliar.",
+        "severity": "medium",
+        "mitigation": "Orientation screen defines FBD terms before scored items."
+      }
+    ],
+    "fairnessNotes": "Residual language risk accepted after orientation.",
+    "accessibilityAssumptions": {
+      "assistiveSupport": "Screen-reader compatible where interaction type allows.",
+      "languageLoad": "Reading demand at Grade 10 band.",
+      "accommodations": "Extended time permitted.",
+      "sensoryMotorDemands": "Pointer or keyboard; diagram construction optional."
+    },
+    "equivalenceGroupId": "force-concept-—-pair-and-net-force-tasks"
+  },
+  {
+    "name": "Kinematic Reasoning — Graph and Equation Tasks",
+    "description": "Kinematic Reasoning — Graph and Equation Tasks",
+    "designRationale": "Hybrid tasks elicit graph, equation, and transfer observables for PCM measurement.",
+    "evidenceModelName": "Kinematic Reasoning — Ordered Levels Evidence Model",
+    "primaryEvidenceModelName": "Kinematic Reasoning — Ordered Levels Evidence Model",
+    "expectedObservations": [
+      {
+        "observationId": "obs_kin_graph",
+        "evidenceModelName": "Kinematic Reasoning — Ordered Levels Evidence Model",
+        "required": true,
+        "weight": 1
+      },
+      {
+        "observationId": "obs_kin_eq",
+        "evidenceModelName": "Kinematic Reasoning — Ordered Levels Evidence Model",
+        "required": true,
+        "weight": 1
+      },
+      {
+        "observationId": "obs_kin_transfer",
+        "evidenceModelName": "Kinematic Reasoning — Ordered Levels Evidence Model",
+        "required": true,
+        "weight": 1
+      }
+    ],
+    "taskStructure": {
+      "presentationMode": "interactive",
+      "responseFormat": "hybrid",
+      "stimulusPolicy": "parameterized",
+      "timingConstraint": {
+        "timeLimitSeconds": 150,
+        "pacingPolicy": "examinee-paced"
+      },
+      "resourceConstraints": {
+        "maxAttempts": 1,
+        "toolsAllowed": "calculator",
+        "collaborationAllowed": false
+      },
+      "administration": {
+        "environment": "online_supervised",
+        "assessor": "automated",
+        "supportLevel": "none",
+        "affectiveLoad": "moderate",
+        "socialExposure": "low"
+      }
+    },
+    "blueprintConstraints": {
+      "difficultyRange": {
+        "min": -2,
+        "max": 2
+      },
+      "cognitiveDemand": {
+        "bloomLevel": "apply",
+        "reasoningType": "conceptual"
+      },
+      "domainAlignment": {
+        "subject": "Physics",
+        "gradeBand": "Grade 10"
+      },
+      "exposurePolicy": {
+        "maxUses": 500,
+        "cooldownPolicy": "form"
+      },
+      "allowedInteractionTypes": [
+        "mcq",
+        "numeric",
+        "constructed"
+      ],
+      "allowedScoringMethods": [
+        "dichotomous",
+        "partial_credit",
+        "analytic_rubric"
+      ]
+    },
+    "taskCompositionType": "atomic",
+    "subTaskIds": [],
+    "actions": [
+      "select",
+      "compute",
+      "construct"
+    ],
+    "fairnessRisks": [
+      {
+        "category": "representational",
+        "description": "x-t/v-t conventions may be unfamiliar.",
+        "severity": "medium",
+        "mitigation": "Non-scored orientation graph precedes scored items."
+      }
+    ],
+    "fairnessNotes": "Graph convention risk mitigated by orientation item.",
+    "accessibilityAssumptions": {
+      "assistiveSupport": "Screen-reader compatible where interaction type allows.",
+      "languageLoad": "Reading demand at Grade 10 band.",
+      "accommodations": "Extended time permitted.",
+      "sensoryMotorDemands": "Pointer or keyboard selection."
+    },
+    "equivalenceGroupId": "kinematic-reasoning-—-graph-and-equation-tasks"
+  },
+  {
+    "name": "Problem Representation — First-Move Process Tasks",
+    "description": "Problem Representation — First-Move Process Tasks",
+    "designRationale": "Interactive process capture elicits first-move observables for BN latent-class measurement.",
+    "evidenceModelName": "Problem Representation Mode — Latent Class Evidence Model",
+    "primaryEvidenceModelName": "Problem Representation Mode — Latent Class Evidence Model",
+    "expectedObservations": [
+      {
+        "observationId": "obs_rep_diagram",
+        "evidenceModelName": "Problem Representation Mode — Latent Class Evidence Model",
+        "required": true,
+        "weight": 1
+      },
+      {
+        "observationId": "obs_rep_equation",
+        "evidenceModelName": "Problem Representation Mode — Latent Class Evidence Model",
+        "required": true,
+        "weight": 1
+      },
+      {
+        "observationId": "obs_rep_narrative",
+        "evidenceModelName": "Problem Representation Mode — Latent Class Evidence Model",
+        "required": true,
+        "weight": 1
+      }
+    ],
+    "taskStructure": {
+      "presentationMode": "interactive",
+      "responseFormat": "hybrid",
+      "stimulusPolicy": "parameterized",
+      "timingConstraint": {
+        "timeLimitSeconds": 180,
+        "pacingPolicy": "examinee-paced"
+      },
+      "resourceConstraints": {
+        "maxAttempts": 1,
+        "toolsAllowed": "diagram_canvas,equation_bank,text_pad",
+        "collaborationAllowed": false
+      },
+      "administration": {
+        "environment": "online_supervised",
+        "assessor": "automated",
+        "supportLevel": "none",
+        "affectiveLoad": "moderate",
+        "socialExposure": "low",
+        "processCapture": "first_substantive_move"
+      }
+    },
+    "blueprintConstraints": {
+      "difficultyRange": {
+        "min": -2,
+        "max": 2
+      },
+      "cognitiveDemand": {
+        "bloomLevel": "apply",
+        "reasoningType": "conceptual"
+      },
+      "domainAlignment": {
+        "subject": "Physics",
+        "gradeBand": "Grade 10"
+      },
+      "exposurePolicy": {
+        "maxUses": 500,
+        "cooldownPolicy": "form"
+      },
+      "allowedInteractionTypes": [
+        "performance",
+        "mcq",
+        "constructed"
+      ],
+      "allowedScoringMethods": [
+        "process_log",
+        "dichotomous"
+      ]
+    },
+    "taskCompositionType": "atomic",
+    "subTaskIds": [],
+    "actions": [
+      "diagram",
+      "select_equation",
+      "narrate"
+    ],
+    "fairnessRisks": [
+      {
+        "category": "interface",
+        "description": "UI defaults that open the diagram tool first invent diagram-first evidence.",
+        "severity": "high",
+        "mitigation": "Neutral blank start; all three tools equally available."
+      }
+    ],
+    "fairnessNotes": "Process telemetry fairness: no forced default tool.",
+    "accessibilityAssumptions": {
+      "assistiveSupport": "Screen-reader compatible where interaction type allows.",
+      "languageLoad": "Reading demand at Grade 10 band.",
+      "accommodations": "Extended time permitted.",
+      "sensoryMotorDemands": "Pointer for canvas; keyboard for narrative/equations."
+    },
+    "equivalenceGroupId": "problem-representation-—-first-move-process-task"
+  },
+  {
+    "name": "Newtonian Theta — Mixed Proficiency Tasks",
+    "description": "Newtonian Theta — Mixed Proficiency Tasks",
+    "designRationale": "Mixed tasks feed unidimensional 2PL for overall Newtonian theta.",
+    "evidenceModelName": "Newtonian Proficiency Theta — IRT Evidence Model",
+    "primaryEvidenceModelName": "Newtonian Proficiency Theta — IRT Evidence Model",
+    "expectedObservations": [
+      {
+        "observationId": "obs_theta_mixed",
+        "evidenceModelName": "Newtonian Proficiency Theta — IRT Evidence Model",
+        "required": true,
+        "weight": 1
+      },
+      {
+        "observationId": "obs_theta_explain",
+        "evidenceModelName": "Newtonian Proficiency Theta — IRT Evidence Model",
+        "required": true,
+        "weight": 1
+      },
+      {
+        "observationId": "obs_theta_numeric",
+        "evidenceModelName": "Newtonian Proficiency Theta — IRT Evidence Model",
+        "required": true,
+        "weight": 1
+      }
+    ],
+    "taskStructure": {
+      "presentationMode": "interactive",
+      "responseFormat": "hybrid",
+      "stimulusPolicy": "parameterized",
+      "timingConstraint": {
+        "timeLimitSeconds": 180,
+        "pacingPolicy": "examinee-paced"
+      },
+      "resourceConstraints": {
+        "maxAttempts": 1,
+        "toolsAllowed": "calculator",
+        "collaborationAllowed": false
+      },
+      "administration": {
+        "environment": "online_supervised",
+        "assessor": "automated",
+        "supportLevel": "none",
+        "affectiveLoad": "moderate",
+        "socialExposure": "low"
+      }
+    },
+    "blueprintConstraints": {
+      "difficultyRange": {
+        "min": -2,
+        "max": 2
+      },
+      "cognitiveDemand": {
+        "bloomLevel": "apply",
+        "reasoningType": "conceptual"
+      },
+      "domainAlignment": {
+        "subject": "Physics",
+        "gradeBand": "Grade 10"
+      },
+      "exposurePolicy": {
+        "maxUses": 500,
+        "cooldownPolicy": "form"
+      },
+      "allowedInteractionTypes": [
+        "mcq",
+        "constructed",
+        "numeric"
+      ],
+      "allowedScoringMethods": [
+        "dichotomous",
+        "analytic_rubric"
+      ]
+    },
+    "taskCompositionType": "atomic",
+    "subTaskIds": [],
+    "actions": [
+      "select",
+      "explain",
+      "compute"
+    ],
+    "fairnessRisks": [
+      {
+        "category": "curriculum_sequence",
+        "description": "Mixed items disadvantage learners not yet taught Force.",
+        "severity": "medium",
+        "mitigation": "Assembly/policy prerequisite gating on Force mastery."
+      }
+    ],
+    "fairnessNotes": "Prerequisite gating reduces sequencing fairness risk.",
+    "accessibilityAssumptions": {
+      "assistiveSupport": "Screen-reader compatible where interaction type allows.",
+      "languageLoad": "Reading demand at Grade 10 band.",
+      "accommodations": "Extended time permitted.",
+      "sensoryMotorDemands": "Pointer or keyboard selection."
+    },
+    "equivalenceGroupId": "newtonian-theta-—-mixed-proficiency-tasks"
+  }
+]

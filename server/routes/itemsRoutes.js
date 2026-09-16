@@ -270,11 +270,33 @@ function createItemRecord(payload = {}, db, creatorId = "system", options = {}) 
   // exist and must still declare the observation, and item CONFIRMATION
   // still refuses a draft Task Model (validateItemLifecycle).
   const allowDraftParents = options.allowDraftParents === true;
-  if (!payload.taskModelId) {
+  let taskModelId = payload.taskModelId;
+  if (!taskModelId && payload.taskModelName) {
+    const needle = String(payload.taskModelName).trim().toLowerCase();
+    const matches = (db.taskModels || []).filter(
+      (t) => (t.name || "").trim().toLowerCase() === needle
+    );
+    if (matches.length === 0) {
+      return {
+        ok: false,
+        status: 400,
+        error: `No task model found named "${payload.taskModelName}".`,
+      };
+    }
+    if (matches.length > 1) {
+      return {
+        ok: false,
+        status: 400,
+        error: `"${payload.taskModelName}" matches ${matches.length} task models; use taskModelId.`,
+      };
+    }
+    taskModelId = matches[0].id;
+  }
+  if (!taskModelId) {
     return { ok: false, status: 400, error: "taskModelId is required. An item exists only as an instantiation of a Task Model." };
   }
 
-  const taskModel = (db.taskModels || []).find((t) => t.id === payload.taskModelId);
+  const taskModel = (db.taskModels || []).find((t) => t.id === taskModelId);
 
   if (!taskModel) {
     return { ok: false, status: 400, error: `Invalid taskModelId '${payload.taskModelId}'.` };
@@ -310,6 +332,8 @@ function createItemRecord(payload = {}, db, creatorId = "system", options = {}) 
 
   const newItem = {
     id: genId(),
+    // Optional display name used by Q-matrix bulk remapping (itemName).
+    name: payload.name || null,
 
     taskModelId: taskModel.id,
     taskModelVersion: taskModel.versionNumber,

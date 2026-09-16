@@ -171,4 +171,143 @@ router.delete("/:id", canDelete, (req, res) => {
   res.json({ success: true });
 });
 
+/* =====================================================
+   POST /api/assemblyModels/bulk
+   Name remapping: competencyModelName, targetsBySMV[].smvName,
+   selectionAlgorithm.policyName → policyId.
+===================================================== */
+function resolveUniqueByName(list, name, label, nameKey = "name") {
+  const needle = String(name || "").trim().toLowerCase();
+  if (!needle) return { error: `${label} name is empty.` };
+  const matches = (list || []).filter(
+    (row) => String(row[nameKey] || row.name || row.label || "").trim().toLowerCase() === needle
+  );
+  if (matches.length === 0) return { error: `No ${label} found named "${name}".` };
+  if (matches.length > 1) {
+    return { error: `"${name}" matches ${matches.length} ${label}s; use an explicit id.` };
+  }
+  return { record: matches[0] };
+}
+
+function createAssemblyModelRecord(payload = {}, db, idSuffix = "") {
+  const now = new Date().toISOString();
+  let competencyModelId = payload.competencyModelId;
+
+  if (!competencyModelId && payload.competencyModelName) {
+    const resolved = resolveUniqueByName(
+      db.competencyModels,
+      payload.competencyModelName,
+      "competency model"
+    );
+    if (resolved.error) return { ok: false, status: 400, error: resolved.error };
+    competencyModelId = resolved.record.id;
+  }
+
+  const competencyModel = (db.competencyModels || []).find((m) => m.id === competencyModelId);
+  if (!competencyModelId || !competencyModel) {
+    return {
+      ok: false,
+      status: 400,
+      error: "competencyModelId (or a unique competencyModelName) is required.",
+    };
+  }
+
+  const targetsBySMV = [];
+  for (const t of payload.targetsBySMV || []) {
+    let smvId = t.smvId;
+    if (!smvId && t.smvName) {
+      const needle = String(t.smvName).trim().toLowerCase();
+      const smv = (competencyModel.smVariables || []).find(
+        (s) => (s.label || "").trim().toLowerCase() === needle || (s.id || "").toLowerCase() === needle
+      );
+      const comp = (db.competencies || []).find(
+        (c) =>
+          c.modelId === competencyModelId &&
+          (c.name || "").trim().toLowerCase() === needle
+      );
+      smvId = smv?.id || comp?.id;
+      if (!smvId) {
+        return {
+          ok: false,
+          status: 400,
+          error: `No SMV/competency named "${t.smvName}" on model "${competencyModel.name || competencyModelId}".`,
+        };
+      }
+    }
+    if (!smvId) {
+      return { ok: false, status: 400, error: "Each targetsBySMV entry needs smvId or smvName." };
+    }
+    const row = { smvId };
+    if (typeof t.requiredSEM === "number") row.requiredSEM = t.requiredSEM;
+    if (typeof t.requiredClassificationAccuracy === "number") {
+      row.requiredClassificationAccuracy = t.requiredClassificationAccuracy;
+    }
+    targetsBySMV.push(row);
+  }
+
+  let selectionAlgorithm = payload.selectionAlgorithm || {};
+  if (!selectionAlgorithm.policyId && selectionAlgorithm.policyName) {
+    const resolved = resolveUniqueByName(
+      db.policies,
+      selectionAlgorithm.policyName,
+      "policy"
+    );
+    if (resolved.error) return { ok: false, status: 400, error: resolved.error };
+    selectionAlgorithm = { policyId: resolved.record.id };
+  }
+
+  const record = {
+    id: `${genId()}${idSuffix}`,
+    name: payload.name || "",
+    description: payload.description || "",
+    competencyModelId,
+    competencyModelVersion:
+      payload.competencyModelVersion ?? competencyModel.versionNumber ?? 1,
+    targetsBySMV,
+    stoppingRules: payload.stoppingRules || {},
+    selectionAlgorithm,
+    status: "draft",
+    locked: false,
+    versionNumber: payload.versionNumber ?? 1,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const { valid, errors } = validateEntity("assemblyModels", record, db);
+  if (!valid) {
+    return { ok: false, status: 400, error: "Assembly model validation failed", details: errors };
+  }
+
+  const lifecycleErrors = validateAssemblyModelLifecycle(record, db);
+  if (lifecycleErrors.length > 0) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Assembly model lifecycle validation failed",
+      details: lifecycleErrors,
+    };
+  }
+
+  db.assemblyModels = db.assemblyModels || [];
+  db.assemblyModels.push(record);
+  return { ok: true, status: 201, record };
+}
+
+router.post("/bulk", canAuthor, (req, res) => {
+  const rows = req.body;
+  if (!Array.isArray(rows)) {
+    return res.status(400).json({ error: "Request body must be a JSON array of assembly models." });
+  }
+  const db = loadDB();
+  const results = rows.map((row, i) => {
+    const result = createAssemblyModelRecord(row || {}, db, `_${i}`);
+    return result.ok
+      ? { index: i, ok: true, id: result.record.id, name: result.record.name }
+      : { index: i, ok: false, error: result.error, details: result.details };
+  });
+  saveDB(db);
+  const created = results.filter((r) => r.ok).length;
+  res.status(207).json({ created, failed: results.length - created, results });
+});
+
 export default router;

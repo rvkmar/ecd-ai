@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Newtonian Mechanics Adaptive — Prerequisite Gated",
+    "description": "IRT adaptive selection with Force→Kinematics prerequisite gating for Grade 10 Newtonian sessions.",
+    "type": "IRT",
+    "config": {
+      "model": "2PL",
+      "startingTheta": 0,
+      "thetaStepSize": 0.3,
+      "maxItems": 30,
+      "minItems": 12,
+      "stoppingRule": "standardError",
+      "standardErrorThreshold": 0.35,
+      "prerequisiteGating": [
+        {
+          "before": "Kinematic Reasoning",
+          "requireMasteryOf": "Force Concept Mastery",
+          "threshold": 0.7
+        }
+      ]
+    }
+  }
+]

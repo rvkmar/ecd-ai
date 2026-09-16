@@ -232,4 +232,167 @@ router.delete("/:id", canDelete, (req, res) => {
   res.json({ success: true });
 });
 
+/* =====================================================
+   POST /api/qMatrixModels/bulk
+   Name remapping: competencyModelName, attributeNames[],
+   entries[].itemName → itemId. Always draft.
+===================================================== */
+function resolveUniqueByName(list, name, label) {
+  const needle = String(name || "").trim().toLowerCase();
+  if (!needle) return { error: `${label} name is empty.` };
+  const matches = (list || []).filter(
+    (row) => (row.name || row.label || "").trim().toLowerCase() === needle
+  );
+  if (matches.length === 0) return { error: `No ${label} found named "${name}".` };
+  if (matches.length > 1) {
+    return { error: `"${name}" matches ${matches.length} ${label}s; use an explicit id.` };
+  }
+  return { record: matches[0] };
+}
+
+function createQMatrixRecord(payload = {}, db, idSuffix = "") {
+  const now = new Date().toISOString();
+  let competencyModelId = payload.competencyModelId;
+
+  if (!competencyModelId && payload.competencyModelName) {
+    const resolved = resolveUniqueByName(
+      db.competencyModels,
+      payload.competencyModelName,
+      "competency model"
+    );
+    if (resolved.error) return { ok: false, status: 400, error: resolved.error };
+    competencyModelId = resolved.record.id;
+  }
+
+  const competencyModel = (db.competencyModels || []).find((m) => m.id === competencyModelId);
+  if (!competencyModelId || !competencyModel) {
+    return {
+      ok: false,
+      status: 400,
+      error: "competencyModelId (or a unique competencyModelName) is required.",
+    };
+  }
+
+  let attributeIds = Array.isArray(payload.attributeIds) ? [...payload.attributeIds] : [];
+  if ((!attributeIds.length) && Array.isArray(payload.attributeNames)) {
+    attributeIds = [];
+    for (const attrName of payload.attributeNames) {
+      const needle = String(attrName || "").trim().toLowerCase();
+      const smvMatches = (competencyModel.smVariables || []).filter(
+        (s) => (s.label || "").trim().toLowerCase() === needle || (s.id || "").toLowerCase() === needle
+      );
+      const compMatches = (db.competencies || []).filter(
+        (c) =>
+          c.modelId === competencyModelId &&
+          (c.name || "").trim().toLowerCase() === needle
+      );
+      const hit = smvMatches[0] || (compMatches[0] ? { id: compMatches[0].id } : null);
+      if (!hit) {
+        return {
+          ok: false,
+          status: 400,
+          error: `No binary SMV/competency named "${attrName}" on model "${competencyModel.name || competencyModelId}".`,
+        };
+      }
+      attributeIds.push(hit.id);
+    }
+  }
+
+  const entries = [];
+  for (const entry of payload.entries || []) {
+    let itemId = entry.itemId;
+    if (!itemId && entry.itemName) {
+      const resolved = resolveUniqueByName(db.items, entry.itemName, "item");
+      if (resolved.error) return { ok: false, status: 400, error: resolved.error };
+      itemId = resolved.record.id;
+    }
+    if (!itemId || !entry.attributeId && !entry.attributeName) {
+      // attribute may be name-resolved against attributeNames map
+    }
+    let attributeId = entry.attributeId;
+    if (!attributeId && entry.attributeName) {
+      const needle = String(entry.attributeName).trim().toLowerCase();
+      const idx = (payload.attributeNames || []).findIndex(
+        (n) => String(n).trim().toLowerCase() === needle
+      );
+      if (idx >= 0 && attributeIds[idx]) attributeId = attributeIds[idx];
+      else {
+        const smv = (competencyModel.smVariables || []).find(
+          (s) => (s.label || "").trim().toLowerCase() === needle
+        );
+        const comp = (db.competencies || []).find(
+          (c) =>
+            c.modelId === competencyModelId &&
+            (c.name || "").trim().toLowerCase() === needle
+        );
+        attributeId = smv?.id || comp?.id;
+      }
+    }
+    if (!itemId || !attributeId) {
+      return {
+        ok: false,
+        status: 400,
+        error: "Each entry requires itemId (or itemName) and attributeId (or attributeName).",
+      };
+    }
+    entries.push({
+      itemId,
+      attributeId,
+      required: entry.required !== false,
+    });
+  }
+
+  const record = {
+    id: `${genId()}${idSuffix}`,
+    name: payload.name || "",
+    description: payload.description || "",
+    competencyModelId,
+    competencyModelVersion:
+      payload.competencyModelVersion ?? competencyModel.versionNumber ?? 1,
+    attributeIds,
+    entries,
+    status: "draft",
+    locked: false,
+    versionNumber: payload.versionNumber ?? 1,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const { valid, errors } = validateEntity("qMatrixModels", record, db);
+  if (!valid) {
+    return { ok: false, status: 400, error: "Q-matrix validation failed", details: errors };
+  }
+
+  const lifecycleErrors = validateQMatrixModelLifecycle(record, db);
+  if (lifecycleErrors.length > 0) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Q-matrix lifecycle validation failed",
+      details: lifecycleErrors,
+    };
+  }
+
+  db.qMatrixModels = db.qMatrixModels || [];
+  db.qMatrixModels.push(record);
+  return { ok: true, status: 201, record };
+}
+
+router.post("/bulk", canAuthor, (req, res) => {
+  const rows = req.body;
+  if (!Array.isArray(rows)) {
+    return res.status(400).json({ error: "Request body must be a JSON array of Q-matrix models." });
+  }
+  const db = loadDB();
+  const results = rows.map((row, i) => {
+    const result = createQMatrixRecord(row || {}, db, `_${i}`);
+    return result.ok
+      ? { index: i, ok: true, id: result.record.id, name: result.record.name }
+      : { index: i, ok: false, error: result.error, details: result.details };
+  });
+  saveDB(db);
+  const created = results.filter((r) => r.ok).length;
+  res.status(207).json({ created, failed: results.length - created, results });
+});
+
 export default router;

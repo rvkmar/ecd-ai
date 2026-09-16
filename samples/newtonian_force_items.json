@@ -1,0 +1,227 @@
+[
+  {
+    "name": "Force item — obs_force_pair",
+    "taskModelName": "Force Concept — Pair and Net Force Tasks",
+    "observationId": "obs_force_pair",
+    "stimulus": {
+      "layout": "single",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "A book rests on a table. Which pair is an action-reaction pair?"
+        }
+      ]
+    },
+    "interaction": {
+      "type": "mcq",
+      "responseComponents": [
+        {
+          "id": "opt_a",
+          "label": "Keyed Newtonian response"
+        },
+        {
+          "id": "opt_b",
+          "label": "Impetus distractor"
+        },
+        {
+          "id": "opt_c",
+          "label": "Single-force distractor"
+        }
+      ]
+    },
+    "scoring": {
+      "method": "dichotomous",
+      "maxScore": 1,
+      "evidenceActivationMap": [
+        {
+          "responsePattern": {
+            "selected": "opt_a"
+          },
+          "activatesObservable": true,
+          "strengthOverride": 4,
+          "rationale": "Keyed response activates the Force observable."
+        },
+        {
+          "responsePattern": {
+            "selected": [
+              "opt_b",
+              "opt_c"
+            ]
+          },
+          "activatesObservable": false,
+          "rationale": "Distractors do not support the observable."
+        }
+      ]
+    },
+    "learningDomain": "cognitive",
+    "cognitiveDemand": {
+      "bloomLevel": "apply"
+    },
+    "metadata": {
+      "gradeBand": "10",
+      "subject": "Physics",
+      "tags": [
+        "newtonian",
+        "force",
+        "obs_force_pair"
+      ]
+    },
+    "psychometrics": {
+      "statisticalModelType": "DINA"
+    },
+    "exposureControl": {
+      "maxUsageBeforeRetire": 500,
+      "maxReactivations": 2
+    }
+  },
+  {
+    "name": "Force item — obs_force_net",
+    "taskModelName": "Force Concept — Pair and Net Force Tasks",
+    "observationId": "obs_force_net",
+    "stimulus": {
+      "layout": "single",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "Two forces act rightward (3 N) and leftward (1 N) on a block. Net force direction?"
+        }
+      ]
+    },
+    "interaction": {
+      "type": "mcq",
+      "responseComponents": [
+        {
+          "id": "opt_a",
+          "label": "Keyed Newtonian response"
+        },
+        {
+          "id": "opt_b",
+          "label": "Impetus distractor"
+        },
+        {
+          "id": "opt_c",
+          "label": "Single-force distractor"
+        }
+      ]
+    },
+    "scoring": {
+      "method": "dichotomous",
+      "maxScore": 1,
+      "evidenceActivationMap": [
+        {
+          "responsePattern": {
+            "selected": "opt_a"
+          },
+          "activatesObservable": true,
+          "strengthOverride": 4,
+          "rationale": "Keyed response activates the Force observable."
+        },
+        {
+          "responsePattern": {
+            "selected": [
+              "opt_b",
+              "opt_c"
+            ]
+          },
+          "activatesObservable": false,
+          "rationale": "Distractors do not support the observable."
+        }
+      ]
+    },
+    "learningDomain": "cognitive",
+    "cognitiveDemand": {
+      "bloomLevel": "apply"
+    },
+    "metadata": {
+      "gradeBand": "10",
+      "subject": "Physics",
+      "tags": [
+        "newtonian",
+        "force",
+        "obs_force_net"
+      ]
+    },
+    "psychometrics": {
+      "statisticalModelType": "DINA"
+    },
+    "exposureControl": {
+      "maxUsageBeforeRetire": 500,
+      "maxReactivations": 2
+    }
+  },
+  {
+    "name": "Force item — obs_force_diagram",
+    "taskModelName": "Force Concept — Pair and Net Force Tasks",
+    "observationId": "obs_force_diagram",
+    "stimulus": {
+      "layout": "single",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "Draw/select the free-body diagram for a block sliding at constant velocity on a rough surface."
+        }
+      ]
+    },
+    "interaction": {
+      "type": "mcq",
+      "responseComponents": [
+        {
+          "id": "opt_a",
+          "label": "Keyed Newtonian response"
+        },
+        {
+          "id": "opt_b",
+          "label": "Impetus distractor"
+        },
+        {
+          "id": "opt_c",
+          "label": "Single-force distractor"
+        }
+      ]
+    },
+    "scoring": {
+      "method": "dichotomous",
+      "maxScore": 1,
+      "evidenceActivationMap": [
+        {
+          "responsePattern": {
+            "selected": "opt_a"
+          },
+          "activatesObservable": true,
+          "strengthOverride": 4,
+          "rationale": "Keyed response activates the Force observable."
+        },
+        {
+          "responsePattern": {
+            "selected": [
+              "opt_b",
+              "opt_c"
+            ]
+          },
+          "activatesObservable": false,
+          "rationale": "Distractors do not support the observable."
+        }
+      ]
+    },
+    "learningDomain": "cognitive",
+    "cognitiveDemand": {
+      "bloomLevel": "apply"
+    },
+    "metadata": {
+      "gradeBand": "10",
+      "subject": "Physics",
+      "tags": [
+        "newtonian",
+        "force",
+        "obs_force_diagram"
+      ]
+    },
+    "psychometrics": {
+      "statisticalModelType": "DINA"
+    },
+    "exposureControl": {
+      "maxUsageBeforeRetire": 500,
+      "maxReactivations": 2
+    }
+  }
+]

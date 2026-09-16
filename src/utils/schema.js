@@ -321,6 +321,28 @@ export const schema = {
         direction: 'string',    // above | below | within
         justification: 'string' // interpretive rationale
       },
+    // TR9 §2.3.2 evaluation component: how Work Products become Observable
+    // Variable values (answer keys, rubrics, automated scorers, process logs).
+    evaluationProcedures: [{
+      id: 'string',
+      observableId: 'string',
+      workProductType: 'string',
+      method: 'string',          // key | rubric | auto | process_log
+      description: 'string',
+      artifactRef: 'string',
+    }],
+    fairnessNotes: 'string',
+    difReviewChecklist: [{
+      id: 'string',
+      prompt: 'string',
+      status: 'string',          // pending | pass | fail | na
+      note: 'string',
+    }],
+    // Authoring plan for future calibration. Never a substitute for real
+    // parameterSets at confirm (drafts must keep parameterSets empty).
+    calibrationPlan: 'object',
+    authoringNotes: 'string',
+    studentModelCoherenceNotes: 'string',
     status: 'string',
     locked: 'boolean',
     createdAt: 'date',
@@ -1161,6 +1183,90 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       for (const wId of warrantIds) {
         const linked = (obj.observables || []).some(o => o.warrantId === wId);
         if (!linked) errors.push(`Warrant ${wId} has no linked observables.`);
+      }
+    }
+
+    /* ---------------------------------------------------
+       TR9 §2.3.2 Evaluation Procedures + fairness / DIF
+       (enterprise Evidence Model gates)
+    --------------------------------------------------- */
+    const EVAL_METHODS = ["key", "rubric", "auto", "process_log"];
+    const DIF_STATUSES = ["pending", "pass", "fail", "na"];
+    const observableIdSet = new Set((obj.observables || []).map(o => o.id).filter(Boolean));
+
+    if (obj.evaluationProcedures !== undefined && !Array.isArray(obj.evaluationProcedures)) {
+      errors.push("evaluationProcedures should be array");
+    } else if (Array.isArray(obj.evaluationProcedures)) {
+      const procsByObs = new Map();
+      for (const proc of obj.evaluationProcedures) {
+        if (!proc?.id) errors.push("evaluationProcedure missing id.");
+        if (!proc?.observableId) {
+          errors.push(`evaluationProcedure ${proc?.id || "(missing id)"} missing observableId.`);
+        } else if (!observableIdSet.has(proc.observableId)) {
+          errors.push(`evaluationProcedure ${proc.id} references unknown observableId '${proc.observableId}'.`);
+        } else {
+          procsByObs.set(proc.observableId, (procsByObs.get(proc.observableId) || 0) + 1);
+        }
+        if (proc?.method && !EVAL_METHODS.includes(proc.method)) {
+          errors.push(`evaluationProcedure ${proc.id} has invalid method '${proc.method}'.`);
+        }
+        if (strict) {
+          if (!proc?.method) errors.push(`evaluationProcedure ${proc?.id || "(missing id)"} missing method.`);
+          if (!proc?.workProductType) errors.push(`evaluationProcedure ${proc?.id || "(missing id)"} missing workProductType.`);
+          if (!proc?.description || String(proc.description).trim().length < 10) {
+            errors.push(`evaluationProcedure ${proc?.id || "(missing id)"} needs a meaningful description.`);
+          }
+        }
+      }
+      if (strict) {
+        for (const oId of observableIdSet) {
+          const n = procsByObs.get(oId) || 0;
+          if (n === 0) errors.push(`Observable ${oId} has no evaluationProcedure.`);
+          if (n > 1) errors.push(`Observable ${oId} has ${n} evaluationProcedures; exactly one is required.`);
+        }
+      }
+    } else if (strict) {
+      errors.push("evaluationProcedures are required (one per observable).");
+    }
+
+    const needsFairness =
+      strict ||
+      ["reviewed", "confirmed", "operational", "suspended"].includes(obj.status);
+
+    if (needsFairness) {
+      if (!obj.fairnessNotes || String(obj.fairnessNotes).trim().length < 20) {
+        errors.push("fairnessNotes is required and must be meaningful from reviewed onward.");
+      }
+    }
+
+    if (obj.difReviewChecklist !== undefined && !Array.isArray(obj.difReviewChecklist)) {
+      errors.push("difReviewChecklist should be array");
+    } else if (Array.isArray(obj.difReviewChecklist)) {
+      for (const row of obj.difReviewChecklist) {
+        if (!row?.id) errors.push("difReviewChecklist entry missing id.");
+        if (strict && (!row?.prompt || String(row.prompt).trim().length < 5)) {
+          errors.push(`difReviewChecklist ${row?.id || "(missing id)"} missing prompt.`);
+        }
+        if (row?.status && !DIF_STATUSES.includes(row.status)) {
+          errors.push(`difReviewChecklist ${row?.id || "(missing id)"} has invalid status '${row.status}'.`);
+        }
+      }
+      if (strict) {
+        if (obj.difReviewChecklist.length < 3) {
+          errors.push("difReviewChecklist requires at least 3 entries.");
+        }
+        const pending = obj.difReviewChecklist.filter(r => !r.status || r.status === "pending");
+        if (pending.length > 0) {
+          errors.push("difReviewChecklist entries must not be pending (use pass, fail, or na).");
+        }
+      }
+    } else if (strict) {
+      errors.push("difReviewChecklist is required (at least 3 completed entries).");
+    }
+
+    if (obj.calibrationPlan !== undefined && obj.calibrationPlan !== null) {
+      if (typeof obj.calibrationPlan !== "object" || Array.isArray(obj.calibrationPlan)) {
+        errors.push("calibrationPlan should be object");
       }
     }
 

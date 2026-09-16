@@ -172,18 +172,73 @@ function validateSubTasks(taskModel, db) {
 ===================================================== */
 function createTaskModelRecord(payload = {}, db, idSuffix = "", options = {}) {
   const allowDraftParents = options.allowDraftParents === true;
-  // Was previously a hand-picked field whitelist that never included
-  // taskPurpose, taskStructure, blueprintConstraints, or actions -- every
-  // one of those got silently dropped here before validateEntity() below
-  // even ran, so validateEntity then rejected the very object this
-  // handler had just stripped them from. That meant POST /api/taskModels
-  // could never succeed for any TaskModel that actually filled in those
-  // fields (i.e. all of them), regardless of what the client sent.
-  // Spread the payload first so nothing the wizard submits gets lost, the
-  // same way PUT /:id below already does with `{ ...existing, ...req.body }`;
-  // the explicit fields after the spread stay to guarantee sane defaults
-  // and to keep server-authoritative fields (status/locked/versionNumber/
-  // parentModelId/id/timestamps) from being spoofable by the client.
+
+  let evidenceModelIds = Array.isArray(payload.evidenceModelIds)
+    ? [...payload.evidenceModelIds]
+    : [];
+  if ((!evidenceModelIds.length) && payload.evidenceModelName) {
+    const needle = String(payload.evidenceModelName).trim().toLowerCase();
+    const matches = (db.evidenceModels || []).filter(
+      (em) => (em.name || "").trim().toLowerCase() === needle
+    );
+    if (matches.length === 1) evidenceModelIds = [matches[0].id];
+    else if (matches.length === 0) {
+      return {
+        ok: false,
+        status: 400,
+        error: `No evidence model found named "${payload.evidenceModelName}".`,
+      };
+    } else {
+      return {
+        ok: false,
+        status: 400,
+        error: `"${payload.evidenceModelName}" matches ${matches.length} evidence models; use evidenceModelIds.`,
+      };
+    }
+  }
+  if (Array.isArray(payload.evidenceModelNames) && payload.evidenceModelNames.length) {
+    evidenceModelIds = [];
+    for (const emName of payload.evidenceModelNames) {
+      const needle = String(emName).trim().toLowerCase();
+      const matches = (db.evidenceModels || []).filter(
+        (em) => (em.name || "").trim().toLowerCase() === needle
+      );
+      if (matches.length !== 1) {
+        return {
+          ok: false,
+          status: 400,
+          error: `evidenceModelNames entry "${emName}" must match exactly one evidence model.`,
+        };
+      }
+      evidenceModelIds.push(matches[0].id);
+    }
+  }
+
+  let primaryEvidenceModelId =
+    payload.primaryEvidenceModelId || evidenceModelIds[0] || "";
+  if (!payload.primaryEvidenceModelId && payload.primaryEvidenceModelName) {
+    const needle = String(payload.primaryEvidenceModelName).trim().toLowerCase();
+    const match = (db.evidenceModels || []).find(
+      (em) => (em.name || "").trim().toLowerCase() === needle
+    );
+    if (match) primaryEvidenceModelId = match.id;
+  }
+
+  const expectedObservations = (payload.expectedObservations || []).map((eo) => {
+    if (eo.evidenceModelId) return eo;
+    if (eo.evidenceModelName) {
+      const needle = String(eo.evidenceModelName).trim().toLowerCase();
+      const match = (db.evidenceModels || []).find(
+        (em) => (em.name || "").trim().toLowerCase() === needle
+      );
+      if (match) return { ...eo, evidenceModelId: match.id };
+    }
+    if (evidenceModelIds.length === 1) {
+      return { ...eo, evidenceModelId: evidenceModelIds[0] };
+    }
+    return eo;
+  });
+
   const newTaskModel = {
     ...payload,
 
@@ -192,12 +247,9 @@ function createTaskModelRecord(payload = {}, db, idSuffix = "", options = {}) {
     description: payload.description || "",
     designRationale: payload.designRationale || "",
 
-    evidenceModelIds: payload.evidenceModelIds || [],
-    // Default to the first binding rather than leaving the pointer empty:
-    // a single-evidence TaskModel has exactly one sensible primary.
-    primaryEvidenceModelId:
-      payload.primaryEvidenceModelId || (payload.evidenceModelIds || [])[0] || "",
-    expectedObservations: payload.expectedObservations || [],
+    evidenceModelIds,
+    primaryEvidenceModelId,
+    expectedObservations,
 
     // `questionBlueprint` used to be seeded here. It appears in no schema,
     // no route and no component -- a phantom field written onto every
