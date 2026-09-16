@@ -1,0 +1,51 @@
+[
+  {
+    "name": "Grade 10 Newtonian Mechanics Multidimensional SM",
+    "description": "Multidimensional Student Model for Grade 10 Newtonian Mechanics. EM-R3 splits Force into binary diagnostic attributes for multi-column DINA Q-matrix measurement.",
+    "measurementIntent": "multidimensional",
+    "smVariables": [
+      {
+        "id": "attr_force_pair",
+        "label": "Force Pair (Action-Reaction)",
+        "type": "binary",
+        "scale": { "states": ["non-mastery", "mastery"] },
+        "priorDistribution": { "family": "bernoulli", "params": { "p": 0.5 } }
+      },
+      {
+        "id": "attr_force_net",
+        "label": "Net Force Identification",
+        "type": "binary",
+        "scale": { "states": ["non-mastery", "mastery"] },
+        "priorDistribution": { "family": "bernoulli", "params": { "p": 0.5 } }
+      },
+      {
+        "id": "attr_force_diagram",
+        "label": "Free-Body Diagram",
+        "type": "binary",
+        "scale": { "states": ["non-mastery", "mastery"] },
+        "priorDistribution": { "family": "bernoulli", "params": { "p": 0.5 } }
+      },
+      {
+        "id": "smv_kinematics",
+        "label": "Kinematic Reasoning",
+        "type": "ordinal",
+        "scale": { "states": ["emerging", "developing", "proficient", "advanced"] },
+        "priorDistribution": { "family": "dirichlet", "params": { "alpha": [1, 1, 1, 1] } }
+      },
+      {
+        "id": "smv_rep",
+        "label": "Problem Representation Mode",
+        "type": "categorical",
+        "scale": { "states": ["diagram", "equation", "narrative"] },
+        "priorDistribution": { "family": "dirichlet", "params": { "alpha": [1, 1, 1] } }
+      },
+      {
+        "id": "smv_theta",
+        "label": "Newtonian Proficiency Theta",
+        "type": "continuous",
+        "scale": { "min": -4, "max": 4 },
+        "priorDistribution": { "family": "normal", "params": { "mean": 0, "sd": 1 } }
+      }
+    ]
+  }
+]

@@ -1,26 +1,33 @@
 [
   {
     "name": "Newtonian Force Concept Q-matrix",
-    "description": "Single-attribute Q-matrix for Force Concept Mastery (binary SMV). Enterprise attribute-split of Force is a future SM change.",
+    "description": "Multi-attribute Q-matrix for Force diagnostic attributes (EM-R3). Columns are binary SMVs: Force Pair, Net Force, Free-Body Diagram.",
     "competencyModelName": "Grade 10 Newtonian Mechanics Multidimensional SM",
     "attributeNames": [
-      "Force Concept Mastery"
+      "Force Pair (Action-Reaction)",
+      "Net Force Identification",
+      "Free-Body Diagram"
     ],
     "entries": [
       {
         "itemName": "Force item — obs_force_pair",
-        "attributeName": "Force Concept Mastery",
+        "attributeName": "Force Pair (Action-Reaction)",
         "required": true
       },
       {
         "itemName": "Force item — obs_force_net",
-        "attributeName": "Force Concept Mastery",
+        "attributeName": "Net Force Identification",
         "required": true
       },
       {
         "itemName": "Force item — obs_force_diagram",
-        "attributeName": "Force Concept Mastery",
+        "attributeName": "Free-Body Diagram",
         "required": true
+      },
+      {
+        "itemName": "Force item — obs_force_diagram",
+        "attributeName": "Force Pair (Action-Reaction)",
+        "required": false
       }
     ]
   }

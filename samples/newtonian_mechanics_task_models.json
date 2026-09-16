@@ -3,24 +3,24 @@
     "name": "Force Concept — Pair and Net Force Tasks",
     "description": "Force Concept — Pair and Net Force Tasks",
     "designRationale": "Hybrid selected/constructed forms elicit pair, net-force, and diagram observables for the Force EM.",
-    "evidenceModelName": "Force Concept Mastery — Diagnostic Evidence Model",
-    "primaryEvidenceModelName": "Force Concept Mastery — Diagnostic Evidence Model",
+    "evidenceModelName": "Force Diagnostic Attributes — DINA Evidence Model",
+    "primaryEvidenceModelName": "Force Diagnostic Attributes — DINA Evidence Model",
     "expectedObservations": [
       {
         "observationId": "obs_force_pair",
-        "evidenceModelName": "Force Concept Mastery — Diagnostic Evidence Model",
+        "evidenceModelName": "Force Diagnostic Attributes — DINA Evidence Model",
         "required": true,
         "weight": 1
       },
       {
         "observationId": "obs_force_net",
-        "evidenceModelName": "Force Concept Mastery — Diagnostic Evidence Model",
+        "evidenceModelName": "Force Diagnostic Attributes — DINA Evidence Model",
         "required": true,
         "weight": 1
       },
       {
         "observationId": "obs_force_diagram",
-        "evidenceModelName": "Force Concept Mastery — Diagnostic Evidence Model",
+        "evidenceModelName": "Force Diagnostic Attributes — DINA Evidence Model",
         "required": true,
         "weight": 1
       }

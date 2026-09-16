@@ -44,9 +44,9 @@ def cal(method, pkg, notes):
 
 
 force = {
-    "name": "Force Concept Mastery — Diagnostic Evidence Model",
-    "description": "Evidence Model for Force Concept Mastery (binary SMV). TR9 §2.3.2 Evaluation + Measurement: evaluationProcedures score work products; active DINA measurement binds a Q-matrix. Inactive 1PL retained as interim reporting fallback.",
-    "competencyName": "Force Concept Mastery",
+    "name": "Force Diagnostic Attributes — DINA Evidence Model",
+    "description": "Evidence Model for Force diagnostic attributes (binary SMVs). TR9 §2.3.2 Evaluation + Measurement: evaluationProcedures score work products; active DINA measurement binds a Q-matrix. Inactive 1PL retained as interim reporting fallback.",
+    "competencyName": "Force Pair (Action-Reaction)",
     "authoringNotes": COHERENCE
     + " Statistical family: binary → active dina (qMatrixName remapped on bulk); inactive irt/1pl fallback until Q-matrix is confirmed.",
     "studentModelCoherenceNotes": COHERENCE,
@@ -199,7 +199,7 @@ kin = {
     "description": "Evidence Model for Kinematic Reasoning (ordinal SMV L1–L4). Active polytomous IRT (PCM) maps cumulative evidence to ordered levels; inactive threshold retained as classroom fallback (TR9 §2.3.2).",
     "competencyName": "Kinematic Reasoning",
     "authoringNotes": COHERENCE
-    + " Statistical family: ordinal → active irt/pcm; inactive threshold fallback. Prerequisite Force Concept Mastery should have its own EM confirmed before operational activation.",
+    + " Statistical family: ordinal → active irt/pcm; inactive threshold fallback. Prerequisite Force Pair attribute should have its EM confirmed before operational activation.",
     "studentModelCoherenceNotes": COHERENCE,
     "claimStatement": (
         "The student can relate displacement, velocity, and acceleration through graphs and equations in Kinematics contexts within Newtonian Mechanics "
@@ -705,7 +705,7 @@ def main():
     force_tm = scrub_tm(
         tm(
             "Force Concept — Pair and Net Force Tasks",
-            "Force Concept Mastery — Diagnostic Evidence Model",
+            "Force Diagnostic Attributes — DINA Evidence Model",
             ["obs_force_pair", "obs_force_net", "obs_force_diagram"],
             {
                 "presentationMode": "interactive",
@@ -936,24 +936,33 @@ def main():
     qmatrix = [
         {
             "name": "Newtonian Force Concept Q-matrix",
-            "description": "Single-attribute Q-matrix for Force Concept Mastery (binary SMV). Enterprise attribute-split of Force is a future SM change.",
+            "description": "Multi-attribute Q-matrix for Force diagnostic attributes (EM-R3).",
             "competencyModelName": "Grade 10 Newtonian Mechanics Multidimensional SM",
-            "attributeNames": ["Force Concept Mastery"],
+            "attributeNames": [
+                "Force Pair (Action-Reaction)",
+                "Net Force Identification",
+                "Free-Body Diagram",
+            ],
             "entries": [
                 {
                     "itemName": "Force item — obs_force_pair",
-                    "attributeName": "Force Concept Mastery",
+                    "attributeName": "Force Pair (Action-Reaction)",
                     "required": True,
                 },
                 {
                     "itemName": "Force item — obs_force_net",
-                    "attributeName": "Force Concept Mastery",
+                    "attributeName": "Net Force Identification",
                     "required": True,
                 },
                 {
                     "itemName": "Force item — obs_force_diagram",
-                    "attributeName": "Force Concept Mastery",
+                    "attributeName": "Free-Body Diagram",
                     "required": True,
+                },
+                {
+                    "itemName": "Force item — obs_force_diagram",
+                    "attributeName": "Force Pair (Action-Reaction)",
+                    "required": False,
                 },
             ],
         }
@@ -978,7 +987,7 @@ def main():
                 "prerequisiteGating": [
                     {
                         "before": "Kinematic Reasoning",
-                        "requireMasteryOf": "Force Concept Mastery",
+                        "requireMasteryOf": "Force Pair (Action-Reaction)",
                         "threshold": 0.7,
                     }
                 ],
@@ -996,8 +1005,16 @@ def main():
             "competencyModelName": "Grade 10 Newtonian Mechanics Multidimensional SM",
             "targetsBySMV": [
                 {
-                    "smvName": "Force Concept Mastery",
+                    "smvName": "Force Pair (Action-Reaction)",
                     "requiredClassificationAccuracy": 0.8,
+                },
+                {
+                    "smvName": "Net Force Identification",
+                    "requiredClassificationAccuracy": 0.8,
+                },
+                {
+                    "smvName": "Free-Body Diagram",
+                    "requiredClassificationAccuracy": 0.75,
                 },
                 {
                     "smvName": "Kinematic Reasoning",

@@ -14,7 +14,7 @@
       "prerequisiteGating": [
         {
           "before": "Kinematic Reasoning",
-          "requireMasteryOf": "Force Concept Mastery",
+          "requireMasteryOf": "Force Pair (Action-Reaction)",
           "threshold": 0.7
         }
       ]

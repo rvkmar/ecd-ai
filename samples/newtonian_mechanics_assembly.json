@@ -1,12 +1,20 @@
 [
   {
     "name": "Grade 10 Newtonian Mechanics Assembly",
-    "description": "TR9 §2.3.4 Assembly Model: per-SMV accuracy targets and stopping rules for the Newtonian multidimensional SM.",
+    "description": "TR9 §2.3.4 Assembly Model: per-SMV accuracy targets and stopping rules for the Newtonian multidimensional SM (EM-R3 Force attributes).",
     "competencyModelName": "Grade 10 Newtonian Mechanics Multidimensional SM",
     "targetsBySMV": [
       {
-        "smvName": "Force Concept Mastery",
+        "smvName": "Force Pair (Action-Reaction)",
         "requiredClassificationAccuracy": 0.8
+      },
+      {
+        "smvName": "Net Force Identification",
+        "requiredClassificationAccuracy": 0.8
+      },
+      {
+        "smvName": "Free-Body Diagram",
+        "requiredClassificationAccuracy": 0.75
       },
       {
         "smvName": "Kinematic Reasoning",

@@ -1,9 +1,9 @@
 {
   "evidenceModels": [
     {
-      "name": "Force Concept Mastery — Diagnostic Evidence Model",
-      "description": "Evidence Model for Force Concept Mastery (binary SMV). TR9 §2.3.2 Evaluation + Measurement: evaluationProcedures score work products; active DINA measurement binds a Q-matrix. Inactive 1PL retained as interim reporting fallback.",
-      "competencyName": "Force Concept Mastery",
+      "name": "Force Diagnostic Attributes — DINA Evidence Model",
+      "description": "Evidence Model for Force diagnostic attributes (binary SMVs). Active DINA binds the multi-column Force Q-matrix (EM-R3: pair / net / diagram). Inactive 1PL retained as interim reporting fallback.",
+      "competencyName": "Force Pair (Action-Reaction)",
       "authoringNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only. Statistical family: binary → active dina (qMatrixName remapped on bulk); inactive irt/1pl fallback until Q-matrix is confirmed.",
       "studentModelCoherenceNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only.",
       "claimStatement": "The student can identify action-reaction force pairs and net-force directions in Force Concepts contexts within Newtonian Mechanics across textbook and slightly novel diagrams, with reasoning sufficient to distinguish impetus misconceptions from Newton second and third laws at mastery level.",
@@ -270,7 +270,7 @@
       "name": "Kinematic Reasoning — Ordered Levels Evidence Model",
       "description": "Evidence Model for Kinematic Reasoning (ordinal SMV L1–L4). Active polytomous IRT (PCM) maps cumulative evidence to ordered levels; inactive threshold retained as classroom fallback (TR9 §2.3.2).",
       "competencyName": "Kinematic Reasoning",
-      "authoringNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only. Statistical family: ordinal → active irt/pcm; inactive threshold fallback. Prerequisite Force Concept Mastery should have its own EM confirmed before operational activation.",
+      "authoringNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only. Statistical family: ordinal → active irt/pcm; inactive threshold fallback. Prerequisite Force Pair attribute should have its EM confirmed before operational activation.",
       "studentModelCoherenceNotes": "Student Model coherence advisory (exact SM typeCoherenceAdvisories / PADI TR9 §2.3.1–2.3.2): Mixed SMV types (binary, ordinal, categorical, continuous). TR9 Evidence Models bind one measurement family per claim — plan separate Evidence Models (or a Bayesian network) rather than one hybrid IRT/DINA fit. This EM is authored for a single competency / SMV type only.",
       "claimStatement": "The student can relate displacement, velocity, and acceleration through graphs and equations in Kinematics contexts within Newtonian Mechanics across qualitative, graphical, and algebraic problem forms, with reasoning sufficient to support ordered level classification at progressively higher developmental levels.",
       "warrants": [

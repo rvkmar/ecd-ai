@@ -325,12 +325,12 @@ Files (name-remappable where noted):
 
 | File | Upload target | Remapping |
 |---|---|---|
-| Downloads `Grade_10_Newtonian_Mechanics_Multidimensional_SM_specification.json` | Student Models | Step 9 export shape |
+| `newtonian_mechanics_competency_model.json` | Student Models (or specification export) | Force split into 3 binary attributes (EM-R3) |
 | `newtonian_mechanics_policy.json` | Selection Policies | none |
 | `newtonian_mechanics_evidence_models.json` | Evidence Models | **Student Model id required** in the Settings card; scopes `competencyName`. Choose the file, then click Upload. Also accepts `{ competencyModelId, evidenceModels }`. |
 | `newtonian_mechanics_task_models.json` | Task Models | `evidenceModelName` / `primaryEvidenceModelName` |
 | `newtonian_force_items.json` | Items | `taskModelName` + item `name` |
-| `newtonian_force_qmatrix.json` | Q-matrix Models | `competencyModelName`, `attributeNames`, `itemName` |
+| `newtonian_force_qmatrix.json` | Q-matrix Models | Multi-column Force attributes; `competencyModelName`, `attributeNames`, `itemName` |
 | `newtonian_mechanics_assembly.json` | Assembly Models | `competencyModelName`, `smvName`, `policyName` |
 
 **Evidence Models (Settings card):** select or paste the Student Model (`competencyModelId`), choose `newtonian_mechanics_evidence_models.json`, then click Upload.

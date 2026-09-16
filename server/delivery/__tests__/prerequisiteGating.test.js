@@ -211,7 +211,7 @@ describe("EM-R4 prerequisiteGating", () => {
     );
     const gating = policy[0]?.config?.prerequisiteGating || [];
     expect(gating[0]?.before).toMatch(/Kinematic/i);
-    expect(gating[0]?.requireMasteryOf).toMatch(/Force Concept Mastery/i);
+    expect(gating[0]?.requireMasteryOf).toMatch(/Force Pair \(Action-Reaction\)/i);
     expect(gating[0]?.threshold).toBe(0.7);
   });
 });
