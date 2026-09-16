@@ -13,10 +13,17 @@ const JOB_KINDS = [
   "equating",
   "item-analysis",
   "test-information",
+  "attribute-profile-summary",
 ];
 
 const PARAM_KINDS = new Set(["irt-parameters", "dina-parameters", "ctt-statistics"]);
-const ARTEFACT_KINDS = new Set(["dif-analysis", "equating", "item-analysis", "test-information"]);
+const ARTEFACT_KINDS = new Set([
+  "dif-analysis",
+  "equating",
+  "item-analysis",
+  "test-information",
+  "attribute-profile-summary",
+]);
 const JOB_STATUSES = ["queued", "running", "succeeded", "failed", "cancelled"];
 const CONTRACT_VERSION = "1.0";
 
@@ -30,6 +37,23 @@ function requestProblems(request) {
   }
   if (!request.jobId) errors.push("Request jobId is required");
   if (!request.model?.family) errors.push("Request model.family is required");
+
+  if (request.model?.family === "attribute-profile") {
+    if (!Array.isArray(request.model?.attributeIds) || request.model.attributeIds.length < 1) {
+      errors.push("Request model.attributeIds must name at least one attribute");
+    }
+    const cohort = request.cohort;
+    if (!cohort || typeof cohort !== "object" || Array.isArray(cohort)) {
+      errors.push("Request cohort is required for family attribute-profile");
+    } else if (!Array.isArray(cohort.members) || cohort.members.length < 2) {
+      errors.push("Request cohort.members must name at least two persons");
+    }
+    if (request.options?.seed === undefined || request.options?.seed === null) {
+      errors.push("Request options.seed is required");
+    }
+    return errors;
+  }
+
   if (!Array.isArray(request.model?.itemIds) || request.model.itemIds.length < 2) {
     errors.push("Request model.itemIds must name at least two items");
   }

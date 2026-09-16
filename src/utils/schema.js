@@ -753,12 +753,12 @@ export const schema = {
   // ------------------------------------------------------------------
   // analysisArtefacts — D76 (W16). Immutable provenance-bearing records
   // produced by analysis job kinds (DIF, equating, item-analysis,
-  // test-information). Not an authored entity: no draft/reviewed status
-  // and no PUT/PATCH. They inform; they never gate a lifecycle transition.
-  // Written only by calibration job ingest (not a generic POST body).
-  // Seven-artefact contract: this block, validateEntity below, immutability
-  // (no lifecycle machine), routes + role gate, vocabulary, readiness
-  // mirror, tests.
+  // test-information, attribute-profile-summary). Not an authored entity:
+  // no draft/reviewed status and no PUT/PATCH. They inform; they never
+  // gate a lifecycle transition. Written only by calibration job ingest
+  // (not a generic POST body). Seven-artefact contract: this block,
+  // validateEntity below, immutability (no lifecycle machine), routes +
+  // role gate, vocabulary, readiness mirror, tests.
   // ------------------------------------------------------------------
   analysisArtefacts: {
     id: 'string',

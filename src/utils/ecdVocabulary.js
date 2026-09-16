@@ -571,11 +571,11 @@ export function statisticalModelTypesForCalibrationKind(kind) {
 /* =====================================================
    8b. Calibration job kinds (D62, W13)
    -----------------------------------------------------
-   The three D19 file kinds write parameterSets[]. The four analysis
-   kinds write the top-level analysisArtefacts collection (D76 / W16) —
-   they inform; they do not authorise a lifecycle transition. Single
-   definition: routes, schema, the R client, and the readiness mirror
-   all import from here.
+   The three D19 file kinds write parameterSets[]. Analysis kinds write
+   the top-level analysisArtefacts collection (D76 / W16) — they inform;
+   they do not authorise a lifecycle transition. Single definition:
+   routes, schema, the R client / Node worker, and the readiness mirror
+   all import from here. attribute-profile-summary is Node-only (D79).
 ===================================================== */
 
 export const CALIBRATION_JOB_KINDS = [
@@ -586,6 +586,13 @@ export const CALIBRATION_JOB_KINDS = [
   { value: "equating", label: "Equating", package: "plink", ingests: "analysisArtefact", statisticalModelTypes: ["irt", "rasch"] },
   { value: "item-analysis", label: "Item Analysis", package: "TAM", ingests: "analysisArtefact", statisticalModelTypes: ["ctt", "irt", "rasch"] },
   { value: "test-information", label: "Test Information", package: "mirt", ingests: "analysisArtefact", statisticalModelTypes: ["irt", "rasch"] },
+  {
+    value: "attribute-profile-summary",
+    label: "Attribute-Profile Cohort Summary",
+    package: "ecd-node",
+    ingests: "analysisArtefact",
+    statisticalModelTypes: ["dina", "gdina"],
+  },
 ];
 
 export const CALIBRATION_JOB_KIND_VALUES = CALIBRATION_JOB_KINDS.map((k) => k.value);

@@ -16,6 +16,7 @@ const CALIBRATION_MODEL_FAMILIES = [
   "equating",
   "item-analysis",
   "test-information",
+  "attribute-profile",
 ];
 const CALIBRATION_IRT_SUBTYPES = ["2PL", "3PL", "Rasch"];
 
@@ -27,6 +28,7 @@ const KIND_TO_R_PATH = {
   equating: "/calibrate/equating",
   "item-analysis": "/calibrate/item-analysis",
   "test-information": "/calibrate/test-information",
+  // attribute-profile-summary is Node-only (D79); no R path on purpose.
 };
 
 export function rPathForJobKind(kind) {
@@ -49,16 +51,57 @@ export function validateCalibrationRequest(body) {
   const model = body.model;
   if (!model || typeof model !== "object" || Array.isArray(model)) {
     errors.push("model is required");
-  } else {
-    if (!CALIBRATION_MODEL_FAMILIES.includes(model.family)) {
-      errors.push(`model.family must be one of: ${CALIBRATION_MODEL_FAMILIES.join(", ")}`);
+    return errors;
+  }
+
+  if (!CALIBRATION_MODEL_FAMILIES.includes(model.family)) {
+    errors.push(`model.family must be one of: ${CALIBRATION_MODEL_FAMILIES.join(", ")}`);
+  }
+
+  // D79: cohort posteriors, not a response matrix. Node worker only.
+  if (model.family === "attribute-profile") {
+    if (!Array.isArray(model.attributeIds) || model.attributeIds.length < 1) {
+      errors.push("model.attributeIds must name at least one attribute");
     }
-    if (model.family === "irt" && !CALIBRATION_IRT_SUBTYPES.includes(model.subtype)) {
-      errors.push(`model.subtype must be one of: ${CALIBRATION_IRT_SUBTYPES.join(", ")}`);
+    const cohort = body.cohort;
+    if (!cohort || typeof cohort !== "object" || Array.isArray(cohort)) {
+      errors.push("cohort is required for family attribute-profile");
+    } else if (!Array.isArray(cohort.members) || cohort.members.length < 2) {
+      errors.push("cohort.members must name at least two persons");
+    } else {
+      cohort.members.forEach((member, i) => {
+        if (!member || typeof member !== "object" || Array.isArray(member)) {
+          errors.push(`cohort.members[${i}] must be an object`);
+          return;
+        }
+        if (!member.personId || typeof member.personId !== "string") {
+          errors.push(`cohort.members[${i}].personId is required`);
+        }
+        if (
+          !member.posteriors ||
+          typeof member.posteriors !== "object" ||
+          Array.isArray(member.posteriors)
+        ) {
+          errors.push(`cohort.members[${i}].posteriors is required`);
+        }
+      });
     }
-    if (!Array.isArray(model.itemIds) || model.itemIds.length < 2) {
-      errors.push("model.itemIds must name at least two items");
+    if (body.options?.seed === undefined || body.options?.seed === null) {
+      errors.push("options.seed is required (reproducibility is provenance)");
     }
+    if (body.scope !== undefined && body.scope !== null) {
+      if (typeof body.scope !== "object" || Array.isArray(body.scope)) {
+        errors.push("scope must be an object when present");
+      }
+    }
+    return errors;
+  }
+
+  if (model.family === "irt" && !CALIBRATION_IRT_SUBTYPES.includes(model.subtype)) {
+    errors.push(`model.subtype must be one of: ${CALIBRATION_IRT_SUBTYPES.join(", ")}`);
+  }
+  if (!Array.isArray(model.itemIds) || model.itemIds.length < 2) {
+    errors.push("model.itemIds must name at least two items");
   }
 
   const rm = body.responseMatrix;

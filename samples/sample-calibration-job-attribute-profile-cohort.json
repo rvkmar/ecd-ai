@@ -1,0 +1,6 @@
+{
+  "kind": "attribute-profile-summary",
+  "fixture": "known-attribute-profile-cohort",
+  "evidenceModelId": "REPLACE_WITH_DINA_OR_GDINA_EM_ID",
+  "statisticalModelId": "REPLACE_WITH_DINA_OR_GDINA_SM_ID"
+}

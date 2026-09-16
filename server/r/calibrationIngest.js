@@ -59,6 +59,10 @@ function analysisArtefactFromCalibrationResponse(response, extras = {}) {
       evidenceModelId: extras.evidenceModelId,
       taskModelId: extras.taskModelId ?? null,
       cohort: extras.cohort ?? null,
+      // W20 tenancy review will inspect these; D79 shapes them now.
+      tenantId: extras.tenantId ?? null,
+      districtId: extras.districtId ?? null,
+      schoolId: extras.schoolId ?? null,
     },
     packageVersion: response.packageVersion,
     sampleSize: response.sampleSize,
@@ -105,16 +109,25 @@ export function ingestCalibrationJob(job, db, extras = {}) {
 
   if (jobKindIngestsAnalysisArtefact(job.kind)) {
     const analysisArtefactId = extras.analysisArtefactId || `aa${Date.now()}`;
+    const scopeFromRequest = job.request?.scope || {};
     const artefact = analysisArtefactFromCalibrationResponse(job.response, {
       analysisArtefactId,
       kind: job.kind,
       calibrationJobId: job.id,
       evidenceModelId: job.evidenceModelId,
       statisticalModelId: job.statisticalModelId,
-      taskModelId: extras.taskModelId ?? null,
-      cohort: extras.cohort ?? null,
+      taskModelId: extras.taskModelId ?? scopeFromRequest.taskModelId ?? null,
+      cohort:
+        extras.cohort ??
+        scopeFromRequest.cohortId ??
+        job.request?.cohort?.id ??
+        null,
+      tenantId: extras.tenantId ?? scopeFromRequest.tenantId ?? null,
+      districtId: extras.districtId ?? scopeFromRequest.districtId ?? null,
+      schoolId: extras.schoolId ?? scopeFromRequest.schoolId ?? null,
       calibratedBy: extras.calibratedBy || job.requestedBy || "r-backend",
-      calibrationMethod: "r-job",
+      calibrationMethod:
+        job.kind === "attribute-profile-summary" ? "node-job" : "r-job",
       notes: extras.notes || "",
     });
 

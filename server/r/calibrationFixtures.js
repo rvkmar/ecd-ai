@@ -10,6 +10,7 @@ import { sim10gdinaCalibrationRequest } from "./sim10gdinaFixture.js";
 import { plantedDifCalibrationRequest } from "./plantedDifFixture.js";
 import { knownEquatingCalibrationRequest } from "./knownEquatingFixture.js";
 import { known2plTestinfoCalibrationRequest } from "./known2plTestinfoFixture.js";
+import { knownAttributeProfileCohortRequest } from "./knownAttributeProfileCohortFixture.js";
 
 export const CALIBRATION_NAMED_FIXTURES = [
   "lsat7",
@@ -20,6 +21,7 @@ export const CALIBRATION_NAMED_FIXTURES = [
   "lsat7-test-information",
   "planted-dif",
   "known-equating",
+  "known-attribute-profile-cohort",
 ];
 
 function mergeFixtureRequest(body, fromFix) {
@@ -91,6 +93,23 @@ export function applyNamedCalibrationFixture(body, db = null) {
         jobId: body.request?.jobId,
       })
     );
+  }
+  if (body.fixture === "known-attribute-profile-cohort") {
+    const fromFix = knownAttributeProfileCohortRequest({
+      jobId: body.request?.jobId,
+    });
+    return {
+      ...body,
+      kind: body.kind || "attribute-profile-summary",
+      request: {
+        ...fromFix,
+        ...(body.request || {}),
+        model: { ...fromFix.model, ...(body.request?.model || {}) },
+        cohort: body.request?.cohort || fromFix.cohort,
+        scope: { ...fromFix.scope, ...(body.request?.scope || {}) },
+        options: { ...fromFix.options, ...(body.request?.options || {}) },
+      },
+    };
   }
   if (body.fixture === "planted-dif") {
     return mergeFixtureRequest(

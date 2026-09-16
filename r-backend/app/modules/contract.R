@@ -6,7 +6,8 @@
 CALIBRATION_CONTRACT_VERSION <- "1.0"
 
 CALIBRATION_MODEL_FAMILIES <- c(
-  "irt", "dina", "gdina", "ctt", "dif", "equating", "item-analysis", "test-information"
+  "irt", "dina", "gdina", "ctt", "dif", "equating", "item-analysis",
+  "test-information", "attribute-profile"
 )
 CALIBRATION_IRT_SUBTYPES <- c("2PL", "3PL", "Rasch")
 

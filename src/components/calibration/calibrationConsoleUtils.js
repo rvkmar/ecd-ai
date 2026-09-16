@@ -41,6 +41,10 @@ export const KNOWN_EQUATING_JOB_KIND = "equating";
 
 export const KNOWN_EQUATING_STATISTICAL_MODEL_TYPES = ["irt", "rasch"];
 
+export const KNOWN_ATTRIBUTE_PROFILE_JOB_KIND = "attribute-profile-summary";
+
+export const KNOWN_ATTRIBUTE_PROFILE_STATISTICAL_MODEL_TYPES = ["dina", "gdina"];
+
 export const NAMED_CALIBRATION_FIXTURES = [
   {
     id: "lsat7",
@@ -145,6 +149,19 @@ export const NAMED_CALIBRATION_FIXTURES = [
     successToast: "Known-equating analysis job queued.",
     description:
       "Seeded NEAT common-item design (seed 20261202): 400 Form X + 400 Form Y, 6 common items, Form Y generated 0.5 logits harder. Live path estimates Rasch b with mirt then links with plink::plink Mean/Sigma. Recovers slope 1 and intercept −0.5 within stated tolerances. Ingest writes an analysis artefact, not a parameter set.",
+  },
+  {
+    id: "known-attribute-profile-cohort",
+    label: "Known attribute-profile cohort",
+    kind: KNOWN_ATTRIBUTE_PROFILE_JOB_KIND,
+    statisticalModelTypes: KNOWN_ATTRIBUTE_PROFILE_STATISTICAL_MODEL_TYPES,
+    buttonLabel: "Enqueue known attribute-profile cohort",
+    choosePrompt: "Choose an evidence model and a DINA or G-DINA statistical model (provenance bind only).",
+    emptyBind:
+      "No evidence model has a DINA or G-DINA statistical model to bind. Author one before enqueueing the known attribute-profile cohort.",
+    successToast: "Known attribute-profile cohort summary job queued.",
+    description:
+      "Four seeded examinees with known mastery posteriors. Node aggregates probability-averaged and classification-counted mastery rates (both labelled) plus profile distribution. Uses classifyAttributeProfile (ADR 0004); does not claim population CA. Writes analysisArtefacts only. Scope carries tenant/district/school/cohort fields for W20 shaping.",
   },
 ];
 

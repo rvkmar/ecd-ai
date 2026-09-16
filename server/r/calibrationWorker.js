@@ -9,6 +9,10 @@ import { canTransitionCalibrationJob } from "../utils/lifecycleMatrix.js";
 import { validateCalibrationJobLifecycle } from "../utils/lifecycleValidation.js";
 import { validateCalibrationResponse } from "./calibrationContract.js";
 import { postCalibration } from "./rClient.js";
+import {
+  ATTRIBUTE_PROFILE_SUMMARY_KIND,
+  runAttributeProfileSummaryJob,
+} from "../delivery/attributeProfileCohortSummary.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -59,7 +63,10 @@ export async function processJobById(jobId, { client = { postCalibration } } = {
   job.error = null;
   saveDB(db);
 
-  const result = await client.postCalibration(job.kind, job.request);
+  const result =
+    job.kind === ATTRIBUTE_PROFILE_SUMMARY_KIND
+      ? runAttributeProfileSummaryJob(job.request)
+      : await client.postCalibration(job.kind, job.request);
 
   const after = loadDB();
   const live = findJob(after, jobId);
