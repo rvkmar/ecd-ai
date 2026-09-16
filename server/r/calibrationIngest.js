@@ -1,8 +1,9 @@
 // server/r/calibrationIngest.js
 // Append an ADR 0002 parameter set (parameter kinds) or an analysis
 // artefact (DIF / equating / item-analysis / test-information) from a
-// succeeded job. Refuses converged: false. DIF informs; it does not
-// authorise a parameter set.
+// succeeded job. Refuses converged: false. Analysis kinds write the
+// top-level analysisArtefacts collection (D76); they inform and do not
+// authorise a parameter set or lifecycle transition.
 
 import { validateEntity } from "../../src/utils/schema.js";
 import { jobKindIngestsParameterSets, jobKindIngestsAnalysisArtefact } from "../../src/utils/ecdVocabulary.js";
@@ -48,21 +49,51 @@ export function ingestRefusal(job, db) {
 }
 
 function analysisArtefactFromCalibrationResponse(response, extras = {}) {
+  const now = extras.createdAt || new Date().toISOString();
+  const id = extras.analysisArtefactId || extras.id;
   return {
-    analysisArtefactId: extras.analysisArtefactId,
+    id,
     kind: extras.kind,
-    parameters: response.parameters,
-    standardErrors: response.standardErrors ?? undefined,
-    fitStatistics: response.fitStatistics ?? undefined,
-    diagnostics: response.diagnostics ?? undefined,
+    jobId: extras.calibrationJobId || extras.jobId,
+    scope: {
+      evidenceModelId: extras.evidenceModelId,
+      taskModelId: extras.taskModelId ?? null,
+      cohort: extras.cohort ?? null,
+    },
     packageVersion: response.packageVersion,
-    converged: response.converged,
     sampleSize: response.sampleSize,
-    calibratedAt: response.calibratedAt,
-    calibrationJobId: extras.calibrationJobId,
-    calibratedBy: extras.calibratedBy || "r-backend",
-    calibrationMethod: extras.calibrationMethod || "r-job",
-    notes: extras.notes || "",
+    computedAt: response.calibratedAt,
+    payload: {
+      parameters: response.parameters,
+      standardErrors: response.standardErrors ?? undefined,
+      fitStatistics: response.fitStatistics ?? undefined,
+      diagnostics: response.diagnostics ?? undefined,
+      converged: response.converged,
+      calibratedBy: extras.calibratedBy || "r-backend",
+      calibrationMethod: extras.calibrationMethod || "r-job",
+      notes: extras.notes || "",
+      statisticalModelId: extras.statisticalModelId ?? undefined,
+    },
+    createdAt: now,
+  };
+}
+
+/** Convenience aliases so console/tests that still read nested DIF fields keep working. */
+function analysisArtefactIngestView(record) {
+  if (!record) return null;
+  return {
+    ...record,
+    analysisArtefactId: record.id,
+    calibrationJobId: record.jobId,
+    parameters: record.payload?.parameters,
+    standardErrors: record.payload?.standardErrors,
+    fitStatistics: record.payload?.fitStatistics,
+    diagnostics: record.payload?.diagnostics,
+    converged: record.payload?.converged,
+    calibratedBy: record.payload?.calibratedBy,
+    calibrationMethod: record.payload?.calibrationMethod,
+    notes: record.payload?.notes,
+    calibratedAt: record.computedAt,
   };
 }
 
@@ -73,30 +104,31 @@ export function ingestCalibrationJob(job, db, extras = {}) {
   }
 
   if (jobKindIngestsAnalysisArtefact(job.kind)) {
-    const em = db.evidenceModels.find((m) => m.id === job.evidenceModelId);
     const analysisArtefactId = extras.analysisArtefactId || `aa${Date.now()}`;
     const artefact = analysisArtefactFromCalibrationResponse(job.response, {
       analysisArtefactId,
       kind: job.kind,
       calibrationJobId: job.id,
+      evidenceModelId: job.evidenceModelId,
+      statisticalModelId: job.statisticalModelId,
+      taskModelId: extras.taskModelId ?? null,
+      cohort: extras.cohort ?? null,
       calibratedBy: extras.calibratedBy || job.requestedBy || "r-backend",
       calibrationMethod: "r-job",
+      notes: extras.notes || "",
     });
-    em.analysisArtefacts = em.analysisArtefacts || [];
-    em.analysisArtefacts.push(artefact);
 
-    const { valid, errors } = validateEntity("evidenceModels", em, db, { strict: false });
+    const { valid, errors } = validateEntity("analysisArtefacts", artefact, db, { strict: false });
     if (!valid) {
-      em.analysisArtefacts = em.analysisArtefacts.filter(
-        (a) => a.analysisArtefactId !== analysisArtefactId
-      );
-      return { ok: false, error: "Analysis artefact failed evidence-model validation", details: errors };
+      return { ok: false, error: "Analysis artefact failed validation", details: errors };
     }
 
+    db.analysisArtefacts = db.analysisArtefacts || [];
+    db.analysisArtefacts.push(artefact);
+
     job.ingestedAnalysisArtefactId = analysisArtefactId;
-    em.updatedAt = new Date().toISOString();
-    job.updatedAt = em.updatedAt;
-    return { ok: true, analysisArtefact: artefact };
+    job.updatedAt = new Date().toISOString();
+    return { ok: true, analysisArtefact: analysisArtefactIngestView(artefact) };
   }
 
   const em = db.evidenceModels.find((m) => m.id === job.evidenceModelId);

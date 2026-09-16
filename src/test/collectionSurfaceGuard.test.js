@@ -210,6 +210,22 @@ describe("calibrationJobs (D62) specifically", () => {
   });
 });
 
+describe("analysisArtefacts (D76) specifically", () => {
+  it("has a route file, is mounted, and is gated", () => {
+    const file = "analysisArtefactsRoutes.js";
+    const full = path.join(ROUTES_DIR, file);
+    expect(fs.existsSync(full), `${file} should exist`).toBe(true);
+    const src = liveCode(fs.readFileSync(full, "utf8"));
+    expect(src, `${file} should apply authenticateToken in LIVE code`).toMatch(
+      HAS_ROUTER_GATE
+    );
+    expect(src, `${file} should import authorizeRole`).toContain("authorizeRole");
+    expect(INDEX, "analysisArtefacts should be mounted in server/index.js").toContain(
+      `app.use("/api/analysisArtefacts"`
+    );
+  });
+});
+
 describe("the three D48 collections specifically", () => {
   // Named explicitly as well as covered generically: the generic checks
   // above would keep passing if someone added a PATH_ALIASES entry to

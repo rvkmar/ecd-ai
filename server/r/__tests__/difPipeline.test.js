@@ -56,6 +56,7 @@ async function jobsApp() {
 function seedDb() {
   dbState.current = {
     calibrationJobs: [],
+    analysisArtefacts: [],
     questions: [{ id: "q1", metadata: {} }],
     evidenceModels: [
       {
@@ -220,10 +221,11 @@ describe("planted DIF contract-path pipeline (always runs)", () => {
         .map(([id]) => id)
     ).toEqual([PLANTED_ITEM]);
 
-    expect(dbState.current.evidenceModels[0].analysisArtefacts).toHaveLength(1);
+    expect(dbState.current.analysisArtefacts).toHaveLength(1);
     expect(dbState.current.calibrationJobs[0].ingestedAnalysisArtefactId).toBe(
-      artefact.analysisArtefactId
+      artefact.analysisArtefactId || artefact.id
     );
+    expect(dbState.current.evidenceModels[0].analysisArtefacts || []).toHaveLength(0);
     expect(dbState.current.evidenceModels[0].statisticalModels[0].parameterSets).toHaveLength(0);
     expect(dbState.current.questions[0].metadata).toEqual({});
   });
@@ -261,6 +263,7 @@ describe("planted DIF contract-path pipeline (always runs)", () => {
       .set("Authorization", `Bearer ${tokenFor("admin")}`);
     expect(ingested.status).toBe(409);
     expect(ingested.body.error).toMatch(/converged: false/);
+    expect(dbState.current.analysisArtefacts || []).toHaveLength(0);
     expect(dbState.current.evidenceModels[0].analysisArtefacts || []).toHaveLength(0);
   });
 });
@@ -351,7 +354,8 @@ describe.skipIf(!live)("planted DIF live R pipeline", () => {
     expect(ingested.body.parameterSet).toBeNull();
     expect(ingested.body.analysisArtefact.calibrationJobId).toBe(jobId);
     expect(ingested.body.analysisArtefact.packageVersion).toMatch(/^difR /);
-    expect(dbState.current.evidenceModels[0].analysisArtefacts).toHaveLength(1);
+    expect(dbState.current.analysisArtefacts).toHaveLength(1);
+    expect(dbState.current.evidenceModels[0].analysisArtefacts || []).toHaveLength(0);
     expect(dbState.current.evidenceModels[0].statisticalModels[0].parameterSets).toHaveLength(0);
   }, 180_000);
 });

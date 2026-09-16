@@ -40,6 +40,9 @@ export const rolePermissions = {
       // D62: calibration job queue. Admin authors; district may view
       // (a calibration run is a system-level measurement decision).
       "calibrationJobs",
+      // D76: immutable analysis artefacts (DIF / equating / …). Written
+      // only by job ingest; admin + district may read for provenance.
+      "analysisArtefacts",
       "announcements",
     ],
     canEdit: [
@@ -56,6 +59,7 @@ export const rolePermissions = {
       // artifact, not an authored entity, and its router exposes no
       // generic write. Rebuilding is an admin action against the builder,
       // not an edit of the package's contents.
+      // analysisArtefacts is deliberately absent: immutable once written.
       "qMatrixModels",
       "assemblyModels",
       "calibrationJobs"
@@ -105,6 +109,7 @@ export const rolePermissions = {
       "qMatrixModels",
       "assemblyModels",
       "calibrationJobs",
+      "analysisArtefacts",
       "announcements",
     ],
     canEdit: [

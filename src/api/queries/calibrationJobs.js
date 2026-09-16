@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../apiClient";
 import { useAuth } from "../../auth/AuthProvider";
 import { evidenceModelsKey } from "./evidenceModels";
+import { analysisArtefactsKey } from "./analysisArtefacts";
 
 export const calibrationJobsKey = ["calibrationJobs"];
 export const calibrationJobKey = (id) => ["calibrationJobs", id];
@@ -96,9 +97,10 @@ export function useIngestCalibrationJob() {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: calibrationJobsKey });
       queryClient.invalidateQueries({ queryKey: calibrationJobKey(id) });
-      // Ingest appends statisticalModels[].parameterSets[]; refresh EMs
-      // so an open Evidence Model workspace sees the new set.
+      // Ingest appends statisticalModels[].parameterSets[] or
+      // analysisArtefacts[]; refresh both so open workspaces see them.
       queryClient.invalidateQueries({ queryKey: evidenceModelsKey });
+      queryClient.invalidateQueries({ queryKey: analysisArtefactsKey });
     },
   });
 }

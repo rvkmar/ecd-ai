@@ -41,6 +41,7 @@ import {
   CALIBRATION_FILE_KIND_VALUES,
   statisticalModelTypesForCalibrationKind,
   CALIBRATION_JOB_KIND_VALUES,
+  ANALYSIS_ARTEFACT_KIND_VALUES,
   BLOOM_LEVEL_VALUES,
   REASONING_TYPE_VALUES,
 } from "./ecdVocabulary.js";
@@ -717,6 +718,28 @@ export const schema = {
     retainUntil: 'date',
     createdAt: 'date',
     updatedAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
+  // analysisArtefacts — D76 (W16). Immutable provenance-bearing records
+  // produced by analysis job kinds (DIF, equating, item-analysis,
+  // test-information). Not an authored entity: no draft/reviewed status
+  // and no PUT/PATCH. They inform; they never gate a lifecycle transition.
+  // Written only by calibration job ingest (not a generic POST body).
+  // Seven-artefact contract: this block, validateEntity below, immutability
+  // (no lifecycle machine), routes + role gate, vocabulary, readiness
+  // mirror, tests.
+  // ------------------------------------------------------------------
+  analysisArtefacts: {
+    id: 'string',
+    kind: 'string',
+    jobId: 'string',
+    scope: 'object',
+    packageVersion: 'string',
+    sampleSize: 'number',
+    computedAt: 'date',
+    payload: 'object',
+    createdAt: 'date',
   },
 };
 
@@ -4720,6 +4743,109 @@ export function validateEntity(collection, obj, db = null, options = {}) {
     }
     if (typeof obj.maxAttempts !== "number") {
       errors.push("maxAttempts is required and must be a number.");
+    }
+  }
+
+  /* =====================================================
+     ANALYSIS ARTEFACTS — D76, W16
+     Immutable analysis records. Shape is the calendar contract;
+     DIF/equating (and later item-analysis / test-information) write
+     here on ingest. No status field — immutability is the lifecycle.
+  ===================================================== */
+
+  if (collection === "analysisArtefacts") {
+    if (!obj.id) {
+      errors.push("id is required.");
+    }
+
+    if (!obj.kind) {
+      errors.push("kind is required.");
+    } else if (!ANALYSIS_ARTEFACT_KIND_VALUES.includes(obj.kind)) {
+      errors.push(
+        `Invalid analysis artefact kind '${obj.kind}'. Must be one of: ${ANALYSIS_ARTEFACT_KIND_VALUES.join(", ")}.`
+      );
+    }
+
+    if (!obj.jobId) {
+      errors.push("jobId is required.");
+    } else if (db && !db.calibrationJobs?.find((j) => j.id === obj.jobId)) {
+      errors.push(`Invalid jobId: ${obj.jobId}`);
+    }
+
+    if (!obj.scope || typeof obj.scope !== "object" || Array.isArray(obj.scope)) {
+      errors.push("scope is required and must be an object.");
+    } else {
+      if (!obj.scope.evidenceModelId) {
+        errors.push("scope.evidenceModelId is required.");
+      } else if (db && !db.evidenceModels?.find((m) => m.id === obj.scope.evidenceModelId)) {
+        errors.push(`Invalid scope.evidenceModelId: ${obj.scope.evidenceModelId}`);
+      }
+      if (
+        obj.scope.taskModelId !== undefined &&
+        obj.scope.taskModelId !== null &&
+        obj.scope.taskModelId !== ""
+      ) {
+        if (typeof obj.scope.taskModelId !== "string") {
+          errors.push("scope.taskModelId must be a string when present.");
+        } else if (db && !db.taskModels?.find((t) => t.id === obj.scope.taskModelId)) {
+          errors.push(`Invalid scope.taskModelId: ${obj.scope.taskModelId}`);
+        }
+      }
+    }
+
+    if (!obj.packageVersion || typeof obj.packageVersion !== "string") {
+      errors.push("packageVersion is required.");
+    }
+
+    if (typeof obj.sampleSize !== "number" || !(obj.sampleSize > 0)) {
+      errors.push("sampleSize must be a positive number.");
+    }
+
+    if (!obj.computedAt) {
+      errors.push("computedAt is required.");
+    }
+
+    if (!obj.payload || typeof obj.payload !== "object" || Array.isArray(obj.payload)) {
+      errors.push("payload is required and must be an object.");
+    }
+
+    if (!obj.createdAt) {
+      errors.push("createdAt is required.");
+    }
+
+    // Immutability: once a row exists under this id, any field change is
+    // refused. Callers that need a correction enqueue a new job.
+    if (db && obj.id) {
+      const existing = db.analysisArtefacts?.find((a) => a.id === obj.id);
+      if (existing) {
+        const keys = [
+          "kind",
+          "jobId",
+          "packageVersion",
+          "sampleSize",
+          "computedAt",
+          "createdAt",
+        ];
+        for (const key of keys) {
+          if (obj[key] !== undefined && existing[key] !== obj[key]) {
+            errors.push(
+              `analysisArtefacts are immutable — cannot change '${key}' on '${obj.id}'.`
+            );
+          }
+        }
+        if (
+          obj.scope !== undefined &&
+          JSON.stringify(existing.scope) !== JSON.stringify(obj.scope)
+        ) {
+          errors.push(`analysisArtefacts are immutable — cannot change 'scope' on '${obj.id}'.`);
+        }
+        if (
+          obj.payload !== undefined &&
+          JSON.stringify(existing.payload) !== JSON.stringify(obj.payload)
+        ) {
+          errors.push(`analysisArtefacts are immutable — cannot change 'payload' on '${obj.id}'.`);
+        }
+      }
     }
   }
 

@@ -549,7 +549,8 @@ export function statisticalModelTypesForCalibrationKind(kind) {
    8b. Calibration job kinds (D62, W13)
    -----------------------------------------------------
    The three D19 file kinds write parameterSets[]. The four analysis
-   kinds write analysis artefacts (W16) and ingest into nothing. Single
+   kinds write the top-level analysisArtefacts collection (D76 / W16) —
+   they inform; they do not authorise a lifecycle transition. Single
    definition: routes, schema, the R client, and the readiness mirror
    all import from here.
 ===================================================== */
@@ -565,6 +566,10 @@ export const CALIBRATION_JOB_KINDS = [
 ];
 
 export const CALIBRATION_JOB_KIND_VALUES = CALIBRATION_JOB_KINDS.map((k) => k.value);
+
+export const ANALYSIS_ARTEFACT_KIND_VALUES = CALIBRATION_JOB_KINDS.filter(
+  (k) => k.ingests === "analysisArtefact"
+).map((k) => k.value);
 
 function calibrationJobKind(kind) {
   return CALIBRATION_JOB_KINDS.find((k) => k.value === kind) || null;

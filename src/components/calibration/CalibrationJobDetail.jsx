@@ -67,7 +67,9 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
         const parameterSetId =
           result?.parameterSet?.parameterSetId || result?.job?.ingestedParameterSetId;
         const analysisArtefactId =
-          result?.analysisArtefact?.analysisArtefactId || result?.job?.ingestedAnalysisArtefactId;
+          result?.analysisArtefact?.id ||
+          result?.analysisArtefact?.analysisArtefactId ||
+          result?.job?.ingestedAnalysisArtefactId;
         if (analysisArtefactId) {
           setIngestResult(result.analysisArtefact || { analysisArtefactId });
           toast.success(`Ingested as analysis artefact ${analysisArtefactId}.`);
@@ -167,11 +169,12 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
         </p>
       )}
 
-      {ingestResult?.analysisArtefactId && (
+      {ingestResult?.analysisArtefactId || ingestResult?.id ? (
         <p className="text-sm" role="status">
-          Wrote analysis artefact <strong>{ingestResult.analysisArtefactId}</strong>.
+          Wrote analysis artefact{" "}
+          <strong>{ingestResult.analysisArtefactId || ingestResult.id}</strong>.
         </p>
-      )}
+      ) : null}
 
       {job.ingestedParameterSetId && !ingestResult && (
         <p className="text-sm" role="status">
