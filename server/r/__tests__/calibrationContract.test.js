@@ -74,6 +74,14 @@ describe("request envelope", () => {
     expect(body.forms.commonItemIds).toHaveLength(6);
     expect(body.responseMatrix.personIds).toHaveLength(800);
   });
+
+  it("accepts the committed LSAT7 item-analysis request (D77)", async () => {
+    const { applyNamedCalibrationFixture } = await import("../calibrationFixtures.js");
+    const body = applyNamedCalibrationFixture({ fixture: "lsat7-item-analysis" }).request;
+    expect(validateCalibrationRequest(body)).toEqual([]);
+    expect(body.model.family).toBe("item-analysis");
+    expect(body.responseMatrix.personIds).toHaveLength(1000);
+  });
 });
 
 describe("response envelope", () => {

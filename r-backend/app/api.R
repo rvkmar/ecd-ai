@@ -29,7 +29,9 @@ library(plumber)
 # jsonlite's default toJSON boxes length-1 vectors. ADR 0002 and /health
 # want scalars (status: "healthy", not ["healthy"]). CI on D64 saw the
 # boxed form from the published image's plumber.
-.json_unboxed <- plumber::serializer_unboxed_json()
+# jsonlite's default null="list" turns R NULL into JSON {}. ADR 0002 and
+# D77 distractors: null need real JSON null.
+.json_unboxed <- plumber::serializer_unboxed_json(null = "null")
 
 api <- plumber::Plumber$new()
 api$setSerializer(.json_unboxed)
@@ -86,6 +88,16 @@ api$handle("POST", "/calibrate/dif", function(req, res) {
 
 api$handle("POST", "/calibrate/equating", function(req, res) {
   calibrate_dispatch(req, res, family = "equating")
+}, serializer = .json_unboxed)
+
+# D77: primary path matches DIF/equating (/calibrate/<family>).
+api$handle("POST", "/calibrate/item-analysis", function(req, res) {
+  calibrate_dispatch(req, res, family = "item-analysis")
+}, serializer = .json_unboxed)
+
+# Calendar alias for the same handler (exit-check name /analyse/item).
+api$handle("POST", "/analyse/item", function(req, res) {
+  calibrate_dispatch(req, res, family = "item-analysis")
 }, serializer = .json_unboxed)
 
 # Legacy path kept as an alias of /calibrate/irt so a leftover client that

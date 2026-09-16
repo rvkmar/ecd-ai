@@ -561,7 +561,7 @@ export const CALIBRATION_JOB_KINDS = [
   { value: "ctt-statistics", label: "CTT Statistics", package: "TAM", ingests: "parameterSets", statisticalModelTypes: ["ctt"] },
   { value: "dif-analysis", label: "DIF Analysis", package: "difR", ingests: "analysisArtefact", statisticalModelTypes: ["irt", "rasch"] },
   { value: "equating", label: "Equating", package: "plink", ingests: "analysisArtefact", statisticalModelTypes: ["irt", "rasch"] },
-  { value: "item-analysis", label: "Item Analysis", package: "mirt", ingests: "analysisArtefact", statisticalModelTypes: [] },
+  { value: "item-analysis", label: "Item Analysis", package: "TAM", ingests: "analysisArtefact", statisticalModelTypes: ["ctt", "irt", "rasch"] },
   { value: "test-information", label: "Test Information", package: "mirt", ingests: "analysisArtefact", statisticalModelTypes: [] },
 ];
 

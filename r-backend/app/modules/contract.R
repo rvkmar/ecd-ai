@@ -5,7 +5,9 @@
 
 CALIBRATION_CONTRACT_VERSION <- "1.0"
 
-CALIBRATION_MODEL_FAMILIES <- c("irt", "dina", "gdina", "ctt", "dif", "equating")
+CALIBRATION_MODEL_FAMILIES <- c(
+  "irt", "dina", "gdina", "ctt", "dif", "equating", "item-analysis"
+)
 CALIBRATION_IRT_SUBTYPES <- c("2PL", "3PL", "Rasch")
 
 .as_char <- function(x) {

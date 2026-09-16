@@ -18,10 +18,10 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D76** — analysisArtefacts collection (W16). Handoff: `claude/day76-analysis-artefacts.md`. |
+| Last completed unit | **D77** — item-analysis → analysisArtefacts (W16). Handoff: `claude/day77-item-analysis.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
-| Next queued | Calendar **D77** — Item analysis endpoint (`/analyse/item`). |
-| Block | **W16** — R analytics and reporting service (**in progress**; D76 done). |
+| Next queued | Calendar **D78** — test-information / remaining W16 analytics. |
+| Block | **W16** — R analytics and reporting service (**in progress**; D76–D77 done). |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -41,7 +41,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-15 day73c | product `e9e01ff`…`6f09fde` + close (gates + handoff). Close: `claude/day73c-session-delivery-home.md`. Build chunk `index-ND7fdpsk.js` 2,269.52 kB. |
 | HEAD at D74 | product `3a6415a` + this close. Close: `claude/day74-performance-bundle-split.md`. Largest JS chunk `recharts` 446.89 kB; entry `index-DVkk4-Lz.js` 31.23 kB. Suite close re-run **1439 passed / 6 skipped**. |
 | HEAD at D75 | product+handoff `4d56191` + this close. Close: `claude/day75-w15-core-sign-off.md`. Suite close re-run **1439 passed / 6 skipped**; CI [34960900031](https://github.com/rvkmar/ecd-ai/actions/runs/34960900031) LSAT7+sim10GDINA green. |
-| HEAD at D76 | product (uncommitted at handoff write) + `claude/day76-analysis-artefacts.md`. Suite **1447 passed / 6 skipped**; live `:6060` GET 200 / PUT 405 / student 403 after `docker compose up -d --build node`. |
+| HEAD at D76 | product + `claude/day76-analysis-artefacts.md`. Suite **1447 passed / 6 skipped**; live `:6060` GET 200 / PUT 405 / student 403. |
+| HEAD at D77 | product + `claude/day77-item-analysis.md`. Suite **1456 passed / 7 skipped**; live TAM item-analysis + both R path aliases. |
 
 ## Session log
 
@@ -85,6 +86,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-15 | D74 | 1, alone | Route + tab `lazyPanel` splits; vendor `manualChunks`. Chunk warning cleared (max 446.89 kB). Live dashboard median 15 ms @ 4 items; rebuild `tm-d56` 28 ms; synthetic library/dashboard through N=1000 recorded. Product `3a6415a`. Close re-run **1439 passed / 6 skipped**. Next: D75 (never-compress). |
 | 2026-09-15 | D75 | 3, alone | W15 never-compress sign-off. Five claims held on `:6060` + CI. Ingest misalignment: calibrated set now becomes `activeParameterSetId`. Four-role walk. Product+handoff `4d56191`. Close re-run **1439 passed / 6 skipped**. Next: W16. |
 | 2026-09-16 | D76 | 2, alone | W16 start. Premise rewritten: nested EM artefacts already existed. Top-level `analysisArtefacts` collection + migrate DIF/equating ingest; immutable HTTP surface. Suite **1447 passed / 6 skipped**. Live GET 200 / PUT 405 / stud 403. Next: D77. |
+| 2026-09-16 | D77 | 2, alone | Item-analysis via TAM::tam.ctt2 → analysisArtefacts. Authority vs CTT parameter sets in diagnostics; distractors null on dichotomous LSAT7. Fixture `lsat7-item-analysis`; routes `/calibrate/item-analysis` + `/analyse/item`. Suite **1456 passed / 7 skipped**. Live TAM 4.3.25. Next: D78. |
 
 ## Compression debt
 
@@ -136,6 +138,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D74 AdminPage | App-only route split would clear the warning | AdminPage (and staff dashboards) static-imported every heavy builder/tab | Lazy tab panels + active-leaf mount in RoleWorkbench; vendor manualChunks |
 | D75 | Plan row: Sonnet/low “handoff + update actuals” | Calendar exit check is five behavioural milestone claims (never-compress) | Assemble evidence for all five on `:6060` + CI; fix ingest→active misalignment; core handoff. Docs-only would be PARTIAL |
 | D76 | New top-level `analysisArtefacts` collection (greenfield seven-artefact contract) | DIF/equating already wrote nested `evidenceModels[].analysisArtefacts[]` with no schema/routes/immutability | Promote to collection; migrate ingest off the nested array; refuse mutation; D48 guard |
+| D77 | Item analysis via mirt `/analyse/item` as a greenfield analytics path | Kind already declared; CTT already owns the classical TAM engine; D76 owns the artefact collection; vocabulary bind list was empty; jsonlite default `null="list"` turns R NULL into JSON `{}` | Reuse TAM CTT helpers; remap to `{ pValue, pointBiserial, n, distractors: null }`; primary `/calibrate/item-analysis` + alias `/analyse/item`; bind `ctt|irt|rasch` for provenance; plumber `null="null"`; authority/overlap/distractors diagnostics required |
 
 ## Carried-forward gaps
 

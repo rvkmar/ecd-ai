@@ -7,7 +7,15 @@ import { CALIBRATION_JOB_KIND_VALUES } from "../../src/utils/ecdVocabulary.js";
 
 export const CALIBRATION_CONTRACT_VERSION = "1.0";
 
-const CALIBRATION_MODEL_FAMILIES = ["irt", "dina", "gdina", "ctt", "dif", "equating"];
+const CALIBRATION_MODEL_FAMILIES = [
+  "irt",
+  "dina",
+  "gdina",
+  "ctt",
+  "dif",
+  "equating",
+  "item-analysis",
+];
 const CALIBRATION_IRT_SUBTYPES = ["2PL", "3PL", "Rasch"];
 
 const KIND_TO_R_PATH = {
@@ -16,6 +24,7 @@ const KIND_TO_R_PATH = {
   "ctt-statistics": "/calibrate/ctt",
   "dif-analysis": "/calibrate/dif",
   equating: "/calibrate/equating",
+  "item-analysis": "/calibrate/item-analysis",
 };
 
 export function rPathForJobKind(kind) {

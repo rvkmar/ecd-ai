@@ -44,7 +44,8 @@ mismatch$model$itemIds <- list("item_a", "item_z", "item_c")
 .stop_if(is.null(validate_calibration_request(mismatch)), "itemId order mismatch was accepted")
 
 # D64: LSAT7 frequency table is the published 1000-person, 5-item matrix.
-# D67 reuses it for CTT (`fixture: "lsat7-ctt"`); there is no second matrix.
+# D67 reuses it for CTT (`fixture: "lsat7-ctt"`); D77 reuses it for
+# item-analysis (`fixture: "lsat7-item-analysis"`); there is no second matrix.
 lsat7 <- jsonlite::fromJSON(file.path(fix_dir, "lsat7-frequency-table.json"), simplifyVector = FALSE)
 lsat7_n <- sum(vapply(lsat7$patterns, function(p) as.integer(p$freq), integer(1)))
 .stop_if(!identical(lsat7_n, 1000L), "LSAT7 frequency table does not sum to 1000")

@@ -189,6 +189,29 @@ vi.mock("@/api/queries/calibrationJobs", () => ({
           })
         );
       }
+      if (payload.fixture === "lsat7-item-analysis") {
+        return fx.addJob(
+          queuedJob({
+            id: "job-lsat7-item-analysis",
+            kind: "item-analysis",
+            evidenceModelId: payload.evidenceModelId,
+            statisticalModelId: payload.statisticalModelId,
+            request: {
+              contractVersion: "1.0",
+              jobId: "job-lsat7-item-analysis",
+              model: {
+                family: "item-analysis",
+                itemIds: ["Item.1", "Item.2", "Item.3", "Item.4", "Item.5"],
+              },
+              responseMatrix: {
+                personIds: Array.from({ length: 8 }, (_, i) => `p${i}`),
+                itemIds: ["Item.1"],
+              },
+              options: { seed: 20261120 },
+            },
+          })
+        );
+      }
       if (payload.fixture === "planted-dif") {
         return fx.addJob(
           queuedJob({
@@ -387,6 +410,31 @@ describe("admin start → process → watch → ingest", () => {
       },
     ]);
     expect(screen.getByRole("heading", { name: /inspect job-lsat7-ctt/i })).toBeInTheDocument();
+    expect(screen.getByText(/5 × 8/)).toBeInTheDocument();
+  });
+
+  it("enqueues LSAT7 item analysis bound to a CTT statistical model", async () => {
+    const user = userEvent.setup();
+    render(<CalibrationConsole />);
+
+    await user.selectOptions(screen.getByLabelText(/published fixture/i), "lsat7-item-analysis");
+    expect(screen.getByRole("button", { name: /enqueue lsat7 item analysis/i })).toBeInTheDocument();
+    expect(screen.getByText(/analysisArtefact/)).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /sim10GDINA evidence/ })).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/evidence model/i), "em-ctt");
+    await user.selectOptions(screen.getByLabelText(/statistical model/i), "sm-ctt");
+    await user.click(screen.getByRole("button", { name: /enqueue lsat7 item analysis/i }));
+
+    expect(fx.enqueuePayloads).toEqual([
+      {
+        fixture: "lsat7-item-analysis",
+        kind: "item-analysis",
+        evidenceModelId: "em-ctt",
+        statisticalModelId: "sm-ctt",
+      },
+    ]);
+    expect(screen.getByRole("heading", { name: /inspect job-lsat7-item-analysis/i })).toBeInTheDocument();
     expect(screen.getByText(/5 × 8/)).toBeInTheDocument();
   });
 

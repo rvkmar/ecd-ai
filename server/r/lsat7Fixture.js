@@ -8,12 +8,15 @@
 // two files equal when both exist in the checkout.
 //
 // mirt::LSAT7 is LSAT *section* 7: 1000 examinees × 5 items. The 7 is not
-// the item count. Enqueue with `{ fixture: "lsat7" }` (IRT 2PL) or
-// `{ fixture: "lsat7-ctt" }` (CTT / TAM::tam.ctt) and the job route fills
-// request.model / responseMatrix / options.seed via
+// the item count. Enqueue with `{ fixture: "lsat7" }` (IRT 2PL),
+// `{ fixture: "lsat7-ctt" }` (CTT / TAM::tam.ctt), or
+// `{ fixture: "lsat7-item-analysis" }` (dashboard item analysis →
+// analysisArtefacts; same TAM classical engine, remapped field names)
+// and the job route fills request.model / responseMatrix / options.seed via
 // applyNamedCalibrationFixture in calibrationFixtures.js.
 // There is no published KR-20 / point-biserial table for this matrix in
-// this pipeline; CTT difficulty is the published item mean.
+// this pipeline; CTT difficulty / item-analysis pValue is the published
+// item mean.
 
 import fs from "fs";
 import path from "path";
@@ -59,11 +62,12 @@ export function lsat7CalibrationRequest({
 } = {}) {
   const table = loadLsat7FrequencyTable();
   const data = expandLsat7Responses();
-  const resolvedFamily = family === "ctt" ? "ctt" : "irt";
+  const resolvedFamily =
+    family === "ctt" || family === "item-analysis" ? family : "irt";
   const model =
-    resolvedFamily === "ctt"
-      ? { family: "ctt", itemIds: [...table.itemIds] }
-      : { family: "irt", subtype: "2PL", itemIds: [...table.itemIds] };
+    resolvedFamily === "irt"
+      ? { family: "irt", subtype: "2PL", itemIds: [...table.itemIds] }
+      : { family: resolvedFamily, itemIds: [...table.itemIds] };
   return {
     contractVersion: CALIBRATION_CONTRACT_VERSION,
     jobId,
@@ -74,7 +78,7 @@ export function lsat7CalibrationRequest({
       data,
     },
     options: {
-      maxIterations: resolvedFamily === "ctt" ? 1 : 200,
+      maxIterations: resolvedFamily === "irt" ? 200 : 1,
       convergenceTolerance: 0.0001,
       seed,
     },

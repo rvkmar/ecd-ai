@@ -121,6 +121,18 @@ calibrate_dispatch <- function(req, res, family) {
     return(calibrate_equating(body, res))
   }
 
+  if (identical(family, "item-analysis")) {
+    if (!identical(requested_family, "item-analysis")) {
+      res$status <- 400
+      return(.failure(
+        body$jobId,
+        paste0("This endpoint calibrates family 'item-analysis', not '", requested_family, "'"),
+        "FamilyMismatch"
+      ))
+    }
+    return(calibrate_item_analysis(body, res))
+  }
+
   res$status <- 501
   .failure(body$jobId, paste0("Unsupported family: ", family), "NotImplemented")
 }
@@ -689,6 +701,169 @@ calibrate_ctt <- function(body, res) {
       iterations = 1L,
       elapsedSeconds = elapsed,
       method = fit_try$method,
+      scoreForDiscrimination = "raw total (rowSums), not an IRT WLE",
+      reliability = "KR-20 (Kuder & Richardson 1937); equals Cronbach's alpha for dichotomous complete data",
+      warnings = as.list(warnings_acc)
+    )
+  )
+}
+
+# D77: dashboard item analysis. Same TAM classical engine as calibrate_ctt
+# where p and rpb overlap; remapped field names for analysisArtefacts.
+# Never writes parameterSets / never sets activeParameterSetId.
+calibrate_item_analysis <- function(body, res) {
+  if (!requireNamespace("TAM", quietly = TRUE)) {
+    res$status <- 500
+    return(.failure(body$jobId, "Package TAM is not installed", "MissingPackage"))
+  }
+  suppressPackageStartupMessages(library(TAM, quietly = TRUE))
+
+  started <- proc.time()[["elapsed"]]
+  stderr_lines <- character(0)
+  warnings_acc <- character(0)
+
+  opts <- body$options
+  .first <- function(x) unlist(x, use.names = FALSE)[[1]]
+  seed <- as.integer(.first(opts$seed))
+
+  resp_df <- tryCatch(
+    response_matrix_to_df(body$responseMatrix),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(resp_df)) {
+    res$status <- 400
+    return(.failure(body$jobId, "Could not coerce responseMatrix.data", "MatrixError", paste(stderr_lines, collapse = "\n")))
+  }
+
+  request_item_ids <- vapply(as.list(body$model$itemIds), .as_char, character(1))
+  colnames(resp_df) <- request_item_ids
+  resp_mat <- as.matrix(resp_df)
+  storage.mode(resp_mat) <- "numeric"
+
+  message(sprintf(
+    "calibrate_item_analysis job=%s dim=%dx%d",
+    .as_char(body$jobId), nrow(resp_mat), ncol(resp_mat)
+  ))
+
+  set.seed(seed)
+  score <- rowSums(resp_mat, na.rm = TRUE)
+
+  fit_try <- try(.run_tam_ctt(resp_mat, score), silent = TRUE)
+  elapsed <- proc.time()[["elapsed"]] - started
+  pkg_ver <- paste("TAM", as.character(utils::packageVersion("TAM")))
+
+  if (inherits(fit_try, "try-error")) {
+    stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    res$status <- 200
+    dim_note <- sprintf(" [%dx%d]", nrow(resp_mat), ncol(resp_mat))
+    return(.failure(
+      body$jobId,
+      paste0(paste(stderr_lines, collapse = "; "), dim_note),
+      "TAMError",
+      paste(stderr_lines, collapse = "\n")
+    ))
+  }
+
+  ctt_parameters <- tryCatch(
+    .ctt_parameters_from_tam(fit_try$dfr, request_item_ids),
+    error = function(e) {
+      stderr_lines <<- c(stderr_lines, conditionMessage(e))
+      NULL
+    }
+  )
+  if (is.null(ctt_parameters)) {
+    res$status <- 200
+    return(.failure(body$jobId, "Unable to extract item-analysis statistics", "ExtractError", paste(stderr_lines, collapse = "\n")))
+  }
+
+  # Remap CTT difficulty/discrimination → artefact pValue/pointBiserial.
+  # distractors = NULL is kept by list() (not deleted) so JSON emits null.
+  parameters <- lapply(ctt_parameters, function(p) {
+    list(
+      pValue = as.numeric(p$difficulty),
+      pointBiserial = as.numeric(p$discrimination),
+      n = as.integer(p$n),
+      distractors = NULL
+    )
+  })
+
+  kr20 <- .kr20(resp_mat)
+  mean_score <- mean(score)
+  sd_score <- stats::sd(score)
+
+  p_values <- vapply(parameters, function(p) as.numeric(p$pValue), numeric(1))
+  rpbs <- vapply(parameters, function(p) as.numeric(p$pointBiserial), numeric(1))
+  converged <- all(is.finite(p_values) & p_values >= 0 & p_values <= 1) &&
+    all(is.finite(rpbs) & rpbs > -1 & rpbs < 1) &&
+    is.finite(kr20)
+
+  overlap_note <- paste(
+    "On dichotomous data, artefact pValue equals CTT parameter-set difficulty",
+    "(published item mean) and artefact pointBiserial equals CTT discrimination",
+    "(TAM item-total rpb). Both use the same TAM::tam.ctt2 engine."
+  )
+  authority_note <- paste(
+    "Operational CTT readiness and activeParameterSetId come only from job kind",
+    "ctt-statistics -> parameterSets (D67). item-analysis writes analysisArtefacts",
+    "(D76/D77) and informs only; it never gates lifecycle.",
+    "classicalCalibration.js is a provisional authoring approximation only and is",
+    "not authoritative once R artefacts or parameter sets exist."
+  )
+  distractors_note <- paste(
+    "Dichotomous 0/1 matrices (including LSAT7) have no option-level distractors;",
+    "each item sets distractors: null explicitly (not omitted)."
+  )
+
+  if (!converged) {
+    res$status <- 200
+    out <- .failure(
+      body$jobId,
+      "Item-analysis statistics were not identified (zero total-score variance or missing item stats)",
+      "NotConverged",
+      paste(stderr_lines, collapse = "\n")
+    )
+    out$packageVersion <- pkg_ver
+    out$sampleSize <- nrow(resp_mat)
+    out$calibratedAt <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+    out$diagnostics <- list(
+      iterations = 1L,
+      elapsedSeconds = elapsed,
+      method = fit_try$method,
+      overlapWithCtt = overlap_note,
+      authority = authority_note,
+      distractorsNote = distractors_note,
+      scoreForDiscrimination = "raw total (rowSums), not an IRT WLE",
+      warnings = as.list(warnings_acc)
+    )
+    return(out)
+  }
+
+  list(
+    contractVersion = CALIBRATION_CONTRACT_VERSION,
+    jobId = .as_char(body$jobId),
+    converged = TRUE,
+    packageVersion = pkg_ver,
+    sampleSize = nrow(resp_mat),
+    calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    parameters = parameters,
+    standardErrors = NULL,
+    fitStatistics = list(
+      kr20 = as.numeric(kr20),
+      meanScore = as.numeric(mean_score),
+      sdScore = as.numeric(sd_score),
+      nItems = ncol(resp_mat),
+      nPersons = nrow(resp_mat)
+    ),
+    diagnostics = list(
+      iterations = 1L,
+      elapsedSeconds = elapsed,
+      method = fit_try$method,
+      overlapWithCtt = overlap_note,
+      authority = authority_note,
+      distractorsNote = distractors_note,
       scoreForDiscrimination = "raw total (rowSums), not an IRT WLE",
       reliability = "KR-20 (Kuder & Richardson 1937); equals Cronbach's alpha for dichotomous complete data",
       warnings = as.list(warnings_acc)

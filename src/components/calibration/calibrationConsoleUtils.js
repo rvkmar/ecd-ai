@@ -18,6 +18,13 @@ export const LSAT7_CTT_JOB_KIND = "ctt-statistics";
 
 export const LSAT7_CTT_STATISTICAL_MODEL_TYPES = ["ctt"];
 
+export const LSAT7_ITEM_ANALYSIS_JOB_KIND = "item-analysis";
+
+// Vocabulary formerly had an empty bind list; prefer ctt + irt/rasch so
+// the console can bind to a real SM for provenance without implying
+// parameter-set authority (ingest is analysisArtefacts only).
+export const LSAT7_ITEM_ANALYSIS_STATISTICAL_MODEL_TYPES = ["ctt", "irt", "rasch"];
+
 export const PLANTED_DIF_JOB_KIND = "dif-analysis";
 
 export const PLANTED_DIF_STATISTICAL_MODEL_TYPES = ["irt", "rasch"];
@@ -65,6 +72,19 @@ export const NAMED_CALIBRATION_FIXTURES = [
     successToast: "LSAT7 CTT calibration job queued.",
     description:
       "LSAT section 7 (Bock & Lieberman 1970) analysed with classical test theory via TAM::tam.ctt: difficulty (p), item-total point-biserial, KR-20. Same published 1000×5 matrix as the IRT fixture. This form does not invent item statistics.",
+  },
+  {
+    id: "lsat7-item-analysis",
+    label: "LSAT7 item analysis",
+    kind: LSAT7_ITEM_ANALYSIS_JOB_KIND,
+    statisticalModelTypes: LSAT7_ITEM_ANALYSIS_STATISTICAL_MODEL_TYPES,
+    buttonLabel: "Enqueue LSAT7 item analysis",
+    choosePrompt: "Choose an evidence model and a CTT, IRT, or Rasch statistical model (provenance bind only).",
+    emptyBind:
+      "No evidence model has a CTT, IRT, or Rasch statistical model to bind. Author one before enqueueing LSAT7 item analysis.",
+    successToast: "LSAT7 item-analysis job queued.",
+    description:
+      "LSAT section 7 via TAM::tam.ctt2 as a dashboard analysisArtefact: pValue, pointBiserial, n; distractors null on dichotomous data. Same classical engine as CTT parameter sets where p and rpb overlap — informs only; never sets activeParameterSetId. Bound SM is provenance, not operational readiness.",
   },
   {
     id: "planted-dif",
