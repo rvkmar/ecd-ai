@@ -68,10 +68,11 @@ npm run build
 ```
 
 Product commits: EM-R2 `f732e19`, EM-R4 `485c13d`, EM-R5 `e2f3d2f`, EM-R3 `127eeef`.
+Close stamp: tree clean; HEAD `2157b3a` ≡ `main/master`. No half-applied work.
 
 ## Calendar
 
-Off-calendar — **do not** mark D81 ✅.
+Off-calendar — **do not** mark D81 ✅. Confirmed D81 summary is still unmarked.
 
 ## Next
 

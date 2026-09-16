@@ -20,7 +20,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 |---|---|
 | Last completed unit | **D80** — scheduled calibration enqueue (W16 close). Handoff: `claude/day80-scheduled-recalibration.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
-| Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R2…EM-R5. |
+| Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Next queued | Calendar **D81** — W17 psychometric dashboards (first unit). |
@@ -105,6 +105,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-16 | D80 | 2, alone | Scheduled calibration enqueue (never ingest). Min-sample gate; opt-in cron; W16 gate closed. Suite **1510 passed / 9 skipped**. Next: W17 / D81. |
 | 2026-09-16 | EM-R1 | 3, alone (off-cal) | Executable rubric / process_log / auto in Identification when activation map empty. Suite **1523 passed / 9 skipped**. Residual EM-R2…EM-R5. |
 | 2026-09-16 | EM-R2…R5 | 2+1+2 (off-cal) | Console ingest smoke; prereq gating; Assembly confirm floors; Force attribute-split Q. Handoff `day80c-em-r2-r5-residual-closeout.md`. |
+| 2026-09-16 | close | — | Off-cal EM residual close (EM-R1…EM-R5). Suite **1536 passed / 9 skipped**; build green; `2157b3a` ≡ `main/master`. No half-applied work; no new compression debt. Calendar D81 left unmarked. Next: D81. |
 
 ## Compression debt
 
