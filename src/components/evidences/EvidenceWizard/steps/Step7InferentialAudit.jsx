@@ -7,6 +7,7 @@ import { useMemo, useEffect } from "react";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { useEvidenceWizardContext } from "../EvidenceWizardContext";
 import { validateEntity } from "../../../../utils/schema";
+import { evaluateAssemblySufficiency } from "../../../../utils/assemblySufficiency";
 import InferentialTraceGraph from "../components/InferentialTraceGraph";
 
 const EVAL_METHODS = ["key", "rubric", "auto", "process_log"];
@@ -136,37 +137,13 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
   }, [observables, evaluationProcedures, draftModel?.fairnessNotes, difReviewChecklist, evidenceRules, models]);
 
   const assemblySufficiency = useMemo(() => {
-    const warnings = [];
-    const competencyName = selectedCompetency?.name || selectedCompetency?.label;
-    const competencyId = draftModel?.competencyId || selectedCompetency?.id;
-    const assemblies = db?.assemblyModels || [];
-    for (const am of assemblies) {
-      for (const t of am.targetsBySMV || []) {
-        const matches =
-          (t.smvId && competencyId && t.smvId === competencyId) ||
-          (t.smvName && competencyName && String(t.smvName).trim() === String(competencyName).trim());
-        if (!matches) continue;
-        if (typeof t.requiredSEM === "number" && observables.length < 3) {
-          warnings.push(
-            `Assembly '${am.name || am.id}' requires SEM≤${t.requiredSEM}; ${observables.length} observable(s) may be thin — expand evidence or calibrationPlan.`
-          );
-        }
-        if (typeof t.requiredClassificationAccuracy === "number") {
-          if (!draftModel?.calibrationPlan || !draftModel.calibrationPlan.pilotSampleSize) {
-            warnings.push(
-              `Assembly '${am.name || am.id}' requires classification accuracy ${t.requiredClassificationAccuracy}; set calibrationPlan.pilotSampleSize before confirm.`
-            );
-          }
-          if (observables.length < 2) {
-            warnings.push(
-              `Assembly '${am.name || am.id}' classification target with only ${observables.length} observable(s) is likely under-powered.`
-            );
-          }
-        }
-      }
-    }
-    return warnings;
-  }, [db?.assemblyModels, selectedCompetency, draftModel?.competencyId, draftModel?.calibrationPlan, observables.length]);
+    const em = {
+      ...draftModel,
+      competencyId: draftModel?.competencyId || selectedCompetency?.id,
+      competencyName: selectedCompetency?.name || selectedCompetency?.label,
+    };
+    return evaluateAssemblySufficiency(em, db).warnings;
+  }, [db, selectedCompetency, draftModel]);
 
   const allErrors = [
     ...(schemaAudit?.errors || []),

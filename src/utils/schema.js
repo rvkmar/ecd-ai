@@ -20,6 +20,7 @@ import { STATUS, TRANSITIONS, canTransition } from "../../server/utils/lifecycle
 // confirm-time gate and attributeAccumulation.js's scoring-time gate
 // unable to disagree.
 import { dinaParametersAreUsable } from "../../server/delivery/attributeAccumulation.js";
+import { evaluateAssemblySufficiency } from "./assemblySufficiency.js";
 
 // The shared ECD response vocabulary. Imported rather than restated so the
 // item rules below and the Item Wizard read the SAME compatibility map --
@@ -1373,6 +1374,13 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           errors.push("calibrationPlan.scheduledEnqueue.jobs should be an array");
         }
       }
+    }
+
+    // EM-R5: Assembly sufficiency — soft at reviewed (Step 7 warnings);
+    // hard errors at confirm / strict when a bound Assembly target exists.
+    if (db && (strict || obj.status === "confirmed")) {
+      const { errors: assemblyErrors } = evaluateAssemblySufficiency(obj, db);
+      errors.push(...assemblyErrors);
     }
 
     if (strict && (!Array.isArray(obj.statisticalModels) || obj.statisticalModels.length === 0)) {
