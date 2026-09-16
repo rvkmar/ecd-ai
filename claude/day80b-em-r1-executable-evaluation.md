@@ -84,7 +84,7 @@ npm run build
   built in 18.47s
 ```
 
-Product commit recorded at close (hash filled after push).
+Product commit: `8187bb4`.
 
 ## Next
 
