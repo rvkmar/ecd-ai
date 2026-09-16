@@ -21,7 +21,7 @@ export default function CalibrationConsolePage({ readOnly = false }) {
               ← {homeLabel}
             </Link>
           </p>
-          <h1 className="text-3xl font-bold tracking-tight">Calibration</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Parameter estimation</h1>
           <p className="text-sm text-muted-foreground">
             Start, watch, inspect, and ingest a calibration job. R stays on
             the job queue — never on a session path.

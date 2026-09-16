@@ -44,7 +44,7 @@ export default function EvidenceModelBuilder() {
                     variant={mode === "create" ? "default" : "outline"}
                     onClick={() => setMode("create")}
                 >
-                    Operate Evidence Model
+                    Manage Evidence Model
                 </Button>
             </div>
 

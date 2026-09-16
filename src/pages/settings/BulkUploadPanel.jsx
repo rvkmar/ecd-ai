@@ -25,7 +25,7 @@ export default function BulkUploadPanel() {
       <div>
         <h2 className="text-xl font-semibold">Bulk Upload</h2>
         <p className="text-sm text-muted-foreground">
-          Import users, selection policies, curricular policies, competency models, evidence
+          Import users, selection policies, curricular policies, Student Models, evidence
           models, task models, or items from a JSON file. Every row is created as a{" "}
           <span className="font-medium text-foreground">draft</span> and validated with the same
           rules as creating it one at a time, with one relaxation specific to importing: a parent
@@ -71,7 +71,7 @@ export default function BulkUploadPanel() {
         />
 
         <BulkUploadCard
-          title="Competency Models"
+          title="Student Models"
           description='Array of { name, description?, measurementIntent?, constructFramework?, competencies? }. Each model may include a nested "competencies" array (each needs at least a variableType: binary | ordinal | continuous | categorical) to create the model and its competencies together. Also accepts a file shaped as { "competencyModels": [...] }.'
           endpoint="/api/competencies/models/bulk"
           invalidateKey={competencyModelsKey}
@@ -83,7 +83,7 @@ export default function BulkUploadPanel() {
           description={'Array of full evidence model objects, each requiring an existing competencyId -- or, if you don\'t know the generated id, a competencyName that matches exactly one existing competency by name (case-insensitive); the row fails if zero or more than one competency shares that name, rather than silently guessing. Needs a claimStatement (20+ chars), at least one warrant ({ id, reasoningStatement, cognitiveAttribute, performanceCondition, limitationClause }) -- a warrant without its own competencyId is bound to the model\'s competency automatically -- at least one observable ({ id, statement, type, warrantId }) referencing a warrant id, one evidenceRule per observable in a top-level evidenceRules array ({ id, observableId, direction: supports|weakens|neutral, strengthLevel: 1-5, activationCondition, justification }), and at least one statisticalModel with exactly one marked active: true. Also accepts a file shaped as { "evidenceModels": [...] }.'}
           endpoint="/api/evidenceModels/bulk"
           invalidateKey={evidenceModelsKey}
-          sampleHint='See the sample-evidence-model.json template for a complete, ready-to-edit example (swap in a real competencyId, or a competencyName exactly matching an existing Competency Model competency).'
+          sampleHint='See the sample-evidence-model.json template for a complete, ready-to-edit example (swap in a real competencyId, or a competencyName exactly matching an existing Student Model competency).'
         />
 
         <BulkUploadCard

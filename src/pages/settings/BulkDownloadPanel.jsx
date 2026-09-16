@@ -15,7 +15,7 @@ export default function BulkDownloadPanel() {
       <div>
         <h2 className="text-xl font-semibold">Bulk Download</h2>
         <p className="text-sm text-muted-foreground">
-          Export users, selection policies, curricular policies, competency models, evidence
+          Export users, selection policies, curricular policies, Student Models, evidence
           models, task models, or items as a JSON file. Each file is a JSON array shaped like
           the one the matching Upload card accepts, so an export can be edited and imported
           again -- here or on another deployment.
@@ -43,8 +43,8 @@ export default function BulkDownloadPanel() {
         />
 
         <BulkDownloadCard
-          title="Competency Models"
-          description="Array of competency models, each with its competencies nested under a competencies array -- the same shape the Competency Models uploader accepts."
+          title="Student Models"
+          description="Array of Student Models, each with its competencies nested under a competencies array -- the same shape the Student Models uploader accepts."
           kind="competencyModels"
           note="Ids are exported as-is; re-importing creates new models with newly generated ids."
         />

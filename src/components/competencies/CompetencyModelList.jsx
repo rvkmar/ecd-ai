@@ -120,7 +120,7 @@ export default function CompetencyModelList({
                         onClick={onCreate}
                         className="px-4 py-2 bg-blue-600 text-white rounded"
                     >
-                        + New Competency Model
+                        + New Student Model
                     </button>
                 )}
                 <p className="text-sm text-slate-500">
@@ -164,7 +164,7 @@ export default function CompetencyModelList({
                         onClick={onCreate}
                         className="ml-auto px-4 py-1.5 bg-blue-600 text-white rounded text-sm"
                     >
-                        + New Competency Model
+                        + New Student Model
                     </button>
                 )}
             </div>
@@ -276,7 +276,7 @@ export default function CompetencyModelList({
                     setDeleteModal({ open: false, model: null })
                 }
                 onConfirm={confirmDelete}
-                title="Delete Competency Model"
+                title="Delete Student Model"
                 message="Delete this draft model?"
                 confirmClass="bg-red-600 text-white"
             />
@@ -287,7 +287,7 @@ export default function CompetencyModelList({
                     setArchiveModal({ open: false, model: null })
                 }
                 onConfirm={archiveModel}
-                title="Archive Competency Model"
+                title="Archive Student Model"
                 message="This withdraws the model as a parent for new Evidence Models. Existing structure is kept. Continue?"
                 confirmLabel="Archive"
                 confirmClass="bg-slate-800 text-white"

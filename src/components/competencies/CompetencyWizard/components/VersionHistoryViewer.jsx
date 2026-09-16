@@ -1,6 +1,6 @@
 // CompetencyWizard/components/VersionHistoryViewer.jsx
 // 🧠 Version History Viewer (Production-Grade Refactor)
-// Displays structural version lineage of Competency Model
+// Displays structural version lineage of Student Model
 // - Tailwind UI
 // - Clear version lineage logic
 // - Status badges
@@ -44,7 +44,7 @@ export default function VersionHistoryViewer({
             <div>
                 <h4 className="text-sm font-semibold text-slate-800">Version History</h4>
                 <p className="mt-1 text-sm text-slate-500">
-                    Structural version lineage for this Competency Model.
+                    Structural version lineage for this Student Model.
                 </p>
             </div>
 

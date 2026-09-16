@@ -35,14 +35,14 @@ export default function CompetencyModelBuilder() {
                     variant={mode === "list" ? "default" : "outline"}
                     onClick={() => setMode("list")}
                 >
-                    Competency Model Structure
+                    Student Model Structure
                 </Button>
 
                 <Button
                     variant={mode === "create" ? "default" : "outline"}
                     onClick={() => setMode("create")}
                 >
-                    Operate Competency Model
+                    Manage Student Model
                 </Button>
             </div>
 

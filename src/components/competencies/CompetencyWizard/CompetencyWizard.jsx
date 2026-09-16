@@ -131,7 +131,7 @@ export default function CompetencyWizard({ onCancel }) {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-screen text-slate-600">
-                Loading Competency Model...
+                Loading Student Model...
             </div>
         );
     }
@@ -154,7 +154,7 @@ export default function CompetencyWizard({ onCancel }) {
                 }}
                 locked={model?.locked}
                 status={model?.status}
-                title="Competency Model Wizard"
+                title="Student Model Wizard"
                 brandInitial="C"
                 footerLabel="Competency Layer"
             />
@@ -178,7 +178,7 @@ export default function CompetencyWizard({ onCancel }) {
                     onSaveAndReview={saveAndReview}
                     onConfirm={confirmModel}
                     onReturnToDraft={returnToDraft}
-                    modelLabel="Competency Model"
+                    modelLabel="Student Model"
                 >
                     <ErrorBoundary
                         resetKey={currentStep}

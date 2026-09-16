@@ -20,7 +20,7 @@ export const Default: Story = {
     <Card className="w-[350px]">
       <CardHeader>
         <CardTitle>Numerical Reasoning</CardTitle>
-        <CardDescription>Competency Model · operational</CardDescription>
+        <CardDescription>Student Model · operational</CardDescription>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">

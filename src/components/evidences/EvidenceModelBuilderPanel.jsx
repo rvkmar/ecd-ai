@@ -96,7 +96,7 @@ export default function EvidenceModelBuilderPanel() {
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold">Operate Evidence Model</h2>
+                <h2 className="text-2xl font-semibold">Manage Evidence Model</h2>
 
                 <button
                     onClick={() => {
@@ -117,7 +117,7 @@ export default function EvidenceModelBuilderPanel() {
                     <p className="mt-1">
                         Evidence models can only be created against
                         confirmed, operational, or suspended competency
-                        structures. Confirm a Competency Model first.
+                        structures. Confirm a Student Model first.
                     </p>
                 </div>
             )}

@@ -76,7 +76,7 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     apiFetch.mockResolvedValue({});
   });
 
-  it("nests Assembly, Q-Matrix, and Calibration under Models in source", () => {
+  it("nests Assembly, Diagnostic design, and Parameter estimation under Models in source", () => {
     const src = read("src/pages/AdminPage.jsx");
     expect(src).toMatch(/Student Model/);
     expect(src).toMatch(/AssemblyModelBuilder/);
@@ -90,17 +90,17 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(src).not.toMatch(/Delivery Model/);
   });
 
-  it("drops District Q-Matrix and Calibration tabs; shares RoleWorkbench layers", () => {
+  it("drops District Diagnostic design and Parameter estimation tabs; shares RoleWorkbench layers", () => {
     const district = read("src/pages/DistrictDashboard.jsx");
     const teacher = read("src/pages/TeacherDashboard.jsx");
     const student = read("src/pages/StudentDashboard.jsx");
     expect(district).toMatch(/RoleWorkbench/);
-    expect(district).not.toMatch(/Q-Matrix/);
+    expect(district).not.toMatch(/Diagnostic design/);
     expect(district).not.toMatch(/CalibrationConsole/);
     expect(district).toMatch(/id: "activities"/);
     expect(district).toMatch(/id: "reports"/);
     expect(teacher).toMatch(/RoleWorkbench/);
-    expect(teacher).not.toMatch(/Q-Matrix/);
+    expect(teacher).not.toMatch(/Diagnostic design/);
     expect(teacher).not.toMatch(/CalibrationConsole/);
     expect(student).toMatch(/RoleWorkbench/);
     expect(student).toMatch(/id: "reports"/);
@@ -124,8 +124,8 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     await user.click(screen.getByRole("tab", { name: "Models" }));
     expect(screen.getByRole("tab", { name: "Student Model" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Assembly Model" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Q-Matrix" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Calibration" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Diagnostic design" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Parameter estimation" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Competency Model" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Analytics" })).not.toBeInTheDocument();
     expect(screen.getByText("Student builder")).toBeInTheDocument();
@@ -146,11 +146,11 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
 
     await user.click(screen.getByRole("tab", { name: "Implementation" }));
     expect(screen.getByText("Item bank")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Activities" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Instantiated tasks" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Delivery" }));
     expect(screen.getByRole("tab", { name: "Sessions" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Evidence Accumulation" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Evidence Accumulation (inspect)" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Presentation" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Reports" })).toBeInTheDocument();
     expect(screen.getByText("Sessions surface")).toBeInTheDocument();

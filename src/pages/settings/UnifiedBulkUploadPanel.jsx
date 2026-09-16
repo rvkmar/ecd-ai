@@ -2,11 +2,11 @@
 // ------------------------------------------------------------
 // Settings > Data > Upload -- unified, staged importer.
 //
-// Pick any subset of { competency models, evidence models, task models,
+// Pick any subset of { Student Models, evidence models, task models,
 // items } as separate JSON files in one go. The panel detects what each
 // file holds, then walks the ECD dependency chain in fixed order:
 //
-//   competency models -> evidence models -> task models -> items
+//   Student Models -> evidence models -> task models -> items
 //
 // Everything it creates is a DRAFT, and a draft may be bound to a draft:
 // the bulk endpoints pass `allowDraftParents` (see src/utils/schema.js),
@@ -51,11 +51,11 @@ import { itemsKey } from "@/api/queries/items";
 const STAGES = [
   {
     key: "competencyModels",
-    title: "Competency Models",
+    title: "Student Models",
     endpoint: "/api/competencies/models/bulk",
     // What the user must do after this stage before the next one can succeed.
     gate:
-      "Copy the competency ids you need into the evidence model file's competencyId (or give a competencyName that matches exactly one competency). The competency model does not have to be confirmed first.",
+      "Copy the competency ids you need into the evidence model file's competencyId (or give a competencyName that matches exactly one competency). The Student Model does not have to be confirmed first.",
   },
   {
     key: "evidenceModels",
@@ -275,7 +275,7 @@ export default function UnifiedBulkUploadPanel() {
       <div>
         <div className="font-medium">Unified upload (staged)</div>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Select any combination of competency model, evidence model, task model, and item JSON
+          Select any combination of Student Model, evidence model, task model, and item JSON
           files — they don't all have to be present. Everything is created as a{" "}
           <span className="font-medium text-foreground">draft</span>, and a draft may reference a
           draft, so nothing has to be confirmed or locked mid-import. The panel uploads in

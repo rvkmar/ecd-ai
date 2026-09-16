@@ -44,7 +44,7 @@ export default function QMatrixList({ onCreate, onEdit, readOnly = false }) {
           spec somebody else owns. */}
       {!readOnly && (
         <div className="flex justify-end">
-          <Button onClick={onCreate}>+ New Q-Matrix</Button>
+          <Button onClick={onCreate}>+ New Diagnostic design</Button>
         </div>
       )}
 
@@ -56,7 +56,7 @@ export default function QMatrixList({ onCreate, onEdit, readOnly = false }) {
             <thead>
               <tr className="bg-slate-50 text-left text-slate-600">
                 <th className="px-4 py-2">Name</th>
-                <th className="px-4 py-2">Competency Model</th>
+                <th className="px-4 py-2">Student Model</th>
                 <th className="px-4 py-2">Attributes</th>
                 <th className="px-4 py-2">Entries</th>
                 <th className="px-4 py-2">Status</th>

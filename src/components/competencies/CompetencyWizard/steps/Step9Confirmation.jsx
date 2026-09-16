@@ -49,8 +49,8 @@ export default function Step9Confirmation() {
                         </strong>
                         <p className="mt-2 text-sm">
                             {archived
-                                ? "This Competency Model is withdrawn as a parent for new Evidence Models. Structure remains frozen for historical sessions."
-                                : "This Competency Model is locked and structurally frozen. To modify the latent architecture, clone this model to create a new draft version."}
+                                ? "This Student Model is withdrawn as a parent for new Evidence Models. Structure remains frozen for historical sessions."
+                                : "This Student Model is locked and structurally frozen. To modify the latent architecture, clone this model to create a new draft version."}
                         </p>
 
                         <div className="mt-4 flex flex-wrap gap-2">
@@ -93,7 +93,7 @@ export default function Step9Confirmation() {
                     isOpen={archiveOpen}
                     onClose={() => setArchiveOpen(false)}
                     onConfirm={archiveModel}
-                    title="Archive Competency Model"
+                    title="Archive Student Model"
                     message="This withdraws the model as a parent for new Evidence Models. Existing structure is kept. Continue?"
                     confirmLabel="Archive"
                     confirmClass="bg-slate-800 text-white"
@@ -112,7 +112,7 @@ export default function Step9Confirmation() {
                     Step 9 — Confirmation
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 max-w-3xl">
-                    Review the full structural definition of this Competency Model
+                    Review the full structural definition of this Student Model
                     before locking. Structural confirmation will permanently freeze
                     the latent architecture.
                 </p>
@@ -157,7 +157,7 @@ export default function Step9Confirmation() {
                 <p>
                     <strong className="font-semibold">ECD Governance:</strong> Confirmation
                     locks this Student Model (claim structure). Evidence Models may
-                    reference a locked, non-archived Competency Model. Structural
+                    reference a locked, non-archived Student Model. Structural
                     change requires cloning, not activation.
                 </p>
             </div>

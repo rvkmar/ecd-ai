@@ -56,7 +56,7 @@ export default function Step1ModelIdentity() {
                     Step 1 — Model Identity
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 max-w-3xl">
-                    Define the conceptual identity of this Competency Model. This
+                    Define the conceptual identity of this Student Model. This
                     represents the latent proficiency structure that will anchor all
                     downstream Evidence Models.
                 </p>
@@ -116,7 +116,7 @@ export default function Step1ModelIdentity() {
             <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm text-blue-800">
                 <Info size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
                 <p>
-                    <strong>ECD Principle:</strong> The Competency Model defines the
+                    <strong>ECD Principle:</strong> The Student Model defines the
                     latent variables representing student knowledge, skills, and
                     abilities. It must remain free from task or observable detail.
                 </p>

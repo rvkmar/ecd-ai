@@ -1,7 +1,7 @@
 // CompetencyWizard/steps/Step3ConstructFramework.jsx
 // 🟢 Step 3 — Construct Framework
 //
-// Grounds the Competency Model in a curriculum document. The author picks
+// Grounds the Student Model in a curriculum document. The author picks
 // a policy by name from the curricular policies uploaded under
 // Settings > Policies > Curricular Policies (JSON, NCF-style:
 // curricular goals -> competencies -> learning outcomes), then selects
@@ -133,7 +133,7 @@ export default function Step3ConstructFramework() {
           Step 3 — Construct Framework
         </h2>
         <p className="mt-1 text-sm text-slate-500 max-w-3xl">
-          Ground this Competency Model in a curriculum document. Select the policy and the
+          Ground this Student Model in a curriculum document. Select the policy and the
           curricular goal(s) it addresses, then add any citation or theoretical rationale.
           While optional, an explicit reference strengthens interpretive validity and
           transparency.
@@ -348,7 +348,7 @@ export default function Step3ConstructFramework() {
       <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm text-blue-800">
         <Info size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
         <p>
-          <strong>ECD Principle:</strong> The Competency Model should be grounded in a
+          <strong>ECD Principle:</strong> The Student Model should be grounded in a
           defensible theoretical or curricular framework. Explicit documentation enhances
           interpretability and supports validity arguments.
         </p>

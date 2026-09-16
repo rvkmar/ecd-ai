@@ -56,12 +56,12 @@ describe("District and teacher RoleWorkbench (D73c)", () => {
     expect(screen.getByText("Home announcements")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Implementation" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Delivery" })).toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Q-Matrix" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Calibration" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Diagnostic design" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Parameter estimation" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Models" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Implementation" }));
     expect(screen.getByText("Item bank")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Activities" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Instantiated tasks" })).toBeInTheDocument();
   });
 
   it("teacher matches the same layers and can open Reports", async () => {
@@ -79,7 +79,7 @@ describe("District and teacher RoleWorkbench (D73c)", () => {
     await user.click(screen.getByRole("tab", { name: "Implementation" }));
     await user.click(screen.getByRole("tab", { name: "Delivery" }));
     expect(screen.getByRole("tab", { name: "Sessions" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Evidence Accumulation" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Evidence Accumulation (inspect)" })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Reports" }));
     expect(screen.getByText("Reports dashboard")).toBeInTheDocument();
   });

@@ -20,7 +20,7 @@ export default function Step8StructuralAudit() {
                     Step 8 — Structural Audit
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 max-w-3xl">
-                    Review the structural integrity of this Competency Model before
+                    Review the structural integrity of this Student Model before
                     confirmation. This audit consolidates dimensional coherence,
                     state-space validity, and structural constraints to ensure
                     inferential stability.

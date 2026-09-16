@@ -1,6 +1,6 @@
 // src/components/ui/LifecycleStatusBadge.jsx
 // ------------------------------------------------------------
-// One status badge for every model layer's Operate tab.
+// One status badge for every model layer's Manage tab.
 //
 // There used to be four of these, and three disagreed with
 // server/utils/lifecycleMatrix.js:

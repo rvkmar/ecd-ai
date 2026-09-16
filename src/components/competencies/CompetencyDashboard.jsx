@@ -84,7 +84,7 @@ export default function CompetencyDashboard() {
             {/* Header */}
             <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tight">
-                    Competency Model Dashboard
+                    Student Model Dashboard
                 </h1>
                 <p className="text-sm text-gray-500">
                     Governance overview of competency models and the constructs they define.

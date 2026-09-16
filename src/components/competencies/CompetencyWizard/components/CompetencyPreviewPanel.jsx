@@ -51,7 +51,7 @@ export default function CompetencyPreviewPanel({
         <div className="space-y-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
             {/* Header */}
             <div>
-                <h3 className="text-lg font-semibold text-slate-900">Competency Model Preview</h3>
+                <h3 className="text-lg font-semibold text-slate-900">Student Model Preview</h3>
                 <p className="mt-1 text-sm text-slate-500">
                     Review the complete latent structure before confirmation.
                 </p>

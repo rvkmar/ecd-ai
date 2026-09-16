@@ -53,7 +53,7 @@ export default function EvidenceAccumulationInspector() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-semibold">Evidence Accumulation</h2>
+        <h2 className="text-xl font-semibold">Evidence Accumulation (inspect)</h2>
         <p className="text-sm text-gray-500 mt-1">
           Read-only inspect of Student Model Variables written by the delivery
           loop (PADI TR9 §2.5). This is not an authoring object. Open a session

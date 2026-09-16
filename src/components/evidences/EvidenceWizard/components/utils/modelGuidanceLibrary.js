@@ -266,7 +266,7 @@ export const MODEL_GUIDANCE_LIBRARY = {
 
        Note the layer distinction the panel has to keep straight: the gate
        here is the COMPETENCY's `variableType`, while the Q-matrix's
-       columns are the competency MODEL's binary `smVariables`. Two
+       columns are the Student Model's binary `smVariables`. Two
        different binaries, one per layer.
     ===================================================== */
 
@@ -406,7 +406,7 @@ export function getModelAvailability(variableType) {
                 ...model,
                 compatible: false,
                 reason:
-                    "The target competency has no variable type set. Set it in the Competency Model before choosing a statistical model."
+                    "The target competency has no variable type set. Set it in the Student Model before choosing a statistical model."
             };
         }
 

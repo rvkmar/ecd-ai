@@ -308,7 +308,7 @@ export default function EvidenceModelList({
                                                     onClick={() => onCalibrate?.(m)}
                                                     className="bg-indigo-600 text-white px-3 py-1 rounded"
                                                 >
-                                                    Calibrate Evidence Model
+                                                    Evidence Model parameters
                                                 </button>
 
                                                 <button

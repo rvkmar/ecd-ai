@@ -37,6 +37,14 @@ export default function CalibrationConsole({ readOnly = false }) {
 
   return (
     <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight">Parameter estimation</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Fit Evidence Model measurement parameters via calibration jobs (R/IRT).
+          Distinct from Parameters &amp; Activation on an Evidence Model.
+        </p>
+      </div>
+
       {!readOnly && (
         <EnqueueCalibrationForm
           onEnqueued={(job) => {

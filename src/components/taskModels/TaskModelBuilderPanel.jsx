@@ -198,7 +198,7 @@ export default function TaskModelBuilderPanel() {
     if (loading) {
         return (
             <div className="p-6">
-                <h2 className="mb-4 text-2xl font-semibold">Operate Task Model</h2>
+                <h2 className="mb-4 text-2xl font-semibold">Manage Task Model</h2>
                 <p className="text-sm text-slate-500">
                     Loading governed task structures…
                 </p>
@@ -209,7 +209,7 @@ export default function TaskModelBuilderPanel() {
     if (evidenceError || itemsError) {
         return (
             <div className="p-6">
-                <h2 className="mb-4 text-2xl font-semibold">Operate Task Model</h2>
+                <h2 className="mb-4 text-2xl font-semibold">Manage Task Model</h2>
                 <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     Unable to load the governed structures this console depends on.
                     Refresh to retry.
@@ -224,7 +224,7 @@ export default function TaskModelBuilderPanel() {
         <div className="space-y-6 p-6">
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-semibold">Operate Task Model</h2>
+                    <h2 className="text-2xl font-semibold">Manage Task Model</h2>
                     <p className="mt-1 text-sm text-slate-500">
                         Author, review and promote Task Models against confirmed
                         Evidence Models.

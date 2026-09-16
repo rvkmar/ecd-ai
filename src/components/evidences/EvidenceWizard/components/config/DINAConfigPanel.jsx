@@ -149,7 +149,7 @@ export function DINAConfigPanelView({
           <p className="text-caption text-amber-700">
             No Q-matrix exists for{" "}
             <span className="font-medium">{selectedCompetencyModel?.name}</span> yet. An
-            administrator builds one in the Q-Matrix editor, over this model&apos;s binary Student
+            administrator builds one in the Diagnostic design editor, over this model&apos;s binary Student
             Model Variables; this panel can bind one once it exists.
           </p>
         ) : (

@@ -24,7 +24,7 @@ const rows = [
 export const Default: Story = {
   render: () => (
     <Table>
-      <TableCaption>Competency Models</TableCaption>
+      <TableCaption>Student Models</TableCaption>
       <TableHeader>
         <TableRow>
           <TableHead>ID</TableHead>

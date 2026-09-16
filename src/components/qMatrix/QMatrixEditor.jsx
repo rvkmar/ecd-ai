@@ -348,7 +348,7 @@ export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly =
       onSaveAndReview={saveAndReview}
       onConfirm={confirmMatrix}
       onReturnToDraft={returnToDraft}
-      modelLabel="Q-Matrix"
+      modelLabel="Diagnostic design"
     >
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -358,11 +358,11 @@ export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly =
               value={draft.name}
               disabled={locked}
               onChange={(e) => patchDraft({ name: e.target.value })}
-              placeholder="e.g. Fractions Diagnostic Q-Matrix"
+              placeholder="e.g. Fractions Diagnostic design"
             />
           </div>
           <div>
-            <label className="text-label font-medium text-slate-600">Competency Model</label>
+            <label className="text-label font-medium text-slate-600">Student Model</label>
             <Combobox
               options={competencyModelOptions.map((m) => ({ value: m.id, label: m.name }))}
               value={draft.competencyModelId}

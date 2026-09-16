@@ -148,14 +148,14 @@ export default function CompetencyModelBuilderPanel() {
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold">Operate Competency Model</h2>
+                <h2 className="text-2xl font-semibold">Manage Student Model</h2>
 
                 <button
                     onClick={handleCreate}
                     className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded hover:bg-gray-800"
                 >
                     <Plus size={16} />
-                    New Competency Model
+                    New Student Model
                 </button>
             </div>
 

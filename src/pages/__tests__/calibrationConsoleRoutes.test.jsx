@@ -31,7 +31,7 @@ describe("calibration console wiring", () => {
   it("AdminPage exposes a Calibration tab that embeds the console", () => {
     const src = read("src/pages/AdminPage.jsx");
     expect(src).toMatch(/id: "calibration"/);
-    expect(src).toMatch(/label: "Calibration"/);
+    expect(src).toMatch(/label: "Parameter estimation"/);
     expect(src).toMatch(/CalibrationConsole/);
     expect(src).toMatch(/id: "models"/);
   });

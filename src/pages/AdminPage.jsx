@@ -75,8 +75,8 @@ export default function AdminPage() {
             { id: "evidence", label: "Evidence Model", content: <EvidenceModelBuilder /> },
             { id: "taskmodels", label: "Task Model", content: <TaskModelBuilder /> },
             { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
-            { id: "qmatrix", label: "Q-Matrix", content: <QMatrixModelBuilder /> },
-            { id: "calibration", label: "Calibration", content: <CalibrationConsole /> },
+            { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },
+            { id: "calibration", label: "Parameter estimation", content: <CalibrationConsole /> },
           ],
         },
         {
@@ -84,7 +84,7 @@ export default function AdminPage() {
           label: "Implementation",
           tabs: [
             { id: "itembank", label: "Item Bank", content: <ItemBankAdmin /> },
-            { id: "activities", label: "Activities", content: <TasksManager /> },
+            { id: "activities", label: "Instantiated tasks", content: <TasksManager /> },
           ],
         },
         {
@@ -92,7 +92,7 @@ export default function AdminPage() {
           label: "Delivery",
           tabs: [
             { id: "sessions", label: "Sessions", content: <SessionBuilder /> },
-            { id: "accumulation", label: "Evidence Accumulation", content: <EvidenceAccumulationInspector /> },
+            { id: "accumulation", label: "Evidence Accumulation (inspect)", content: <EvidenceAccumulationInspector /> },
             { id: "presentation", label: "Presentation", content: <PresentationModelStub /> },
             { id: "reports", label: "Reports", content: <AnalyticsReports /> },
           ],

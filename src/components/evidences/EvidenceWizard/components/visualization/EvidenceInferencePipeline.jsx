@@ -90,7 +90,7 @@ export default function EvidenceInferencePipeline() {
 
                 <Stage
                     title="Claim Inference"
-                    subtitle="Competency estimate"
+                    subtitle="Student Model estimate"
                 />
 
             </div>

@@ -2,7 +2,7 @@
 // ------------------------------------------------------------
 // One name for the "open this model" button, shared by all four
 // model lists (Competency / Evidence / Task Model / Item) so the
-// Operate tab reads the same way at every layer.
+// Manage tab reads the same way at every layer.
 //
 //   draft      → "Edit"    the model is still being authored.
 //   reviewed   → "Review"  it was saved from the wizard's final step;

@@ -502,7 +502,7 @@ export default function Step6StatisticalModel({
                 PosteriorPanelMulti) and IRT ability estimation
                 (IRTInferencePanel) now live in
                 src/components/evidences/calibration/panels/ and are
-                rendered by the Calibration & Operationalization
+                rendered by the Parameters & Activation
                 workspace against a real active parameter set.
             ===================================================== */}
 
@@ -516,7 +516,7 @@ export default function Step6StatisticalModel({
                         Posterior / IRT inference previews run against
                         calibrated parameters, which only exist once this
                         evidence model is confirmed. Confirm the model, then
-                        open <strong className="font-semibold text-slate-800">Calibrate</strong> from
+                        open <strong className="font-semibold text-slate-800">Evidence Model parameters</strong> from
                         the evidence model list to estimate parameters and
                         exercise the inference panels.
                     </span>

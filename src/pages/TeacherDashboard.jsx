@@ -45,7 +45,7 @@ export default function TeacherDashboard() {
           label: "Implementation",
           tabs: [
             { id: "itembank", label: "Item Bank", content: <ItemBankAdmin /> },
-            { id: "activities", label: "Activities", content: <TasksManager /> },
+            { id: "activities", label: "Instantiated tasks", content: <TasksManager /> },
           ],
         },
         {
@@ -53,7 +53,7 @@ export default function TeacherDashboard() {
           label: "Delivery",
           tabs: [
             { id: "sessions", label: "Sessions", content: <SessionBuilder /> },
-            { id: "accumulation", label: "Evidence Accumulation", content: <EvidenceAccumulationInspector /> },
+            { id: "accumulation", label: "Evidence Accumulation (inspect)", content: <EvidenceAccumulationInspector /> },
             { id: "reports", label: "Reports", content: <AnalyticsReports /> },
           ],
         },

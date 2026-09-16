@@ -244,7 +244,7 @@ describe("Q-matrix binding", () => {
     expect(screen.getByText(/no q-matrix exists/i)).toBeInTheDocument();
     // Naming the model is the difference between a dead end and an errand.
     expect(screen.getByText(/Grade 6 Fraction Diagnosis/)).toBeInTheDocument();
-    expect(screen.getByText(/Q-Matrix editor/i)).toBeInTheDocument();
+    expect(screen.getByText(/Diagnostic design editor/i)).toBeInTheDocument();
   });
 
   it("explains the earlier missing step when no competency is selected", () => {

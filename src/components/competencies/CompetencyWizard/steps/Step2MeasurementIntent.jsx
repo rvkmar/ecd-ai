@@ -87,7 +87,7 @@ export default function Step2MeasurementIntent() {
                     Step 2 — Measurement Intent
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 max-w-3xl">
-                    Specify whether this Competency Model represents a single latent
+                    Specify whether this Student Model represents a single latent
                     proficiency dimension or multiple independent dimensions. This
                     decision determines statistical compatibility and structural rules.
                 </p>

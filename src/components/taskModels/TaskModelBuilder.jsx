@@ -47,7 +47,7 @@ export default function TaskModelBuilder() {
           variant={mode === "create" ? "default" : "outline"}
           onClick={() => setMode("create")}
         >
-          Operate Task Model
+          Manage Task Model
         </Button>
       </div>
 

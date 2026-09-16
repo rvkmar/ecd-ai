@@ -53,7 +53,7 @@ import {
 
 const TABS = [
     { id: "lifecycle", label: "Lifecycle", icon: GitBranch },
-    { id: "calibration", label: "Calibration", icon: Upload },
+    { id: "calibration", label: "Fit parameters", icon: Upload },
     { id: "parameters", label: "Parameter Sets", icon: Layers },
     { id: "inference", label: "Inference", icon: FlaskConical },
     { id: "decision", label: "Decision & Activation", icon: Scale },
@@ -203,7 +203,7 @@ export default function EvidenceModelCalibration({
                     <div className="flex flex-wrap items-center gap-2">
 
                         <h2 className="text-2xl font-semibold text-slate-900">
-                            Calibration &amp; Operationalization
+                            Parameters &amp; Activation
                         </h2>
 
                         <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${stageBadgeClass(stage)}`}>

@@ -97,7 +97,7 @@ export function CurricularPolicyManager() {
     try {
       // mutateAsync (not fire-and-forget mutate) so the toast below reflects
       // the real outcome — the server returns 409 when a confirmed or locked
-      // competency model still references this policy, and that message is
+      // Student Model still references this policy, and that message is
       // the whole point of showing it to the admin.
       await deletePolicy.mutateAsync(target.id);
       toast.success("Curricular policy deleted.");
@@ -113,7 +113,7 @@ export function CurricularPolicyManager() {
         <h2 className="text-xl font-semibold">Curricular Policies</h2>
         <p className="text-sm text-muted-foreground">
           Published curriculum documents expressed as curricular goals, their competencies, and
-          learning outcomes. Uploaded policies become selectable in the Competency Model wizard
+          learning outcomes. Uploaded policies become selectable in the Student Model wizard
           at <span className="font-medium">Step 3 — Construct Framework</span>, where an author
           picks a policy by name and then the curricular goal(s) the model is grounded in.
         </p>
@@ -218,7 +218,7 @@ export function CurricularPolicyManager() {
         title="Delete Curricular Policy"
         message={
           pendingDelete
-            ? `Delete "${pendingDelete.name}"? Competency models already grounded in it keep their saved policy name and goals, but the policy will no longer be selectable. This cannot be undone.`
+            ? `Delete "${pendingDelete.name}"? Student Models already grounded in it keep their saved policy name and goals, but the policy will no longer be selectable. This cannot be undone.`
             : ""
         }
         confirmClass="bg-red-500 hover:bg-red-600 text-white"

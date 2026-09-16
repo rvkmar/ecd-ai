@@ -92,7 +92,7 @@ export default function CloneModelDialog({
                         id="clone-model-title"
                         className="text-lg font-semibold text-slate-900"
                     >
-                        Clone Competency Model
+                        Clone Student Model
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
                         Create a new draft version based on the locked Student Model structure.

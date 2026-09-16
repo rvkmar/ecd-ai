@@ -46,7 +46,7 @@ export default function AssemblyModelList({ onCreate, onEdit }) {
             <thead>
               <tr className="bg-slate-50 text-left text-slate-600">
                 <th className="px-4 py-2">Name</th>
-                <th className="px-4 py-2">Competency Model</th>
+                <th className="px-4 py-2">Student Model</th>
                 <th className="px-4 py-2">SMV Targets</th>
                 <th className="px-4 py-2">Stopping Rules</th>
                 <th className="px-4 py-2">Status</th>
