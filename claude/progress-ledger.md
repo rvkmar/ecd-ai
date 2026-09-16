@@ -23,6 +23,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
+| Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 | Next queued | Calendar **D81** — W17 psychometric dashboards (first unit). |
 | Block | **W16** — R analytics and reporting service (**closed** at D80). Off-cal EM residual does not reopen the gate. |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
@@ -53,6 +54,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D80 | product + `claude/day80-scheduled-recalibration.md`. Suite **1510 passed / 9 skipped**; enqueue-only cron; W16 gate closed. |
 | HEAD at EM-R1 | product + `claude/day80b-em-r1-executable-evaluation.md`. Suite **1523 passed / 9 skipped**; empty-map rubric/process_log/auto. |
 | HEAD at EM-R2…R5 | product + `claude/day80c-em-r2-r5-residual-closeout.md`. Suite **1536 passed / 9 skipped**; residual stack closed. |
+| HEAD at 2026-09-17 EM inventory | analysis-only close at `7330a41` + this handoff commit. Suite **1536 passed / 9 skipped**; build green (recharts 446.89 kB). Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. |
 
 ## Session log
 
@@ -106,6 +108,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-16 | EM-R1 | 3, alone (off-cal) | Executable rubric / process_log / auto in Identification when activation map empty. Suite **1523 passed / 9 skipped**. Residual EM-R2…EM-R5. |
 | 2026-09-16 | EM-R2…R5 | 2+1+2 (off-cal) | Console ingest smoke; prereq gating; Assembly confirm floors; Force attribute-split Q. Handoff `day80c-em-r2-r5-residual-closeout.md`. |
 | 2026-09-16 | close | — | Off-cal EM residual close (EM-R1…EM-R5). Suite **1536 passed / 9 skipped**; build green; `2157b3a` ≡ `main/master`. No half-applied work; no new compression debt. Calendar D81 left unmarked. Next: D81. |
+| 2026-09-17 | analysis | — | Off-cal EM remaining-gap inventory. Confirmed EM-core closed; file list for W25/W23/W27. Suite **1536 passed / 9 skipped**; build green; tree was clean at `7330a41`. Handoff: `day81-offcal-em-remaining-gap-inventory.md`. Next: D81. |
 
 ## Compression debt
 
@@ -198,3 +201,6 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 - ~~Force Q-matrix still single-attribute~~ closed EM-R3
 - Newtonian live promote on `:6060` (confirm → attach-seed → operational) — **open**
 - Live Newtonian console walk beyond suite ingest fixture — **open**
+- Work Products / Rubrics as first-class objects + multi-phase eval + human rating (W25 / G11–G12) — **open**; file inventory in `claude/day81-offcal-em-remaining-gap-inventory.md`
+- Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)
+- Design Patterns (W27 / G7) — absent; Additional KSAs still notes-only on EMs
