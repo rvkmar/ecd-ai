@@ -32,10 +32,12 @@ Unit rewritten only to **ground dispositions in live code**, not to skip the mod
 
 ```
 NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
-  (docs-only unit; full suite expected green / unchanged)
+  1611 passed | 9 skipped (1620)   # product commit + session-close re-run
 npm run build
-  green
+  green (~14s)
 ```
+
+Product commit: `725ef0c`. Session-close: `claude/day91-w19-session-close.md`.
 
 ## Delivered
 
