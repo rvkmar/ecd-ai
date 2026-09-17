@@ -11,6 +11,11 @@ import { validateCalibrationResponse } from "./calibrationContract.js";
 import { postCalibration } from "./rClient.js";
 import { jobTimeoutMsForKind } from "./jobTimeouts.js";
 import {
+  computeQueueMetrics,
+  maxConcurrentJobs,
+  maybeEmitQueueDepthAlarm,
+} from "./calibrationQueueLimits.js";
+import {
   ATTRIBUTE_PROFILE_SUMMARY_KIND,
   runAttributeProfileSummaryJob,
 } from "../delivery/attributeProfileCohortSummary.js";
@@ -22,6 +27,13 @@ function nowIso() {
 function findJob(db, id) {
   return (db.calibrationJobs || []).find((j) => j.id === id);
 }
+
+export function getCalibrationQueueMetrics(db = loadDB()) {
+  return computeQueueMetrics(db.calibrationJobs || []);
+}
+
+/** Single dispatcher — concurrent kickQueue must not double-dispatch. */
+let dispatcherActive = false;
 
 /** Wall-clock wrap for Node-only jobs (no R process to kill). */
 function withWallClockTimeout(work, timeoutMs) {
@@ -167,13 +179,43 @@ export async function processJobById(
 }
 
 export async function processQueuedJobs(options = {}) {
-  const db = loadDB();
-  const queued = (db.calibrationJobs || []).filter((j) => j.status === "queued");
-  const processed = [];
-  for (const job of queued) {
-    processed.push(await processJobById(job.id, options));
+  if (dispatcherActive) {
+    maybeEmitQueueDepthAlarm(getCalibrationQueueMetrics());
+    return [];
   }
-  return processed;
+  dispatcherActive = true;
+  const processed = [];
+  try {
+    const max = Number.isFinite(options.maxConcurrent)
+      ? Math.max(1, Math.floor(options.maxConcurrent))
+      : maxConcurrentJobs();
+
+    while (true) {
+      const db = loadDB();
+      const metrics = computeQueueMetrics(db.calibrationJobs || []);
+      maybeEmitQueueDepthAlarm(metrics);
+      if (metrics.running >= max) break;
+
+      const slots = max - metrics.running;
+      const batch = (db.calibrationJobs || [])
+        .filter((j) => j.status === "queued")
+        .slice(0, slots);
+      if (batch.length === 0) break;
+
+      if (batch.length === 1) {
+        processed.push(await processJobById(batch[0].id, options));
+      } else {
+        const results = await Promise.all(
+          batch.map((job) => processJobById(job.id, options))
+        );
+        processed.push(...results);
+      }
+    }
+
+    return processed;
+  } finally {
+    dispatcherActive = false;
+  }
 }
 
 // Auto-run is opt-in. Tests leave it off and call processJobById (or
@@ -191,3 +233,9 @@ export function kickQueue(options = {}) {
   });
   return undefined;
 }
+
+export const __testing__ = {
+  resetDispatcher() {
+    dispatcherActive = false;
+  },
+};

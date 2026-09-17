@@ -116,16 +116,32 @@ api$handle("POST", "/irt/calibrate", function(req, res) {
   calibrate_dispatch(req, res, family = "irt")
 }, serializer = .json_unboxed)
 
-# Diagnostic only. Does not list futures() -- that call threw
-# "no applicable method for 'futures' applied to an object of class logical".
+# Diagnostic only. Workers are pinned via R_WORKERS (default 1). Do NOT
+# use future::multisession / availableCores() — inside a CPU-limited
+# container availableCores() often reports the HOST core count (D87).
 api$handle("GET", "/irt/parallel-status", function(req, res) {
-  list(
-    plan = "sequential",
-    workers = 1L,
-    note = "Parallel backends are not used. Calibration is a queued job on node.",
-    timestamp = format(Sys.time(), tz = "UTC", usetz = TRUE)
+  workers_env <- Sys.getenv("R_WORKERS", unset = "1")
+  workers <- suppressWarnings(as.integer(workers_env))
+  if (is.na(workers) || workers < 1L) workers <- 1L
+  host_cores <- tryCatch(
+    as.integer(parallel::detectCores(logical = TRUE)),
+    error = function(e) NA_integer_
   )
-})
+  list(
+    plan = jsonlite::unbox("sequential"),
+    workers = jsonlite::unbox(workers),
+    workerSource = jsonlite::unbox("R_WORKERS (explicit; not availableCores())"),
+    availableCoresReported = if (is.na(host_cores)) {
+      jsonlite::unbox(NA_integer_)
+    } else {
+      jsonlite::unbox(host_cores)
+    },
+    note = jsonlite::unbox(
+      "Parallel backends are not used. Calibration is a queued job on node. Worker count is pinned to match the container limit."
+    ),
+    timestamp = jsonlite::unbox(format(Sys.time(), tz = "UTC", usetz = TRUE))
+  )
+}, serializer = .json_unboxed)
 
 # D86: deliberately non-terminating handler for timeout + process-kill tests.
 # Gated on R_ALLOW_HANG_ENDPOINT=1 so a production image does not expose sleep.

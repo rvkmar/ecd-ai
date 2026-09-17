@@ -90,6 +90,43 @@ describe("role gates", () => {
     expect(student.status).toBe(403);
   });
 
+  it("exposes queue-metrics to admin/district (D87)", async () => {
+    dbState.current.calibrationJobs = [
+      {
+        id: "j1",
+        kind: "irt-parameters",
+        status: "queued",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+        requestedBy: "admin1",
+        requestedAt: "2026-12-25T09:00:00Z",
+        startedAt: null,
+        finishedAt: null,
+        request: validRequest(),
+        response: null,
+        error: null,
+        attempts: 1,
+        maxAttempts: 3,
+        ingestedParameterSetId: null,
+      },
+    ];
+    const app = await jobsApp();
+    const res = await request(app)
+      .get("/api/calibrationJobs/queue-metrics")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`);
+    expect(res.status).toBe(200);
+    expect(res.body.queued).toBe(1);
+    expect(res.body.running).toBe(0);
+    expect(res.body.maxConcurrent).toBe(1);
+    expect(res.body).toHaveProperty("depthAlarm");
+    expect(res.body.rWorkersExpected).toBe(1);
+
+    const student = await request(app)
+      .get("/api/calibrationJobs/queue-metrics")
+      .set("Authorization", `Bearer ${tokenFor("student")}`);
+    expect(student.status).toBe(403);
+  });
+
   it("refuses a write from district or teacher", async () => {
     const app = await jobsApp();
     for (const role of ["district", "teacher", "student"]) {

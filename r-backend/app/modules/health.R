@@ -24,10 +24,16 @@ library(jsonlite)
 health_payload <- function() {
   versions <- lapply(HEALTH_PACKAGES, function(pkg) .unbox_chr(.pkg_version(pkg)))
   names(versions) <- HEALTH_PACKAGES
+  workers_env <- Sys.getenv("R_WORKERS", unset = "1")
+  workers <- suppressWarnings(as.integer(workers_env))
+  if (is.na(workers) || workers < 1L) workers <- 1L
   list(
     status = jsonlite::unbox("healthy"),
     timestamp = .unbox_chr(format(Sys.time(), tz = "UTC", usetz = TRUE)),
     rVersion = .unbox_chr(paste(R.version$major, R.version$minor, sep = ".")),
-    packages = versions
+    packages = versions,
+    # D87: pin reported workers to R_WORKERS (compose sets 1).
+    workers = jsonlite::unbox(workers),
+    plan = jsonlite::unbox("sequential")
   )
 }

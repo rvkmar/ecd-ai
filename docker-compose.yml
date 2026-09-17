@@ -19,6 +19,11 @@ services:
       - R_BACKEND_URL=http://r-backend:4000
       - R_SERVICE_TOKEN=${R_SERVICE_TOKEN:-}
       - CALIBRATION_QUEUE_AUTORUN=1
+      # D87: match R_WORKERS=1 — never dispatch more concurrent jobs than
+      # the R container can run without thrashing.
+      - CALIBRATION_MAX_CONCURRENT=1
+      - CALIBRATION_QUEUE_DEPTH_ALARM=20
+      - R_WORKERS=1
       - ECD_DB_FILE=/data/db.json
       - ECD_BACKUP_DIR=/data/backups
     depends_on:
@@ -66,10 +71,19 @@ services:
     command: Rscript /home/app/start.R
     environment:
       - R_SERVICE_TOKEN=${R_SERVICE_TOKEN:-}
+      # D87: pin Plumber workers explicitly. Never trust availableCores()
+      # inside a CPU-limited container (it often reports the host).
+      - R_WORKERS=1
     volumes:
       - ./r-backend/app:/home/app
     expose:
       - "4000"
+    # Compose V2 applies deploy.resources.limits on `compose up`.
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
     restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
@@ -90,4 +104,4 @@ services:
 
 volumes:
   ecd_data:
-  mongo_data:
+  mongo_data:

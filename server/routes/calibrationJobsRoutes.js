@@ -14,7 +14,7 @@ import {
   validateCalibrationRequest,
 } from "../r/calibrationContract.js";
 import { ingestCalibrationJob, ingestRefusal } from "../r/calibrationIngest.js";
-import { kickQueue, processJobById } from "../r/calibrationWorker.js";
+import { kickQueue, processJobById, getCalibrationQueueMetrics } from "../r/calibrationWorker.js";
 import { isDeclaredJobKind } from "../r/calibrationContract.js";
 import {
   applyNamedCalibrationFixture,
@@ -47,6 +47,13 @@ router.get("/", canView, (req, res) => {
   if (status) rows = rows.filter((j) => j.status === status);
   if (kind) rows = rows.filter((j) => j.kind === kind);
   res.json(rows);
+});
+
+// ------------------------------
+// GET /api/calibrationJobs/queue-metrics (D87 — must be before /:id)
+// ------------------------------
+router.get("/queue-metrics", canView, (_req, res) => {
+  res.json(getCalibrationQueueMetrics());
 });
 
 // ------------------------------
