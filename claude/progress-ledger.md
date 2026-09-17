@@ -59,7 +59,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D82 | product + `claude/day82-item-analysis-dashboard.md`. Suite **1549 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at D83 | product + `claude/day83-test-information-dashboard.md`. Suite **1557 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at D84 | product + `claude/day84-attribute-profile-dif-dashboards.md`. Suite **1563 passed / 9 skipped**; build green (recharts 451.37 kB). |
-| HEAD at D85 / W17 close | product + `claude/day85-export-w17-handoff.md` + `claude/day85-w17-close.md`. Suite **1570 passed / 9 skipped**; build green (recharts 451.37 kB). |
+| HEAD at D85 / W17 close | product `2a7c2f0` + `claude/day85-export-w17-handoff.md` + `claude/day85-w17-close.md`. Suite **1570 passed / 9 skipped**; build green (recharts 451.37 kB). |
+| HEAD at 2026-09-17 W17 session close | this close. Suite re-run **1570 passed / 9 skipped**; build 13.02s (recharts 451.37 kB). Tree clean at product `2a7c2f0` then this close. Calendar W17 block ✅. Next: D86. |
 
 ## Session log
 
@@ -119,6 +120,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | D83 | 1–2, alone | Test-information dashboard: I(θ)+SEM curves, Assembly requiredSEM overlay, never-meets banner, labelled KR-20 vs marginal reliability. Suite **1557 passed / 9 skipped**. Next: D84. |
 | 2026-09-17 | D84 | 1, alone | Attribute-profile (both estimands labelled) + DIF (on-screen flag framing, ETS band). Suite **1563 passed / 9 skipped**. Next: D85. |
 | 2026-09-17 | D85 | 1, alone | CSV/PDF export with mandatory provenance across all four W17 views; W17 gate closed. Suite **1570 passed / 9 skipped**. Next: W18 / D86. |
+| 2026-09-17 | close | — | W17 session close (D81–D85). Suite re-run **1570 passed / 9 skipped**; build green, recharts 451.37 kB. No half-applied work; no new compression debt. D54 re-dated to W18 close. Calendar D81–D85 + W17 block ✅. Next: D86. |
 
 ## Compression debt
 
