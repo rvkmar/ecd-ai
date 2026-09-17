@@ -66,6 +66,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-17 W18 session close (D86–D87) | this close. Close re-run had 2×5s timeout flakes (isolation green); build green. Calendar D86–D87 ✅. Next: D88. |
 | HEAD at D88 | product + `claude/day88-benchmark-suite-ci-perturbation.md`. Suite **1605 passed / 9 skipped** (close re-run 1×5s flake, isolation green); build green (recharts 451.37 kB). |
 | HEAD at D89 | live-proof handoff `claude/day89-kill-r-mid-session.md` (no product code). Suite **1605 passed / 9 skipped**; build green (recharts 451.37 kB). |
+| HEAD at 2026-09-17 W18 session close (D88–D89) | this close. Suite re-run **1605 passed / 9 skipped**; build green. Calendar D88–D89 ✅. W18 gate closed. Next: D90. |
 
 ## Session log
 
@@ -131,6 +132,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | close | — | W18 session close (D86–D87 only; gate D89 not due). Close re-run 2×5s flakes (isolation green). No half-applied work; no new compression debt. Calendar D87 ✅. Next: D88. |
 | 2026-09-17 | D88 | 2, alone | Perturbation-fail for five CI benchmarks + Hub plink package gate. Premise: pipelines already in CI. |
 | 2026-09-17 | D89 | 3, alone | Never-compress live kill of `r-backend` mid-session. Delivery continued; calib failed with reason; queue drained after restart. |
+| 2026-09-17 | close | — | W18 session close (D88–D89; gate D89 met). Suite re-run **1605 passed / 9 skipped**; build green. No half-applied work; no new compression debt. D54 still open → due at W18 block close (D90). Calendar D88–D89 ✅. Next: D90. |
 
 ## Compression debt
 
@@ -145,7 +147,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D62/D63 | Live enqueue → process → ingest against running R | Admin token / D65 console; `/health` only that close | D64 CI + D65 | D64 covers scripted LSAT7 in CI; D65 console walked 2026-09-13 (`job1789319022666002`). |
 | D64 | Live mirt LSAT7 not executed in the authoring environment (no Docker/R here) | CI job `lsat7-pipeline` is the acceptance | this PR's CI | **closed** — live job green (`mirt 1.47`, `converged: true`, 1000×5) |
 | D46 | Phase-2 `apiFetch` | — | — | **closed** (`e533a77` / PRs #5–#6) |
-| D54 | Wizard readiness mirror has no agreement test | Token | W12 close | **open, past multiple block closes → standing risk** — re-dated at W17 close to **W18 close** |
+| D54 | Wizard readiness mirror has no agreement test | Token | W12 close | **open, past multiple block closes → standing risk** — re-dated at W17 close to **W18 close**; W18 *gate* closed at D89 but **block** close is D90 — discharge D54 with D90, do not roll again without reason |
 | D65 | Live operator walk + parameter-set diff UI skipped | Tests + routes; seed password; diff never built | D71 / follow-on | **walk closed 2026-09-13** (coordinator, `job1789319022666002` → `ps1789319081640`). Parameter-set diff UI still open. |
 | D66 | Live GDINA sim10GDINA not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `sim10gdinaPipeline.test.js` | this PR's CI | **closed** — live job green (`GDINA 2.9.12`, `converged: true`, 1000×10; first CI keyed `"Item 1"`, then keyed by request `itemIds`) |
 | D67 | Live TAM LSAT7 CTT not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `cttPipeline.test.js` | this PR's CI | **closed** — live job green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`; observed KR-20 0.4542 recorded, not pinned) |
