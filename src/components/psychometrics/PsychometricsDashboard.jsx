@@ -1,5 +1,5 @@
-// D81 — psychometric dashboard shell. Lists analysisArtefacts with
-// provenance; concrete figure dashboards are D82+.
+// D81 — psychometric dashboard shell. Lists analysisArtefacts; D82 adds
+// the item-analysis figure pane.
 
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -14,7 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import ItemAnalysisDashboard from "./ItemAnalysisDashboard";
 import ProvenanceStamp from "./ProvenanceStamp";
 import ReferenceInformationChart from "./ReferenceInformationChart";
 import { provenanceFromArtefact } from "./provenance";
@@ -38,6 +40,7 @@ const DEMO_PROVENANCE = {
 
 export default function PsychometricsDashboard() {
   const [kind, setKind] = useState("all");
+  const [panel, setPanel] = useState("item-analysis");
   const filters = useMemo(
     () => (kind === "all" ? {} : { kind }),
     [kind]
@@ -54,8 +57,7 @@ export default function PsychometricsDashboard() {
           <h2 className="text-xl font-semibold tracking-tight">Psychometrics</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Provenance-bearing analysis artefacts from calibration jobs. Every
-            figure in this workspace must carry a stamp. Chart panes for each
-            kind land in later W17 units.
+            figure in this workspace must carry a stamp.
           </p>
           <p className="mt-2 text-caption text-muted-foreground">
             Bookmark:{" "}
@@ -67,88 +69,95 @@ export default function PsychometricsDashboard() {
             </Link>
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={kind} onValueChange={setKind}>
-            <SelectTrigger className="w-[220px]" aria-label="Filter by artefact kind">
-              <SelectValue placeholder="Kind" />
-            </SelectTrigger>
-            <SelectContent>
-              {KIND_FILTERS.map((k) => (
-                <SelectItem key={k.value} value={k.value}>
-                  {k.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-          >
-            Refresh
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          disabled={isFetching}
+        >
+          Refresh
+        </Button>
       </div>
 
-      {isLoading ? (
-        <Spinner />
-      ) : isError ? (
-        <p className="text-sm text-destructive" role="alert">
-          Could not load analysis artefacts
-          {error?.message ? `: ${error.message}` : "."}
-        </p>
-      ) : artefacts.length === 0 ? (
-        <div
-          className="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground"
-          data-testid="psychometrics-empty"
-        >
-          No analysis artefacts yet. Run an analysis job from Parameter
-          estimation (item analysis, test information, DIF, equating, or
-          attribute-profile cohort), then return here.
-        </div>
-      ) : (
-        <ul className="space-y-4" data-testid="psychometrics-artefact-list">
-          {artefacts.map((artefact) => {
-            const provenance = provenanceFromArtefact(artefact);
-            return (
-              <li
-                key={artefact.id}
-                className="rounded-xl border border-border bg-card p-4 shadow-sm"
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="font-medium">{artefact.kind}</h3>
-                  <span className="font-mono text-2xs text-muted-foreground">
-                    {artefact.id}
-                  </span>
-                </div>
-                {provenance ? (
-                  <ProvenanceStamp provenance={provenance} />
-                ) : (
-                  <p className="mt-2 text-sm text-destructive">
-                    Artefact is missing provenance fields and cannot be charted.
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <Tabs value={panel} onValueChange={setPanel}>
+        <TabsList className="flex flex-wrap gap-2">
+          <TabsTrigger value="item-analysis">Item analysis</TabsTrigger>
+          <TabsTrigger value="catalogue">Artefact catalogue</TabsTrigger>
+          <TabsTrigger value="reference">Reference chrome</TabsTrigger>
+        </TabsList>
 
-      <section aria-labelledby="psychometrics-reference-heading" className="space-y-3">
-        <h3
-          id="psychometrics-reference-heading"
-          className="text-sm font-semibold tracking-tight"
-        >
-          Reference chart (block chrome)
-        </h3>
-        <p className="text-caption text-muted-foreground">
-          Demonstrates the shared recharts treatment and the mandatory stamp.
-          Live artefact charts arrive in D82+.
-        </p>
-        <ReferenceInformationChart provenance={DEMO_PROVENANCE} />
-      </section>
+        <TabsContent value="item-analysis" className="mt-6">
+          <ItemAnalysisDashboard />
+        </TabsContent>
+
+        <TabsContent value="catalogue" className="mt-6 space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={kind} onValueChange={setKind}>
+              <SelectTrigger className="w-[220px]" aria-label="Filter by artefact kind">
+                <SelectValue placeholder="Kind" />
+              </SelectTrigger>
+              <SelectContent>
+                {KIND_FILTERS.map((k) => (
+                  <SelectItem key={k.value} value={k.value}>
+                    {k.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isLoading ? (
+            <Spinner />
+          ) : isError ? (
+            <p className="text-sm text-destructive" role="alert">
+              Could not load analysis artefacts
+              {error?.message ? `: ${error.message}` : "."}
+            </p>
+          ) : artefacts.length === 0 ? (
+            <div
+              className="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground"
+              data-testid="psychometrics-empty"
+            >
+              No analysis artefacts yet. Run an analysis job from Parameter
+              estimation, then return here.
+            </div>
+          ) : (
+            <ul className="space-y-4" data-testid="psychometrics-artefact-list">
+              {artefacts.map((artefact) => {
+                const provenance = provenanceFromArtefact(artefact);
+                return (
+                  <li
+                    key={artefact.id}
+                    className="rounded-xl border border-border bg-card p-4 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <h3 className="font-medium">{artefact.kind}</h3>
+                      <span className="font-mono text-2xs text-muted-foreground">
+                        {artefact.id}
+                      </span>
+                    </div>
+                    {provenance ? (
+                      <ProvenanceStamp provenance={provenance} />
+                    ) : (
+                      <p className="mt-2 text-sm text-destructive">
+                        Artefact is missing provenance fields and cannot be charted.
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </TabsContent>
+
+        <TabsContent value="reference" className="mt-6 space-y-3">
+          <p className="text-caption text-muted-foreground">
+            Shared recharts treatment and mandatory stamp (D81).
+          </p>
+          <ReferenceInformationChart provenance={DEMO_PROVENANCE} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
