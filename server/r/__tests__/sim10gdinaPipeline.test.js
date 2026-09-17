@@ -24,6 +24,10 @@ import { processJobById } from "../calibrationWorker.js";
 import { postCalibration, getRHealth } from "../rClient.js";
 import { applyNamedCalibrationFixture } from "../calibrationFixtures.js";
 import { validateCalibrationRequest, CALIBRATION_CONTRACT_VERSION } from "../calibrationContract.js";
+import {
+  SIM10_REQUIRED_COUNTS,
+  checkSim10GdinaAcceptance,
+} from "./benchmarkAcceptance.js";
 
 const tokenFor = (role) =>
   jwt.sign({ username: `${role}1`, role }, JWT_SECRET, { expiresIn: "1h" });
@@ -358,25 +362,18 @@ describe.skipIf(!live)("sim10GDINA live R pipeline", () => {
     expect(processed.ok, liveDump).toBe(true);
     const job = processed.job;
     expect(job.status, liveDump).toBe("succeeded");
-    expect(job.response.converged, liveDump).toBe(true);
-    expect(job.response.packageVersion).toMatch(/^GDINA /);
-    expect(job.response.sampleSize).toBe(1000);
     expect(job.response.jobId).toBe(jobId);
 
     const itemIds = enqueue.body.request.model.itemIds;
     const qRows = enqueue.body.request.qMatrix.data;
     const ks = requiredCounts(qRows);
-    for (let i = 0; i < itemIds.length; i += 1) {
-      const id = itemIds[i];
-      const par = job.response.parameters[id];
-      expect(par, `missing parameters for ${id}`).toBeTruthy();
-      expect(Array.isArray(par.probabilities), `${id} probabilities`).toBe(true);
-      expect(par.probabilities).toHaveLength(2 ** ks[i]);
-      expect(par.probabilities.every((p) => Number.isFinite(p) && p >= 0 && p <= 1)).toBe(true);
-      // Generating simItempar has P(all mastered) > P(none) on every item.
-      expect(par.probabilities[par.probabilities.length - 1]).toBeGreaterThan(par.probabilities[0]);
-    }
-    expect(ks).toEqual([1, 1, 1, 2, 2, 2, 2, 2, 2, 3]);
+    expect(ks).toEqual(SIM10_REQUIRED_COUNTS);
+    // D88: same predicates as benchmarkPerturbation.test.js.
+    const acceptance = checkSim10GdinaAcceptance(job.response, {
+      itemIds,
+      requiredCounts: ks,
+    });
+    expect(acceptance.ok, acceptance.failures.join("; ") || liveDump).toBe(true);
 
     const ingested = await request(app)
       .post(`/api/calibrationJobs/${jobId}/ingest`)

@@ -18,15 +18,15 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D87** — W18 concurrency bounds + queue-depth alarm. Handoff: `claude/day87-concurrency-backpressure-queue-alarm.md`. |
+| Last completed unit | **D88** — benchmark suite drift / perturbation + Hub plink gate. Handoff: `claude/day88-benchmark-suite-ci-perturbation.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
-| Next queued | Calendar **D88** — full benchmark suite in CI. |
-| Block | **W18** — R track hardening (D86–D87 done; gate is D89 kill-container). |
-| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
+| Next queued | Calendar **D89** — never-compress: kill R mid live session (W18 gate). |
+| Block | **W18** — R track hardening (D86–D88 done; gate is D89 kill-container). |
+| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88 probe + CI package gate).~~ |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
 | HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` / `85b43fa` (live `/health` close). |
@@ -64,6 +64,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D86 | product + `claude/day86-job-timeouts-process-kill.md`. Suite **1577 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at D87 | product `f51c7a5` + `claude/day87-concurrency-backpressure-queue-alarm.md`. Suite **1585 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at 2026-09-17 W18 session close (D86–D87) | this close. Close re-run had 2×5s timeout flakes (isolation green); build green. Calendar D86–D87 ✅. Next: D88. |
+| HEAD at D88 | product + `claude/day88-benchmark-suite-ci-perturbation.md`. Suite **1605 passed / 9 skipped** (close re-run 1×5s flake, isolation green); build green (recharts 451.37 kB). |
 
 ## Session log
 
@@ -127,6 +128,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | D86 | 2, alone | Per-kind timeouts; kill R on Timeout (not fetch-abort alone); next queued job starts. Suite **1577 passed / 9 skipped**. Next: D87. |
 | 2026-09-17 | D87 | 2, alone | Compose cpus/mem limits; maxConcurrent=1 dispatcher; queue-depth metric/alarm; R_WORKERS pin. Suite **1585 passed / 9 skipped**. Next: D88. |
 | 2026-09-17 | close | — | W18 session close (D86–D87 only; gate D89 not due). Close re-run 2×5s flakes (isolation green). No half-applied work; no new compression debt. Calendar D87 ✅. Next: D88. |
+| 2026-09-17 | D88 | 2, alone | Perturbation-fail for five CI benchmarks + Hub plink package gate. Premise: pipelines already in CI. |
 
 ## Compression debt
 
@@ -147,7 +149,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D67 | Live TAM LSAT7 CTT not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `cttPipeline.test.js` | this PR's CI | **closed** — live job green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`; observed KR-20 0.4542 recorded, not pinned) |
 | D68 | Live mid-flight ingest + second submit on `:6060` | HTTP switchover tests; player regression only | D71 | **open** — no unstopped two-item session in the deployment this walk |
 | D69 | Live difR planted-item flags not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `difPipeline.test.js` | this PR's CI | **closed** — live job green (`difR 6.1.0`, unique ETS C on Item.5; first two live runs failed the unique-item rule, recorded in the handoff) |
-| D70 | Live known-equating not executed against Hub `rvkmar/r-backend:latest` | Local `:4000` has equate 2.0.9 / plink 1.5.1; CI still pulls Hub | Docker Hub push of the rebuilt image | **open** — local exit check closed; GitHub live equating waits on Hub |
+| D70 | Live known-equating not executed against Hub `rvkmar/r-backend:latest` | Local `:4000` has equate 2.0.9 / plink 1.5.1; CI still pulls Hub | Docker Hub push of the rebuilt image | **closed D88** — Hub `latest` reports plink 1.5.1; CI package gate fails loudly if missing |
 | CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open** |
 | Admin CAF IA | Live tabs do not match TR9 CAF/delivery | Walk 2026-09-15; wiring is D73b | D73b | **closed** — Admin nested Models / Implementation / Delivery on `:6060`; District/Teacher/Student chrome aligned same session |
 
@@ -195,6 +197,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D85 | PDF/CSV export + invent chart raster PDF | No jspdf in tree; stamp contract already exists | Text PDF + CSV builders refuse missing provenance; toolbar on four views; cross-view test |
 | D86 | Add 15‑min timeouts + kill R (greenfield) | Node already aborted fetch at 15m; abort ≠ kill; Plumber single-threaded | Timeout → `killRBackend` → job `failed`/`Timeout` → next queued job; per-kind overrides; hang endpoint gated |
 | D87 | Fix multisession/availableCores overprovision; compose CPU limits | R already sequential workers=1; compose had no limits; concurrent kickQueue could double-dispatch | Compose cpus 2.0 / mem 4G; `R_WORKERS=1`; Node maxConcurrent + depth alarm; no availableCores for workers |
+| D88 | Wire five benchmarks into CI as one suite | Five already on `lsat7-pipeline`; no perturbation-fail; Hub already had plink 1.5.1 | Shared acceptance predicates + always-run perturbation tests; CI Hub package gate; live paths call same predicates; no invented coefficient pins |
 
 ## Carried-forward gaps
 

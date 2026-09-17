@@ -31,6 +31,7 @@ import { processJobById } from "../calibrationWorker.js";
 import { postCalibration, getRHealth } from "../rClient.js";
 import { applyNamedCalibrationFixture } from "../calibrationFixtures.js";
 import { validateCalibrationRequest, CALIBRATION_CONTRACT_VERSION } from "../calibrationContract.js";
+import { checkLsat7CttAcceptance } from "./benchmarkAcceptance.js";
 
 const tokenFor = (role) =>
   jwt.sign({ username: `${role}1`, role }, JWT_SECRET, { expiresIn: "1h" });
@@ -335,38 +336,18 @@ describe.skipIf(!live)("LSAT7 CTT live R pipeline", () => {
     expect(processed.ok, liveDump).toBe(true);
     const job = processed.job;
     expect(job.status, liveDump).toBe("succeeded");
-    expect(job.response.converged, liveDump).toBe(true);
-    expect(job.response.packageVersion).toMatch(/^TAM /);
-    expect(job.response.sampleSize).toBe(1000);
     expect(job.response.jobId).toBe(jobId);
 
     const publishedMeans = table().source.publishedItemMeans;
     const itemIds = enqueue.body.request.model.itemIds;
-    for (const id of itemIds) {
-      const par = job.response.parameters[id];
-      expect(par, `missing CTT parameters for ${id}`).toBeTruthy();
-      expect(par.n).toBe(1000);
-      // CTT difficulty for a complete dichotomous item IS the published
-      // proportion correct. That identity is not an invented coefficient pin.
-      expect(par.difficulty).toBeCloseTo(publishedMeans[id], 6);
-      expect(Number.isFinite(par.discrimination)).toBe(true);
-      expect(par.discrimination).toBeGreaterThan(-1);
-      expect(par.discrimination).toBeLessThan(1);
-      // LSAT section 7 is an aptitude test: item-total rpb of the keyed
-      // category is positive. Not a published table.
-      expect(par.discrimination).toBeGreaterThan(0);
-    }
-    // Same ordering D64 uses for IRT b: Item.5 easiest (p=0.843), Item.4
-    // hardest (p=0.606). CTT difficulty is p, so Item.5 > Item.4.
-    expect(job.response.parameters["Item.5"].difficulty).toBeGreaterThan(
-      job.response.parameters["Item.4"].difficulty
-    );
+    // D88: same predicates as benchmarkPerturbation.test.js.
+    const acceptance = checkLsat7CttAcceptance(job.response, {
+      itemIds,
+      publishedMeans,
+    });
+    expect(acceptance.ok, acceptance.failures.join("; ") || liveDump).toBe(true);
 
     const fit = job.response.fitStatistics;
-    expect(fit).toBeTruthy();
-    expect(Number.isFinite(fit.kr20)).toBe(true);
-    expect(fit.kr20).toBeGreaterThan(0);
-    expect(fit.kr20).toBeLessThan(1);
     expect(fit.nPersons).toBe(1000);
     expect(fit.nItems).toBe(5);
     expect(fit.meanScore).toBeCloseTo(table().source.publishedMeanTotalScore, 3);
