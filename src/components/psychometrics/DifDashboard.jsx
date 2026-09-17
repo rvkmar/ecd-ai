@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 
 import PsychometricFigure from "./PsychometricFigure";
+import PsychometricExportToolbar from "./PsychometricExportToolbar";
 import { provenanceFromArtefact } from "./provenance";
 import {
   DIF_FLAG_NOT,
@@ -112,7 +113,13 @@ export default function DifDashboard() {
           Selected artefact is missing provenance and cannot be charted.
         </p>
       ) : (
-        <PsychometricFigure
+        <>
+          <PsychometricExportToolbar
+            view="dif"
+            provenance={provenance}
+            artefact={selected}
+          />
+          <PsychometricFigure
           provenance={provenance}
           title="DIF by item"
           description={`Method ${diagnostics.method || "difR::difMH"}; pair from artefact rows.`}
@@ -158,6 +165,7 @@ export default function DifDashboard() {
             </Table>
           </div>
         </PsychometricFigure>
+        </>
       )}
     </div>
   );

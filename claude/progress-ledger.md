@@ -18,14 +18,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D84** — W17 attribute-profile + DIF dashboards. Handoff: `claude/day84-attribute-profile-dif-dashboards.md`. |
+| Last completed unit | **D85** — W17 PDF/CSV export + block close. Handoff: `claude/day85-export-w17-handoff.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
-| Next queued | Calendar **D85** — W17 PDF/CSV export + block handoff. |
-| Block | **W17** — Psychometric dashboards (D81–D84 done; D85 open). |
+| Next queued | Calendar **D86** — W18 R track hardening (first unit). |
+| Block | **W17** — Psychometric dashboards (**closed** at D85). |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -59,6 +59,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D82 | product + `claude/day82-item-analysis-dashboard.md`. Suite **1549 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at D83 | product + `claude/day83-test-information-dashboard.md`. Suite **1557 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at D84 | product + `claude/day84-attribute-profile-dif-dashboards.md`. Suite **1563 passed / 9 skipped**; build green (recharts 451.37 kB). |
+| HEAD at D85 / W17 close | product + `claude/day85-export-w17-handoff.md` + `claude/day85-w17-close.md`. Suite **1570 passed / 9 skipped**; build green (recharts 451.37 kB). |
 
 ## Session log
 
@@ -117,6 +118,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | D82 | 1, alone | Item-analysis dashboard on D77 artefacts: EM/TM filters, stamped charts, actionable flags (threshold + next action). Suite **1549 passed / 9 skipped**. Next: D83. |
 | 2026-09-17 | D83 | 1–2, alone | Test-information dashboard: I(θ)+SEM curves, Assembly requiredSEM overlay, never-meets banner, labelled KR-20 vs marginal reliability. Suite **1557 passed / 9 skipped**. Next: D84. |
 | 2026-09-17 | D84 | 1, alone | Attribute-profile (both estimands labelled) + DIF (on-screen flag framing, ETS band). Suite **1563 passed / 9 skipped**. Next: D85. |
+| 2026-09-17 | D85 | 1, alone | CSV/PDF export with mandatory provenance across all four W17 views; W17 gate closed. Suite **1570 passed / 9 skipped**. Next: W18 / D86. |
 
 ## Compression debt
 
@@ -131,7 +133,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D62/D63 | Live enqueue → process → ingest against running R | Admin token / D65 console; `/health` only that close | D64 CI + D65 | D64 covers scripted LSAT7 in CI; D65 console walked 2026-09-13 (`job1789319022666002`). |
 | D64 | Live mirt LSAT7 not executed in the authoring environment (no Docker/R here) | CI job `lsat7-pipeline` is the acceptance | this PR's CI | **closed** — live job green (`mirt 1.47`, `converged: true`, 1000×5) |
 | D46 | Phase-2 `apiFetch` | — | — | **closed** (`e533a77` / PRs #5–#6) |
-| D54 | Wizard readiness mirror has no agreement test | Token | W12 close | **open, past two block closes → standing risk** |
+| D54 | Wizard readiness mirror has no agreement test | Token | W12 close | **open, past multiple block closes → standing risk** — re-dated at W17 close to **W18 close** |
 | D65 | Live operator walk + parameter-set diff UI skipped | Tests + routes; seed password; diff never built | D71 / follow-on | **walk closed 2026-09-13** (coordinator, `job1789319022666002` → `ps1789319081640`). Parameter-set diff UI still open. |
 | D66 | Live GDINA sim10GDINA not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `sim10gdinaPipeline.test.js` | this PR's CI | **closed** — live job green (`GDINA 2.9.12`, `converged: true`, 1000×10; first CI keyed `"Item 1"`, then keyed by request `itemIds`) |
 | D67 | Live TAM LSAT7 CTT not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `cttPipeline.test.js` | this PR's CI | **closed** — live job green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`; observed KR-20 0.4542 recorded, not pinned) |
@@ -182,6 +184,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D82 | Greenfield item-analysis UI | D81 stamp + chart chrome exist; D77 payload is `parameters[itemId].{pValue,pointBiserial,n,distractors}` | ItemAnalysisDashboard on shell; advisory flags with threshold + action; EM/TM artefact filters |
 | D83 | Test-info UI + invent SEM math | D78 curve arrays + Assembly `requiredSEM` already exist; SEM = artefact conditionalSEM | Overlay requiredSEM; never-meets banner when all SEM above target; label KR-20 vs marginal |
 | D84 | Attribute-profile + DIF dashboards | D79/D69 payloads already labelled; stamp shell exists | Dual estimand UI; DIF investigation framing on screen (not docs-only) |
+| D85 | PDF/CSV export + invent chart raster PDF | No jspdf in tree; stamp contract already exists | Text PDF + CSV builders refuse missing provenance; toolbar on four views; cross-view test |
 
 ## Carried-forward gaps
 
@@ -220,4 +223,4 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 - ~~W17 item-analysis dashboard~~ closed D82 (`claude/day82-item-analysis-dashboard.md`)
 - ~~W17 test-information + requiredSEM overlay~~ closed D83 (`claude/day83-test-information-dashboard.md`)
 - ~~W17 attribute-profile + DIF dashboards~~ closed D84 (`claude/day84-attribute-profile-dif-dashboards.md`)
-- W17 PDF/CSV export — **open** (D85)
+- ~~W17 PDF/CSV export + provenance-in-export~~ closed D85 (`claude/day85-export-w17-handoff.md`); W17 closed (`claude/day85-w17-close.md`)

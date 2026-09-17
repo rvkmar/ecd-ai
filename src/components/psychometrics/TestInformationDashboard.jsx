@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 
 import TestInformationCharts from "./TestInformationCharts";
+import PsychometricExportToolbar from "./PsychometricExportToolbar";
 import { provenanceFromArtefact } from "./provenance";
 import {
   continuousSemTargetsFromAssemblyModels,
@@ -184,6 +185,11 @@ export default function TestInformationDashboard() {
         </p>
       ) : (
         <>
+          <PsychometricExportToolbar
+            view="test-information"
+            provenance={provenance}
+            artefact={selected}
+          />
           <TestInformationCharts
             provenance={provenance}
             points={points}

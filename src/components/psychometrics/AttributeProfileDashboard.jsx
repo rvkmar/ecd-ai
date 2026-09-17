@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 
 import PsychometricFigure from "./PsychometricFigure";
+import PsychometricExportToolbar from "./PsychometricExportToolbar";
 import {
   chartAxisProps,
   chartColor,
@@ -133,6 +134,11 @@ export default function AttributeProfileDashboard() {
         </p>
       ) : (
         <>
+          <PsychometricExportToolbar
+            view="attribute-profile"
+            provenance={provenance}
+            artefact={selected}
+          />
           <div
             className="rounded-xl border border-border bg-muted/20 p-4 text-caption text-muted-foreground"
             data-testid="estimand-legend"

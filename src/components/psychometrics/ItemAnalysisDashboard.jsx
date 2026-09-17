@@ -16,6 +16,7 @@ import {
 
 import ItemAnalysisCharts from "./ItemAnalysisCharts";
 import ItemAnalysisTable from "./ItemAnalysisTable";
+import PsychometricExportToolbar from "./PsychometricExportToolbar";
 import { itemRowsFromArtefact } from "./itemAnalysisFlags";
 import { provenanceFromArtefact } from "./provenance";
 
@@ -206,6 +207,11 @@ export default function ItemAnalysisDashboard() {
         </p>
       ) : (
         <>
+          <PsychometricExportToolbar
+            view="item-analysis"
+            provenance={provenance}
+            artefact={selected}
+          />
           <ItemAnalysisCharts provenance={provenance} rows={rows} />
           <ItemAnalysisTable rows={rows} />
           <DistractorPanel
