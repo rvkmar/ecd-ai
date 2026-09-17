@@ -18,14 +18,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D82** — W17 item analysis dashboard. Handoff: `claude/day82-item-analysis-dashboard.md`. |
+| Last completed unit | **D83** — W17 test information & reliability dashboard. Handoff: `claude/day83-test-information-dashboard.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
-| Next queued | Calendar **D83** — W17 test information and reliability dashboard. |
-| Block | **W17** — Psychometric dashboards (D81–D82 done; D83–D85 open). |
+| Next queued | Calendar **D84** — W17 attribute-profile and DIF dashboards. |
+| Block | **W17** — Psychometric dashboards (D81–D83 done; D84–D85 open). |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -57,6 +57,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-17 EM inventory | analysis-only close at `7330a41` + handoff `b3d224b`. Suite **1536 passed / 9 skipped**; build green (recharts 446.89 kB). Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. |
 | HEAD at D81 | product + `claude/day81-psychometric-dashboard-shell.md`. Suite **1544 passed / 9 skipped**; build green (recharts 446.89 kB). |
 | HEAD at D82 | product + `claude/day82-item-analysis-dashboard.md`. Suite **1549 passed / 9 skipped**; build green (recharts 451.37 kB). |
+| HEAD at D83 | product + `claude/day83-test-information-dashboard.md`. Suite **1557 passed / 9 skipped**; build green (recharts 451.37 kB). |
 
 ## Session log
 
@@ -113,6 +114,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | analysis | — | Off-cal EM remaining-gap inventory. Confirmed EM-core closed; file list for W25/W23/W27. Suite **1536 passed / 9 skipped**; build green; tree was clean at `7330a41`. Handoff: `day81-offcal-em-remaining-gap-inventory.md`. Next: D81. |
 | 2026-09-17 | D81 | 2, alone | W17 shell: ProvenanceStamp + PsychometricFigure compose guard; recharts chartTheme; Delivery tab + `/admin/psychometrics`; Storybook stamp + reference chart. Suite **1544 passed / 9 skipped**. Next: D82+. |
 | 2026-09-17 | D82 | 1, alone | Item-analysis dashboard on D77 artefacts: EM/TM filters, stamped charts, actionable flags (threshold + next action). Suite **1549 passed / 9 skipped**. Next: D83. |
+| 2026-09-17 | D83 | 1–2, alone | Test-information dashboard: I(θ)+SEM curves, Assembly requiredSEM overlay, never-meets banner, labelled KR-20 vs marginal reliability. Suite **1557 passed / 9 skipped**. Next: D84. |
 
 ## Compression debt
 
@@ -176,6 +178,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D80 | Cron enqueues recalibration/analysis; artefact produced on schedule | Only autoFinishCron existed (unmounted); no scheduled calibration; live session matrices not built | `calibrationPlan.scheduledEnqueue` + enqueue-only cron (opt-in); fixture-backed sample gate; never ingest; W16 gate closed |
 | D81 | `/admin/psychometrics` path + greenfield chart library + invent provenance fields | Nested Admin Delivery tabs; recharts already in use; analysisArtefacts already have job/package/sample/computedAt; hooks exist; Reports is separate mock-fallback analytics | Delivery Psychometrics tab + `/admin/psychometrics`; adopt recharts chartTheme; ProvenanceStamp from artefact fields; PsychometricFigure refuse incomplete stamp |
 | D82 | Greenfield item-analysis UI | D81 stamp + chart chrome exist; D77 payload is `parameters[itemId].{pValue,pointBiserial,n,distractors}` | ItemAnalysisDashboard on shell; advisory flags with threshold + action; EM/TM artefact filters |
+| D83 | Test-info UI + invent SEM math | D78 curve arrays + Assembly `requiredSEM` already exist; SEM = artefact conditionalSEM | Overlay requiredSEM; never-meets banner when all SEM above target; label KR-20 vs marginal |
 
 ## Carried-forward gaps
 
@@ -212,4 +215,5 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 - Design Patterns (W27 / G7) — absent; Additional KSAs still notes-only on EMs
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 - ~~W17 item-analysis dashboard~~ closed D82 (`claude/day82-item-analysis-dashboard.md`)
-- W17 test-information / DIF / cohort / PDF-CSV — **open** (D83–D85)
+- ~~W17 test-information + requiredSEM overlay~~ closed D83 (`claude/day83-test-information-dashboard.md`)
+- W17 attribute-profile / DIF / PDF-CSV — **open** (D84–D85)

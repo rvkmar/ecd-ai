@@ -14,6 +14,9 @@ vi.mock("@/api/queries/evidenceModels", () => ({
 vi.mock("@/api/queries/taskModels", () => ({
   useTaskModels: vi.fn(() => ({ data: [] })),
 }));
+vi.mock("@/api/queries/assemblyModels", () => ({
+  useAssemblyModels: vi.fn(() => ({ data: [] })),
+}));
 
 import { useAnalysisArtefacts } from "@/api/queries/analysisArtefacts";
 
@@ -37,6 +40,17 @@ describe("PsychometricsDashboard (D81/D82)", () => {
       </MemoryRouter>
     );
     expect(screen.getByTestId("item-analysis-empty")).toBeInTheDocument();
+  });
+
+  it("opens the test information panel", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <PsychometricsDashboard />
+      </MemoryRouter>
+    );
+    await user.click(screen.getByRole("tab", { name: "Test information" }));
+    expect(screen.getByTestId("test-information-empty")).toBeInTheDocument();
   });
 
   it("shows catalogue empty state and reference chart with stamp", async () => {

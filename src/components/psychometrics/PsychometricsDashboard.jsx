@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ItemAnalysisDashboard from "./ItemAnalysisDashboard";
 import ProvenanceStamp from "./ProvenanceStamp";
 import ReferenceInformationChart from "./ReferenceInformationChart";
+import TestInformationDashboard from "./TestInformationDashboard";
 import { provenanceFromArtefact } from "./provenance";
 
 const KIND_FILTERS = [
@@ -83,12 +84,17 @@ export default function PsychometricsDashboard() {
       <Tabs value={panel} onValueChange={setPanel}>
         <TabsList className="flex flex-wrap gap-2">
           <TabsTrigger value="item-analysis">Item analysis</TabsTrigger>
+          <TabsTrigger value="test-information">Test information</TabsTrigger>
           <TabsTrigger value="catalogue">Artefact catalogue</TabsTrigger>
           <TabsTrigger value="reference">Reference chrome</TabsTrigger>
         </TabsList>
 
         <TabsContent value="item-analysis" className="mt-6">
           <ItemAnalysisDashboard />
+        </TabsContent>
+
+        <TabsContent value="test-information" className="mt-6">
+          <TestInformationDashboard />
         </TabsContent>
 
         <TabsContent value="catalogue" className="mt-6 space-y-4">
