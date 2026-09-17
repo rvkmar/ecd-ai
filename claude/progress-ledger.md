@@ -62,7 +62,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D85 / W17 close | product `2a7c2f0` + `claude/day85-export-w17-handoff.md` + `claude/day85-w17-close.md`. Suite **1570 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at 2026-09-17 W17 session close | this close. Suite re-run **1570 passed / 9 skipped**; build 13.02s (recharts 451.37 kB). Tree clean at product `2a7c2f0` then this close. Calendar W17 block ✅. Next: D86. |
 | HEAD at D86 | product + `claude/day86-job-timeouts-process-kill.md`. Suite **1577 passed / 9 skipped**; build green (recharts 451.37 kB). |
-| HEAD at D87 | product + `claude/day87-concurrency-backpressure-queue-alarm.md`. Suite **1585 passed / 9 skipped**; build green (recharts 451.37 kB). |
+| HEAD at D87 | product `f51c7a5` + `claude/day87-concurrency-backpressure-queue-alarm.md`. Suite **1585 passed / 9 skipped**; build green (recharts 451.37 kB). |
+| HEAD at 2026-09-17 W18 session close (D86–D87) | this close. Close re-run had 2×5s timeout flakes (isolation green); build green. Calendar D86–D87 ✅. Next: D88. |
 
 ## Session log
 
@@ -125,6 +126,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | close | — | W17 session close (D81–D85). Suite re-run **1570 passed / 9 skipped**; build green, recharts 451.37 kB. No half-applied work; no new compression debt. D54 re-dated to W18 close. Calendar D81–D85 + W17 block ✅. Next: D86. |
 | 2026-09-17 | D86 | 2, alone | Per-kind timeouts; kill R on Timeout (not fetch-abort alone); next queued job starts. Suite **1577 passed / 9 skipped**. Next: D87. |
 | 2026-09-17 | D87 | 2, alone | Compose cpus/mem limits; maxConcurrent=1 dispatcher; queue-depth metric/alarm; R_WORKERS pin. Suite **1585 passed / 9 skipped**. Next: D88. |
+| 2026-09-17 | close | — | W18 session close (D86–D87 only; gate D89 not due). Close re-run 2×5s flakes (isolation green). No half-applied work; no new compression debt. Calendar D87 ✅. Next: D88. |
 
 ## Compression debt
 
