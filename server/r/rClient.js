@@ -4,9 +4,12 @@
 // server/delivery or any /api/sessions handler (ADR 0001).
 
 import { rPathForJobKind, unboxPlumberScalars } from "./calibrationContract.js";
+import { jobTimeoutMsForKind, DEFAULT_JOB_TIMEOUT_MS } from "./jobTimeouts.js";
+import { killRBackend } from "./killRBackend.js";
 
 const DEFAULT_R_BACKEND_URL = "http://r-backend:4000";
-const DEFAULT_R_JOB_TIMEOUT_MS = 15 * 60 * 1000;
+
+export { DEFAULT_JOB_TIMEOUT_MS, jobTimeoutMsForKind };
 
 export function rBackendUrl() {
   return process.env.R_BACKEND_URL || DEFAULT_R_BACKEND_URL;
@@ -19,7 +22,7 @@ function authHeaders() {
   return headers;
 }
 
-async function rFetch(path, { method = "GET", body, timeoutMs = DEFAULT_R_JOB_TIMEOUT_MS } = {}) {
+async function rFetch(path, { method = "GET", body, timeoutMs = DEFAULT_JOB_TIMEOUT_MS } = {}) {
   const url = `${rBackendUrl().replace(/\/$/, "")}${path}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -64,6 +67,11 @@ export async function getRHealth(options = {}) {
   return rFetch("/health", { timeoutMs: options.timeoutMs || 10_000 });
 }
 
+/**
+ * POST a calibration/analysis job to R.
+ * On wall-clock timeout the R process is killed (D86) — aborting fetch alone
+ * leaves a blocked Plumber handler holding the worker.
+ */
 export async function postCalibration(kind, request, options = {}) {
   const path = rPathForJobKind(kind);
   if (!path) {
@@ -79,9 +87,27 @@ export async function postCalibration(kind, request, options = {}) {
       },
     };
   }
-  return rFetch(path, {
+  const timeoutMs = jobTimeoutMsForKind(kind, options.timeoutMs);
+  const result = await rFetch(path, {
     method: "POST",
     body: request,
-    timeoutMs: options.timeoutMs || DEFAULT_R_JOB_TIMEOUT_MS,
+    timeoutMs,
   });
+
+  if (result.error?.rClass === "Timeout" && options.killOnTimeout !== false) {
+    const kill = await killRBackend({
+      reason: "job-timeout",
+      kind,
+      jobId: request?.jobId,
+      killer: options.killer,
+    });
+    result.error.rKilled = kill.ok;
+    result.error.killMethod = kill.method;
+    result.error.message =
+      `${result.error.message}; R process kill ${kill.ok ? "succeeded" : "failed"}` +
+      ` via ${kill.method}`;
+    result.error.stderr = [result.error.stderr, kill.detail].filter(Boolean).join("\n");
+  }
+
+  return result;
 }

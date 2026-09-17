@@ -18,14 +18,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D85** — W17 PDF/CSV export + block close. Handoff: `claude/day85-export-w17-handoff.md`. |
+| Last completed unit | **D86** — W18 job timeouts + R process kill. Handoff: `claude/day86-job-timeouts-process-kill.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
-| Next queued | Calendar **D86** — W18 R track hardening (first unit). |
-| Block | **W17** — Psychometric dashboards (**closed** at D85). |
+| Next queued | Calendar **D87** — concurrency bounds, backpressure, queue-depth alarm. |
+| Block | **W18** — R track hardening (D86 started; gate is D89 kill-container). |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ Hub `latest` still needs the rebuilt image for GitHub live equating. |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -61,6 +61,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D84 | product + `claude/day84-attribute-profile-dif-dashboards.md`. Suite **1563 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at D85 / W17 close | product `2a7c2f0` + `claude/day85-export-w17-handoff.md` + `claude/day85-w17-close.md`. Suite **1570 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at 2026-09-17 W17 session close | this close. Suite re-run **1570 passed / 9 skipped**; build 13.02s (recharts 451.37 kB). Tree clean at product `2a7c2f0` then this close. Calendar W17 block ✅. Next: D86. |
+| HEAD at D86 | product + `claude/day86-job-timeouts-process-kill.md`. Suite **1577 passed / 9 skipped**; build green (recharts 451.37 kB). |
 
 ## Session log
 
@@ -121,6 +122,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | D84 | 1, alone | Attribute-profile (both estimands labelled) + DIF (on-screen flag framing, ETS band). Suite **1563 passed / 9 skipped**. Next: D85. |
 | 2026-09-17 | D85 | 1, alone | CSV/PDF export with mandatory provenance across all four W17 views; W17 gate closed. Suite **1570 passed / 9 skipped**. Next: W18 / D86. |
 | 2026-09-17 | close | — | W17 session close (D81–D85). Suite re-run **1570 passed / 9 skipped**; build green, recharts 451.37 kB. No half-applied work; no new compression debt. D54 re-dated to W18 close. Calendar D81–D85 + W17 block ✅. Next: D86. |
+| 2026-09-17 | D86 | 2, alone | Per-kind timeouts; kill R on Timeout (not fetch-abort alone); next queued job starts. Suite **1577 passed / 9 skipped**. Next: D87. |
 
 ## Compression debt
 
@@ -187,6 +189,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D83 | Test-info UI + invent SEM math | D78 curve arrays + Assembly `requiredSEM` already exist; SEM = artefact conditionalSEM | Overlay requiredSEM; never-meets banner when all SEM above target; label KR-20 vs marginal |
 | D84 | Attribute-profile + DIF dashboards | D79/D69 payloads already labelled; stamp shell exists | Dual estimand UI; DIF investigation framing on screen (not docs-only) |
 | D85 | PDF/CSV export + invent chart raster PDF | No jspdf in tree; stamp contract already exists | Text PDF + CSV builders refuse missing provenance; toolbar on four views; cross-view test |
+| D86 | Add 15‑min timeouts + kill R (greenfield) | Node already aborted fetch at 15m; abort ≠ kill; Plumber single-threaded | Timeout → `killRBackend` → job `failed`/`Timeout` → next queued job; per-kind overrides; hang endpoint gated |
 
 ## Carried-forward gaps
 
@@ -226,3 +229,4 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 - ~~W17 test-information + requiredSEM overlay~~ closed D83 (`claude/day83-test-information-dashboard.md`)
 - ~~W17 attribute-profile + DIF dashboards~~ closed D84 (`claude/day84-attribute-profile-dif-dashboards.md`)
 - ~~W17 PDF/CSV export + provenance-in-export~~ closed D85 (`claude/day85-export-w17-handoff.md`); W17 closed (`claude/day85-w17-close.md`)
+- ~~W18 job timeout + R process kill on breach~~ closed D86 (`claude/day86-job-timeouts-process-kill.md`)

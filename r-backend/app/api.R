@@ -126,3 +126,37 @@ api$handle("GET", "/irt/parallel-status", function(req, res) {
     timestamp = format(Sys.time(), tz = "UTC", usetz = TRUE)
   )
 })
+
+# D86: deliberately non-terminating handler for timeout + process-kill tests.
+# Gated on R_ALLOW_HANG_ENDPOINT=1 so a production image does not expose sleep.
+api$handle("POST", "/calibrate/hang", function(req, res) {
+  allow <- Sys.getenv("R_ALLOW_HANG_ENDPOINT", unset = "")
+  if (!identical(allow, "1")) {
+    res$status <- 404
+    return(list(
+      contractVersion = CALIBRATION_CONTRACT_VERSION,
+      error = list(
+        message = "Hang endpoint disabled (set R_ALLOW_HANG_ENDPOINT=1)",
+        rClass = "NotFound",
+        stderr = ""
+      )
+    ))
+  }
+  body <- tryCatch(
+    {
+      raw <- req$postBody
+      if (is.raw(raw)) raw <- rawToChar(raw)
+      if (is.null(raw) || !nzchar(raw)) list() else jsonlite::fromJSON(raw, simplifyVector = TRUE)
+    },
+    error = function(e) list()
+  )
+  secs <- suppressWarnings(as.numeric(body$sleepSeconds))
+  if (is.na(secs) || secs < 1) secs <- 3600
+  Sys.sleep(secs)
+  list(
+    contractVersion = CALIBRATION_CONTRACT_VERSION,
+    jobId = if (!is.null(body$jobId)) body$jobId else "hang",
+    converged = TRUE,
+    note = "hang completed (should not reach here under D86 timeout tests)"
+  )
+}, serializer = .json_unboxed)

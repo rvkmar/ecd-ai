@@ -9,6 +9,7 @@ import { canTransitionCalibrationJob } from "../utils/lifecycleMatrix.js";
 import { validateCalibrationJobLifecycle } from "../utils/lifecycleValidation.js";
 import { validateCalibrationResponse } from "./calibrationContract.js";
 import { postCalibration } from "./rClient.js";
+import { jobTimeoutMsForKind } from "./jobTimeouts.js";
 import {
   ATTRIBUTE_PROFILE_SUMMARY_KIND,
   runAttributeProfileSummaryJob,
@@ -20,6 +21,54 @@ function nowIso() {
 
 function findJob(db, id) {
   return (db.calibrationJobs || []).find((j) => j.id === id);
+}
+
+/** Wall-clock wrap for Node-only jobs (no R process to kill). */
+function withWallClockTimeout(work, timeoutMs) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve({
+        ok: false,
+        status: 0,
+        json: null,
+        text: "",
+        error: {
+          message: `Job timed out after ${timeoutMs}ms (Node-only; no R process to kill)`,
+          rClass: "Timeout",
+          stderr: "",
+          rKilled: false,
+          killMethod: "n/a",
+        },
+      });
+    }, timeoutMs);
+    Promise.resolve()
+      .then(work)
+      .then((result) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve({
+          ok: false,
+          status: 0,
+          json: null,
+          text: "",
+          error: {
+            message: err?.message || "Job failed",
+            rClass: err?.name || "Error",
+            stderr: err?.stack || "",
+          },
+        });
+      });
+  });
 }
 
 export function recoverRunningJobs() {
@@ -48,7 +97,10 @@ export function recoverRunningJobs() {
   return db.calibrationJobs.filter((j) => j.error?.rClass === "RestartRecovery");
 }
 
-export async function processJobById(jobId, { client = { postCalibration } } = {}) {
+export async function processJobById(
+  jobId,
+  { client = { postCalibration }, timeoutMs, killer } = {}
+) {
   const db = loadDB();
   const job = findJob(db, jobId);
   if (!job) return { ok: false, error: "Calibration job not found." };
@@ -63,10 +115,17 @@ export async function processJobById(jobId, { client = { postCalibration } } = {
   job.error = null;
   saveDB(db);
 
+  const resolvedTimeoutMs = jobTimeoutMsForKind(job.kind, timeoutMs);
   const result =
     job.kind === ATTRIBUTE_PROFILE_SUMMARY_KIND
-      ? runAttributeProfileSummaryJob(job.request)
-      : await client.postCalibration(job.kind, job.request);
+      ? await withWallClockTimeout(
+          () => runAttributeProfileSummaryJob(job.request),
+          resolvedTimeoutMs
+        )
+      : await client.postCalibration(job.kind, job.request, {
+          timeoutMs: resolvedTimeoutMs,
+          killer,
+        });
 
   const after = loadDB();
   const live = findJob(after, jobId);
