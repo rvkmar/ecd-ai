@@ -83,8 +83,10 @@ describe("POST /api/evidenceModels/:id/attach-seed-parameter-sets", () => {
     ]);
     const sm = db.evidenceModels[0].statisticalModels[0];
     expect(sm.parameterSets).toHaveLength(1);
-    expect(sm.activeParameterSetId).toBe("ps_pilot_sm1");
+    // D90: attach must not flip the live scoring pointer
+    expect(sm.activeParameterSetId).toBeNull();
     expect(sm.parameterSets[0].packageVersion).toBe("ecd-pilot-1.0.0");
+    expect(sm.parameterSets[0].calibrationMethod).toBe("seed-parameter-set");
     expect(saveDB).toHaveBeenCalled();
   });
 

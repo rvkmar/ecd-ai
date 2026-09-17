@@ -99,7 +99,9 @@ describe("validateAssemblyModelLifecycle", () => {
       makeAssemblyModel({ status: "confirmed", locked: true, stoppingRules: undefined }),
       db
     );
-    expect(errors.join(" ")).toMatch(/must declare stoppingRules before confirmation/);
+    expect(errors.join(" ")).toMatch(
+      /must declare stoppingRules.*before confirmation/
+    );
   });
 
   it("activates cleanly when the bound competency model is operational at the matching version", () => {

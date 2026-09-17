@@ -720,16 +720,41 @@ router.post("/:id/recalibrate", canAuthor, (req, res) => {
   const sm = model.statisticalModels.find(m => m.id === statisticalModelId);
   if (!sm) return res.status(400).json({ error: "Invalid statisticalModelId." });
 
+  // D90: refuse silent provenance defaults. A parameter set that becomes
+  // active drives scoring — packageVersion / sampleSize / converged must
+  // be stated, not invented as "manual-unspecified" / 0 / true.
+  if (!parameters || typeof parameters !== "object" || Array.isArray(parameters)) {
+    return res.status(400).json({ error: "parameters object is required." });
+  }
+  if (typeof packageVersion !== "string" || !packageVersion.trim()) {
+    return res.status(400).json({
+      error: "packageVersion is required (do not omit — invented defaults are refused).",
+    });
+  }
+  if (typeof sampleSize !== "number" || !(sampleSize > 0)) {
+    return res.status(400).json({
+      error: "sampleSize must be a positive number (do not omit).",
+    });
+  }
+  if (converged !== true) {
+    return res.status(400).json({
+      error: "converged must be explicitly true (omission is not treated as success).",
+    });
+  }
+  if (typeof calibrationMethod !== "string" || !calibrationMethod.trim()) {
+    return res.status(400).json({ error: "calibrationMethod is required." });
+  }
+
   const newParamSet = {
     parameterSetId: parameterSetId || genId("ps"),
     parameters,
     calibratedAt: calibratedAt || new Date().toISOString(),
     calibratedBy: calibratedBy || req.body.calibratedBy || "system",
-    calibrationMethod: calibrationMethod || "manual",
-    sampleSize: sampleSize || 0,
+    calibrationMethod: calibrationMethod.trim(),
+    sampleSize,
     notes: notes || "",
-    packageVersion: packageVersion || "manual-unspecified",
-    converged: typeof converged === "boolean" ? converged : true,
+    packageVersion: packageVersion.trim(),
+    converged: true,
   };
   if (fitStatistics !== undefined) newParamSet.fitStatistics = fitStatistics;
   if (standardErrors !== undefined) newParamSet.standardErrors = standardErrors;
@@ -793,6 +818,11 @@ router.post("/:id/attach-seed-parameter-sets", canAuthor, (req, res) => {
       packageVersion: parameterSet.packageVersion || "ecd-pilot-1.0.0",
       converged: parameterSet.converged !== false,
       sampleSize: parameterSet.sampleSize || 1,
+      // Mark as seed so operators / activate gate can distinguish pilot
+      // bridges from R-job ingest (samples README: draft bridge, not
+      // Accumulation-ready measurement).
+      calibrationMethod:
+        parameterSet.calibrationMethod || "seed-parameter-set",
     };
     sm.parameterSets = sm.parameterSets || [];
     const existingIdx = sm.parameterSets.findIndex(
@@ -800,7 +830,8 @@ router.post("/:id/attach-seed-parameter-sets", canAuthor, (req, res) => {
     );
     if (existingIdx >= 0) sm.parameterSets[existingIdx] = ps;
     else sm.parameterSets.push(ps);
-    if (sm.active) sm.activeParameterSetId = ps.parameterSetId;
+    // D90: attach only — never flip the live scoring pointer. Activation
+    // stays on POST .../activate-parameter-set (with provenance gate).
     attached.push({ statisticalModelId, parameterSetId: ps.parameterSetId });
   }
 
@@ -830,6 +861,24 @@ router.post("/:id/activate-parameter-set", canAuthor, (req, res) => {
 
   const paramSet = statModel.parameterSets.find(p => p.parameterSetId === parameterSetId);
   if (!paramSet) return res.status(400).json({ error: "Invalid parameterSetId." });
+
+  // D90: activating a set makes it drive scoring. Refuse weak / missing
+  // provenance — same bar as /recalibrate and ingest.
+  if (paramSet.converged !== true) {
+    return res.status(400).json({
+      error: "Cannot activate a parameter set that is not explicitly converged: true.",
+    });
+  }
+  if (typeof paramSet.packageVersion !== "string" || !paramSet.packageVersion.trim()) {
+    return res.status(400).json({
+      error: "Cannot activate a parameter set without packageVersion.",
+    });
+  }
+  if (typeof paramSet.sampleSize !== "number" || !(paramSet.sampleSize > 0)) {
+    return res.status(400).json({
+      error: "Cannot activate a parameter set without a positive sampleSize.",
+    });
+  }
 
   statModel.activeParameterSetId = parameterSetId;
   model.updatedAt = new Date().toISOString();

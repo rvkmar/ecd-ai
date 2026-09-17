@@ -67,7 +67,8 @@ export default function ItemAnalysisTable({ rows = [] }) {
   if (!rows.length) {
     return (
       <p className="text-sm text-muted-foreground">
-        This artefact has no item parameters to display.
+        This artefact has no item-analysis rows to display.
+        Analysis artefacts inform review; they are not scoring parameter sets.
       </p>
     );
   }

@@ -18,15 +18,15 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D89** — kill R mid live session (W18 gate). Handoff: `claude/day89-kill-r-mid-session.md`. |
+| Last completed unit | **D90** — adversarial R track + W18 block close. Handoff: `claude/day90-adversarial-r-track-w18-close.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
-| Next queued | Calendar **D90** — never-compress adversarial R track + W18 handoff (separate Agent). |
-| Block | **W18** — R track hardening (D86–D89 done; D90 adversarial closes the block). |
-| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ |
+| Next queued | Calendar **D91** — threat model written before any fix (W19 Security). |
+| Block | **W18 closed** (D86–D90). R track hardened through live kill (D89) + adversarial (D90). |
+| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
 | HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` / `85b43fa` (live `/health` close). |
@@ -67,6 +67,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D88 | product + `claude/day88-benchmark-suite-ci-perturbation.md`. Suite **1605 passed / 9 skipped** (close re-run 1×5s flake, isolation green); build green (recharts 451.37 kB). |
 | HEAD at D89 | live-proof handoff `claude/day89-kill-r-mid-session.md` (no product code). Suite **1605 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at 2026-09-17 W18 session close (D88–D89) | this close. Suite re-run **1605 passed / 9 skipped**; build green. Calendar D88–D89 ✅. W18 gate closed. Next: D90. |
+| HEAD at 2026-09-17 W18 block close (D90) | this close. Suite **1611 passed / 9 skipped**; build green. Calendar D90 + W18 ✅. D54 closed. Next: D91. |
 
 ## Session log
 
@@ -133,6 +134,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | D88 | 2, alone | Perturbation-fail for five CI benchmarks + Hub plink package gate. Premise: pipelines already in CI. |
 | 2026-09-17 | D89 | 3, alone | Never-compress live kill of `r-backend` mid-session. Delivery continued; calib failed with reason; queue drained after restart. |
 | 2026-09-17 | close | — | W18 session close (D88–D89; gate D89 met). Suite re-run **1605 passed / 9 skipped**; build green. No half-applied work; no new compression debt. D54 still open → due at W18 block close (D90). Calendar D88–D89 ✅. Next: D90. |
+| 2026-09-17 | D90 | 3, alone | Adversarial R track (separate Agents); P0 provenance/activate/attach fixes; D54 discharged; W18 block closed. Suite **1611 passed / 9 skipped**. |
 
 ## Compression debt
 
@@ -147,7 +149,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D62/D63 | Live enqueue → process → ingest against running R | Admin token / D65 console; `/health` only that close | D64 CI + D65 | D64 covers scripted LSAT7 in CI; D65 console walked 2026-09-13 (`job1789319022666002`). |
 | D64 | Live mirt LSAT7 not executed in the authoring environment (no Docker/R here) | CI job `lsat7-pipeline` is the acceptance | this PR's CI | **closed** — live job green (`mirt 1.47`, `converged: true`, 1000×5) |
 | D46 | Phase-2 `apiFetch` | — | — | **closed** (`e533a77` / PRs #5–#6) |
-| D54 | Wizard readiness mirror has no agreement test | Token | W12 close | **open, past multiple block closes → standing risk** — re-dated at W17 close to **W18 close**; W18 *gate* closed at D89 but **block** close is D90 — discharge D54 with D90, do not roll again without reason |
+| D54 | Wizard readiness mirror has no agreement test | Token | W12 close | **closed D90** — `assemblyModelReadiness.js` + agreement test; lifecycle refuses empty `stoppingRules: {}` |
 | D65 | Live operator walk + parameter-set diff UI skipped | Tests + routes; seed password; diff never built | D71 / follow-on | **walk closed 2026-09-13** (coordinator, `job1789319022666002` → `ps1789319081640`). Parameter-set diff UI still open. |
 | D66 | Live GDINA sim10GDINA not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `sim10gdinaPipeline.test.js` | this PR's CI | **closed** — live job green (`GDINA 2.9.12`, `converged: true`, 1000×10; first CI keyed `"Item 1"`, then keyed by request `itemIds`) |
 | D67 | Live TAM LSAT7 CTT not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `cttPipeline.test.js` | this PR's CI | **closed** — live job green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`; observed KR-20 0.4542 recorded, not pinned) |
