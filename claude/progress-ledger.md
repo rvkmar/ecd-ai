@@ -18,14 +18,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D90** — adversarial R track + W18 block close. Handoff: `claude/day90-adversarial-r-track-w18-close.md`. |
+| Last completed unit | **D91** — threat model (W19). Handoff: `claude/day91-threat-model.md`. Model: `docs/security/threat-model.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
-| Next queued | Calendar **D91** — threat model written before any fix (W19 Security). |
-| Block | **W18 closed** (D86–D90). R track hardened through live kill (D89) + adversarial (D90). |
+| Next queued | Calendar **D92** — authentication / session policy (token life, refresh/revocation) per threat model. |
+| Block | **W19** — Security (D91 done; gate = dispositioned threat model). |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -68,6 +68,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D89 | live-proof handoff `claude/day89-kill-r-mid-session.md` (no product code). Suite **1605 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at 2026-09-17 W18 session close (D88–D89) | this close. Suite re-run **1605 passed / 9 skipped**; build green. Calendar D88–D89 ✅. W18 gate closed. Next: D90. |
 | HEAD at 2026-09-17 W18 block close (D90) | this close. Suite **1611 passed / 9 skipped**; build green. Calendar D90 + W18 ✅. D54 closed. Next: D91. |
+| HEAD at 2026-09-17 D91 | this close. Threat model only. Suite **1611 passed / 9 skipped**; build green. Calendar D91 ✅. Next: D92. |
 
 ## Session log
 
@@ -135,6 +136,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | D89 | 3, alone | Never-compress live kill of `r-backend` mid-session. Delivery continued; calib failed with reason; queue drained after restart. |
 | 2026-09-17 | close | — | W18 session close (D88–D89; gate D89 met). Suite re-run **1605 passed / 9 skipped**; build green. No half-applied work; no new compression debt. D54 still open → due at W18 block close (D90). Calendar D88–D89 ✅. Next: D90. |
 | 2026-09-17 | D90 | 3, alone | Adversarial R track (separate Agents); P0 provenance/activate/attach fixes; D54 discharged; W18 block closed. Suite **1611 passed / 9 skipped**. |
+| 2026-09-17 | D91 | 3, alone | Threat model dispositioned (`docs/security/threat-model.md`); no fixes. Premise: F3 closed, login already rate-limited. Suite **1611 passed / 9 skipped**. |
 
 ## Compression debt
 
@@ -204,7 +206,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D86 | Add 15‑min timeouts + kill R (greenfield) | Node already aborted fetch at 15m; abort ≠ kill; Plumber single-threaded | Timeout → `killRBackend` → job `failed`/`Timeout` → next queued job; per-kind overrides; hang endpoint gated |
 | D87 | Fix multisession/availableCores overprovision; compose CPU limits | R already sequential workers=1; compose had no limits; concurrent kickQueue could double-dispatch | Compose cpus 2.0 / mem 4G; `R_WORKERS=1`; Node maxConcurrent + depth alarm; no availableCores for workers |
 | D88 | Wire five benchmarks into CI as one suite | Five already on `lsat7-pipeline`; no perturbation-fail; Hub already had plink 1.5.1 | Shared acceptance predicates + always-run perturbation tests; CI Hub package gate; live paths call same predicates; no invented coefficient pins |
-| D89 | Destructive mid-session R kill (greenfield tooling) | ADR 0001 guard tests + D86 timeout kill already exist; no session path imports R | Live `docker kill r-backend` on `:6060` BN session; delivery/accumulation continue; calibration fails with reason; restart drains queue — no product code |
+| D91 | Readiness brief still says client posts score; login unthrottled; write greenfield model | Item path F3/D47 closed; loginLimiter + lockout exist; JWT 8h/no revocation and viewScope gap remain | Dispositioned model against live code; scheduled D92–D95 / W20–W22; no fixes in D91 |
 
 ## Carried-forward gaps
 
