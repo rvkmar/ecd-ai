@@ -18,15 +18,15 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D88** — benchmark suite drift / perturbation + Hub plink gate. Handoff: `claude/day88-benchmark-suite-ci-perturbation.md`. |
+| Last completed unit | **D89** — kill R mid live session (W18 gate). Handoff: `claude/day89-kill-r-mid-session.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
-| Next queued | Calendar **D89** — never-compress: kill R mid live session (W18 gate). |
-| Block | **W18** — R track hardening (D86–D88 done; gate is D89 kill-container). |
-| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88 probe + CI package gate).~~ |
+| Next queued | Calendar **D90** — never-compress adversarial R track + W18 handoff (separate Agent). |
+| Block | **W18** — R track hardening (D86–D89 done; D90 adversarial closes the block). |
+| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
 | HEAD at D61–D63 | `fc0da07` (#17) + `1b56720` (#18) + `edea9f5` / `85b43fa` (live `/health` close). |
@@ -65,6 +65,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D87 | product `f51c7a5` + `claude/day87-concurrency-backpressure-queue-alarm.md`. Suite **1585 passed / 9 skipped**; build green (recharts 451.37 kB). |
 | HEAD at 2026-09-17 W18 session close (D86–D87) | this close. Close re-run had 2×5s timeout flakes (isolation green); build green. Calendar D86–D87 ✅. Next: D88. |
 | HEAD at D88 | product + `claude/day88-benchmark-suite-ci-perturbation.md`. Suite **1605 passed / 9 skipped** (close re-run 1×5s flake, isolation green); build green (recharts 451.37 kB). |
+| HEAD at D89 | live-proof handoff `claude/day89-kill-r-mid-session.md` (no product code). Suite **1605 passed / 9 skipped**; build green (recharts 451.37 kB). |
 
 ## Session log
 
@@ -129,6 +130,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | D87 | 2, alone | Compose cpus/mem limits; maxConcurrent=1 dispatcher; queue-depth metric/alarm; R_WORKERS pin. Suite **1585 passed / 9 skipped**. Next: D88. |
 | 2026-09-17 | close | — | W18 session close (D86–D87 only; gate D89 not due). Close re-run 2×5s flakes (isolation green). No half-applied work; no new compression debt. Calendar D87 ✅. Next: D88. |
 | 2026-09-17 | D88 | 2, alone | Perturbation-fail for five CI benchmarks + Hub plink package gate. Premise: pipelines already in CI. |
+| 2026-09-17 | D89 | 3, alone | Never-compress live kill of `r-backend` mid-session. Delivery continued; calib failed with reason; queue drained after restart. |
 
 ## Compression debt
 
@@ -198,6 +200,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D86 | Add 15‑min timeouts + kill R (greenfield) | Node already aborted fetch at 15m; abort ≠ kill; Plumber single-threaded | Timeout → `killRBackend` → job `failed`/`Timeout` → next queued job; per-kind overrides; hang endpoint gated |
 | D87 | Fix multisession/availableCores overprovision; compose CPU limits | R already sequential workers=1; compose had no limits; concurrent kickQueue could double-dispatch | Compose cpus 2.0 / mem 4G; `R_WORKERS=1`; Node maxConcurrent + depth alarm; no availableCores for workers |
 | D88 | Wire five benchmarks into CI as one suite | Five already on `lsat7-pipeline`; no perturbation-fail; Hub already had plink 1.5.1 | Shared acceptance predicates + always-run perturbation tests; CI Hub package gate; live paths call same predicates; no invented coefficient pins |
+| D89 | Destructive mid-session R kill (greenfield tooling) | ADR 0001 guard tests + D86 timeout kill already exist; no session path imports R | Live `docker kill r-backend` on `:6060` BN session; delivery/accumulation continue; calibration fails with reason; restart drains queue — no product code |
 
 ## Carried-forward gaps
 
