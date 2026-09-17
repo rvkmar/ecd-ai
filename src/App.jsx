@@ -18,6 +18,7 @@ const SettingsPage = lazyPanel(() => import("./pages/SettingsPage"));
 const CalibrationConsolePage = lazyPanel(() =>
   import("./pages/CalibrationConsolePage")
 );
+const PsychometricsPage = lazyPanel(() => import("./pages/PsychometricsPage"));
 const DistrictDashboard = lazyPanel(() => import("./pages/DistrictDashboard"));
 const TeacherDashboard = lazyPanel(() => import("./pages/TeacherDashboard"));
 const StudentDashboard = lazyPanel(() => import("./pages/StudentDashboard"));
@@ -137,6 +138,10 @@ export default function App() {
                     {/* D65: calibration job console. Also a tab on
                         AdminPage so the surface is not URL-only. */}
                     <Route path="calibration" element={<CalibrationConsolePage />} />
+
+                    {/* D81: psychometric dashboard shell + provenance stamp.
+                        Also a Delivery tab on AdminPage. */}
+                    <Route path="psychometrics" element={<PsychometricsPage />} />
                   </Routes>
                 </ProtectedRoute>
               }

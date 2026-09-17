@@ -45,6 +45,9 @@ vi.mock("@/components/itemBank/ItemBankAdmin", () => ({
 vi.mock("@/components/reports/AnalyticsReports", () => ({
   default: () => <div>Reports dashboard</div>,
 }));
+vi.mock("@/components/psychometrics/PsychometricsDashboard", () => ({
+  default: () => <div>Psychometrics shell</div>,
+}));
 vi.mock("@/components/sessions/SessionBuilder", () => ({
   default: () => <div>Sessions surface</div>,
 }));
@@ -78,6 +81,7 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
 
   it("nests Assembly, Diagnostic design, and Parameter estimation under Models in source", () => {
     const src = read("src/pages/AdminPage.jsx");
+    const app = read("src/App.jsx");
     expect(src).toMatch(/Student Model/);
     expect(src).toMatch(/AssemblyModelBuilder/);
     expect(src).toMatch(/id: "assembly"/);
@@ -85,6 +89,10 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(src).toMatch(/id: "implementation"/);
     expect(src).toMatch(/id: "delivery"/);
     expect(src).toMatch(/id: "reports"/);
+    expect(src).toMatch(/id: "psychometrics"/);
+    expect(src).toMatch(/PsychometricsDashboard/);
+    expect(app).toMatch(/path="psychometrics"/);
+    expect(app).toMatch(/PsychometricsPage/);
     expect(src).not.toMatch(/TabsTrigger value="competencies"/);
     expect(src).not.toMatch(/>Analytics</);
     expect(src).not.toMatch(/Delivery Model/);
@@ -152,8 +160,12 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(screen.getByRole("tab", { name: "Sessions" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Evidence Accumulation (inspect)" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Presentation" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Psychometrics" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Reports" })).toBeInTheDocument();
     expect(screen.getByText("Sessions surface")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Psychometrics" }));
+    expect(screen.getByText("Psychometrics shell")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Reports" }));
     expect(screen.getByText("Reports dashboard")).toBeInTheDocument();

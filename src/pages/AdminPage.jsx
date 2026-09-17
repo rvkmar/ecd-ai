@@ -35,6 +35,9 @@ const AssemblyModelBuilder = lazyPanel(() =>
 const AnalyticsReports = lazyPanel(() =>
   import("@/components/reports/AnalyticsReports")
 );
+const PsychometricsDashboard = lazyPanel(() =>
+  import("@/components/psychometrics/PsychometricsDashboard")
+);
 const SessionBuilder = lazyPanel(() =>
   import("@/components/sessions/SessionBuilder")
 );
@@ -94,6 +97,7 @@ export default function AdminPage() {
             { id: "sessions", label: "Sessions", content: <SessionBuilder /> },
             { id: "accumulation", label: "Evidence Accumulation (inspect)", content: <EvidenceAccumulationInspector /> },
             { id: "presentation", label: "Presentation", content: <PresentationModelStub /> },
+            { id: "psychometrics", label: "Psychometrics", content: <PsychometricsDashboard /> },
             { id: "reports", label: "Reports", content: <AnalyticsReports /> },
           ],
         },
