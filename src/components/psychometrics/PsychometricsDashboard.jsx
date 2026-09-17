@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import AttributeProfileDashboard from "./AttributeProfileDashboard";
+import DifDashboard from "./DifDashboard";
 import ItemAnalysisDashboard from "./ItemAnalysisDashboard";
 import ProvenanceStamp from "./ProvenanceStamp";
 import ReferenceInformationChart from "./ReferenceInformationChart";
@@ -85,6 +87,8 @@ export default function PsychometricsDashboard() {
         <TabsList className="flex flex-wrap gap-2">
           <TabsTrigger value="item-analysis">Item analysis</TabsTrigger>
           <TabsTrigger value="test-information">Test information</TabsTrigger>
+          <TabsTrigger value="attribute-profile">Attribute profiles</TabsTrigger>
+          <TabsTrigger value="dif">DIF</TabsTrigger>
           <TabsTrigger value="catalogue">Artefact catalogue</TabsTrigger>
           <TabsTrigger value="reference">Reference chrome</TabsTrigger>
         </TabsList>
@@ -95,6 +99,14 @@ export default function PsychometricsDashboard() {
 
         <TabsContent value="test-information" className="mt-6">
           <TestInformationDashboard />
+        </TabsContent>
+
+        <TabsContent value="attribute-profile" className="mt-6">
+          <AttributeProfileDashboard />
+        </TabsContent>
+
+        <TabsContent value="dif" className="mt-6">
+          <DifDashboard />
         </TabsContent>
 
         <TabsContent value="catalogue" className="mt-6 space-y-4">

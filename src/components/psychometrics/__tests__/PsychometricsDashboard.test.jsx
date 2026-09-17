@@ -53,6 +53,19 @@ describe("PsychometricsDashboard (D81/D82)", () => {
     expect(screen.getByTestId("test-information-empty")).toBeInTheDocument();
   });
 
+  it("opens attribute-profile and DIF panels", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <PsychometricsDashboard />
+      </MemoryRouter>
+    );
+    await user.click(screen.getByRole("tab", { name: "Attribute profiles" }));
+    expect(screen.getByTestId("attribute-profile-empty")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "DIF" }));
+    expect(screen.getByTestId("dif-empty")).toBeInTheDocument();
+  });
+
   it("shows catalogue empty state and reference chart with stamp", async () => {
     const user = userEvent.setup();
     render(
