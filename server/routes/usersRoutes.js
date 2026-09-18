@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { dbAdapter } from "../utils/dbAdapter.js";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { JWT_SECRET } from "../config/jwt.js";
 import { validatePassword, PASSWORD_POLICY_STATEMENT } from "../config/passwordPolicy.js";
 import { generateTempPassword } from "../../src/utils/generatePassword.js";
@@ -20,6 +21,8 @@ import {
 } from "../utils/tokenService.js";
 
 const router = express.Router();
+
+router.use(sanitizeRequestInputs);
 
 const VALID_ROLES = ["admin", "district", "teacher", "student"];
 

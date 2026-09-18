@@ -3,6 +3,7 @@
 
 import express from "express";
 import { authenticateToken } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB } from "../../src/utils/db-server.js";
 
 const router = express.Router();
@@ -11,6 +12,7 @@ const router = express.Router();
 // (Previously this file had no auth check at all — added as part of the
 // Phase 1 security hardening pass; see AUTH_SECURITY_FIXES.md.)
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 /* =====================================================
    🔹 GET ITEM HEALTH SUMMARY

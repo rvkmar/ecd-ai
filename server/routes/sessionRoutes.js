@@ -1,5 +1,6 @@
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs, submitRateLimiter } from "../utils/requestValidation.js";
 import { loadDB, saveDB, finishSession } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
@@ -57,6 +58,7 @@ const router = express.Router();
 // (Previously this file had no auth check at all — added as part of the
 // Phase 1 security hardening pass; see AUTH_SECURITY_FIXES.md.)
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 // Most routes below are open to any authenticated role for their own
 // work. A student may not read or mutate another examinee's session
@@ -266,7 +268,7 @@ router.get("/:id", (req, res) => {
 // POST /api/sessions/:id/submit
 // ------------------------------
 // body: { taskId, questionId?, itemId?, rawAnswer, observationId?, scoredValue?, evidenceId?, rubricLevel? }
-router.post("/:id/submit", async (req, res) => {
+router.post("/:id/submit", submitRateLimiter, async (req, res) => {
   const { id } = req.params;
   const { taskId, questionId, itemId, rawAnswer, observationId, scoredValue, evidenceId, rubricLevel } = req.body;
 

@@ -6,6 +6,7 @@ import path from "path";
 import mongoose from "mongoose";
 import { schema } from "../../src/utils/schema.js";
 import { validateEntity } from "../../src/utils/schema.js";
+import { assertSafeEqualityFilter } from "./requestValidation.js";
 
 // ------------------------------
 // Configuration
@@ -182,6 +183,7 @@ export const dbAdapter = {
   // on { username } instead finds those records whether or not they were
   // ever given an id.
   async updateWhere(collection, filter, updates) {
+    assertSafeEqualityFilter(filter);
     updates.updatedAt = new Date().toISOString();
 
     if (DB_MODE === "json") {
@@ -204,6 +206,7 @@ export const dbAdapter = {
 
   // Filter-based sibling of remove(), for the same reason as updateWhere.
   async removeWhere(collection, filter) {
+    assertSafeEqualityFilter(filter);
     if (DB_MODE === "json") {
       const db = loadJSON();
       db[collection] = (db[collection] || []).filter(

@@ -37,7 +37,8 @@
 // =============================================================
 
 import express from "express";
-import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import {
   validateEntity,
@@ -51,7 +52,8 @@ import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
 
 const router = express.Router();
 
-router.use(authenticateToken);
+router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 // Authoring and governance are admin/district, matching
 // src/config/rolePermissions.js. Reads are left to any authenticated

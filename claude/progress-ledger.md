@@ -18,14 +18,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D92** — authentication / session policy. Handoff: `claude/day92-session-policy.md`. Policy: `docs/security/session-policy.md`. |
+| Last completed unit | **D93** — input validation + submit rate limit. Handoff: `claude/day93-input-validation-submit-rate-limit.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
-| Next queued | Calendar **D93** — input-validation sweep + session-submit rate limit (never-compress). |
-| Block | **W19** — Security (D91–D92 done; D93–D95 remain). |
+| Next queued | Calendar **D94** — nginx security headers + prod CORS. |
+| Block | **W19** — Security (D91–D93 done; D94–D95 remain). |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -71,6 +71,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-17 D91 | this close. Threat model only. Suite **1611 passed / 9 skipped**; build green. Calendar D91 ✅. Next: D92. |
 | HEAD at 2026-09-17 W19 session close (D91) | this close. Suite re-run **1611 passed / 9 skipped**; build green. W19 gate met. Next: D92. |
 | HEAD at 2026-09-18 D92 | product + `claude/day92-session-policy.md`. Suite **1620 passed / 9 skipped**; build green; live `:6060` logout/role/replay exit checks. |
+| HEAD at 2026-09-18 D93 | product + `claude/day93-input-validation-submit-rate-limit.md`. Suite **1648 passed / 9 skipped**; build green. |
 
 ## Session log
 
@@ -141,6 +142,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-17 | D91 | 3, alone | Threat model dispositioned (`docs/security/threat-model.md`); no fixes. Premise: F3 closed, login already rate-limited. Suite **1611 passed / 9 skipped**. |
 | 2026-09-17 | close | — | W19 session close (D91; gate met). Suite re-run **1611 passed / 9 skipped**; build green. No half-applied work; no new compression debt. Calendar D91 ✅. Next: D92. |
 | 2026-09-18 | D92 | 2, alone | Premise rewritten: login limiter already existed. Short access + refresh rotation + revocation + password policy; fixed dead users validateEntity. Live exit checks on `:6060`. |
+| 2026-09-18 | D93 | 3, alone | Never-compress. sanitizeRequestInputs on all mounted routers; submit 60/user/min; filter hardening; static scan + mutation. |
 
 ## Compression debt
 
@@ -212,6 +214,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D88 | Wire five benchmarks into CI as one suite | Five already on `lsat7-pipeline`; no perturbation-fail; Hub already had plink 1.5.1 | Shared acceptance predicates + always-run perturbation tests; CI Hub package gate; live paths call same predicates; no invented coefficient pins |
 | D91 | Readiness brief still says client posts score; login unthrottled; write greenfield model | Item path F3/D47 closed; loginLimiter + lockout exist; JWT 8h/no revocation and viewScope gap remain | Dispositioned model against live code; scheduled D92–D95 / W20–W22; no fixes in D91 |
 | D92 | JWT 8h / no revocation; D93 builds login rate limiter; password policy absent | Login limiter + lockout already live; PUT users blocked by validateEntity("users") unknown collection | Keep throttle; access 15m + refresh rotation + revocation + authEpoch; stated password policy; remove dead users validateEntity; submit rate-limit design noted for D93 |
+| D93 | Rate-limit auth (greenfield) + submit; sweep path/query; updateWhere filters | Auth throttle already live; `/submit` unlimited; validateEntity body-only; filters caller-built but unguarded | Keep auth throttle; per-user submit limiter; sanitizeRequestInputs on every mounted router (path segments + query); assertSafeEqualityFilter in dbAdapter; D13-style static scan |
 
 ## Carried-forward gaps
 

@@ -30,6 +30,7 @@
 // ------------------------------------------------------------------
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { isCompositeLibraryStale } from "../compositeLibrary/builder.js";
 import { compileAndActivate } from "../compositeLibrary/activation.js";
@@ -37,6 +38,7 @@ import { compileAndActivate } from "../compositeLibrary/activation.js";
 const router = express.Router();
 
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 const canRebuild = authorizeRole(["admin"]);
 

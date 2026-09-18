@@ -47,14 +47,15 @@ See `server/config/passwordPolicy.js` (`PASSWORD_POLICY_STATEMENT`):
 - Login: **10** attempts / IP / minute (`loginLimiter`).
 - Account lockout: **5** failures → **15** minutes (in-memory per username).
 
-## Submit rate-limit design (for D93)
+## Submit rate limit (D93)
 
-D92 does **not** rate-limit `/submit`. Decided shape for D93:
+Implemented on `POST /api/sessions/:id/submit`:
 
-- Per-authenticated-user limiter on `POST /api/sessions/:id/submit` (not only per-IP), so a classroom NAT cannot starve peers.
-- Suggested starting point: **60 submits / minute / user**, burst 10; 429 with a stable error body.
-- Do not share the login limiter’s store; keep calibration and delivery paths separate.
-- Record the decision in the D93 handoff when wired.
+- Per-authenticated-user key (`submit:<username>`), 60 / minute (override via `SUBMIT_RATE_LIMIT_MAX` for tests).
+- Stable 429 body: `{ error: "Too many submits. Please try again shortly." }`.
+- Separate from the login limiter store.
+
+Path/query sanitization (`sanitizeRequestInputs`) is mounted on every live router; `dbAdapter.updateWhere` / `removeWhere` refuse operator-shaped filters.
 
 ## SSO
 

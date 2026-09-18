@@ -4,6 +4,7 @@
 
 import express from "express";
 import { authenticateToken } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity, isLinkableEvidenceModel } from "../../src/utils/schema.js";
 import { validateTaskModelLifecycle } from "../utils/lifecycleValidation.js";
@@ -22,6 +23,7 @@ const router = express.Router();
 // (Previously this file had no auth check at all — added as part of the
 // Phase 1 security hardening pass; see AUTH_SECURITY_FIXES.md.)
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 // Every write route also needs a role gate: only force-deactivate had
 // one. src/config/rolePermissions.js declares taskModels editing as

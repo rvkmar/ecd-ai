@@ -5,6 +5,7 @@
 
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
@@ -21,6 +22,7 @@ const router = express.Router();
 // (Previously this file had no auth check at all — added as part of the
 // Phase 1 security hardening pass; see AUTH_SECURITY_FIXES.md.)
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 // Every write route also needs a role gate: this file had none at all,
 // while src/config/rolePermissions.js already declared competencyModels

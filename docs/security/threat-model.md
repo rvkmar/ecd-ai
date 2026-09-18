@@ -116,11 +116,11 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 
 | ID | Threat | Impact | Disposition | Notes |
 |---|---|---|---|---|
-| T-INP-01 | Malicious query/path/filter params | Injection, NoSQL operator abuse, DoS | **Scheduled D93** | `validateEntity` covers entity insert shape, not query/path/filters |
+| T-INP-01 | Malicious query/path/filter params | Injection, NoSQL operator abuse, DoS | **Control** (D93) | `sanitizeRequestInputs` on every mounted router; `assertSafeEqualityFilter` on `updateWhere`/`removeWhere`; static scan in `requestInputGuard.test.js` |
 | T-INP-02 | Oversized JSON bodies | DoS on node | **Accepted** (dev) → **Scheduled** (ops hardening) | `express.json()` default limits; no explicit cap documented for production |
 | T-INP-03 | Missing security headers (CSP, HSTS, XCTO, Referrer-Policy) | XSS impact amplification, MIME sniffing | **Scheduled D94** | `nginx.conf` proxies `/api` only — no security headers today |
 | T-INP-04 | CORS misconfiguration in production | Token theft via malicious origin | **Scheduled D94** | Dev CORS locked to `localhost:5173`; production relies on same-origin nginx — verify no open CORS in prod compose |
-| T-INP-05 | Session submit flooding | Exhaustion / distorted exposure stats | **Scheduled D93** | Login limited; `/submit` not rate-limited |
+| T-INP-05 | Session submit flooding | Exhaustion / distorted exposure stats | **Control** (D93) | Per-user `submitRateLimiter` (60/min) on `POST /:id/submit` |
 
 ### 4.5 Supply chain and secrets
 
@@ -156,7 +156,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 |---|---|
 | **D91** (this doc) | Gate: every threat dispositioned |
 | **D92** | ~~T-AUTH-01/02~~ **closed** — see `docs/security/session-policy.md` |
-| **D93** | T-INP-01/05 input validation sweep + rate limit on session submit |
+| **D93** | ~~T-INP-01/05~~ **closed** — path/query sanitize + submit rate limit |
 | **D94** | T-INP-03/04 nginx security headers + prod CORS posture |
 | **D95** | T-SUP-01/02 dependency + secret scanning CI; history scan |
 | **W19 SSO ADR** | T-AUTH-05 (decide only) |

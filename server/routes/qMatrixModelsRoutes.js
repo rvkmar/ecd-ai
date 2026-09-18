@@ -21,6 +21,7 @@
 // ------------------------------------------------------------------
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { validateQMatrixModelLifecycle } from "../utils/lifecycleValidation.js";
@@ -32,6 +33,7 @@ const router = express.Router();
 // then per-route role gates matching rolePermissions.js's declared intent
 // (qMatrixModels: admin+district may view, admin may author and delete).
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 const canAuthor = authorizeRole(["admin"]);
 const canDelete = authorizeRole(["admin"]);

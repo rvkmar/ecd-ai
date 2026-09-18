@@ -1,6 +1,7 @@
 // server/routes/api/reportsRoutes.js
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB } from "../../src/utils/db-server.js";
 import { dbAdapter } from "../utils/dbAdapter.js";
 import { sessionMeasurementReport } from "../delivery/sessionReportMeasurement.js";
@@ -13,6 +14,7 @@ const router = express.Router();
 // (Previously this file had no auth check at all — added as part of the
 // Phase 1 security hardening pass; see AUTH_SECURITY_FIXES.md.)
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 // D59: teacher-report payloads (per-session teacher report, class, and
 // district) are staff-only. Authenticate-only was the examinee leak —

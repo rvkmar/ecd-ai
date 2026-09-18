@@ -5,6 +5,7 @@
 
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { validateCalibrationJobLifecycle } from "../utils/lifecycleValidation.js";
@@ -23,6 +24,7 @@ import {
 
 const router = express.Router();
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 const canAuthor = authorizeRole(["admin"]);
 const canView = authorizeRole(["admin", "district"]);
