@@ -59,7 +59,9 @@ Path/query sanitization (`sanitizeRequestInputs`) is mounted on every live route
 
 ## SSO
 
-Out of scope here — ADR only when district requirements are known (T-AUTH-05).
+See **ADR 0005** (`docs/adr/0005-sso-hosting-residency.md`). Local JWT accounts
+remain the production identity path until a named district IdP requirement
+exists. No SAML/OIDC implementation in W19.
 
 ## Exit checks (D92)
 

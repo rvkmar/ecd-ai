@@ -83,7 +83,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 | T-AUTH-02 | Brute-force login | Account takeover | **Control** | Per-IP `loginLimiter` (10/min) + per-username lockout (5 fails / 15 min); password policy stated in `passwordPolicy.js` |
 | T-AUTH-03 | Weak / default JWT secret | Forge any token | **Control** | Boot refuses `JWT_SECRET` &lt; 32 chars (`jwt.js`) |
 | T-AUTH-04 | Password stored or logged in clear | Credential theft | **Control** | bcrypt on create/login path; `toSafeUser` strips password |
-| T-AUTH-05 | Missing SSO / IdP for districts | Operational pressure to share passwords; weak identity binding | **Scheduled** (SSO ADR, W19 — not speculative build) | Calendar: evaluate SAML/OIDC against real district requirements; **do not implement in D91–D95 without ADR** |
+| T-AUTH-05 | Missing SSO / IdP for districts | Operational pressure to share passwords; weak identity binding | **Accepted** (current deploy) + **Scheduled** (build only after IdP known) | ADR 0005: no district IdP supplied → local JWT accounts remain correct; OIDC preferred when a real IdP arrives; do not build SAML/OIDC now |
 | T-AUTH-06 | Client calls bypassing `apiFetch` | Unauthenticated or mis-attached requests | **Control** | D46 guard: no raw `fetch("/api…")` outside `apiClient.js` |
 
 ### 4.2 Authorisation and tenancy
@@ -146,7 +146,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 |---|---|---|---|---|
 | T-AVL-01 | Calibration queue exhaustion | Ops delay; not delivery outage | **Control** | D87 concurrency + queue alarm; D86 kill-on-timeout |
 | T-AVL-02 | R container down | Calibration fails | **Control** | Delivery continues (D89); jobs fail with reason; restart drains queue |
-| T-AVL-03 | Single-node API / no HA | Site outage | **Accepted** until hosting ADR | Hosting target undecided (readiness §9) |
+| T-AVL-03 | Single-node API / no HA | Site outage | **Accepted** under interim hosting | ADR 0005: single hardened host + compose; K8s / on-prem deferred to procurement open question |
 
 ---
 
@@ -158,8 +158,8 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 | **D92** | ~~T-AUTH-01/02~~ **closed** — see `docs/security/session-policy.md` |
 | **D93** | ~~T-INP-01/05~~ **closed** — path/query sanitize + submit rate limit |
 | **D94** | T-INP-03/04 nginx security headers + prod CORS; T-SUP-01/02 npm audit + Dependabot + Gitleaks CI; git-history secret audit |
-| **D95** | T-AUTH-05 SSO / hosting / residency ADR + W19 handoff (calendar; not scanners) |
-| **W19 SSO ADR** | Settled inside **D95** (same unit) |
+| **D95** | T-AUTH-05 + hosting + residency — ADR 0005; W19 handoff |
+| **W19 SSO ADR** | ~~Settled inside D95~~ — see `docs/adr/0005-sso-hosting-residency.md` |
 | **W20 D96–D100** | T-AUTHZ-02/03/04 tenancy + artefact/roster scoping + mirror-drift |
 | **W21** | Audit log for lifecycle / ingest / auth failures (insider app-path detection) |
 | **W22** | Storage ADR (JSON vs Mongo), backup/restore, T-NET-01/04 operational hardening |
@@ -170,13 +170,16 @@ D91 **does not** implement any of the above.
 
 ## 6. Explicit non-decisions (named, not forgotten)
 
-These remain ADRs or policy decisions when reached — not silent omissions:
+Settled or partially settled in ADR 0005 (2026-09-18):
 
-- SSO / IdP product choice  
-- Hosting target (compose vs managed K8s vs on-prem)  
-- Data residency for Indian state education bodies  
+- ~~SSO / IdP product choice~~ → **local accounts for current deploy**; IdP product still open until a district names one (owner: product)
+- ~~Hosting target (compose vs managed K8s vs on-prem)~~ → **interim: single hardened host + compose**; final procurement still open (owner: product + ops)
+- ~~Data residency for Indian state education bodies~~ → **working assumption: data stays on that host**; legal confirmation still open (owner: product + counsel)
+
+Still open (not closed by D95):
+
 - Retention periods for responses, audit, artefacts  
-- Whether JSON store survives outside test harness (W22)
+- Whether JSON store survives outside test harness (W22 / D106)
 
 ---
 

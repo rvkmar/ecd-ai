@@ -157,6 +157,51 @@ describe("POST /api/users/login", () => {
 
     expect(res.status).toBe(200);
   });
+
+  it("accepts EMIS id in the username field for local teachers", async () => {
+    const { app, dbAdapter } = await buildApp();
+    dbAdapter.list.mockResolvedValue([
+      await makeTestUser({
+        username: "teach-chennai",
+        profile: { emisId: "TN-TCH-CHENNAI-001", udiseId: "33030100101" },
+      }),
+    ]);
+
+    const res = await request(app)
+      .post("/api/users/login")
+      .send({
+        username: "TN-TCH-CHENNAI-001",
+        password: TEST_PASSWORD,
+        role: "teacher",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.username).toBe("teach-chennai");
+    expect(res.body.mustChangePassword).toBe(false);
+  });
+
+  it("refuses password login for oidc accounts without breaking local login", async () => {
+    const { app, dbAdapter } = await buildApp();
+    dbAdapter.list.mockResolvedValue([
+      await makeTestUser({
+        username: "federated",
+        authProvider: "oidc",
+        password: await bcrypt.hash(TEST_PASSWORD, 10),
+      }),
+      await makeTestUser({ username: "teach1" }),
+    ]);
+
+    const sso = await request(app)
+      .post("/api/users/login")
+      .send({ username: "federated", password: TEST_PASSWORD, role: "teacher" });
+    expect(sso.status).toBe(401);
+    expect(sso.body.error).toMatch(/single sign-on/i);
+
+    const local = await request(app)
+      .post("/api/users/login")
+      .send({ username: "teach1", password: TEST_PASSWORD, role: "teacher" });
+    expect(local.status).toBe(200);
+  });
 });
 
 describe("admin user-management endpoints still require auth", () => {

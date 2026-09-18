@@ -3,25 +3,13 @@
 
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
-import crypto from "crypto";
 import "dotenv/config";
+import {
+  buildTamilNaduSeedUsers,
+  resolveSeedTempPassword,
+} from "./tnSeedUsers.js";
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/ecd_assessment";
-
-// Previously these four seed accounts were created with hardcoded, publicly
-// visible passwords (admin123/dist123/teach123/stud123) on every fresh
-// deploy, with no forced change on first login. This script is idempotent
-// (skips users that already exist), so it only matters on the very first
-// run against an empty database — but that first run is exactly when it
-// matters most. Each seed password can now be pinned via an environment
-// variable (useful for scripted/CI setups); if not set, a random strong
-// password is generated and printed once so the operator can capture it.
-// These accounts still don't have a forced-password-change flow — that's a
-// follow-up (see AUTH_SECURITY_FIXES.md) — so treat these as temporary and
-// rotate them by hand after first login.
-function seedPassword(envVar) {
-  return process.env[envVar] || crypto.randomBytes(12).toString("base64url");
-}
 
 async function init() {
   try {
@@ -31,9 +19,6 @@ async function init() {
     const db = mongoose.connection.db;
     console.log("✅ Connected to", db.databaseName);
 
-    // ------------------------------
-    // 1️⃣ Create Questions Collection
-    // ------------------------------
     const collections = await db.listCollections().toArray();
     const exists = collections.some((c) => c.name === "questions");
 
@@ -52,9 +37,6 @@ async function init() {
     await questionColl.createIndex({ "metadata.grade": 1 });
     console.log("✅ Question indexes created successfully");
 
-    // ------------------------------
-    // 2️⃣ Create Users Collection
-    // ------------------------------
     const userExists = collections.some((c) => c.name === "users");
     if (!userExists) {
       console.log("🆕 Creating 'users' collection...");
@@ -64,87 +46,49 @@ async function init() {
     }
 
     const usersColl = db.collection("users");
-    // 3️⃣ Define MongoDB schema (students  teachers)
-    console.log("⚙️ Ensuring users schema with profile subdocument...");
+    console.log("⚙️ Ensuring users indexes...");
     await usersColl.createIndex({ username: 1 }, { unique: true });
     await usersColl.createIndex({ role: 1 });
     await usersColl.createIndex({ "profile.districtId": 1 });
     await usersColl.createIndex({ "profile.state": 1 });
+    // Sparse unique: only rows that have the field must be unique (admins have none).
+    await usersColl.createIndex(
+      { "profile.emisId": 1 },
+      { unique: true, sparse: true }
+    );
+    await usersColl.createIndex(
+      { "profile.udiseId": 1 },
+      { unique: true, sparse: true }
+    );
 
-    // Document structure reference (for clarity only)
-    /*
-      {
-        username: "teacher1",
-        password: "<bcrypt-hash>",
-        role: "teacher" | "student" | "admin" | "district",
-        email: "teacher1@school.local",
-        profile: {
-          // For Students
-          name: "Student Name",
-          emisId: "EMIS1234",
-          apaarId: "APAAR1234",
-          grade: "Class 8",
-          districtId: "D001",
-          state: "Tamil Nadu",
+    const password = resolveSeedTempPassword();
+    const defaultUsers = buildTamilNaduSeedUsers(password);
 
-          // For Teachers
-          designation: "PG Assistant",
-          subject: "Mathematics",
-          emisId: "TCH9876",
-          udiseId: "UDISE8765",
-          districtId: "D001",
-          state: "Tamil Nadu"
-        },
-        createdAt: ISODate(),
-        updatedAt: ISODate()
-      }
-    */
-    
-    // 4️⃣ Default users (admin, district, teacher, student)
-    // Passwords are pinned via env vars if set (SEED_ADMIN_PASSWORD, etc.),
-    // otherwise randomly generated per run — see seedPassword() above.
-    const defaultUsers = [
-      {
-        username: "admin1",
-        role: "admin",
-        password: seedPassword("SEED_ADMIN_PASSWORD"),
-        email: "admin@ecd.local",
-      },
-      {
-        username: "dist1",
-        role: "district",
-        password: seedPassword("SEED_DISTRICT_PASSWORD"),
-        email: "district@ecd.local",
-      },
-      {
-        username: "teach1",
-        role: "teacher",
-        password: seedPassword("SEED_TEACHER_PASSWORD"),
-        email: "teacher@ecd.local",
-      },
-      {
-        username: "stud1",
-        role: "student",
-        password: seedPassword("SEED_STUDENT_PASSWORD"),
-        email: "student@ecd.local",
-      },
-    ];
-
-    console.log("👥 Creating default users...");
+    console.log(`👥 Seeding TN roster (${defaultUsers.length} accounts, idempotent)...`);
     const createdCredentials = [];
 
     for (const user of defaultUsers) {
-      const exists = await usersColl.findOne({ username: user.username });
-      if (!exists) {
+      const existsUser = await usersColl.findOne({ username: user.username });
+      if (!existsUser) {
         const hashed = await bcrypt.hash(user.password, 10);
         await usersColl.insertOne({
+          id: user.username,
           username: user.username,
           email: user.email,
           role: user.role,
           password: hashed,
+          profile: user.profile || {},
+          authProvider: user.authProvider || "local",
+          mustChangePassword: Boolean(user.mustChangePassword),
+          authEpoch: 0,
           createdAt: new Date(),
+          updatedAt: new Date(),
         });
-        createdCredentials.push({ username: user.username, role: user.role, password: user.password });
+        createdCredentials.push({
+          username: user.username,
+          role: user.role,
+          password: user.password,
+        });
         console.log(`✅ Created user: ${user.username} (${user.role})`);
       } else {
         console.log(`ℹ️ User '${user.username}' already exists, skipping.`);
@@ -152,27 +96,11 @@ async function init() {
     }
 
     if (createdCredentials.length) {
-      console.log("\n🔐 Seed account credentials (shown only this once — capture them now):");
-      for (const c of createdCredentials) {
-        console.log(`   ${c.username} (${c.role}) / ${c.password}`);
-      }
-      console.log("   Change these passwords after first login.\n");
+      console.log("\n🔐 New seed credentials (shown only for accounts created this run):");
+      console.log(`   Temporary password for all new accounts: ${password}`);
+      console.log(`   (${createdCredentials.length} usernames created — see log lines above)`);
+      console.log("   Change passwords after first login (mustChangePassword=true).\n");
     }
-
-    // Indexes for users
-    console.log("⚙️ Creating user indexes...");
-    await usersColl.createIndex({ username: 1 }, { unique: true });
-    await usersColl.createIndex({ role: 1 });
-    console.log("✅ User indexes created successfully");
-
-    // ------------------------------
-    // 3️⃣ Verify setup
-    // ------------------------------
-    const questionIndexes = await questionColl.indexes();
-    const userIndexes = await usersColl.indexes();
-
-    console.log("📚 Question Indexes:", questionIndexes);
-    console.log("📚 User Indexes:", userIndexes);
 
     console.log("🎉 MongoDB initialization complete for ecd_assessment");
   } catch (err) {

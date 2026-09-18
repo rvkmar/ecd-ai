@@ -110,6 +110,10 @@ async function initMongo() {
           districtId: String,
           state: String,
         },
+        // "local" (default) | future "oidc" / "saml" — see server/auth/localIdentity.js
+        authProvider: { type: String, default: "local" },
+        mustChangePassword: { type: Boolean, default: false },
+        authEpoch: { type: Number, default: 0 },
       },
       { timestamps: true }
     );
@@ -154,8 +158,12 @@ export const dbAdapter = {
   },
 
   async insert(collection, obj) {
-    const { valid, errors } = validateEntity(collection, obj);
-    if (!valid) throw new Error(errors.join(", "));
+    // Users are intentionally absent from schema.js (auth records, not ECD
+    // entities). createUserRecord / TN seed still go through this helper.
+    if (collection !== "users") {
+      const { valid, errors } = validateEntity(collection, obj);
+      if (!valid) throw new Error(errors.join(", "));
+    }
 
     obj.createdAt = new Date().toISOString();
     obj.updatedAt = new Date().toISOString();

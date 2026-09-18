@@ -18,14 +18,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D94** — security headers, CI scanners, git-history audit. Handoff: `claude/day94-security-headers-scanners-history-audit.md`. |
+| Last completed unit | **D95** — SSO/hosting/residency ADR + W19 close. Handoff: `claude/day95-sso-hosting-residency-adr.md`; block: `claude/day95-w19-block-close.md`. |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
-| Next queued | Calendar **D95** — SSO evaluation ADR + W19 handoff. |
-| Block | **W19** — Security (D91–D94 done; D95 remains). |
+| Next queued | Calendar **D96** — W20 multi-tenancy (server-side viewScope). |
+| Block | **W19** — Security (**closed** D91–D95). Next block **W20**. |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -73,6 +73,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-18 D92 | product + `claude/day92-session-policy.md`. Suite **1620 passed / 9 skipped**; build green; live `:6060` logout/role/replay exit checks. |
 | HEAD at 2026-09-18 D93 | product + `claude/day93-input-validation-submit-rate-limit.md`. Suite **1648 passed / 9 skipped**; build green. |
 | HEAD at 2026-09-18 D94 | product + `claude/day94-security-headers-scanners-history-audit.md`. Suite **1661 passed / 9 skipped**; build green; live `:6060` headers + no prod CORS. |
+| HEAD at 2026-09-18 D95 / W19 close | ADR 0005 + `claude/day95-sso-hosting-residency-adr.md` + `claude/day95-w19-block-close.md`. Docs only; suite **1662 passed / 9 skipped**; build green. |
 
 ## Session log
 
@@ -145,6 +146,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-18 | D92 | 2, alone | Premise rewritten: login limiter already existed. Short access + refresh rotation + revocation + password policy; fixed dead users validateEntity. Live exit checks on `:6060`. |
 | 2026-09-18 | D93 | 3, alone | Never-compress. sanitizeRequestInputs on all mounted routers; submit 60/user/min; filter hardening; static scan + mutation. |
 | 2026-09-18 | D94 | 2, alone | Calendar owns headers+scanners+history (threat-model D95 map drifted). nginx CSP/HSTS/…; CI npm audit+Gitleaks; Dependabot; history audit no rotations. |
+| 2026-09-18 | D95 | 2, alone | ADR 0005: local accounts remain; interim single-host compose; residency working assumption + open owners. W19 block closed. No SSO code. |
 
 ## Compression debt
 
@@ -218,6 +220,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D92 | JWT 8h / no revocation; D93 builds login rate limiter; password policy absent | Login limiter + lockout already live; PUT users blocked by validateEntity("users") unknown collection | Keep throttle; access 15m + refresh rotation + revocation + authEpoch; stated password policy; remove dead users validateEntity; submit rate-limit design noted for D93 |
 | D93 | Rate-limit auth (greenfield) + submit; sweep path/query; updateWhere filters | Auth throttle already live; `/submit` unlimited; validateEntity body-only; filters caller-built but unguarded | Keep auth throttle; per-user submit limiter; sanitizeRequestInputs on every mounted router (path segments + query); assertSafeEqualityFilter in dbAdapter; D13-style static scan |
 | D94 | Threat-model map: headers+CORS only; scanners on D95 | Calendar D94 = headers + npm audit/Dependabot/Gitleaks + history audit; D95 = SSO ADR | Implemented calendar scope; rewrote threat-model D94/D95 map; fixed local override that forced NODE_ENV=development (re-enabled CORS on walk stack) |
+| D95 | Evaluate SAML/OIDC against actual district IdP | No district IdP metadata in repo; local JWT only | Local accounts remain correct; OIDC preferred if/when IdP named; interim single-host compose; residency working assumption; three open questions with owners (ADR 0005) |
 
 ## Carried-forward gaps
 
