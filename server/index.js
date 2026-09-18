@@ -2,6 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import "dotenv/config";
+import { applyCors } from "./utils/corsPolicy.js";
 
 import sessionRoutes from "./routes/sessionRoutes.js";
 import questionsRoutes from "./routes/questionsRoutes.js";
@@ -38,10 +39,9 @@ const app = express();
 app.use(express.json());
 app.use(bodyParser.json());
 
-// Enable CORS for development only
-if (process.env.NODE_ENV !== "production") {
-  app.use(cors({ origin: "http://localhost:5173", credentials: true }));
-}
+// D94: production is same-origin via nginx — CORS stays off.
+// Dev pins an explicit Vite origin (never "*"); see corsPolicy.js.
+applyCors(app, cors);
 
 // Role-specific dashboard "am I still logged in" probes. These used to have
 // no auth at all — anyone could hit /api/admin/data with no token — and the

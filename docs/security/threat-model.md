@@ -118,16 +118,16 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 |---|---|---|---|---|
 | T-INP-01 | Malicious query/path/filter params | Injection, NoSQL operator abuse, DoS | **Control** (D93) | `sanitizeRequestInputs` on every mounted router; `assertSafeEqualityFilter` on `updateWhere`/`removeWhere`; static scan in `requestInputGuard.test.js` |
 | T-INP-02 | Oversized JSON bodies | DoS on node | **Accepted** (dev) → **Scheduled** (ops hardening) | `express.json()` default limits; no explicit cap documented for production |
-| T-INP-03 | Missing security headers (CSP, HSTS, XCTO, Referrer-Policy) | XSS impact amplification, MIME sniffing | **Scheduled D94** | `nginx.conf` proxies `/api` only — no security headers today |
-| T-INP-04 | CORS misconfiguration in production | Token theft via malicious origin | **Scheduled D94** | Dev CORS locked to `localhost:5173`; production relies on same-origin nginx — verify no open CORS in prod compose |
+| T-INP-03 | Missing security headers (CSP, HSTS, XCTO, Referrer-Policy) | XSS impact amplification, MIME sniffing | **Control** (D94) | `nginx.conf`: CSP, HSTS, XCTO, Referrer-Policy, `frame-ancestors 'none'`; live-verified on `:6060` |
+| T-INP-04 | CORS misconfiguration in production | Token theft via malicious origin | **Control** (D94) | `applyCors` mounts only when `NODE_ENV !== "production"`; refuses `CORS_ORIGIN=*`; compose node is `NODE_ENV=production` |
 | T-INP-05 | Session submit flooding | Exhaustion / distorted exposure stats | **Control** (D93) | Per-user `submitRateLimiter` (60/min) on `POST /:id/submit` |
 
 ### 4.5 Supply chain and secrets
 
 | ID | Threat | Impact | Disposition | Notes |
 |---|---|---|---|---|
-| T-SUP-01 | Vulnerable npm dependency | RCE / data exfil | **Scheduled D95** | No Dependabot / `npm audit` CI gate observed under `.github/` |
-| T-SUP-02 | Secret committed in git history | Credential compromise | **Scheduled D95** | `.env` gitignored at HEAD; history scan not yet proven |
+| T-SUP-01 | Vulnerable npm dependency | RCE / data exfil | **Control** (D94) | CI `security-scanners` job: `npm audit --audit-level=high` fails the build; Dependabot weekly PRs |
+| T-SUP-02 | Secret committed in git history | Credential compromise | **Control** (D94) | CI Gitleaks (full history); written audit `docs/security/git-history-secret-audit.md` — no leaks; no rotation required |
 | T-SUP-03 | Hub `r-backend` image drift / missing packages | Silent calib failure or wrong estimates | **Control** | D88 CI package gate; D61 `/health` pin practice |
 | T-SUP-04 | Compromised publish of Hub image | Malicious R code on calib path | **Accepted** (trust Hub + pin digest later) | Prefer digest pin in compose as follow-on; not W19 day-unit yet |
 
@@ -157,9 +157,9 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 | **D91** (this doc) | Gate: every threat dispositioned |
 | **D92** | ~~T-AUTH-01/02~~ **closed** — see `docs/security/session-policy.md` |
 | **D93** | ~~T-INP-01/05~~ **closed** — path/query sanitize + submit rate limit |
-| **D94** | T-INP-03/04 nginx security headers + prod CORS posture |
-| **D95** | T-SUP-01/02 dependency + secret scanning CI; history scan |
-| **W19 SSO ADR** | T-AUTH-05 (decide only) |
+| **D94** | T-INP-03/04 nginx security headers + prod CORS; T-SUP-01/02 npm audit + Dependabot + Gitleaks CI; git-history secret audit |
+| **D95** | T-AUTH-05 SSO / hosting / residency ADR + W19 handoff (calendar; not scanners) |
+| **W19 SSO ADR** | Settled inside **D95** (same unit) |
 | **W20 D96–D100** | T-AUTHZ-02/03/04 tenancy + artefact/roster scoping + mirror-drift |
 | **W21** | Audit log for lifecycle / ingest / auth failures (insider app-path detection) |
 | **W22** | Storage ADR (JSON vs Mongo), backup/restore, T-NET-01/04 operational hardening |

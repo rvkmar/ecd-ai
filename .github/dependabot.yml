@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # D94 — dependency scanning surface (PRs); CI `npm audit` fails the build.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5

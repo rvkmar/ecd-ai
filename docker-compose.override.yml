@@ -1,11 +1,8 @@
-# version: "3.9"
-
 services:
   node:
     environment:
-      # 🔹 Enable development mode
-      - NODE_ENV=development
-      # 🔹 Change backend URL to point to local r-backend service
+      # D94: do not override NODE_ENV=development — that re-enables CORS on the
+      # same-origin nginx stack. Main compose pins production.
       - R_BACKEND_URL=http://r-backend:4000
     depends_on:
       - r-backend

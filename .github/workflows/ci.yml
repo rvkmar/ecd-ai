@@ -30,6 +30,31 @@ jobs:
       - name: Test
         run: npm test
 
+  # D94 — dependency + secret scanners must FAIL the job (not warn).
+  security-scanners:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: secret scan must cover commits, not only HEAD.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit (fail on high+)
+        run: npm audit --audit-level=high
+
+      - name: Gitleaks (full history)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # D64/D66/D67/D69/D70/D77: existing build-and-test never starts r-backend (confirmed).
   # This job uses the same published image + repo app bind-mount as
   # compose — not a second psychometric stack — and runs the live
