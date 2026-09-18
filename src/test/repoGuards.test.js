@@ -101,6 +101,10 @@ describe("every write route declares a role gate", () => {
   const OPEN_BY_DESIGN = new Set([
     // Login is how you get a token in the first place.
     "usersRoutes.js:POST:/login",
+    // D92: refresh and logout authenticate via the refresh token body (and
+    // optional bearer for logout denylist), not a prior access token.
+    "usersRoutes.js:POST:/refresh",
+    "usersRoutes.js:POST:/logout",
     // A session's own lifecycle (create, submit, play, pause, resume, finish,
     // review, archive) is the student's self-service flow, not a
     // privileged action -- gating it by role would block the exact
@@ -344,6 +348,11 @@ const DEAD_EXPORT_BASELINE = new Map([
     "Used 4x inside evidenceModels.js; named in prose in effectiveModel.js and " +
       "in mirrorDrift.test.js (a test, which by design does not count). " +
       "The export is unnecessary — deletion candidate.",
+  ],
+  [
+    "server/utils/tokenService.js :: _resetTokenServiceForTests",
+    "D92 test harness only — clears in-memory refresh/denylist/epoch maps " +
+      "between suites. Not a production caller by design.",
   ],
 ]);
 

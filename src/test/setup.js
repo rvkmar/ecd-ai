@@ -13,8 +13,32 @@ import "@testing-library/jest-dom";
 // top of each test file — is what makes the timing work.
 process.env.JWT_SECRET ||=
   "test-only-secret-do-not-use-outside-automated-tests-please-thanks";
-process.env.TOKEN_EXPIRES_IN ||= "1h";
+process.env.ACCESS_TOKEN_EXPIRES_IN ||= "15m";
+process.env.REFRESH_TOKEN_EXPIRES_IN ||= "7d";
+process.env.TOKEN_EXPIRES_IN ||= "15m";
 process.env.DB_MODE ||= "json";
+
+// D92: authenticateToken checks authEpoch. Route tests mint JWTs without
+// going through login, so seed a zero epoch for the four walk accounts
+// (and common role-named subjects). Dynamic import so jwt.js sees JWT_SECRET
+// above (static imports would hoist before the env assignment).
+const { setCachedAuthEpoch } = await import("../../server/utils/tokenService.js");
+for (const u of [
+  "admin1",
+  "dist1",
+  "teach1",
+  "stud1",
+  // Route tests mint `${role}1` (district1, teacher1, …), not the walk ids.
+  "district1",
+  "teacher1",
+  "student1",
+  "admin",
+  "district",
+  "teacher",
+  "student",
+]) {
+  setCachedAuthEpoch(u, 0);
+}
 
 // Day 42 (Week 9): jsdom has no ResizeObserver at all, but cmdk (the
 // Command-palette primitive the new Combobox is built on -- see

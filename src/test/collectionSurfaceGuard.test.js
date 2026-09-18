@@ -136,7 +136,11 @@ function mountedRouteFiles() {
 
 // Routes that legitimately take no token, because they are how a caller
 // obtains one. Anything else ungated is a finding.
-const UNAUTHENTICATED_BY_DESIGN = new Set(["usersRoutes.js::/login"]);
+const UNAUTHENTICATED_BY_DESIGN = new Set([
+  "usersRoutes.js::/login",
+  "usersRoutes.js::/refresh",
+  "usersRoutes.js::/logout",
+]);
 
 // Strip // line comments before looking for a gate. Without this, a gate
 // that has been COMMENTED OUT still matches the regex looking for it, and

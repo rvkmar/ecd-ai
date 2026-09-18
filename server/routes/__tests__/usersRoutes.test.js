@@ -5,12 +5,16 @@
 // admin-only user-management endpoints still require auth. dbAdapter is
 // mocked — these tests exercise usersRoutes.js's own logic, not Mongo.
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../../config/jwt.js";
+import {
+  setCachedAuthEpoch,
+  _resetTokenServiceForTests,
+} from "../../utils/tokenService.js";
 
 vi.mock("../../utils/dbAdapter.js", () => ({
   dbAdapter: {
@@ -32,6 +36,7 @@ async function makeTestUser(overrides = {}) {
     role: "teacher",
     email: "teach1@ecd.local",
     password: await bcrypt.hash(TEST_PASSWORD, 10),
+    authEpoch: 0,
     ...overrides,
   };
 }
@@ -43,6 +48,7 @@ async function makeTestUser(overrides = {}) {
 // the lockout in a different test.
 async function buildApp() {
   vi.resetModules();
+  _resetTokenServiceForTests();
   const { dbAdapter } = await import("../../utils/dbAdapter.js");
   const { default: usersRoutes } = await import("../usersRoutes.js");
   const app = express();
@@ -63,6 +69,7 @@ describe("POST /api/users/login", () => {
     expect(res.status).toBe(200);
     expect(typeof res.body.token).toBe("string");
     expect(res.body.token.length).toBeGreaterThan(10);
+    expect(typeof res.body.refreshToken).toBe("string");
     expect(res.body.username).toBe("teach1");
     expect(res.body.role).toBe("teacher");
   });
@@ -183,11 +190,20 @@ describe("POST /api/users/:username/reset-password", () => {
   // document and returned null without throwing, so the endpoint answered
   // 200 while the password on disk was unchanged. The route must key the
   // write on { username } instead.
+  beforeEach(() => {
+    _resetTokenServiceForTests();
+    setCachedAuthEpoch("admin1", 0);
+  });
+
   const adminToken = () =>
-    jwt.sign({ username: "admin1", role: "admin" }, JWT_SECRET, { expiresIn: "1h" });
+    jwt.sign({ username: "admin1", role: "admin", ae: 0 }, JWT_SECRET, {
+      expiresIn: "1h",
+    });
 
   it("updates an id-less seed account by username and persists the new hash", async () => {
     const { app, dbAdapter } = await buildApp();
+    const { setCachedAuthEpoch: setEpoch } = await import("../../utils/tokenService.js");
+    setEpoch("admin1", 0);
     const seed = { username: "teach1", role: "teacher", password: "old-hash" }; // note: no `id`
     dbAdapter.list.mockResolvedValue([seed]);
     dbAdapter.updateWhere.mockImplementation(async (_c, _f, updates) => ({ ...seed, ...updates }));
@@ -195,7 +211,7 @@ describe("POST /api/users/:username/reset-password", () => {
     const res = await request(app)
       .post("/api/users/teach1/reset-password")
       .set("Authorization", `Bearer ${adminToken()}`)
-      .send({ newPassword: "brand-new-password" });
+      .send({ newPassword: "brand-new-pass1!" });
 
     expect(res.status).toBe(200);
     expect(dbAdapter.updateWhere).toHaveBeenCalledTimes(1);
@@ -203,18 +219,21 @@ describe("POST /api/users/:username/reset-password", () => {
     const [collection, filter, updates] = dbAdapter.updateWhere.mock.calls[0];
     expect(collection).toBe("users");
     expect(filter).toEqual({ username: "teach1" });
-    expect(await bcrypt.compare("brand-new-password", updates.password)).toBe(true);
+    expect(await bcrypt.compare("brand-new-pass1!", updates.password)).toBe(true);
+    expect(updates.authEpoch).toBe(1);
   });
 
   it("reports a failure instead of success when the write matched nothing", async () => {
     const { app, dbAdapter } = await buildApp();
+    const { setCachedAuthEpoch: setEpoch } = await import("../../utils/tokenService.js");
+    setEpoch("admin1", 0);
     dbAdapter.list.mockResolvedValue([{ username: "teach1", role: "teacher", password: "old" }]);
     dbAdapter.updateWhere.mockResolvedValue(null);
 
     const res = await request(app)
       .post("/api/users/teach1/reset-password")
       .set("Authorization", `Bearer ${adminToken()}`)
-      .send({ newPassword: "brand-new-password" });
+      .send({ newPassword: "brand-new-pass1!" });
 
     expect(res.status).toBe(500);
   });

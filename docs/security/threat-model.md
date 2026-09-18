@@ -79,8 +79,8 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 
 | ID | Threat | Impact | Disposition | Notes |
 |---|---|---|---|---|
-| T-AUTH-01 | Stolen JWT used until expiry | Full role impersonation for up to `TOKEN_EXPIRES_IN` (default **8h**); **no revocation** | **Scheduled D92** | `server/config/jwt.js`; `authenticateToken` only verifies signature/exp |
-| T-AUTH-02 | Brute-force login | Account takeover | **Control** (partial) + **Scheduled D92** | Per-IP `loginLimiter` (10/min) + per-username lockout (5 fails / 15 min) in `usersRoutes.js`. No shared store for multi-instance; no password complexity policy stated |
+| T-AUTH-01 | Stolen JWT used until expiry | Full role impersonation for up to access-token life; refresh theft until rotation/revocation | **Control** (D92) | Access default **15m** + refresh rotation + logout denylist + `authEpoch` on password/role change. See `docs/security/session-policy.md` |
+| T-AUTH-02 | Brute-force login | Account takeover | **Control** | Per-IP `loginLimiter` (10/min) + per-username lockout (5 fails / 15 min); password policy stated in `passwordPolicy.js` |
 | T-AUTH-03 | Weak / default JWT secret | Forge any token | **Control** | Boot refuses `JWT_SECRET` &lt; 32 chars (`jwt.js`) |
 | T-AUTH-04 | Password stored or logged in clear | Credential theft | **Control** | bcrypt on create/login path; `toSafeUser` strips password |
 | T-AUTH-05 | Missing SSO / IdP for districts | Operational pressure to share passwords; weak identity binding | **Scheduled** (SSO ADR, W19 — not speculative build) | Calendar: evaluate SAML/OIDC against real district requirements; **do not implement in D91–D95 without ADR** |
@@ -155,7 +155,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 | Unit | Closes (primary threats) |
 |---|---|
 | **D91** (this doc) | Gate: every threat dispositioned |
-| **D92** | T-AUTH-01/02 (token life, refresh/revocation policy); password policy statement; begin submit rate-limit design |
+| **D92** | ~~T-AUTH-01/02~~ **closed** — see `docs/security/session-policy.md` |
 | **D93** | T-INP-01/05 input validation sweep + rate limit on session submit |
 | **D94** | T-INP-03/04 nginx security headers + prod CORS posture |
 | **D95** | T-SUP-01/02 dependency + secret scanning CI; history scan |

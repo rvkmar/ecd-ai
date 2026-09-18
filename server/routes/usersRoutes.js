@@ -7,9 +7,17 @@ import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { dbAdapter } from "../utils/dbAdapter.js";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
-import { JWT_SECRET, TOKEN_EXPIRES_IN } from "../config/jwt.js";
-import { validateEntity } from "../../src/utils/schema.js";
+import { JWT_SECRET } from "../config/jwt.js";
+import { validatePassword, PASSWORD_POLICY_STATEMENT } from "../config/passwordPolicy.js";
 import { generateTempPassword } from "../../src/utils/generatePassword.js";
+import {
+  issueTokenPair,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  revokeAllForUser,
+  readAuthEpoch,
+  setCachedAuthEpoch,
+} from "../utils/tokenService.js";
 
 const router = express.Router();
 
@@ -79,6 +87,11 @@ export async function createUserRecord(payload = {}) {
     return { ok: false, status: 400, error: `role must be one of: ${VALID_ROLES.join(", ")}` };
   }
 
+  const pw = validatePassword(password);
+  if (!pw.ok) {
+    return { ok: false, status: 400, error: pw.error };
+  }
+
   const users = await dbAdapter.list("users");
   if (users.some((u) => u.username === username)) {
     return { ok: false, status: 400, error: "Username already exists" };
@@ -100,6 +113,7 @@ export async function createUserRecord(payload = {}) {
     role,
     email: email || "",
     profile: profile || {},
+    authEpoch: 0,
   };
 
   try {
@@ -153,21 +167,77 @@ router.post("/login", loginLimiter, async (req, res) => {
 
     clearFailedAttempts(username);
 
-    const token = jwt.sign(
-      {
-        username: user.username,
-        role: user.role,
-      },
-      JWT_SECRET,
-      { expiresIn: TOKEN_EXPIRES_IN }
-    );
+    const authEpoch = readAuthEpoch(user);
+    const pair = issueTokenPair({
+      username: user.username,
+      role: user.role,
+      authEpoch,
+    });
 
-    res.json({ token, username: user.username, role: user.role });
+    res.json({
+      token: pair.token,
+      refreshToken: pair.refreshToken,
+      expiresIn: pair.expiresIn,
+      username: user.username,
+      role: user.role,
+    });
   } catch (err) {
     console.error("Login failed:", err);
     res.status(500).json({ error: "Server error during login" });
   }
 });
+
+// ------------------------------
+// POST /api/users/refresh
+// Body: { refreshToken } — rotates refresh; detects replay.
+// ------------------------------
+router.post("/refresh", async (req, res) => {
+  const { refreshToken } = req.body || {};
+  const result = rotateRefreshToken(refreshToken);
+  if (!result.ok) {
+    return res.status(result.status).json({ error: result.error });
+  }
+  res.json({
+    token: result.token,
+    refreshToken: result.refreshToken,
+    expiresIn: result.expiresIn,
+    username: result.username,
+    role: result.role,
+  });
+});
+
+// ------------------------------
+// POST /api/users/logout
+// Body: { refreshToken? }. Bearer access optional — when present, its jti
+// is denylisted until natural expiry.
+// ------------------------------
+router.post("/logout", (req, res) => {
+  const { refreshToken } = req.body || {};
+  const authHeader = req.headers["authorization"];
+  const access = authHeader && authHeader.split(" ")[1];
+  let accessPayload = null;
+  if (access) {
+    try {
+      accessPayload = jwt.verify(access, JWT_SECRET);
+    } catch {
+      accessPayload = null;
+    }
+  }
+  revokeRefreshToken(refreshToken, accessPayload);
+  res.status(204).end();
+});
+
+// ------------------------------
+// GET /api/users/password-policy (any authenticated role)
+// ------------------------------
+router.get(
+  "/password-policy",
+  authenticateToken,
+  authorizeRole(["admin", "district", "teacher", "student"]),
+  (_req, res) => {
+    res.json({ policy: PASSWORD_POLICY_STATEMENT });
+  }
+);
 
 // ------------------------------
 // GET /api/users (Admin only)
@@ -283,11 +353,14 @@ router.put(
       if (email !== undefined) updates.email = email;
       if (profile !== undefined) updates.profile = profile;
 
-      const merged = { ...target, ...updates };
-      const { valid, errors } = validateEntity("users", merged);
-      if (!valid) {
-        return res.status(400).json({ error: "Schema validation failed", details: errors });
+      const roleChanged = role !== undefined && role !== target.role;
+      if (roleChanged) {
+        updates.authEpoch = (Number(target.authEpoch) || 0) + 1;
       }
+
+      // Users are the credential store, not an ECD schema collection —
+      // validateEntity("users") always returns "Unknown collection".
+      // Role enum is checked above; email/profile are free-form.
 
       // Same username-keyed lookup as reset-password below, and for the
       // same reason: seed accounts have no `id` to match on.
@@ -297,6 +370,10 @@ router.put(
       });
       if (!updated) {
         return res.status(500).json({ error: "Failed to update user" });
+      }
+      if (roleChanged) {
+        setCachedAuthEpoch(username, updates.authEpoch);
+        revokeAllForUser(username);
       }
       res.json(toSafeUser(updated));
     } catch (err) {
@@ -329,11 +406,13 @@ router.post(
 
       const generated = !newPassword;
       const passwordToSet = newPassword || generateTempPassword();
-      if (passwordToSet.length < 8) {
-        return res.status(400).json({ error: "Password must be at least 8 characters." });
+      const pw = validatePassword(passwordToSet);
+      if (!pw.ok) {
+        return res.status(400).json({ error: pw.error });
       }
 
       const hashed = await bcrypt.hash(passwordToSet, 10);
+      const nextEpoch = (Number(target.authEpoch) || 0) + 1;
 
       // Match on { username }, not on the synthetic `id`. The four seed
       // accounts (admin1/dist1/teach1/stud1) are created by initMongo.js
@@ -346,11 +425,14 @@ router.post(
       const updated = await dbAdapter.updateWhere(
         "users",
         { username },
-        { password: hashed, id: target.id || username }
+        { password: hashed, authEpoch: nextEpoch, id: target.id || username }
       );
       if (!updated) {
         return res.status(500).json({ error: "Failed to reset password" });
       }
+
+      setCachedAuthEpoch(username, nextEpoch);
+      revokeAllForUser(username);
 
       res.json({
         success: true,
@@ -391,6 +473,8 @@ router.delete(
       // and because in JSON mode remove("users", undefined) matched every
       // id-less record, i.e. deleting one seed account wiped them all.
       await dbAdapter.removeWhere("users", { username });
+      revokeAllForUser(username);
+      setCachedAuthEpoch(username, (Number(target.authEpoch) || 0) + 1);
       res.json({ success: true, deleted: username });
     } catch (err) {
       console.error("User deletion failed:", err);
