@@ -1,0 +1,21 @@
+# Custom ECD Node base — published as rvkmar/ecd-node:24-alpine
+#
+# Official node:24-alpine currently ships npm deps with 4 High CVEs
+# (brace-expansion, tar, ip-address). This image starts from the pinned
+# official digest and upgrades those packages in-place.
+#
+# Build + push (from repo root, logged in as rvkmar):
+#   docker build -f docker/base/Dockerfile.node -t rvkmar/ecd-node:24-alpine .
+#   docker scout cves rvkmar/ecd-node:24-alpine --only-severity critical,high
+#   docker push rvkmar/ecd-node:24-alpine
+
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
+
+COPY docker/base/patch-npm-deps.sh /tmp/patch-npm-deps.sh
+RUN sed -i 's/\r$//' /tmp/patch-npm-deps.sh \
+  && chmod +x /tmp/patch-npm-deps.sh \
+  && /tmp/patch-npm-deps.sh \
+  && rm /tmp/patch-npm-deps.sh
+
+WORKDIR /app
+CMD ["node"]

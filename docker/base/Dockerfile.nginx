@@ -1,0 +1,26 @@
+# Custom ECD nginx base — published as rvkmar/ecd-nginx:alpine
+#
+# Official nginx:alpine pulls optional XSLT/njs modules that depend on
+# libxml2 (High CVE, no Alpine fix). ECD only needs static + proxy, so
+# those packages are removed in this base. Scout/IDE then see a clean FROM.
+#
+# Build + push (from repo root, logged in as rvkmar):
+#   docker build -f docker/base/Dockerfile.nginx -t rvkmar/ecd-nginx:alpine .
+#   docker scout cves rvkmar/ecd-nginx:alpine --only-severity critical,high
+#   docker push rvkmar/ecd-nginx:alpine
+#
+# Retarget Dockerfile.nginx final stage to:
+#   FROM rvkmar/ecd-nginx:alpine@sha256:<digest>
+
+FROM nginx:alpine@sha256:3a7edb153fcd67884f51775c8bed68a418fac7328a31d2be4c4ed5cae816ce8d
+
+RUN apk del --no-cache \
+      nginx-module-xslt \
+      nginx-module-njs \
+      libxslt \
+      libxml2 \
+  && rm -rf /var/cache/apk/* \
+  && nginx -t
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
