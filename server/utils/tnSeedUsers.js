@@ -19,7 +19,7 @@ import {
   demoUdiseForDistrict,
 } from "../data/tamilNaduDistricts.js";
 
-export const DEFAULT_SEED_TEMP_PASSWORD = "WalkPass!2026";
+const DEFAULT_SEED_TEMP_PASSWORD = "WalkPass!2026";
 
 export function resolveSeedTempPassword(env = process.env) {
   return (

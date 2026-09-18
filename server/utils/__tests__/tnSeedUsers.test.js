@@ -4,7 +4,7 @@ import { TAMIL_NADU_DISTRICTS } from "../../data/tamilNaduDistricts.js";
 import {
   buildTamilNaduSeedUsers,
   countSeedByRole,
-  DEFAULT_SEED_TEMP_PASSWORD,
+  resolveSeedTempPassword,
 } from "../tnSeedUsers.js";
 import {
   findUserByLoginIdentifier,
@@ -24,7 +24,8 @@ describe("Tamil Nadu district registry", () => {
 });
 
 describe("TN seed roster", () => {
-  const users = buildTamilNaduSeedUsers(DEFAULT_SEED_TEMP_PASSWORD);
+  const seedPassword = resolveSeedTempPassword({});
+  const users = buildTamilNaduSeedUsers(seedPassword);
   const counts = countSeedByRole(users);
 
   it("seeds at least 5 admins and 38 district officers", () => {
@@ -53,7 +54,7 @@ describe("TN seed roster", () => {
   });
 
   it("uses the shared temporary password and local authProvider", () => {
-    expect(users.every((u) => u.password === DEFAULT_SEED_TEMP_PASSWORD)).toBe(true);
+    expect(users.every((u) => u.password === seedPassword)).toBe(true);
     expect(users.every((u) => u.authProvider === "local")).toBe(true);
     expect(users.every((u) => u.mustChangePassword === true)).toBe(true);
   });

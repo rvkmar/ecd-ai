@@ -18,7 +18,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D95** — SSO/hosting/residency ADR + W19 close. Handoff: `claude/day95-sso-hosting-residency-adr.md`; block: `claude/day95-w19-block-close.md`. |
+| Last completed unit | **D95** — SSO/hosting/residency ADR + W19 close. Handoff: `claude/day95-sso-hosting-residency-adr.md`; block: `claude/day95-w19-block-close.md`. Session close: `claude/day95-w19-session-close.md`. |
+| Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
@@ -74,6 +75,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-18 D93 | product + `claude/day93-input-validation-submit-rate-limit.md`. Suite **1648 passed / 9 skipped**; build green. |
 | HEAD at 2026-09-18 D94 | product + `claude/day94-security-headers-scanners-history-audit.md`. Suite **1661 passed / 9 skipped**; build green; live `:6060` headers + no prod CORS. |
 | HEAD at 2026-09-18 D95 / W19 close | ADR 0005 + `claude/day95-sso-hosting-residency-adr.md` + `claude/day95-w19-block-close.md`. Docs only; suite **1662 passed / 9 skipped**; build green. |
+| HEAD at 2026-09-18 off-cal TN + Docker | product `a8c4e7b` (TN seed in D95 commit) + `7639477` (hardened bases). |
+| HEAD at 2026-09-18 W19 session close | this close. Suite re-run **1665 passed / 6 failed (load flakes) / 9 skipped**; isolation of failing files green; build green. Calendar W19 block ✅. Next: D96. |
 
 ## Session log
 
@@ -147,6 +150,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-18 | D93 | 3, alone | Never-compress. sanitizeRequestInputs on all mounted routers; submit 60/user/min; filter hardening; static scan + mutation. |
 | 2026-09-18 | D94 | 2, alone | Calendar owns headers+scanners+history (threat-model D95 map drifted). nginx CSP/HSTS/…; CI npm audit+Gitleaks; Dependabot; history audit no rotations. |
 | 2026-09-18 | D95 | 2, alone | ADR 0005: local accounts remain; interim single-host compose; residency working assumption + open owners. W19 block closed. No SSO code. |
+| 2026-09-18 | off-cal TN + Docker | 2 | TN 38-district seed + EMIS/UDISE login + authProvider seam; Hub `ecd-node`/`ecd-nginx` Scout-clean digests pinned in app Dockerfiles. |
+| 2026-09-18 | close | — | W19 session close (D94–D95 + off-cal). Close-gate fixed dead TN exports / `createUserRecord` baseline. Full suite load flakes (isolation green). Calendar W19 block ✅. Next: D96. |
 
 ## Compression debt
 
@@ -221,6 +226,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D93 | Rate-limit auth (greenfield) + submit; sweep path/query; updateWhere filters | Auth throttle already live; `/submit` unlimited; validateEntity body-only; filters caller-built but unguarded | Keep auth throttle; per-user submit limiter; sanitizeRequestInputs on every mounted router (path segments + query); assertSafeEqualityFilter in dbAdapter; D13-style static scan |
 | D94 | Threat-model map: headers+CORS only; scanners on D95 | Calendar D94 = headers + npm audit/Dependabot/Gitleaks + history audit; D95 = SSO ADR | Implemented calendar scope; rewrote threat-model D94/D95 map; fixed local override that forced NODE_ENV=development (re-enabled CORS on walk stack) |
 | D95 | Evaluate SAML/OIDC against actual district IdP | No district IdP metadata in repo; local JWT only | Local accounts remain correct; OIDC preferred if/when IdP named; interim single-host compose; residency working assumption; three open questions with owners (ADR 0005) |
+| Off-cal TN | Seed roster + keep local login; SSO-ready | createUserRecord was dead-export baseline; unused helpers exported | Seed via createUserRecord (resurrected); unexport identity/password helpers at close gate |
 
 ## Carried-forward gaps
 

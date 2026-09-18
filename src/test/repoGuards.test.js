@@ -339,11 +339,6 @@ const DEAD_EXPORT_BASELINE = new Map([
       "src/test/setup.js). The export is unnecessary — deletion candidate.",
   ],
   [
-    "server/routes/usersRoutes.js :: createUserRecord",
-    "Used 5x inside usersRoutes.js; named only in a dbAdapter.js comment. " +
-      "The export is unnecessary — deletion candidate.",
-  ],
-  [
     "server/routes/evidenceModels.js :: calibrationGate",
     "Used 4x inside evidenceModels.js; named in prose in effectiveModel.js and " +
       "in mirrorDrift.test.js (a test, which by design does not count). " +

@@ -10,7 +10,7 @@
  * - local admins and any remaining local accounts keep working unchanged
  */
 
-export function normalizeLoginIdentifier(raw) {
+function normalizeLoginIdentifier(raw) {
   return String(raw ?? "").trim();
 }
 
@@ -33,7 +33,7 @@ export function findUserByLoginIdentifier(users, identifier) {
 }
 
 /** Effective provider: missing field means local (backward compatible). */
-export function effectiveAuthProvider(user) {
+function effectiveAuthProvider(user) {
   return user?.authProvider || "local";
 }
 

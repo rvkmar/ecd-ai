@@ -10,7 +10,8 @@
 | D92 | `9169119` | 15m access + refresh rotation/revocation; password policy |
 | D93 | `5a2bcf7` | Path/query sanitize; submit rate limit; filter hardening |
 | D94 | `6493696` | nginx headers; CI npm audit + Gitleaks; history audit |
-| D95 | (this close) | ADR 0005 SSO/hosting/residency; W19 handoff |
+| D95 | `a8c4e7b` | ADR 0005 SSO/hosting/residency; W19 handoff; TN roster seed (off-cal same commit) |
+| Off-cal Docker | `7639477` | Digest-pinned `rvkmar/ecd-node` + `ecd-nginx` (Scout 0C/0H) |
 
 ## W19 exit (calendar D95)
 
