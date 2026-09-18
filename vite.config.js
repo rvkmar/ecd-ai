@@ -59,16 +59,30 @@ export default defineConfig({
     },
   },
   test: {
-    // React components (auth context, ProtectedRoute, RequirePermission)
-    // need a DOM; Express route tests don't care and run fine under jsdom
-    // too, so one shared environment keeps this simple.
-    environment: "jsdom",
+    // Soft floor for cold workers on constrained Windows hosts.
+    testTimeout: 15_000,
     globals: true,
     setupFiles: ["./src/test/setup.js"],
     css: false,
-    include: [
-      "src/**/*.test.{js,jsx,ts,tsx}",
-      "server/**/*.test.{js,jsx}",
+    // Vitest 5 dropped environmentMatchGlobs. Split environments via
+    // projects so server/Express files do not pay for a jsdom per file
+    // (full-suite runs were ~47% environment setup and then 5s-timeout
+    // flaking under contention — native PS 2026-09-18).
+    projects: [
+      {
+        test: {
+          name: "server",
+          environment: "node",
+          include: ["server/**/*.test.{js,jsx}"],
+        },
+      },
+      {
+        test: {
+          name: "client",
+          environment: "jsdom",
+          include: ["src/**/*.test.{js,jsx,ts,tsx}"],
+        },
+      },
     ],
   },
 });
