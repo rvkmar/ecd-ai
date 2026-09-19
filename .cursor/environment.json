@@ -1,0 +1,16 @@
+{
+  "name": "ECD Assessment",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "dev",
+      "description": "Vite frontend (:5173) + Express API (:3000), started together via npm run dev.",
+      "command": "export NVM_DIR=\"$HOME/.nvm\"; . \"$NVM_DIR/nvm.sh\"; nvm use >/dev/null; npm run dev"
+    }
+  ],
+  "ports": [
+    { "name": "vite", "port": 5173 },
+    { "name": "api", "port": 3000 }
+  ]
+}
