@@ -45,10 +45,10 @@ npm run build
   green (~49s; max JS chunk recharts 451.37 kB)
 ```
 
-- No half-applied product work. Commit **`a57437b`** (product + session close).
+- No half-applied product work. Commit **`c0a327b`** (product + session close).
 - Exit check executed: HTTP suite + sixth mirror + live foreign-district 403.
 - Calendar: **ECD D98** marked ✅ (event date unchanged).
-- Remote `main/master` at **`a57437b`** (after push).
+- Remote `main/master` at **`c0a327b`**.
 
 ## Delivered
 
