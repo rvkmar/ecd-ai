@@ -21,6 +21,11 @@ import {
   applyNamedCalibrationFixture,
   CALIBRATION_NAMED_FIXTURES,
 } from "../r/calibrationFixtures.js";
+import {
+  MIN_CELL_SIZE,
+  namedAggregateScope,
+  redactCalibrationJobForViewer,
+} from "../utils/aggregatePrivacy.js";
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -48,7 +53,17 @@ router.get("/", canView, (req, res) => {
   if (evidenceModelId) rows = rows.filter((j) => j.evidenceModelId === evidenceModelId);
   if (status) rows = rows.filter((j) => j.status === status);
   if (kind) rows = rows.filter((j) => j.kind === kind);
-  res.json(rows);
+  const isAdmin = req.user?.role === "admin";
+  res.json(
+    rows.map((j) => ({
+      ...redactCalibrationJobForViewer(j, isAdmin),
+      scopeMeta: namedAggregateScope(req, {
+        kind: "calibration-job",
+        jobScope: j.scope || null,
+      }),
+      minCellSize: MIN_CELL_SIZE,
+    }))
+  );
 });
 
 // ------------------------------
@@ -65,7 +80,15 @@ router.get("/:id", canView, (req, res) => {
   const db = loadDB();
   const row = (db.calibrationJobs || []).find((j) => j.id === req.params.id);
   if (!row) return res.status(404).json({ error: "Calibration job not found" });
-  res.json(row);
+  const isAdmin = req.user?.role === "admin";
+  res.json({
+    ...redactCalibrationJobForViewer(row, isAdmin),
+    scopeMeta: namedAggregateScope(req, {
+      kind: "calibration-job",
+      jobScope: row.scope || null,
+    }),
+    minCellSize: MIN_CELL_SIZE,
+  });
 });
 
 // ------------------------------

@@ -8,6 +8,13 @@ import { sessionMeasurementReport } from "../delivery/sessionReportMeasurement.j
 import { studentForbiddenFromSession } from "../../src/utils/sessionPlay.js";
 import { assertCallerMayAccessDistrict } from "../utils/tenancyScope.js";
 import { TenancyError } from "../utils/tenancyContext.js";
+import {
+  MIN_CELL_SIZE,
+  namedAggregateScope,
+  suppressBnSummary,
+  suppressCoverageMap,
+  suppressIrtSummary,
+} from "../utils/aggregatePrivacy.js";
 
 
 const router = express.Router();
@@ -460,10 +467,28 @@ router.get("/teacher/class/:classId", canViewTeacherReports, (req, res) => {
     return res.status(404).json({ error: `No students found for classId ${classId}` });
   }
 
+  // D99: class must sit inside the caller's district (teachers/district).
+  const callerDistrict = req.user?.districtId;
+  if (req.user?.role !== "admin" && callerDistrict) {
+    const foreign = students.some((s) => s.districtId && s.districtId !== callerDistrict);
+    if (foreign) {
+      return res.status(403).json({
+        error: "Class is outside caller district",
+        code: "TENANCY_REQUIRED",
+      });
+    }
+  }
+
   // get all sessions for these students
   const sessions = db.sessions?.filter(s => students.some(stu => stu.id === s.studentId)) || [];
   if (sessions.length === 0) {
-    return res.json({ classId, summary: {}, recommendations: [] });
+    return res.json({
+      classId,
+      scope: namedAggregateScope(req, { kind: "class-report", classId }),
+      minCellSize: MIN_CELL_SIZE,
+      summary: {},
+      recommendations: [],
+    });
   }
 
   // 🔹 Pre-index collections
@@ -602,18 +627,30 @@ router.get("/teacher/class/:classId", canViewTeacherReports, (req, res) => {
 
   res.json({
     classId,
-    students: students.map(s => ({ id: s.id, name: s.name })),
-    policiesUsed: policyUsage, // 🔹 NEW
+    scope: namedAggregateScope(req, { kind: "class-report", classId }),
+    minCellSize: MIN_CELL_SIZE,
+    // D99: roster size only — not names/ids (small-cell / peer identification).
+    studentCount: suppressCountSafe(students.length),
+    policiesUsed: policyUsage.map((p) => ({
+      // Drop sessionId — ties policy to an individual delivery.
+      policy: p.policy,
+    })),
     summary: {
-      IRT: irtSummary,
-      BayesianNetwork: bnSummary,
-      captured: capturedSummary,
-      competencyCoverage,
-      evidenceCoverage,
+      IRT: suppressIrtSummary(irtSummary),
+      BayesianNetwork: suppressBnSummary(bnSummary),
+      // Aggregate capture counts only — no per-student captured[].
+      capturedTaskCount: suppressCountSafe(capturedSummary.length),
+      competencyCoverage: suppressCoverageMap(competencyCoverage),
+      evidenceCoverage: suppressCoverageMap(evidenceCoverage),
     },
     recommendations
   });
 });
+
+function suppressCountSafe(n) {
+  if (n > 0 && n < MIN_CELL_SIZE) return null;
+  return n;
+}
 
 
 // ------------------------------
@@ -763,9 +800,10 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, (req, res) =>
     }
 
     districtReport.classes[classId] = {
-      IRT: irtSummary,
-      BayesianNetwork: bnSummary,
-      policiesUsed: classPolicyUsage // 🔹 NEW
+      IRT: suppressIrtSummary(irtSummary),
+      BayesianNetwork: suppressBnSummary(bnSummary),
+      // D99: policy type counts only — no sessionId.
+      policiesUsed: classPolicyUsage.map((p) => ({ policy: p.policy })),
     };
   }
 
@@ -773,11 +811,11 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, (req, res) =>
   if (allIrt.length > 0) {
     const mean = allIrt.reduce((a, b) => a + b, 0) / allIrt.length;
     const variance = allIrt.reduce((a, b) => a + (b - mean) ** 2, 0) / allIrt.length;
-    districtReport.districtSummary.IRT = {
+    districtReport.districtSummary.IRT = suppressIrtSummary({
       count: allIrt.length,
       mean,
       stddev: Math.sqrt(variance),
-    };
+    });
 
     if (mean < 0) {
       districtReport.recommendations.push("District average ability is below expected. Consider remedial programs.");
@@ -790,9 +828,10 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, (req, res) =>
 
   // district-wide BN
   const entropy = (p) => (p <= 0 || p >= 1) ? 0 : -p * Math.log2(p) - (1 - p) * Math.log2(1 - p);
+  const bnDistrict = {};
   for (const [node, probs] of Object.entries(bnNodes)) {
     const mean = probs.reduce((a, b) => a + b, 0) / probs.length;
-    districtReport.districtSummary.BayesianNetwork[node] = {
+    bnDistrict[node] = {
       count: probs.length,
       mean,
       meanEntropy: probs.map(p => entropy(p)).reduce((a, b) => a + b, 0) / probs.length,
@@ -803,9 +842,9 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, (req, res) =>
       districtReport.recommendations.push(`District shows strong performance in ${node}.`);
     }
   }
+  districtReport.districtSummary.BayesianNetwork = suppressBnSummary(bnDistrict);
 
-  // attach captured + coverage
-  districtReport.districtSummary.captured = capturedSummary;
+  // D99: capture counts only — no per-student captured[].
   const competencyCoverage = {};
   const evidenceCoverage = {};
   for (const cap of capturedSummary) {
@@ -824,31 +863,31 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, (req, res) =>
       }
     }
   }
-  districtReport.districtSummary.competencyCoverage = competencyCoverage;
-  districtReport.districtSummary.evidenceCoverage = evidenceCoverage;
+  districtReport.districtSummary.captured = undefined;
+  districtReport.districtSummary.capturedTaskCount = suppressCountSafe(capturedSummary.length);
+  districtReport.districtSummary.competencyCoverage = suppressCoverageMap(competencyCoverage);
+  districtReport.districtSummary.evidenceCoverage = suppressCoverageMap(evidenceCoverage);
 
-  // 🔹 Attach policy usage
-  districtReport.policiesUsed = allPolicyUsage;
+  districtReport.policiesUsed = allPolicyUsage.map((p) => ({
+    classId: p.classId,
+    policy: p.policy,
+  }));
+  districtReport.scope = namedAggregateScope(req, {
+    kind: "district-report",
+    districtId,
+  });
+  districtReport.minCellSize = MIN_CELL_SIZE;
 
   res.json(districtReport);
 });
 
 // ------------------------------
-// GET /api/reports/dashboard?role=admin|district|teacher|student
+// GET /api/reports/dashboard
+// D99: aggregates ONLY over JWT-scoped sessions/students (never query-role).
 // ------------------------------
 router.get("/dashboard", async (req, res) => {
   try {
-    const {
-      districtId,
-      teacherId,
-      studentId,
-      startDate,
-      endDate,
-    } = req.query;
-
-    // D59: the caller's role comes from the token, not from `?role=`.
-    // The query string used to let any authenticated user request the
-    // teacher/admin dashboard payload.
+    const { startDate, endDate } = req.query;
     const role = req.user?.role || "student";
 
     const [sessions, tasks, students] = await Promise.all([
@@ -857,36 +896,43 @@ router.get("/dashboard", async (req, res) => {
       dbAdapter.list("students"),
     ]);
 
-    // ------------------------------
-    // 🔹 Role-based filtering
-    // ------------------------------
+    // Scope from JWT claims only (ignore query districtId/teacherId spoofing).
     let scopedStudents = [...students];
-
-    if (role === "district" && districtId) {
-      scopedStudents = students.filter((s) => s.districtId === districtId);
+    if (role === "district") {
+      const did = req.user?.districtId;
+      scopedStudents = did
+        ? students.filter((s) => s.districtId === did)
+        : [];
+    } else if (role === "teacher") {
+      const sid = req.user?.schoolId;
+      const did = req.user?.districtId;
+      scopedStudents = students.filter((s) => {
+        if (sid && s.schoolId) return s.schoolId === sid;
+        if (did) return s.districtId === did;
+        return false;
+      });
+    } else if (role === "student") {
+      const selfId = req.user?.username;
+      scopedStudents = students.filter(
+        (s) => s.id === selfId || s.username === selfId
+      );
     }
+    // admin: all (ALS already unscoped)
 
-    if (role === "teacher" && teacherId) {
-      // Assume teacher's class or assigned students marked by teacherId
-      scopedStudents = students.filter((s) => s.teacherId === teacherId);
-    }
-
-    if (role === "student") {
-      const selfId = studentId || req.user?.username;
-      scopedStudents = students.filter((s) => s.id === selfId);
-    }
-
-    const scopedStudentIds = scopedStudents.map((s) => s.id);
-    const scopedSessions = sessions.filter((s) =>
-      scopedStudentIds.includes(s.studentId)
+    const scopedStudentIds = new Set(scopedStudents.map((s) => s.id));
+    // Sessions for students in scope; also include sessions already ALS-filtered
+    // whose studentId is in the set (or student self sessions).
+    let scopedSessions = sessions.filter(
+      (s) =>
+        scopedStudentIds.has(s.studentId) ||
+        (role === "student" &&
+          (s.studentId === req.user?.username ||
+            (s.studentIds || []).includes(req.user?.username)))
     );
+    if (role === "admin") scopedSessions = sessions;
 
-    // ------------------------------
-    // 🔹 Apply Date Filter
-    // ------------------------------
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
-
     const filteredSessions = scopedSessions.filter((s) => {
       const ts = new Date(s.finishedAt || s.updatedAt || s.startedAt || new Date());
       if (start && ts < start) return false;
@@ -894,82 +940,119 @@ router.get("/dashboard", async (req, res) => {
       return true;
     });
 
-    // ------------------------------
-    // 🔹 Summary
-    // ------------------------------
     const totalSessions = filteredSessions.length;
     const avgScore =
-      sessions.reduce((sum, s) => {
+      filteredSessions.reduce((sum, s) => {
         const vals = (s.responses || [])
-          .map((r) => (typeof r.scoredValue === "number" ? r.scoredValue : parseFloat(r.scoredValue)))
+          .map((r) =>
+            typeof r.scoredValue === "number"
+              ? r.scoredValue
+              : parseFloat(r.scoredValue)
+          )
           .filter((v) => !isNaN(v));
-        return sum + (vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0);
+        return (
+          sum +
+          (vals.length > 0
+            ? vals.reduce((a, b) => a + b, 0) / vals.length
+            : 0)
+        );
       }, 0) / (totalSessions || 1);
 
-    const activeStudents = students.length;
-    const masteryRate = `${Math.round(avgScore)}%`;
+    const activeStudentsRaw = scopedStudents.length;
+    const activeStudents =
+      activeStudentsRaw > 0 && activeStudentsRaw < MIN_CELL_SIZE
+        ? null
+        : activeStudentsRaw;
 
-    // 🔹 Summary section
     const summary = {
-      sessions: totalSessions,
+      sessions:
+        totalSessions > 0 && totalSessions < MIN_CELL_SIZE ? null : totalSessions,
+      sessionsSuppressed:
+        totalSessions > 0 && totalSessions < MIN_CELL_SIZE,
       averageScore: Math.round(avgScore),
-      masteryRate,
+      masteryRate: `${Math.round(avgScore)}%`,
       activeStudents,
+      activeStudentsSuppressed:
+        activeStudentsRaw > 0 && activeStudentsRaw < MIN_CELL_SIZE,
     };
 
-    // 🔹 Performance chart (per day)
     const byDate = {};
-    for (const s of sessions) {
-      const d = (s.finishedAt || s.updatedAt || s.startedAt || new Date()).toISOString().slice(0, 10);
+    for (const s of filteredSessions) {
+      const d = new Date(
+        s.finishedAt || s.updatedAt || s.startedAt || Date.now()
+      )
+        .toISOString()
+        .slice(0, 10);
       if (!byDate[d]) byDate[d] = [];
       const vals = (s.responses || []).map((r) => Number(r.scoredValue) || 0);
-      if (vals.length > 0) byDate[d].push(vals.reduce((a, b) => a + b, 0) / vals.length);
+      if (vals.length > 0)
+        byDate[d].push(vals.reduce((a, b) => a + b, 0) / vals.length);
     }
     const performance = Object.entries(byDate)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, vals]) => ({ date, average: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) }));
+      .map(([date, vals]) => ({
+        date,
+        average: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length),
+        n:
+          vals.length > 0 && vals.length < MIN_CELL_SIZE ? null : vals.length,
+      }));
 
-    // 🔹 Competency Mastery (from evidenceModels or responses)
     const masteryMap = {};
-    for (const s of sessions) {
+    for (const s of filteredSessions) {
       for (const r of s.responses || []) {
         if (!r.evidenceId) continue;
         masteryMap[r.evidenceId] = masteryMap[r.evidenceId] || [];
         masteryMap[r.evidenceId].push(Number(r.scoredValue) || 0);
       }
     }
-    const mastery = Object.entries(masteryMap).map(([competency, vals]) => ({
-      competency,
-      score: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length),
-    }));
+    const mastery = Object.entries(masteryMap)
+      .filter(([, vals]) => vals.length === 0 || vals.length >= MIN_CELL_SIZE)
+      .map(([competency, vals]) => ({
+        competency,
+        score: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length),
+        n: vals.length,
+      }));
 
-    // 🔹 Evidence coverage (types of observations)
+    // Tasks are global content — evidence-type histogram is bank-wide and
+    // OK to show; not examinee PII. Still name the bank scope.
     const evidenceCounts = { selected: 0, constructed: 0, rubric: 0, performance: 0 };
     for (const t of tasks) {
       for (const evid of t.generatedEvidenceIds || []) {
         const key =
-          evid.toLowerCase().includes("rubric") ? "rubric" :
-          evid.toLowerCase().includes("perf") ? "performance" :
-          evid.toLowerCase().includes("const") ? "constructed" :
-          "selected";
+          evid.toLowerCase().includes("rubric")
+            ? "rubric"
+            : evid.toLowerCase().includes("perf")
+              ? "performance"
+              : evid.toLowerCase().includes("const")
+                ? "constructed"
+                : "selected";
         evidenceCounts[key] = (evidenceCounts[key] || 0) + 1;
       }
     }
-    const evidence = Object.entries(evidenceCounts).map(([label, value]) => ({ label, value }));
+    const evidence = Object.entries(evidenceCounts).map(([label, value]) => ({
+      label,
+      value,
+    }));
 
-    // 🔹 Table summary (latest sessions)
-    const table = sessions.slice(-10).map((s) => ({
-      name: s.id,
+    const table = filteredSessions.slice(-10).map((s) => ({
+      // D99: no raw session id as "name" for non-admin small lists.
+      name: role === "admin" ? s.id : "session",
       score: Math.round(
         ((s.responses || [])
           .map((r) => Number(r.scoredValue) || 0)
-          .reduce((a, b) => a + b, 0) / ((s.responses || []).length || 1)) || 0
+          .reduce((a, b) => a + b, 0) /
+          ((s.responses || []).length || 1)) ||
+          0
       ),
       tasks: s.taskIds?.length || 0,
-      date: s.finishedAt ? new Date(s.finishedAt).toISOString().slice(0, 10) : "-",
+      date: s.finishedAt
+        ? new Date(s.finishedAt).toISOString().slice(0, 10)
+        : "-",
     }));
 
     res.json({
+      scope: namedAggregateScope(req, { kind: "dashboard" }),
+      minCellSize: MIN_CELL_SIZE,
       summary,
       charts: { performance, mastery, evidence },
       table,

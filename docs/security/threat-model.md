@@ -188,7 +188,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 
 | T-AUTHZ-03 | `GET /api/students` returns full roster to any authenticated role | Child PII / roster dump | **Scheduled D92–D93 / W20** | `studentsRoutes.js` — authenticate only; no role or tenant filter on `GET /` |
 
-| T-AUTHZ-04 | District can list all `analysisArtefacts` | Cross-tenant psychometric aggregates | **Scheduled W20** | D90 finding; scope fields stored, list API unscoped |
+| T-AUTHZ-04 | District can list all `analysisArtefacts` | Cross-tenant psychometric aggregates | **Control (D97–D99)** | D97 ALS filters unscoped artefacts to admin; D99 small-cell suppress + job member redact on district read |
 
 | T-AUTHZ-05 | Student reads another student’s session/report | Child data leak | **Control** (sessions/reports) | D72 ownership on session + session-report routes; regression tests |
 

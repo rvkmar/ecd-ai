@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D98** — Row-level HTTP tenancy negatives + sixth mirrorDrift. Handoff: `claude/day98-row-level-tenancy-negatives.md`. |
+| Last completed unit | **D99** — Aggregate leakage review (`MIN_CELL_SIZE=5`). Handoff: `claude/day99-aggregate-leakage.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D99** — aggregate leakage review (never-compress). |
+| Next queued | Calendar **D100** — tenant admin UI + scope inspector + W20 gate (never-compress). |
 
-| Block | **W20** — Multi-tenancy (D96–D98 done; D99–D100 open). Gate: district cannot read another district’s data, proven by test. |
+| Block | **W20** — Multi-tenancy (D96–D99 done; D100 open). Gate: district cannot read another district’s data, proven by test. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ |
 
@@ -315,6 +315,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-19 | close | — | D97 session close. Suite re-run **1688 passed / 9 skipped**; build green. No half-applied work; no new compression debt. Next: D98 (never-compress). |
 | 2026-09-19 | D98 | 3, alone | Row-level HTTP negatives (19) + sixth mirrorDrift; sync JWT + `runWithTenancy` around `next`. Suite **1710 passed / 9 skipped**. Live foreign-district report 403. |
 | 2026-09-19 | close | — | D98 session close. Suite **1710 passed / 9 skipped**; build green. No half-applied work; no new compression debt. Next: D99 (never-compress). |
+| 2026-09-19 | D99 | 3, alone | Aggregate leakage: named scope + MIN_CELL_SIZE=5; dashboard/class/district/item exposure/artefacts/jobs fixed. Suite **1722 passed / 9 skipped**. |
+| 2026-09-19 | close | — | D99 session close. Suite **1722 passed / 9 skipped**; build green. No half-applied work; no new compression debt. Next: D100 (never-compress). |
 
 
 
