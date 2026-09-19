@@ -77,7 +77,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-18 D95 / W19 close | ADR 0005 + `claude/day95-sso-hosting-residency-adr.md` + `claude/day95-w19-block-close.md`. Docs only; suite **1662 passed / 9 skipped**; build green. |
 | HEAD at 2026-09-18 off-cal TN + Docker | product `a8c4e7b` (TN seed in D95 commit) + `7639477` (hardened bases). |
 | HEAD at 2026-09-18 W19 session close | this close. Suite re-run **1665 passed / 6 failed (load flakes) / 9 skipped**; isolation of failing files green; build green. Calendar W19 block ✅. Next: D96. |
-| HEAD at D96 | product + `claude/day96-tenancy-adr-jwt-claims.md`. Suite **1677 passed / 9 skipped**; build green. Live `:6060` JWT claims (`tn-chennai` on dist1/teach1/stud1; admin omits). |
+| HEAD at D96 | product `80afcfe` + `claude/day96-tenancy-adr-jwt-claims.md`. Suite close re-run **1677 passed / 9 skipped**; build green (~17s). Live `:6060` JWT claims (`tn-chennai` on dist1/teach1/stud1; admin omits). |
 
 ## Session log
 

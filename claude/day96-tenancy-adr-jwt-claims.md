@@ -48,7 +48,8 @@ npm run build
   green (~17s; max JS chunk recharts 451.37 kB)
 ```
 
-- No half-applied product work. Tree committed this close.
+- No half-applied product work. Product commit **`80afcfe`**; this close follows.
+- Calendar mark: Google Calendar MCP not available in this Cursor session ? mark `ECD D96` ? manually if still open.
 - Close-gate: IA tests wait for D74 `lazyPanel` Suspense; `repoGuards` required
   unexporting unused tenancy helpers and wiring `req.viewScope`.
 
