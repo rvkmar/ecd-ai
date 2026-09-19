@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Post-W20 calendar unit (see `ecd-claude` calendar after D100). |
+| Next queued | Calendar **D101** — auditLog collection + write-path integration (W21, never-compress alone if Tier 3). |
 
 | Block | **W20** — Multi-tenancy (**closed** D96–D100). Gate met: district cannot read another district’s data (inspector ≡ API). |
 
@@ -319,6 +319,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-19 | close | — | D99 session close. Suite **1722 passed / 9 skipped**; build green. No half-applied work; no new compression debt. Next: D100 (never-compress). |
 | 2026-09-19 | D100 | 3, alone | Scope inspector API/UI; W20 gate test (inspector ≡ students API; foreign district 403). Suite **1728 passed / 9 skipped**. W20 closed. |
 | 2026-09-19 | close | — | D100 / W20 session close. Suite **1728 passed / 9 skipped**; build green. No half-applied work; no new compression debt. |
+| 2026-09-19 | close | — | W20 session-close re-verify: suite **1728 passed / 9 skipped**; build green; tip **`7ff7586`** ≡ `main/master`. Exit checks already executed (D100 gate). Next: D101. |
 
 
 

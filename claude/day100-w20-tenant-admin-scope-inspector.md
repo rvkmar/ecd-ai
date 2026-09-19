@@ -39,7 +39,8 @@ npm run build
 ```
 
 - Tests: `server/routes/__tests__/d100W20Gate.test.js`
-- Commit **`3b8ff44`**; remote `main/master` matches
+- Commit product **`3b8ff44`**; tip **`7ff7586`** (handoff hash note); remote `main/master` matches
+- Close re-verify 2026-09-19: suite **1728 passed / 9 skipped**; build green
 - Calendar: **ECD D100** marked ✅ (event date unchanged); **W20** closed
 - Threat model T-AUTHZ-02 → Control (D96–D100)
 
@@ -65,4 +66,4 @@ is the admin verification surface. Block D96–D100 complete.
 
 ## Next
 
-Post-W20 calendar unit (alone if never-compress).
+Calendar **D101** — auditLog collection + write-path integration (W21 start).

@@ -28,3 +28,7 @@ report 403) on top of D97–D99 storage/HTTP/aggregate coverage.
 - `claude/day98-row-level-tenancy-negatives.md`
 - `claude/day99-aggregate-leakage.md`
 - `claude/day100-w20-tenant-admin-scope-inspector.md`
+
+## Next block
+
+**W21** (D101–D105) — Auditability and observability. First unit: **D101** auditLog.
