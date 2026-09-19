@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 
 import UsersSettings from "./settings/UsersSettings";
+import TenancySettings from "./settings/TenancySettings";
 import { PolicyManager } from "@/components/policies/PolicyManager";
 import { CurricularPolicyManager } from "@/components/policies/CurricularPolicyManager";
 import BulkUploadPanel from "./settings/BulkUploadPanel";
@@ -122,6 +123,7 @@ export default function SettingsPage() {
         <Tabs defaultValue="users" className="space-y-6">
           <TabsList className="flex flex-wrap gap-2 bg-muted p-2 rounded-2xl h-auto">
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="tenancy">Tenancy</TabsTrigger>
             <TabsTrigger value="policies">Policies</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="data">Data</TabsTrigger>
@@ -130,6 +132,10 @@ export default function SettingsPage() {
 
           <TabsContent value="users" className="bg-card text-card-foreground rounded-2xl border border-border p-6">
             <UsersSettings />
+          </TabsContent>
+
+          <TabsContent value="tenancy" className="bg-card text-card-foreground rounded-2xl border border-border p-6">
+            <TenancySettings />
           </TabsContent>
 
           {/* Two unrelated things share the word "policy" in this domain, so

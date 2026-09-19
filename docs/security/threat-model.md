@@ -184,7 +184,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 
 | T-AUTHZ-01 | Role spoofing via JWT claim edit | Privilege escalation | **Control** | Claims signed; role checked via `authorizeRole` on write routes (D13 static scan) |
 
-| T-AUTHZ-02 | `viewScope` / `editableModels` only on client | Cross-district / cross-school data read | **Partial (D96-D97)** + **Scheduled D98-D100** | D97: ALS + loadDB/dbAdapter filters (ADR 0006). Row-level matrix D98; aggregates D99 |
+| T-AUTHZ-02 | `viewScope` / `editableModels` only on client | Cross-district / cross-school data read | **Control (D96–D100)** | JWT claims + ALS filters + row/aggregate negatives + scope inspector (W20 gate) |
 
 | T-AUTHZ-03 | `GET /api/students` returns full roster to any authenticated role | Child PII / roster dump | **Scheduled D92–D93 / W20** | `studentsRoutes.js` — authenticate only; no role or tenant filter on `GET /` |
 

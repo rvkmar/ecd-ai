@@ -33,6 +33,7 @@ import qMatrixModelsRoutes from "./routes/qMatrixModelsRoutes.js";
 import assemblyModelsRoutes from "./routes/assemblyModelsRoutes.js";
 import compositeLibraryRoutes from "./routes/compositeLibraryRoutes.js";
 import announcementsRoutes from "./routes/announcementsRoutes.js";
+import tenancyRoutes from "./routes/tenancyRoutes.js";
 import { authenticateToken, authorizeRole } from "./utils/authMiddleware.js";
 import { beginTenancyRequest } from "./utils/tenancyContext.js";
 
@@ -102,6 +103,7 @@ app.use("/api/qMatrixModels", qMatrixModelsRoutes);
 app.use("/api/assemblyModels", assemblyModelsRoutes);
 app.use("/api/compositeLibrary", compositeLibraryRoutes);
 app.use("/api/announcements", announcementsRoutes);
+app.use("/api/tenancy", tenancyRoutes);
 
 // D97: storage-layer TenancyError → 403 (sync throws from loadDB/saveDB).
 app.use((err, req, res, next) => {
