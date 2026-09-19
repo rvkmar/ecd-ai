@@ -49,6 +49,7 @@ npm run build
 ```
 
 - Tests: `server/routes/__tests__/d99AggregateLeakage.test.js`
+- Commit **`be10eef`**; remote `main/master` matches
 - Calendar: **ECD D99** marked ✅ (event date unchanged)
 - Threat model T-AUTHZ-04 → Control (D97–D99)
 - Next: **D100** — tenant admin UI + scope inspector + W20 gate
