@@ -2,6 +2,11 @@
 import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import {
+  applyTenancyToDb,
+  mergeScopedDbSave,
+} from "../../server/utils/tenancyScope.js";
+import { getTenancyContext } from "../../server/utils/tenancyContext.js";
 
 const DB_FILE = process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
 const BACKUP_DIR = process.env.ECD_BACKUP_DIR || path.join(path.dirname(DB_FILE), "backups");
@@ -48,7 +53,8 @@ function defaultDB() {
 // Load & Save DB
 // ------------------------------
 
-export function loadDB() {
+/** Unscoped disk read — boot, merge-on-save, tests that need the full file. */
+export function readRawDB() {
   if (!fs.existsSync(DB_FILE)) {
     fs.writeFileSync(DB_FILE, JSON.stringify(defaultDB(), null, 2));
   }
@@ -64,9 +70,26 @@ export function loadDB() {
   return db;
 }
 
+/**
+ * D97 — tenant-scoped view of the JSON store.
+ * When ALS tenancy is bound, tenant-scoped collections are filtered (ADR 0006).
+ * Cron / boot / tests with no ALS still see the full file.
+ */
+export function loadDB() {
+  return applyTenancyToDb(readRawDB());
+}
+
+/**
+ * D97 — merge scoped writes back onto the full file so other tenants are not wiped.
+ */
 export function saveDB(db) {
+  const ctx = getTenancyContext();
+  const toWrite =
+    ctx && !ctx.unscoped && ctx.role !== "admin"
+      ? mergeScopedDbSave(readRawDB(), db, ctx)
+      : db;
   backupDB();
-  atomicWrite(DB_FILE, JSON.stringify(db, null, 2));
+  atomicWrite(DB_FILE, JSON.stringify(toWrite, null, 2));
 }
 
 export function clearDB() {

@@ -6,6 +6,8 @@ import { loadDB } from "../../src/utils/db-server.js";
 import { dbAdapter } from "../utils/dbAdapter.js";
 import { sessionMeasurementReport } from "../delivery/sessionReportMeasurement.js";
 import { studentForbiddenFromSession } from "../../src/utils/sessionPlay.js";
+import { assertCallerMayAccessDistrict } from "../utils/tenancyScope.js";
+import { TenancyError } from "../utils/tenancyContext.js";
 
 
 const router = express.Router();
@@ -619,6 +621,14 @@ router.get("/teacher/class/:classId", canViewTeacherReports, (req, res) => {
 // ------------------------------
 router.get("/teacher/district/:districtId", canViewTeacherReports, (req, res) => {
   const { districtId } = req.params;
+  try {
+    assertCallerMayAccessDistrict(districtId);
+  } catch (err) {
+    if (err instanceof TenancyError || err?.code === "TENANCY_REQUIRED") {
+      return res.status(403).json({ error: err.message, code: err.code });
+    }
+    throw err;
+  }
   const db = loadDB();
 
   // Find all students in district

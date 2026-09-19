@@ -96,6 +96,14 @@ app.use("/api/assemblyModels", assemblyModelsRoutes);
 app.use("/api/compositeLibrary", compositeLibraryRoutes);
 app.use("/api/announcements", announcementsRoutes);
 
+// D97: storage-layer TenancyError → 403 (sync throws from loadDB/saveDB).
+app.use((err, req, res, next) => {
+  if (err?.code === "TENANCY_REQUIRED" || err?.name === "TenancyError") {
+    return res.status(403).json({ error: err.message, code: "TENANCY_REQUIRED" });
+  }
+  return next(err);
+});
+
 // ------------------------------
 // No static serving here! Nginx handles frontend build
 // ------------------------------
