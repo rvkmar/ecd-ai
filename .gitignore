@@ -163,3 +163,5 @@ scripts-login-dump.cjs
 scripts-new-session-walk.cjs
 scripts-ui-walk.cjs
 scripts-cal-walk.cjs
+
+.cursor
