@@ -39,6 +39,7 @@ npm run build
 ```
 
 - Tests: `server/routes/__tests__/d100W20Gate.test.js`
+- Commit **`3b8ff44`**; remote `main/master` matches
 - Calendar: **ECD D100** marked ✅ (event date unchanged); **W20** closed
 - Threat model T-AUTHZ-02 → Control (D96–D100)
 
