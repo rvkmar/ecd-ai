@@ -1,4 +1,5 @@
 // D92 — access/refresh issuance, refresh rotation, and revocation.
+// D96 — optional districtId / schoolId claims from user.profile (ADR 0006).
 //
 // Access tokens are short-lived JWTs (jti + authEpoch). Refresh tokens are
 // opaque, hashed at rest in an in-memory session store (same single-instance
@@ -15,7 +16,7 @@ import {
   REFRESH_TOKEN_EXPIRES_IN,
 } from "../config/jwt.js";
 
-/** @type {Map<string, { username: string, role: string, authEpoch: number, familyId: string, expiresAt: number, used: boolean }>} */
+/** @type {Map<string, { username: string, role: string, authEpoch: number, familyId: string, expiresAt: number, used: boolean, districtId: string | null, schoolId: string | null }>} */
 const refreshByHash = new Map();
 
 /** @type {Map<string, number>} jti -> unix exp (seconds) */
@@ -85,17 +86,27 @@ function denyAccessToken(jti, expUnixSec) {
   accessDenylist.set(jti, exp);
 }
 
-function issueAccessToken({ username, role, authEpoch }) {
+function issueAccessToken({ username, role, authEpoch, districtId = null, schoolId = null }) {
   const jti = crypto.randomUUID();
-  const token = jwt.sign(
-    { username, role, ae: authEpoch, typ: "access" },
-    JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_EXPIRES_IN, jwtid: jti }
-  );
+  const payload = { username, role, ae: authEpoch, typ: "access" };
+  // D96: omit empty tenancy claims so admin tokens stay unscoped by absence.
+  if (districtId) payload.districtId = districtId;
+  if (schoolId) payload.schoolId = schoolId;
+  const token = jwt.sign(payload, JWT_SECRET, {
+    expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+    jwtid: jti,
+  });
   return { token, jti };
 }
 
-function issueRefreshToken({ username, role, authEpoch, familyId }) {
+function issueRefreshToken({
+  username,
+  role,
+  authEpoch,
+  familyId,
+  districtId = null,
+  schoolId = null,
+}) {
   const raw = crypto.randomBytes(32).toString("base64url");
   const hash = hashToken(raw);
   const expiresAt = Date.now() + parseDurationToMs(REFRESH_TOKEN_EXPIRES_IN);
@@ -106,29 +117,37 @@ function issueRefreshToken({ username, role, authEpoch, familyId }) {
     familyId,
     expiresAt,
     used: false,
+    districtId: districtId || null,
+    schoolId: schoolId || null,
   });
   return raw;
 }
 
 /**
  * Issue a fresh access + refresh pair for a login (new family).
- * @param {{ username: string, role: string, authEpoch?: number }} user
+ * @param {{ username: string, role: string, authEpoch?: number, districtId?: string | null, schoolId?: string | null }} user
  */
 export function issueTokenPair(user) {
   pruneExpired();
   const authEpoch = Number(user.authEpoch) || 0;
+  const districtId = user.districtId || null;
+  const schoolId = user.schoolId || null;
   setCachedAuthEpoch(user.username, authEpoch);
   const familyId = crypto.randomUUID();
   const { token } = issueAccessToken({
     username: user.username,
     role: user.role,
     authEpoch,
+    districtId,
+    schoolId,
   });
   const refreshToken = issueRefreshToken({
     username: user.username,
     role: user.role,
     authEpoch,
     familyId,
+    districtId,
+    schoolId,
   });
   return {
     token,
@@ -193,16 +212,22 @@ export function rotateRefreshToken(rawRefresh) {
     return { ok: false, status: 401, error: "Session invalidated" };
   }
 
+  const districtId = row.districtId || null;
+  const schoolId = row.schoolId || null;
   const { token } = issueAccessToken({
     username: row.username,
     role: row.role,
     authEpoch,
+    districtId,
+    schoolId,
   });
   const refreshToken = issueRefreshToken({
     username: row.username,
     role: row.role,
     authEpoch,
     familyId: row.familyId,
+    districtId,
+    schoolId,
   });
 
   return {

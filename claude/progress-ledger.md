@@ -18,15 +18,15 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | | |
 |---|---|
-| Last completed unit | **D95** — SSO/hosting/residency ADR + W19 close. Handoff: `claude/day95-sso-hosting-residency-adr.md`; block: `claude/day95-w19-block-close.md`. Session close: `claude/day95-w19-session-close.md`. |
+| Last completed unit | **D96** — Tenancy ADR + JWT `districtId`/`schoolId` claims. Handoff: `claude/day96-tenancy-adr-jwt-claims.md`. |
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 | Off-calendar (2026-09-15) | Session delivery UX + Home announcements. Product `e9e01ff`…`6f09fde` + close gate fix. Handoff: `claude/day73c-session-delivery-home.md`. **Not D74.** |
 | Off-calendar (2026-09-16) | Newtonian enterprise EMs + TR9 EM gap-fix (G1–G6/G8). Product `e3d6595` + `28fd9f0` + close-gate fixes. Handoff: `claude/day79-offcal-em-enterprise-gap-fix.md`. **Not D79.** Residual EM-R1…EM-R5 later closed same day. |
 | Off-calendar (2026-09-16 evening) | **EM-R1** — executable rubric / process_log / auto in Identification. Handoff: `claude/day80b-em-r1-executable-evaluation.md`. **Not D81.** |
 | Off-calendar (2026-09-16 late) | **EM-R2…EM-R5** residual closeout. Handoff: `claude/day80c-em-r2-r5-residual-closeout.md`. **Not D81.** |
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
-| Next queued | Calendar **D96** — W20 multi-tenancy (server-side viewScope). |
-| Block | **W19** — Security (**closed** D91–D95). Next block **W20**. |
+| Next queued | Calendar **D97** — data-layer scope enforcement (never-compress). |
+| Block | **W20** — Multi-tenancy (D96 done; D97–D100 open). Gate: district cannot read another district’s data, proven by test. |
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ |
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 | HEAD at D60 | `bdc88dc` |
@@ -77,6 +77,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-18 D95 / W19 close | ADR 0005 + `claude/day95-sso-hosting-residency-adr.md` + `claude/day95-w19-block-close.md`. Docs only; suite **1662 passed / 9 skipped**; build green. |
 | HEAD at 2026-09-18 off-cal TN + Docker | product `a8c4e7b` (TN seed in D95 commit) + `7639477` (hardened bases). |
 | HEAD at 2026-09-18 W19 session close | this close. Suite re-run **1665 passed / 6 failed (load flakes) / 9 skipped**; isolation of failing files green; build green. Calendar W19 block ✅. Next: D96. |
+| HEAD at D96 | product + `claude/day96-tenancy-adr-jwt-claims.md`. Suite **1677 passed / 9 skipped**; build green. Live `:6060` JWT claims (`tn-chennai` on dist1/teach1/stud1; admin omits). |
 
 ## Session log
 
@@ -152,6 +153,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-18 | D95 | 2, alone | ADR 0005: local accounts remain; interim single-host compose; residency working assumption + open owners. W19 block closed. No SSO code. |
 | 2026-09-18 | off-cal TN + Docker | 2 | TN 38-district seed + EMIS/UDISE login + authProvider seam; Hub `ecd-node`/`ecd-nginx` Scout-clean digests pinned in app Dockerfiles. |
 | 2026-09-18 | close | — | W19 session close (D94–D95 + off-cal). Close-gate fixed dead TN exports / `createUserRecord` baseline. Full suite load flakes (isolation green). Calendar W19 block ✅. Next: D96. |
+| 2026-09-19 | D96 | 2, alone | Tenancy ADR 0006; JWT `districtId`/`schoolId`; initMongo profile backfill for pre-TN walk users. Live `:6060` claims verified. |
+| 2026-09-19 | close | ? | D96 session close. Suite re-run **1677 passed / 9 skipped**; build green. No half-applied work; no new compression debt. Next: D97 (never-compress). |
 
 ## Compression debt
 

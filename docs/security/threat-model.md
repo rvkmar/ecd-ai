@@ -91,7 +91,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 | ID | Threat | Impact | Disposition | Notes |
 |---|---|---|---|---|
 | T-AUTHZ-01 | Role spoofing via JWT claim edit | Privilege escalation | **Control** | Claims signed; role checked via `authorizeRole` on write routes (D13 static scan) |
-| T-AUTHZ-02 | `viewScope` / `editableModels` only on client | Cross-district / cross-school data read | **Scheduled W20 (D96–D100)** | `rolePermissions.js` has scopes; server does not enforce at `dbAdapter` |
+| T-AUTHZ-02 | `viewScope` / `editableModels` only on client | Cross-district / cross-school data read | **Partial (D96)** + **Scheduled D97?D100** | D96: JWT carries `districtId`/`schoolId` (ADR 0006). Enforcement at `dbAdapter` still D97 |
 | T-AUTHZ-03 | `GET /api/students` returns full roster to any authenticated role | Child PII / roster dump | **Scheduled D92–D93 / W20** | `studentsRoutes.js` — authenticate only; no role or tenant filter on `GET /` |
 | T-AUTHZ-04 | District can list all `analysisArtefacts` | Cross-tenant psychometric aggregates | **Scheduled W20** | D90 finding; scope fields stored, list API unscoped |
 | T-AUTHZ-05 | Student reads another student’s session/report | Child data leak | **Control** (sessions/reports) | D72 ownership on session + session-report routes; regression tests |
@@ -160,7 +160,8 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 | **D94** | T-INP-03/04 nginx security headers + prod CORS; T-SUP-01/02 npm audit + Dependabot + Gitleaks CI; git-history secret audit |
 | **D95** | T-AUTH-05 + hosting + residency — ADR 0005; W19 handoff |
 | **W19 SSO ADR** | ~~Settled inside D95~~ — see `docs/adr/0005-sso-hosting-residency.md` |
-| **W20 D96–D100** | T-AUTHZ-02/03/04 tenancy + artefact/roster scoping + mirror-drift |
+| **W20 D96** | Tenancy ADR + JWT `districtId`/`schoolId` claims (ADR 0006) |
+| **W20 D97?D100** | T-AUTHZ-02/03/04 enforcement + artefact/roster scoping + mirror-drift |
 | **W21** | Audit log for lifecycle / ingest / auth failures (insider app-path detection) |
 | **W22** | Storage ADR (JSON vs Mongo), backup/restore, T-NET-01/04 operational hardening |
 

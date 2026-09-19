@@ -13,7 +13,7 @@
 |---|---|
 | Type | JWT (`typ: access`), signed with `JWT_SECRET` |
 | Lifetime | `ACCESS_TOKEN_EXPIRES_IN` (default **15m**; `TOKEN_EXPIRES_IN` is an alias) |
-| Claims | `username`, `role`, `ae` (authEpoch), `jti`, `exp` |
+| Claims | `username`, `role`, `ae` (authEpoch), `jti`, `exp`; optional `districtId` / `schoolId` from `profile` (D96 / ADR 0006) |
 | Verification | Signature + expiry + `jti` not denylisted + `ae` matches current user epoch |
 
 Boot still refuses a `JWT_SECRET` shorter than 32 characters.

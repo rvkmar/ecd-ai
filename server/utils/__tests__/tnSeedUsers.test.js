@@ -4,6 +4,7 @@ import { TAMIL_NADU_DISTRICTS } from "../../data/tamilNaduDistricts.js";
 import {
   buildTamilNaduSeedUsers,
   countSeedByRole,
+  missingProfileFields,
   resolveSeedTempPassword,
 } from "../tnSeedUsers.js";
 import {
@@ -101,5 +102,17 @@ describe("local identity / SSO seam", () => {
     const refused = assertPasswordLoginAllowed(users[1]);
     expect(refused.ok).toBe(false);
     expect(refused.error).toMatch(/single sign-on/i);
+  });
+});
+
+describe("missingProfileFields (D96 backfill)", () => {
+  it("returns only seed keys that are empty on the existing profile", () => {
+    expect(
+      missingProfileFields(
+        { name: "Walk Teacher" },
+        { name: "Teacher Chennai", districtId: "tn-chennai", state: "Tamil Nadu" }
+      )
+    ).toEqual({ districtId: "tn-chennai", state: "Tamil Nadu" });
+    expect(missingProfileFields({ districtId: "tn-chennai" }, { districtId: "tn-madurai" })).toEqual({});
   });
 });

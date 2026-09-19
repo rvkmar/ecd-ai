@@ -23,6 +23,7 @@ import {
   findUserByLoginIdentifier,
   assertPasswordLoginAllowed,
 } from "../auth/localIdentity.js";
+import { tenancyClaimsFromUser } from "../utils/tenancy.js";
 
 const router = express.Router();
 
@@ -207,10 +208,13 @@ router.post("/login", loginLimiter, async (req, res) => {
     clearFailedAttempts(lockoutKey);
 
     const authEpoch = readAuthEpoch(user);
+    const tenancy = tenancyClaimsFromUser(user);
     const pair = issueTokenPair({
       username: user.username,
       role: user.role,
       authEpoch,
+      districtId: tenancy.districtId,
+      schoolId: tenancy.schoolId,
     });
 
     res.json({

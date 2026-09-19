@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import "dotenv/config";
 import {
   buildTamilNaduSeedUsers,
+  missingProfileFields,
   resolveSeedTempPassword,
 } from "./tnSeedUsers.js";
 
@@ -91,7 +92,21 @@ async function init() {
         });
         console.log(`✅ Created user: ${user.username} (${user.role})`);
       } else {
-        console.log(`ℹ️ User '${user.username}' already exists, skipping.`);
+        // D96: pre-TN walk accounts often lack profile.districtId. Backfill
+        // missing profile keys only ? never touch password / authEpoch.
+        const missing = missingProfileFields(existsUser.profile, user.profile);
+        if (Object.keys(missing).length) {
+          const $set = { updatedAt: new Date() };
+          for (const [k, v] of Object.entries(missing)) {
+            $set[`profile.${k}`] = v;
+          }
+          await usersColl.updateOne({ username: user.username }, { $set });
+          console.log(
+            `Backfilled profile on ${user.username}: ${Object.keys(missing).join(", ")}`
+          );
+        } else {
+          console.log(`User '${user.username}' already exists, skipping.`);
+        }
       }
     }
 

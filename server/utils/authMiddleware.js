@@ -6,6 +6,7 @@ import {
   setCachedAuthEpoch,
 } from "./tokenService.js";
 import { dbAdapter } from "./dbAdapter.js";
+import { viewScopeForRole } from "./tenancy.js";
 
 async function resolveAuthEpoch(username) {
   const cached = getCachedAuthEpoch(username);
@@ -39,7 +40,8 @@ export function authenticateToken(req, res, next) {
     const claimEpoch = Number(user.ae) || 0;
     if (claimEpoch !== expected) return res.sendStatus(403);
 
-    req.user = user; // { username, role, ae, jti, iat, exp, typ }
+    req.user = user; // { username, role, ae, jti, iat, exp, typ, districtId?, schoolId? }
+    req.viewScope = viewScopeForRole(user.role);
     next();
   });
 }

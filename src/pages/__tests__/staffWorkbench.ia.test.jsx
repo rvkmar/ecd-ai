@@ -60,7 +60,8 @@ describe("District and teacher RoleWorkbench (D73c)", () => {
     expect(screen.queryByRole("tab", { name: "Parameter estimation" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Models" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Implementation" }));
-    expect(screen.getByText("Item bank")).toBeInTheDocument();
+    // D74 lazyPanel: wait for Suspense to resolve the mocked ItemBank panel.
+    await waitFor(() => expect(screen.getByText("Item bank")).toBeInTheDocument());
     expect(screen.getByRole("tab", { name: "Instantiated tasks" })).toBeInTheDocument();
   });
 

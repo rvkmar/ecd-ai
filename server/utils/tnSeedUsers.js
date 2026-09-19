@@ -164,6 +164,27 @@ export function buildTamilNaduSeedUsers(password = resolveSeedTempPassword()) {
   return users;
 }
 
+/**
+ * Fields present on the seed profile but missing/empty on an existing user.
+ * Used by initMongo to backfill districtId (and related) without resetting
+ * passwords ? needed so D96 JWT tenancy claims can attach to pre-TN walk accounts.
+ *
+ * @param {object|null|undefined} existingProfile
+ * @param {object|null|undefined} seedProfile
+ * @returns {Record<string, unknown>}
+ */
+export function missingProfileFields(existingProfile, seedProfile) {
+  const patch = {};
+  const existing = existingProfile || {};
+  for (const [k, v] of Object.entries(seedProfile || {})) {
+    if (v == null || v === "") continue;
+    if (existing[k] == null || existing[k] === "") {
+      patch[k] = v;
+    }
+  }
+  return patch;
+}
+
 export function countSeedByRole(users = buildTamilNaduSeedUsers("x")) {
   return users.reduce((acc, u) => {
     acc[u.role] = (acc[u.role] || 0) + 1;
