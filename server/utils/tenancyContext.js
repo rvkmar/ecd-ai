@@ -1,7 +1,9 @@
 /**
- * D97 — request-scoped tenancy (AsyncLocalStorage).
- * Bound in authenticateToken via enterWith (Express-safe); read by loadDB / dbAdapter.
- * Absent store = unscoped (tests, boot, privileged auth lookups).
+ * D97/D98 — request-scoped tenancy (AsyncLocalStorage).
+ *
+ * Early middleware calls beginTenancyRequest() (enterWith a mutable bag).
+ * authenticateToken assigns bag.current. getTenancyContext reads it.
+ * Absent store = unscoped (boot, cron, privileged auth lookups).
  */
 import { AsyncLocalStorage } from "async_hooks";
 
@@ -14,20 +16,40 @@ import { AsyncLocalStorage } from "async_hooks";
  *   unscoped?: boolean,
  * }} TenancyContext */
 
+/** @typedef {{ current: TenancyContext | null }} TenancyBag */
+
 const storage = new AsyncLocalStorage();
+
+function isBag(store) {
+  return (
+    store &&
+    typeof store === "object" &&
+    Object.prototype.hasOwnProperty.call(store, "current")
+  );
+}
 
 /** @returns {TenancyContext | null} */
 export function getTenancyContext() {
-  return storage.getStore() || null;
+  const store = storage.getStore();
+  if (!store) return null;
+  if (isBag(store)) return store.current;
+  return store;
+}
+
+/** Start a request bag (call from early Express middleware). */
+export function beginTenancyRequest() {
+  storage.enterWith({ current: null });
 }
 
 /**
- * Bind tenancy for the remainder of this request (Express middleware).
- * Prefer this over runWithTenancy in authenticateToken so async route
- * continuations still see the store.
  * @param {TenancyContext} ctx
  */
 export function bindTenancyContext(ctx) {
+  const store = storage.getStore();
+  if (isBag(store)) {
+    store.current = ctx;
+    return;
+  }
   storage.enterWith(ctx);
 }
 

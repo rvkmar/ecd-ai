@@ -34,6 +34,7 @@ import assemblyModelsRoutes from "./routes/assemblyModelsRoutes.js";
 import compositeLibraryRoutes from "./routes/compositeLibraryRoutes.js";
 import announcementsRoutes from "./routes/announcementsRoutes.js";
 import { authenticateToken, authorizeRole } from "./utils/authMiddleware.js";
+import { beginTenancyRequest } from "./utils/tenancyContext.js";
 
 const app = express();
 app.use(express.json());
@@ -42,6 +43,12 @@ app.use(bodyParser.json());
 // D94: production is same-origin via nginx — CORS stays off.
 // Dev pins an explicit Vite origin (never "*"); see corsPolicy.js.
 applyCors(app, cors);
+
+// D98: request-scoped tenancy bag (mutated by authenticateToken).
+app.use((req, res, next) => {
+  beginTenancyRequest();
+  next();
+});
 
 // Role-specific dashboard "am I still logged in" probes. These used to have
 // no auth at all — anyone could hit /api/admin/data with no token — and the
