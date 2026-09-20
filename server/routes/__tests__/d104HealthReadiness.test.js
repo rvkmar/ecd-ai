@@ -124,7 +124,7 @@ describe("D104 HTTP endpoints", () => {
         latestId: null,
         latestAppliedAt: null,
         appliedCount: 0,
-        registryCount: 4,
+        registryCount: 5,
         pendingIds: [],
       },
       backup: { latestAt: null, ageMs: null, fileCount: 0 },
@@ -159,10 +159,10 @@ describe("D104 HTTP endpoints", () => {
       r: { ok: true, reachable: true, url: "http://r-backend:4000", status: 200, rStatus: "healthy" },
       queue: { queued: 2, running: 1, maxConcurrent: 1 },
       migrations: {
-        latestId: "004-preview-remove-lifecycle-meta",
+        latestId: "005-remove-lifecycle-meta",
         latestAppliedAt: "2026-09-20T00:00:00.000Z",
-        appliedCount: 4,
-        registryCount: 4,
+        appliedCount: 5,
+        registryCount: 5,
         pendingIds: [],
       },
       backup: { latestAt: "2026-09-19T00:00:00.000Z", ageMs: 86400000, fileCount: 3 },
@@ -173,7 +173,7 @@ describe("D104 HTTP endpoints", () => {
     const app = await appWithStatus(async () => status);
     const res = await request(app).get("/api/metrics");
     expect(res.status).toBe(200);
-    expect(res.body.migrations.latestId).toBe("004-preview-remove-lifecycle-meta");
+    expect(res.body.migrations.latestId).toBe("005-remove-lifecycle-meta");
     expect(res.body.backup.ageMs).toBe(86400000);
     expect(res.body.queue.queued).toBe(2);
   });

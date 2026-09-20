@@ -17,6 +17,9 @@ const LEGACY_SPELLING = "in-progress";
 export default {
   id: "001-normalize-session-status",
   description: `Rewrite session.status "${LEGACY_SPELLING}" to the canonical "${SESSION_STATUS.IN_PROGRESS}".`,
+  forwardOnly: false,
+  rollback:
+    "Restore ECD JSON from backup taken before 001, or rewrite in_progress → in-progress only if a consumer still required the hyphen (none do after sessionStatus.js).",
 
   async run({ dryRun }) {
     const db = loadDB();

@@ -683,11 +683,7 @@ describe("a live session blocks deactivation, and Force Deactivate clears it", (
     expect(res.status).toBe(200);
     expect(res.body.closedSessions).toHaveLength(2);
     expect(db.taskModels[0].status).toBe("suspended");
-    expect(db.taskModels[0].deactivation).toMatchObject({
-      forced: true,
-      closedSessionCount: 2,
-      reason: "calibration error",
-    });
+    expect(db.taskModels[0].deactivation).toBeUndefined();
   });
 
   it("locks responses rather than deleting them", async () => {

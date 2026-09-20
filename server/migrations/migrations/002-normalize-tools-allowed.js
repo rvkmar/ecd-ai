@@ -4,11 +4,11 @@
 // toolsAllowedList() in src/utils/schema.js for the crash this caused and
 // why the reader no longer tolerates the string shape after this runs.
 //
-// Task Models are a governed entity behind server/utils/dbAdapter.js
-// (json or Mongo), so this migration goes through dbAdapter rather than
-// touching either storage directly -- it works in both DB_MODEs.
+// Task Models live in the ECD JSON store (loadDB/saveDB) under the interim
+// architecture (ADR 0007). D109 rehearsal targets that file via ECD_DB_FILE,
+// so this migration reads/writes readRawDB — not dbAdapter — matching 001/003.
 
-import { dbAdapter } from "../../utils/dbAdapter.js";
+import { readRawDB, saveDB } from "../../../src/utils/db-server.js";
 
 function toArray(raw) {
   if (Array.isArray(raw)) return raw;
@@ -22,28 +22,27 @@ export default {
   id: "002-normalize-tools-allowed",
   description:
     "Rewrite taskStructure.resourceConstraints.toolsAllowed from a comma-separated string to a string[].",
+  forwardOnly: false,
+  rollback:
+    "Restore ECD JSON from backup taken before 002, or manually join toolsAllowed arrays back to comma-strings if a consumer still required the legacy shape (none do after toolsAllowedList).",
 
   async run({ dryRun }) {
-    const taskModels = await dbAdapter.list("taskModels");
+    const db = readRawDB();
     const changed = [];
 
-    for (const tm of taskModels) {
+    for (const tm of db.taskModels || []) {
       const rc = tm?.taskStructure?.resourceConstraints;
       if (!rc || Array.isArray(rc.toolsAllowed)) continue;
+      if (rc.toolsAllowed == null) continue;
 
       changed.push(tm.id);
-
       if (!dryRun) {
-        await dbAdapter.update("taskModels", tm.id, {
-          taskStructure: {
-            ...tm.taskStructure,
-            resourceConstraints: {
-              ...rc,
-              toolsAllowed: toArray(rc.toolsAllowed),
-            },
-          },
-        });
+        rc.toolsAllowed = toArray(rc.toolsAllowed);
       }
+    }
+
+    if (!dryRun && changed.length) {
+      saveDB(db, { skipAudit: true });
     }
 
     return {

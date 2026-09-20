@@ -15,6 +15,9 @@ export default {
   id: "004-preview-remove-lifecycle-meta",
   description:
     "Preview (never apply) removal of reviewMeta / operationalMeta / deactivation after audit backfill.",
+  forwardOnly: true,
+  rollback:
+    "No-op: 004 never mutates data. Marking applied is bookkeeping only; clear the log entry if re-preview is required.",
 
   async run({ dryRun }) {
     const db = readRawDB();

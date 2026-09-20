@@ -126,7 +126,6 @@ describe("PATCH /api/evidenceModels/:id/lifecycle", () => {
 
     expect(res.status).toBe(200);
     expect(db.evidenceModels[0].status).toBe("operational");
-    expect(db.evidenceModels[0].operationalMeta.activatedAt).toBeTruthy();
     expect(saveDB).toHaveBeenCalled();
   });
 
@@ -139,13 +138,11 @@ describe("PATCH /api/evidenceModels/:id/lifecycle", () => {
 
     expect(res.status).toBe(200);
     expect(db.evidenceModels[0].status).toBe("suspended");
-    expect(db.evidenceModels[0].operationalMeta.suspendedAt).toBeTruthy();
-    expect(db.evidenceModels[0].operationalMeta.suspensionReason).toBe("Drift review");
   });
 
-  it("reactivates a suspended model and counts the reactivation", async () => {
+  it("reactivates a suspended model", async () => {
     const { app, db } = await buildApp(
-      makeModel({ status: "suspended", operationalMeta: { activatedAt: "2026-01-01T00:00:00.000Z" } })
+      makeModel({ status: "suspended" })
     );
 
     const res = await request(app)
@@ -154,7 +151,6 @@ describe("PATCH /api/evidenceModels/:id/lifecycle", () => {
 
     expect(res.status).toBe(200);
     expect(db.evidenceModels[0].status).toBe("operational");
-    expect(db.evidenceModels[0].operationalMeta.reactivationCount).toBe(1);
   });
 
   it("refuses a transition the lifecycle matrix does not allow", async () => {
@@ -221,7 +217,6 @@ describe("review stage", () => {
 
     expect(res.status).toBe(200);
     expect(db.evidenceModels[0].status).toBe("reviewed");
-    expect(db.evidenceModels[0].reviewMeta.submittedForReviewAt).toBeTruthy();
   });
 
   it("leaves a reviewed model unlocked so the reviewer's findings can be acted on", async () => {
@@ -244,7 +239,6 @@ describe("review stage", () => {
     expect(res.status).toBe(200);
     expect(db.evidenceModels[0].status).toBe("draft");
     expect(db.evidenceModels[0].locked).toBe(false);
-    expect(db.evidenceModels[0].reviewMeta.returnedToDraftAt).toBeTruthy();
   });
 
   it("refuses confirmation through this route — /confirm owns that gate", async () => {
@@ -863,7 +857,6 @@ describe("PATCH /:id/lifecycle — suspension is blocked by live task models", (
 
     expect(res.status).toBe(200);
     expect(db.evidenceModels[0].status).toBe("suspended");
-    expect(db.evidenceModels[0].operationalMeta.suspensionReason).toBe("recalibrating");
   });
 
   it.each(["confirmed", "suspended", "archived", "draft"])(

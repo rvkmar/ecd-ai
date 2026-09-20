@@ -715,12 +715,8 @@ router.post("/:id/force-deactivate", authorizeRole(["admin", "district"]), (req,
 
   model.status = "suspended";
   model.updatedAt = now;
-  model.deactivation = {
-    deactivatedAt: now,
-    forced: true,
-    closedSessionCount: closed.length,
-    reason,
-  };
+  // D109: force-deactivate detail stays in the HTTP response + structured
+  // log; deactivation blob removed by 005 / no longer written.
 
   saveDB(db);
 

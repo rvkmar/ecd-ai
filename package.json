@@ -17,6 +17,7 @@
     "migrate": "node server/migrations/run.js",
     "migrate:dry-run": "node server/migrations/run.js --dry-run",
     "seed:tn-users": "node server/utils/seedTamilNaduUsers.js",
+    "generate:production-shaped": "node server/scripts/generateProductionShapedDataset.js",
     "backup:restore-rehearsal": "node server/scripts/d108RestoreRehearsal.js",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"

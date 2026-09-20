@@ -149,6 +149,9 @@ vite.config.ts.timestamp-*
 /backups/
 migrations.log.json
 
+# Regenerable D109 dumps (generator source is committed)
+/fixtures/production-shaped/
+
 *storybook.log
 storybook-static
 

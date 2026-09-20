@@ -15,6 +15,9 @@ export default {
   id: "003-backfill-lifecycle-audit",
   description:
     "Backfill auditLog with reconstructed lifecycle history from operationalMeta / reviewMeta / deactivation (fields retained).",
+  forwardOnly: false,
+  rollback:
+    "Delete auditLog rows whose detail.reconstructed === true (stable ids aud-recon-*). Source entity fields are unchanged by this migration.",
 
   async run({ dryRun }) {
     const db = readRawDB();

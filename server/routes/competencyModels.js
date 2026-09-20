@@ -16,6 +16,7 @@ import {
   stripStudentModelImportIdentity,
 } from "../../src/utils/studentModelBulkNormalize.js";
 import { logger } from "../utils/logger.js";
+import { resolveReviewSubmitter } from "../migrations/lifecycleMetaAudit.js";
 
 const router = express.Router();
 
@@ -532,7 +533,8 @@ router.post("/models/:id/confirm", authorizeRole(["admin", "district"]), (req, r
 
   // Two-person gate: submitter (reviewed) ≠ confirmer, unless an admin
   // explicitly acknowledges same-author confirmation for solo lab use.
-  const submitter = model.reviewMeta?.submittedBy || null;
+  // D109: submitter comes from append-only history after lifecycle meta removal.
+  const submitter = resolveReviewSubmitter(db, "competencyModels", model);
   const confirmer = req.user?.username || null;
   const sameAuthor = submitter && confirmer && submitter === confirmer;
   const acknowledgeSameAuthor = req.body?.acknowledgeSameAuthor === true;
@@ -667,18 +669,7 @@ router.patch("/models/:id/lifecycle", canAuthor, (req, res) => {
   if (prevStatus !== nextStatus) {
     model.status = nextStatus;
     model.locked = false;
-    model.reviewMeta = {
-      ...(model.reviewMeta || {}),
-      ...(nextStatus === "reviewed"
-        ? {
-            submittedForReviewAt: now,
-            submittedBy: req.user?.username || null,
-          }
-        : {
-            returnedToDraftAt: now,
-            returnedBy: req.user?.username || null,
-          }),
-    };
+    // D109: review timestamps → append-only history via saveDB; no reviewMeta blob.
     // Keep SMVs aligned whenever a model enters review.
     if (nextStatus === "reviewed") {
       const related = (db.competencies || []).filter((c) => c.modelId === model.id);

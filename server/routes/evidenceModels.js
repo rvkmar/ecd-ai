@@ -969,10 +969,9 @@ const TRANSITION_HANDLERS = {
   draft: (model, now) => {
     model.status = "draft";
     model.locked = false;
-    model.reviewMeta = {
-      ...(model.reviewMeta || {}),
-      returnedToDraftAt: now,
-    };
+    // D109: lifecycle timestamps live in the append-only history (saveDB
+    // chokepoint), not denormalized reviewMeta blobs (stripped by migration 005).
+    void now;
     return null;
   },
 
@@ -982,10 +981,7 @@ const TRANSITION_HANDLERS = {
     // editable so the reviewer's findings can actually be acted on.
     model.status = "reviewed";
     model.locked = false;
-    model.reviewMeta = {
-      ...(model.reviewMeta || {}),
-      submittedForReviewAt: now,
-    };
+    void now;
     return null;
   },
 
@@ -1018,14 +1014,8 @@ const TRANSITION_HANDLERS = {
     }
 
     model.status = "operational";
-    model.operationalMeta = {
-      ...(model.operationalMeta || {}),
-      activatedAt: now,
-      reactivationCount:
-        prevStatus === "suspended"
-          ? (model.operationalMeta?.reactivationCount || 0) + 1
-          : (model.operationalMeta?.reactivationCount || 0),
-    };
+    // D109: activation time / reactivation count → append-only history only.
+    void now;
     return null;
   },
 
@@ -1064,11 +1054,7 @@ const TRANSITION_HANDLERS = {
     }
 
     model.status = "suspended";
-    model.operationalMeta = {
-      ...(model.operationalMeta || {}),
-      suspendedAt: now,
-      suspensionReason: null,
-    };
+    void now;
     return null;
   },
 
@@ -1092,10 +1078,7 @@ const TRANSITION_HANDLERS = {
 
     model.status = "archived";
     model.locked = true;
-    model.operationalMeta = {
-      ...(model.operationalMeta || {}),
-      archivedAt: now,
-    };
+    void now;
     return null;
   },
 };
@@ -1161,8 +1144,13 @@ router.patch("/:id/lifecycle", canAuthor, (req, res) => {
     return res.status(result.status).json(result.body);
   }
 
+  // Suspension reason (if any) is request-scoped logging only — D109 stopped
+  // writing operationalMeta; saveDB records the transition in history.
   if (nextStatus === "suspended" && reason) {
-    model.operationalMeta.suspensionReason = String(reason);
+    logger.info("evidenceModel.suspend_reason", {
+      evidenceModelId: model.id,
+      reason: String(reason),
+    });
   }
 
   saveDB(db);

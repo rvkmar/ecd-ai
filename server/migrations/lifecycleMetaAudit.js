@@ -208,3 +208,50 @@ export function collectRemovableLifecycleFields(db) {
 
   return removable;
 }
+
+/**
+ * Mutate-and-return: delete reviewMeta / operationalMeta / deactivation.
+ * Used by 005-remove-lifecycle-meta after 003 has backfilled auditLog.
+ * @param {object} db
+ */
+export function stripLifecycleMetaFields(db) {
+  for (const collection of COLLECTIONS) {
+    for (const row of db[collection] || []) {
+      if (!row || typeof row !== "object") continue;
+      if ("reviewMeta" in row) delete row.reviewMeta;
+      if ("operationalMeta" in row) delete row.operationalMeta;
+      if ("deactivation" in row) delete row.deactivation;
+    }
+  }
+  return db;
+}
+
+/**
+ * Resolve who submitted a model for review — prefers live reviewMeta
+ * (pre-005), else the latest audit row for that entity.
+ * @param {object} db
+ * @param {string} collection
+ * @param {object} model
+ */
+export function resolveReviewSubmitter(db, collection, model) {
+  if (model?.reviewMeta?.submittedBy) return model.reviewMeta.submittedBy;
+
+  const id = model?.id;
+  if (!id) return null;
+
+  const candidates = (db.auditLog || []).filter((e) => {
+    if (e?.entity?.collection !== collection || e?.entity?.id !== id) return false;
+    if (e.action === "lifecycle.transition" && e.detail?.to === "reviewed") return true;
+    if (
+      e.action === "lifecycle.reconstructed" &&
+      e.detail?.inferredTo === "reviewed"
+    ) {
+      return true;
+    }
+    return false;
+  });
+
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+  return candidates[0]?.actor?.userId || null;
+}
