@@ -15,8 +15,15 @@
 import { runMigration } from "./runner.js";
 import normalizeSessionStatus from "./migrations/001-normalize-session-status.js";
 import normalizeToolsAllowed from "./migrations/002-normalize-tools-allowed.js";
+import backfillLifecycleAudit from "./migrations/003-backfill-lifecycle-audit.js";
+import previewRemoveLifecycleMeta from "./migrations/004-preview-remove-lifecycle-meta.js";
 
-const REGISTRY = [normalizeSessionStatus, normalizeToolsAllowed];
+const REGISTRY = [
+  normalizeSessionStatus,
+  normalizeToolsAllowed,
+  backfillLifecycleAudit,
+  previewRemoveLifecycleMeta,
+];
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");

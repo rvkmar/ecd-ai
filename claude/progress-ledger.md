@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D101** — auditLog collection + write-path integration (W21). Handoff: `claude/day101-auditlog-write-path.md`. |
+| Last completed unit | **D102** — migrate ad hoc lifecycle fields onto auditLog (reconstructed backfill + removal preview). Handoff: `claude/day102-lifecycle-meta-audit-backfill.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D102** — migrate ad hoc lifecycle fields onto the audit log (W21, **never-compress**, alone). |
+| Next queued | Calendar **D103** — structured logging + request-id propagation (W21). |
 
 | Block | **W21** — Auditability and observability (D101–D105). D101 done; gate due at D105. |
 
@@ -322,6 +322,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-19 | close | — | W20 session-close re-verify: suite **1728 passed / 9 skipped**; build green; tip **`7ff7586`** ≡ `main/master`. Exit checks already executed (D100 gate). Next: D101. |
 
 | 2026-09-20 | D101 | 2, alone | auditLog via saveDB chokepoint; auth/user events; admin GET; suite **1742 passed / 9 skipped**. Next: D102 (never-compress). |
+
+| 2026-09-20 | D102 | 3, alone | Reconstructed lifecycle audit backfill (003) + removal preview never-deletes (004). Suite **1747 passed / 9 skipped**. Next: D103. |
 
 
 
