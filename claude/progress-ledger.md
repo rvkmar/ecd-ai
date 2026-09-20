@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D107** — scheduled encrypted full backup + inventory. Handoff: `claude/day107-backup-encrypted-scheduled.md`. |
+| Last completed unit | **D108** — restore rehearsal performed and timed; **W22 gate met**. Handoff: `claude/day108-restore-rehearsal.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,11 +52,11 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D108** — restore rehearsal, timed (W22; never-compress). |
+| Next queued | Calendar **D109** — production-shaped migration rehearsal (W22; never-compress). |
 
-| Block | **W22** — Resilience (D106–D110). D106–D107 done. |
+| Block | **W22** — Resilience (D106–D110). D106–D108 done; **block gate met** (restore timed). |
 
-| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ **W22 open:** a restore from backup is performed and timed (block gate). |
+| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ |
 
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 
@@ -336,6 +336,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-20 | D106 | 2, alone | ADR 0007: Mongo production / JSON harness; boot refuse + compose pin. Two-store premise rewritten. Suite **1775 passed / 9 skipped**. Next: D107. |
 
 | 2026-09-20 | D107 | 2, alone | Scheduled AES-256-GCM full backup + inventory (jobs/artefacts in ECD JSON); compose key-from-env. Suite **1784 passed / 9 skipped**. Next: D108 (never-compress). |
+
+| 2026-09-20 | D108 | 3, alone | Timed restore rehearsal; four checks pass; RPO 24h / RTO 60m met (restore 3 ms). W22 gate met. Suite **1787 passed / 9 skipped**. Next: D109. |
 
 
 

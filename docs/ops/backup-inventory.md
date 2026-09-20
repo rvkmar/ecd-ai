@@ -31,5 +31,7 @@ Summary:
 
 ## Restore
 
-Timed restore rehearsal is **D108** (never-compress). Helper to open an
-archive in tests: `openEncryptedBackup` in `runFullBackup.js`.
+Timed restore rehearsal is **D108** (never-compress). Entry points:
+`server/backup/runRestore.js`, `npm run backup:restore-rehearsal`. Record:
+`docs/ops/restore-rehearsal-record.json`. Procedure write-up:
+`docs/ops/restore-rehearsal.md`.

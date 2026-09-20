@@ -1,0 +1,56 @@
+{
+  "ok": true,
+  "unit": "D108",
+  "performedAt": "2026-09-20T09:15:08.921Z",
+  "backupPath": "C:\\Users\\DIETCHENNAI\\AppData\\Local\\Temp\\ecd-d108-zW10XF\\backups\\ecd-full-2026-09-19T21-15-08-914Z.ecd.bak.enc",
+  "backupCreatedAt": "2026-09-19T21:15:08.914Z",
+  "backupAgeMs": 43200007,
+  "restoreElapsedMs": 2,
+  "statedRpoMs": 86400000,
+  "statedRtoMs": 3600000,
+  "rpoMet": true,
+  "rtoMet": true,
+  "rpoNote": "RPO 24h — daily encrypted full backup (ECD_BACKUP_CRON default 20 2 * * * UTC). Rehearsal backup age must be ≤ 24h.",
+  "rtoNote": "RTO 60m — decrypt + write ECD JSON, mongo exports, and materials into a clean tree. Live Mongo import is a follow-on ops step using mongo/users.json.",
+  "verification": {
+    "ok": true,
+    "checks": {
+      "posteriorRecomputes": {
+        "ok": true,
+        "detail": {
+          "restoredEstimate": 0.40244904110361196,
+          "expectedEstimate": 0.40244904110361196,
+          "supported": true
+        }
+      },
+      "parameterSetResolvesToJob": {
+        "ok": true,
+        "detail": {
+          "parameterSetCalibrationJobId": "job-rehearsal-1",
+          "jobIngestedParameterSetId": "ps-rehearsal-1"
+        }
+      },
+      "materialsRender": {
+        "ok": true,
+        "detail": {
+          "stimulusText": "Restore-rehearsal passage: the incline is frictionless.",
+          "materialFileText": "Restore-rehearsal passage: the incline is frictionless."
+        }
+      },
+      "auditLogIntact": {
+        "ok": true,
+        "detail": {
+          "auditCount": 1
+        }
+      }
+    }
+  },
+  "mongoUsersRestored": true,
+  "filesRestored": [
+    "ecd/db.json",
+    "manifest.json",
+    "materials/passage.txt",
+    "mongo/questions.json",
+    "mongo/users.json"
+  ]
+}
