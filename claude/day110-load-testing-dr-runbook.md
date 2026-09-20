@@ -48,6 +48,7 @@ NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
   1794 passed | 9 skipped (1803) — 159 files
 npm run build
   green (~16s)
+Tip: `fecdd5c` (D110 + W22 close). D109 product tip: `372720f`.
 ```
 
 ## Delivered

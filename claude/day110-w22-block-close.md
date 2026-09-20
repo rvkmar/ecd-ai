@@ -36,6 +36,8 @@ npm run build
   green
 ```
 
+Tip at session close: **`fecdd5c`**. D109: `372720f`.
+
 ## Next block
 
 **W23** begins at calendar **D111** (TaskWizard onto shared shell —
