@@ -2,7 +2,11 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import "dotenv/config";
+import { assertProductionStorageBoundary } from "./config/storageMode.js";
 import { applyCors } from "./utils/corsPolicy.js";
+
+// ADR 0007: production refuses the JSON harness mode and requires MONGO_URI.
+assertProductionStorageBoundary();
 
 import sessionRoutes from "./routes/sessionRoutes.js";
 import questionsRoutes from "./routes/questionsRoutes.js";

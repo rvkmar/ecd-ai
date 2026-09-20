@@ -81,9 +81,8 @@ Consequences of the interim choice:
 - W22 DR runbook is written for **compose on one host** (backup/restore of
   Mongo volume + `ecd_data`, R image pin, nginx). Revisit if hosting changes.
 - Do not invent a second deployment topology in code until this ADR is revised.
-- D106 (JSON vs Mongo) should assume the interim host runs **Mongo in
-  compose** for any real deployment; JSON stays a harness (direction already
-  sketched in readiness §4.1 — final call remains D106).
+  - D106 (JSON vs Mongo) assumed the interim host runs **Mongo in compose**
+  for any real deployment; JSON stays a harness — **settled in ADR 0007**.
 
 **Open question:**
 

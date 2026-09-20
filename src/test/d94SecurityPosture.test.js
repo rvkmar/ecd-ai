@@ -121,4 +121,10 @@ describe("D94 compose publish posture (mongo unpublished; R expose)", () => {
     expect(block).toMatch(/NODE_ENV=production/);
     expect(block).not.toMatch(/NODE_ENV=development/);
   });
+
+  it("compose node service pins DB_MODE=mongo (ADR 0007)", () => {
+    const block = serviceBlock("node");
+    expect(block).toMatch(/DB_MODE=mongo/);
+    expect(block).not.toMatch(/DB_MODE=json/);
+  });
 });

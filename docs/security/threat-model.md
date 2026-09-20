@@ -278,7 +278,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 
 | T-NET-03 | Insider edits Mongo / `db.json` | Arbitrary score/param rewrite | **Accepted** (insider) → **Scheduled W21** audit log detects app-path changes only | DB-level integrity needs backup + audit + access control outside app |
 
-| T-NET-04 | JSON `saveDB` race clobbers concurrent writes | Lost updates / integrity | **Accepted** (known) → **Scheduled W22** storage ADR | Carried since D72 adversarial list |
+| T-NET-04 | JSON `saveDB` race clobbers concurrent writes | Lost updates / integrity | **Accepted** (harness + interim ECD file) → **Scheduled** cutover | ADR 0007: Mongo is production; ECD `loadDB` file remains interim until W22 migration; harness JSON stays out of production via boot guard |
 
 
 
@@ -329,7 +329,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 
 | **W21** | Audit log for lifecycle / ingest / auth failures (insider app-path detection) — **D101 landed** (saveDB chokepoint); D102–D105 remain |
 
-| **W22** | Storage ADR (JSON vs Mongo), backup/restore, T-NET-01/04 operational hardening |
+| **W22** | ~~Storage ADR (JSON vs Mongo)~~ → ADR 0007; backup/restore, T-NET-01/04 cutover hardening |
 
 
 
@@ -359,11 +359,11 @@ Settled or partially settled in ADR 0005 (2026-09-18):
 
 Still open (not closed by D95):
 
-
-
 - Retention periods for responses, audit, artefacts  
 
-- Whether JSON store survives outside test harness (W22 / D106)
+Settled in ADR 0007 (2026-09-20 / D106):
+
+- ~~Whether JSON store survives outside test harness~~ → **harness (+ interim ECD `ECD_DB_FILE` until cutover) only**; production boot refuses `DB_MODE=json`
 
 
 

@@ -8,6 +8,7 @@ import fs from "fs";
 import path from "path";
 import mongoose from "mongoose";
 import { loadDB, backupDirPath } from "../../src/utils/db-server.js";
+import { describeStorageMode } from "../config/storageMode.js";
 import { getRHealth, rBackendUrl } from "../r/rClient.js";
 import { computeQueueMetrics } from "../r/calibrationQueueLimits.js";
 import { getMigrationStatus } from "../migrations/runner.js";
@@ -155,6 +156,12 @@ export async function collectSystemStatus(options = {}) {
       ok: ecdDb.ok,
       ecd: ecdDb,
       userStore,
+      // ADR 0007: harnessAllowed false under NODE_ENV=production.
+      storagePolicy: {
+        ...describeStorageMode(),
+        ecdStore: "interim-json-file",
+        productionRecord: "mongo",
+      },
     },
     r,
     queue,
