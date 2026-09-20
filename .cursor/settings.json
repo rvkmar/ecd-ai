@@ -1,0 +1,13 @@
+{
+  "plugins": {
+    "google-calendar": {
+      "enabled": true
+    },
+    "google-drive": {
+      "enabled": true
+    },
+    "github": {
+      "enabled": true
+    }
+  }
+}
