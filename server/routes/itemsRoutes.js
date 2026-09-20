@@ -53,6 +53,7 @@ import {
   redactItemExposure,
 } from "../utils/aggregatePrivacy.js";
 import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
+import { logger } from "../utils/logger.js";
 
 const router = express.Router();
 
@@ -462,6 +463,15 @@ router.post("/bulk", canAuthor, (req, res) => {
   // Only touch the file when something actually landed. An all-failed
   // batch used to rewrite the database for no reason.
   if (created > 0) saveDB(db);
+
+  if (failed > 0) {
+    logger.warn("bulk.failure", {
+      collection: "items",
+      created,
+      failed,
+      errors: results.filter((r) => !r.ok).map((r) => ({ index: r.index, error: r.error })),
+    });
+  }
 
   res.status(207).json({ created, failed: results.length - created, results });
 });

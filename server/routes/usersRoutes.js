@@ -25,6 +25,7 @@ import {
 } from "../auth/localIdentity.js";
 import { tenancyClaimsFromUser } from "../utils/tenancy.js";
 import { recordAuditEvent } from "../../src/utils/db-server.js";
+import { logger } from "../utils/logger.js";
 
 const router = express.Router();
 
@@ -169,6 +170,12 @@ function auditAuthFailure(username, reason) {
     // Auth path must still return 401 even if the audit store is unavailable.
     console.error("audit auth.failure failed:", err?.message || err);
   }
+  // D103: structured log — username is a login identifier (may be EMIS), not a
+  // display name; still treat as identifier only (no password / profile).
+  logger.warn("auth.failure", {
+    loginId: username ? String(username) : null,
+    reason,
+  });
 }
 
 // ------------------------------

@@ -6,6 +6,8 @@
 import { rPathForJobKind, unboxPlumberScalars } from "./calibrationContract.js";
 import { jobTimeoutMsForKind, DEFAULT_JOB_TIMEOUT_MS } from "./jobTimeouts.js";
 import { killRBackend } from "./killRBackend.js";
+import { getAuditRequestId } from "../utils/auditContext.js";
+import { logger } from "../utils/logger.js";
 
 const DEFAULT_R_BACKEND_URL = "http://r-backend:4000";
 
@@ -19,6 +21,9 @@ function authHeaders() {
   const headers = { "Content-Type": "application/json", Accept: "application/json" };
   const token = process.env.R_SERVICE_TOKEN;
   if (token) headers.Authorization = `Bearer ${token}`;
+  // D103: propagate request id into R so job logs can join on the enqueue.
+  const requestId = getAuditRequestId();
+  if (requestId) headers["X-Request-Id"] = requestId;
   return headers;
 }
 
@@ -26,6 +31,13 @@ async function rFetch(path, { method = "GET", body, timeoutMs = DEFAULT_JOB_TIME
   const url = `${rBackendUrl().replace(/\/$/, "")}${path}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const requestId = getAuditRequestId();
+  logger.info("r.request", {
+    path,
+    method,
+    jobId: body?.jobId ?? null,
+    requestId,
+  });
   try {
     const res = await fetch(url, {
       method,

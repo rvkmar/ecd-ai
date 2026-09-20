@@ -12,6 +12,7 @@
 import { randomUUID } from "crypto";
 import { STATUS, CALIBRATION_JOB_STATUS } from "./lifecycleMatrix.js";
 import { getAuditActor, getAuditRequestId } from "./auditContext.js";
+import { logger } from "./logger.js";
 
 /** Authored entities on the shared STATUS machine. */
 const LIFECYCLE_ENTITY_COLLECTIONS = Object.freeze([
@@ -250,6 +251,17 @@ export function applySaveAudits(before, after, options = {}) {
   // Prefer mutating the same object routes already hold so in-memory
   // fixtures see the audit rows without a second load.
   appendAuditsToDb(after, entries);
+  // D103: structured log for lifecycle transitions (ids only).
+  for (const entry of entries) {
+    if (entry.action === "lifecycle.transition") {
+      logger.info("lifecycle.transition", {
+        collection: entry.entity?.collection,
+        entityId: entry.entity?.id,
+        from: entry.detail?.from,
+        to: entry.detail?.to,
+      });
+    }
+  }
   return after;
 }
 

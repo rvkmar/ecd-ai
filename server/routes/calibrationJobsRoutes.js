@@ -7,6 +7,7 @@ import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
+import { getAuditRequestId } from "../utils/auditContext.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { validateCalibrationJobLifecycle } from "../utils/lifecycleValidation.js";
 import { canTransitionCalibrationJob } from "../utils/lifecycleMatrix.js";
@@ -127,6 +128,8 @@ router.post("/", canAuthor, (req, res) => {
     statisticalModelId: incoming?.statisticalModelId ?? req.body?.statisticalModelId,
     requestedBy: req.user?.username || req.body?.requestedBy || "unknown",
     requestedAt: now,
+    // D103: persist the edge request id so the worker can propagate it to R.
+    requestId: getAuditRequestId() || null,
     startedAt: null,
     finishedAt: null,
     request,

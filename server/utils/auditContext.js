@@ -58,3 +58,19 @@ export function getAuditActor() {
   if (!isBag(store)) return null;
   return store.actor;
 }
+
+/**
+ * @template T
+ * @param {{ requestId?: string, actor?: AuditActor }} bag
+ * @param {() => T} fn
+ * @returns {T}
+ */
+export function runWithAudit(bag, fn) {
+  return storage.run(
+    {
+      requestId: bag.requestId || randomUUID(),
+      actor: bag.actor ?? null,
+    },
+    fn
+  );
+}

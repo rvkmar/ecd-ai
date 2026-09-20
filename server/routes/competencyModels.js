@@ -15,6 +15,7 @@ import {
   normalizeStudentModelBulkRows,
   stripStudentModelImportIdentity,
 } from "../../src/utils/studentModelBulkNormalize.js";
+import { logger } from "../utils/logger.js";
 
 const router = express.Router();
 
@@ -424,7 +425,19 @@ router.post("/models/bulk", canAuthor, (req, res) => {
   saveDB(db);
 
   const created = results.filter((r) => r.ok).length;
-  res.status(207).json({ created, failed: results.length - created, results });
+  const failed = results.length - created;
+  if (failed > 0) {
+    logger.warn("bulk.failure", {
+      collection: "competencyModels",
+      created,
+      failed,
+      errors: results.filter((r) => !r.ok).map((r) => ({
+        index: r.index,
+        error: r.error,
+      })),
+    });
+  }
+  res.status(207).json({ created, failed, results });
 });
 
 /* =====================================================

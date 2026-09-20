@@ -25,6 +25,7 @@ import {
   frozenScoringContext,
 } from "../delivery/parameterSourceResolution.js";
 import { resolveAssemblyProgress } from "../delivery/assemblyProgress.js";
+import { logger } from "../utils/logger.js";
 // D56: Activity Selection. /next-task's whole strategy block used to live
 // inline below; it now lives in one module that reads the composite library
 // and the live posteriors instead of db.questions. See that file's header.
@@ -272,6 +273,13 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
   const { id } = req.params;
   const { taskId, questionId, itemId, rawAnswer, observationId, scoredValue, evidenceId, rubricLevel } = req.body;
 
+  logger.info("session.submit.start", {
+    sessionId: id,
+    taskId: taskId || null,
+    itemId: itemId || null,
+    questionId: questionId || null,
+  });
+
   const db = loadDB();
   const session = db.sessions.find(s => s.id === id && !s.isCompleted);
   if (!session) return res.status(404).json({ error: "Session not found or already completed" });
@@ -470,6 +478,15 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     };
     if (evidence.warning) response.warning = evidence.warning;
 
+    logger.info("session.submit.scored", {
+      sessionId: id,
+      taskId,
+      itemId,
+      observationId: evidence.observationId,
+      observableId: evidence.observableId,
+      parameterSource,
+    });
+
     session.responses.push(response);
     session.currentTaskIndex = Math.min(session.currentTaskIndex + 1, session.taskIds.length);
     session.updatedAt = new Date().toISOString();
@@ -553,6 +570,12 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     }
 
     saveDB(db);
+    logger.info("session.submit.persisted", {
+      sessionId: id,
+      taskId,
+      itemId,
+      responseCount: (session.responses || []).length,
+    });
     // `assemblyProgress` and `accumulationWarnings` are surfaced in the
     // response only -- see assemblyProgress.js's own module header for why
     // neither is ever persisted or acted on here.

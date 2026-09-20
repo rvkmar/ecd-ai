@@ -739,6 +739,8 @@ export const schema = {
     statisticalModelId: 'string',
     requestedBy: 'string',
     requestedAt: 'date',
+    // D103: edge request id persisted so the worker can propagate to R.
+    requestId: 'string',
     startedAt: 'date',
     finishedAt: 'date',
     request: 'object',

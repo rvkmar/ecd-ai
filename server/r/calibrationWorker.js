@@ -19,6 +19,7 @@ import {
   ATTRIBUTE_PROFILE_SUMMARY_KIND,
   runAttributeProfileSummaryJob,
 } from "../delivery/attributeProfileCohortSummary.js";
+import { runWithAudit } from "../utils/auditContext.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -128,16 +129,25 @@ export async function processJobById(
   saveDB(db);
 
   const resolvedTimeoutMs = jobTimeoutMsForKind(job.kind, timeoutMs);
-  const result =
-    job.kind === ATTRIBUTE_PROFILE_SUMMARY_KIND
-      ? await withWallClockTimeout(
-          () => runAttributeProfileSummaryJob(job.request),
-          resolvedTimeoutMs
-        )
-      : await client.postCalibration(job.kind, job.request, {
-          timeoutMs: resolvedTimeoutMs,
-          killer,
-        });
+  // D103: restore the enqueue request id so R client headers + logs join.
+  const result = await runWithAudit(
+    {
+      requestId: job.requestId || undefined,
+      actor: job.requestedBy
+        ? { userId: String(job.requestedBy), role: null }
+        : null,
+    },
+    async () =>
+      job.kind === ATTRIBUTE_PROFILE_SUMMARY_KIND
+        ? withWallClockTimeout(
+            () => runAttributeProfileSummaryJob(job.request),
+            resolvedTimeoutMs
+          )
+        : client.postCalibration(job.kind, job.request, {
+            timeoutMs: resolvedTimeoutMs,
+            killer,
+          })
+  );
 
   const after = loadDB();
   const live = findJob(after, jobId);
