@@ -24,6 +24,7 @@
 
 import React from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { reportClientError } from "@/utils/clientErrorReporter";
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -42,15 +43,16 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // Kept as console output rather than a toast: this is diagnostic
-    // information for whoever is debugging, and the visible fallback
-    // below is what the user is meant to read.
     // eslint-disable-next-line no-console
     console.error(
       `[ErrorBoundary${this.props.label ? ` · ${this.props.label}` : ""}]`,
       error,
       info?.componentStack
     );
+    reportClientError(error, {
+      label: this.props.label,
+      componentStack: info?.componentStack,
+    });
   }
 
   render() {

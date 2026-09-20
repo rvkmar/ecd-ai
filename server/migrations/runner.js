@@ -55,6 +55,19 @@ export function hasBeenApplied(migrationId) {
   return readLog().some((entry) => entry.id === migrationId);
 }
 
+/** Snapshot for health/metrics — which schema this environment is on. */
+export function getMigrationStatus() {
+  const applied = readLog();
+  const latest = applied.length ? applied[applied.length - 1] : null;
+  return {
+    appliedCount: applied.length,
+    appliedIds: applied.map((e) => e.id),
+    latestId: latest?.id || null,
+    latestAppliedAt: latest?.appliedAt || null,
+    logPath: logFilePath(),
+  };
+}
+
 /**
  * Run a single migration.
  * @param {{id: string, description: string, run: Function}} migration

@@ -38,6 +38,7 @@ import { authenticateToken, authorizeRole } from "./utils/authMiddleware.js";
 import { beginTenancyRequest } from "./utils/tenancyContext.js";
 import { beginAuditRequest } from "./utils/auditContext.js";
 import auditLogRoutes from "./routes/auditLogRoutes.js";
+import healthRoutes from "./routes/healthRoutes.js";
 
 const app = express();
 app.use(express.json());
@@ -56,6 +57,9 @@ app.use((req, res, next) => {
   req.requestId = requestId;
   next();
 });
+
+// D104: unauthenticated ops probes (health ≠ readiness; R does not fail health).
+app.use("/api", healthRoutes);
 
 // Role-specific dashboard "am I still logged in" probes. These used to have
 // no auth at all — anyone could hit /api/admin/data with no token — and the

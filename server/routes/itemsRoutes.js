@@ -459,6 +459,7 @@ router.post("/bulk", canAuthor, (req, res) => {
   });
 
   const created = results.filter((r) => r.ok).length;
+  const failed = results.length - created;
 
   // Only touch the file when something actually landed. An all-failed
   // batch used to rewrite the database for no reason.
@@ -473,7 +474,7 @@ router.post("/bulk", canAuthor, (req, res) => {
     });
   }
 
-  res.status(207).json({ created, failed: results.length - created, results });
+  res.status(207).json({ created, failed, results });
 });
 
 /* =============================================================

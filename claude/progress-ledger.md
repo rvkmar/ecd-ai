@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D103** — structured logging + request-id propagation. Handoff: `claude/day103-structured-logging.md`. |
+| Last completed unit | **D104** — health, readiness, metrics + client error tracking. Handoff: `claude/day104-health-readiness-metrics.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D104** — health, readiness, metrics + client error tracking (W21). |
+| Next queued | Calendar **D105** — audit viewer + system health screen + four alerts + W21 handoff (gate). |
 
-| Block | **W21** — Auditability and observability (D101–D105). D101–D103 done; gate due at D105. |
+| Block | **W21** — Auditability and observability (D101–D105). D101–D104 done; gate due at D105. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ **W21 open:** “who promoted this Task Model to operational, when, and on what evidence” is one query (D105). |
 
@@ -326,6 +326,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-20 | D102 | 3, alone | Reconstructed lifecycle audit backfill (003) + removal preview never-deletes (004). Suite **1747 passed / 9 skipped**. Next: D103. |
 
 | 2026-09-20 | D103 | 2, alone | Structured JSON logs + redaction; request-id through submit and R client; suite **1750 passed / 9 skipped**. Next: D104. |
+
+| 2026-09-20 | D104 | 2, alone | Health≠readiness endpoints + client error tracking/sourcemaps; suite **1757 passed / 9 skipped**. Next: D105 (W21 gate). |
 
 
 

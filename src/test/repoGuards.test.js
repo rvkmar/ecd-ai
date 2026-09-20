@@ -122,6 +122,10 @@ describe("every write route declares a role gate", () => {
     // Student Session Wizard Draft→Submit clocks — same ownership-scoped
     // self-service as finish/play; role list would block the examinee.
     "sessionRoutes.js:POST:/:id/wizard-timing",
+    // D104: ErrorBoundary intake — must work before/without a token so a
+    // crashed login/wizard surface can still report. Rate-limited; logs
+    // ids/release/stack only (no response bodies).
+    "healthRoutes.js:POST:/client-errors",
   ]);
 
   const WRITE_METHODS = ["post", "put", "patch", "delete"];

@@ -15,6 +15,8 @@ export default defineConfig({
     },
   },
   build: {
+    // D104: source maps so client error stacks map to source in production.
+    sourcemap: true,
     // D74: keep the Vite >500 kB warning meaningful — do not raise the
     // limit; split heavy vendors so route chunks stay under it.
     rollupOptions: {

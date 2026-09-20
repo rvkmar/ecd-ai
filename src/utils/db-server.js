@@ -16,7 +16,7 @@ function dbFilePath() {
   return process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
 }
 
-function backupDirPath() {
+export function backupDirPath() {
   return process.env.ECD_BACKUP_DIR || path.join(path.dirname(dbFilePath()), "backups");
 }
 
