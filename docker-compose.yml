@@ -15,7 +15,9 @@ services:
       # No fallback value on purpose: server/config/jwt.js refuses to start
       # without a real secret. Set JWT_SECRET in your .env (see .env.example).
       - JWT_SECRET=${JWT_SECRET}
-      - TOKEN_EXPIRES_IN=8h
+      - ACCESS_TOKEN_EXPIRES_IN=15m
+      - REFRESH_TOKEN_EXPIRES_IN=7d
+      - TOKEN_EXPIRES_IN=15m
       - R_BACKEND_URL=http://r-backend:4000
       - R_SERVICE_TOKEN=${R_SERVICE_TOKEN:-}
       - CALIBRATION_QUEUE_AUTORUN=1

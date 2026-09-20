@@ -2,6 +2,7 @@ import express from "express";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";  // ✅ schema with metadata-based a/b/c
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 
 const router = express.Router();
 
@@ -10,6 +11,7 @@ const router = express.Router();
 // This was missing here because the router was never mounted; add it now
 // that it's being wired back into the app.
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 // Every write route also needs a role gate: none had one.
 // src/config/rolePermissions.js declares "questions" editing as

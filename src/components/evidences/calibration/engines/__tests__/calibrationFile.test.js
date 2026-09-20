@@ -155,7 +155,12 @@ describe("parseCalibrationJson rejections", () => {
     const base = {
         calibrationFileVersion: "1.0",
         kind: "irt-parameters",
-        provenance: { calibratedBy: "x@y.z", calibrationMethod: "mirt 2PL", sampleSize: 500 },
+        provenance: {
+            calibratedBy: "x@y.z",
+            calibrationMethod: "mirt 2PL",
+            sampleSize: 500,
+            software: "R mirt 1.42",
+        },
         parameters: { o1: { a: 1.2, b: 0.1 } },
     };
 
@@ -184,7 +189,21 @@ describe("parseCalibrationJson rejections", () => {
             expect.stringMatching(/calibratedBy/),
             expect.stringMatching(/calibrationMethod/),
             expect.stringMatching(/sampleSize/),
+            expect.stringMatching(/software|packageVersion/),
         ]));
+    });
+
+    it("requires software or packageVersion for packageVersion provenance", () => {
+        const r = parseCalibrationJson(JSON.stringify({
+            ...base,
+            provenance: {
+                calibratedBy: "x@y.z",
+                calibrationMethod: "mirt 2PL",
+                sampleSize: 500,
+            },
+        }));
+        expect(r.ok).toBe(false);
+        expect(r.errors.some((e) => /software|packageVersion/.test(e))).toBe(true);
     });
 
     it("requires a numeric difficulty per observable", () => {
@@ -335,6 +354,8 @@ describe("buildRecalibrationPayload", () => {
         expect(payload.statisticalModelId).toBe("sm1");
         expect(payload.sampleSize).toBe(4821);
         expect(payload.calibratedBy).toBe("psychometrics.unit@example.org");
+        expect(payload.packageVersion).toMatch(/mirt/);
+        expect(payload.converged).toBe(true);
 
         expect(observableParameterEntries(payload.parameters).map(([id]) => id))
             .toEqual(["o1", "o2", "o3"]);

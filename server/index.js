@@ -2,6 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import "dotenv/config";
+import { applyCors } from "./utils/corsPolicy.js";
 
 import sessionRoutes from "./routes/sessionRoutes.js";
 import questionsRoutes from "./routes/questionsRoutes.js";
@@ -32,16 +33,34 @@ import qMatrixModelsRoutes from "./routes/qMatrixModelsRoutes.js";
 import assemblyModelsRoutes from "./routes/assemblyModelsRoutes.js";
 import compositeLibraryRoutes from "./routes/compositeLibraryRoutes.js";
 import announcementsRoutes from "./routes/announcementsRoutes.js";
+import tenancyRoutes from "./routes/tenancyRoutes.js";
 import { authenticateToken, authorizeRole } from "./utils/authMiddleware.js";
+import { beginTenancyRequest } from "./utils/tenancyContext.js";
+import { beginAuditRequest } from "./utils/auditContext.js";
+import auditLogRoutes from "./routes/auditLogRoutes.js";
+import healthRoutes from "./routes/healthRoutes.js";
+import opsRoutes from "./routes/opsRoutes.js";
 
 const app = express();
 app.use(express.json());
 app.use(bodyParser.json());
 
-// Enable CORS for development only
-if (process.env.NODE_ENV !== "production") {
-  app.use(cors({ origin: "http://localhost:5173", credentials: true }));
-}
+// D94: production is same-origin via nginx — CORS stays off.
+// Dev pins an explicit Vite origin (never "*"); see corsPolicy.js.
+applyCors(app, cors);
+
+// D98: request-scoped tenancy bag (mutated by authenticateToken).
+// D101: request id + audit actor bag (actor bound on authenticateToken).
+app.use((req, res, next) => {
+  beginTenancyRequest();
+  const requestId = beginAuditRequest(req.headers["x-request-id"]);
+  res.setHeader("X-Request-Id", requestId);
+  req.requestId = requestId;
+  next();
+});
+
+// D104: unauthenticated ops probes (health ≠ readiness; R does not fail health).
+app.use("/api", healthRoutes);
 
 // Role-specific dashboard "am I still logged in" probes. These used to have
 // no auth at all — anyone could hit /api/admin/data with no token — and the
@@ -90,11 +109,22 @@ app.use("/api/curricularPolicies", curricularPoliciesRoutes);
 app.use("/api/calibrate", calibrationRoutes);
 app.use("/api/calibrationJobs", calibrationJobsRoutes);
 app.use("/api/analysisArtefacts", analysisArtefactsRoutes);
+app.use("/api/auditLog", auditLogRoutes);
+app.use("/api/ops", opsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/qMatrixModels", qMatrixModelsRoutes);
 app.use("/api/assemblyModels", assemblyModelsRoutes);
 app.use("/api/compositeLibrary", compositeLibraryRoutes);
 app.use("/api/announcements", announcementsRoutes);
+app.use("/api/tenancy", tenancyRoutes);
+
+// D97: storage-layer TenancyError → 403 (sync throws from loadDB/saveDB).
+app.use((err, req, res, next) => {
+  if (err?.code === "TENANCY_REQUIRED" || err?.name === "TenancyError") {
+    return res.status(403).json({ error: err.message, code: "TENANCY_REQUIRED" });
+  }
+  return next(err);
+});
 
 // ------------------------------
 // No static serving here! Nginx handles frontend build

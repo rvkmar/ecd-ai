@@ -136,7 +136,7 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(screen.getByRole("tab", { name: "Parameter estimation" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Competency Model" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Analytics" })).not.toBeInTheDocument();
-    expect(screen.getByText("Student builder")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Student builder")).toBeInTheDocument());
   });
 
   it("opens Assembly, Implementation Item Bank, and Delivery Reports", async () => {
@@ -150,10 +150,10 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
 
     await user.click(screen.getByRole("tab", { name: "Models" }));
     await user.click(screen.getByRole("tab", { name: "Assembly Model" }));
-    expect(screen.getByText("Assembly builder")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Assembly builder")).toBeInTheDocument());
 
     await user.click(screen.getByRole("tab", { name: "Implementation" }));
-    expect(screen.getByText("Item bank")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Item bank")).toBeInTheDocument());
     expect(screen.getByRole("tab", { name: "Instantiated tasks" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Delivery" }));
@@ -162,12 +162,12 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(screen.getByRole("tab", { name: "Presentation" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Psychometrics" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Reports" })).toBeInTheDocument();
-    expect(screen.getByText("Sessions surface")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Sessions surface")).toBeInTheDocument());
 
     await user.click(screen.getByRole("tab", { name: "Psychometrics" }));
-    expect(screen.getByText("Psychometrics shell")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Psychometrics shell")).toBeInTheDocument());
 
     await user.click(screen.getByRole("tab", { name: "Reports" }));
-    expect(screen.getByText("Reports dashboard")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Reports dashboard")).toBeInTheDocument());
   });
 });

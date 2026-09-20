@@ -9,6 +9,10 @@
 // Set JWT_SECRET via your .env file (see .env.example) for local/dev use, or
 // via your deployment's secret manager in production. Generate a strong
 // value with: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+//
+// D92: access tokens are short-lived; refresh tokens (opaque, rotated) are
+// issued alongside them. TOKEN_EXPIRES_IN remains as an alias for the access
+// lifetime so older env files keep working.
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim().length < 32) {
   throw new Error(
@@ -19,4 +23,13 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim().length < 32) {
 }
 
 export const JWT_SECRET = process.env.JWT_SECRET;
-export const TOKEN_EXPIRES_IN = process.env.TOKEN_EXPIRES_IN || "8h";
+
+/** Access-token lifetime (JWT). Default 15m (was 8h before D92). */
+export const ACCESS_TOKEN_EXPIRES_IN =
+  process.env.ACCESS_TOKEN_EXPIRES_IN ||
+  process.env.TOKEN_EXPIRES_IN ||
+  "15m";
+
+/** Opaque refresh-token lifetime. Default 7d. */
+export const REFRESH_TOKEN_EXPIRES_IN =
+  process.env.REFRESH_TOKEN_EXPIRES_IN || "7d";

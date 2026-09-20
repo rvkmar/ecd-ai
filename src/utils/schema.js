@@ -739,6 +739,8 @@ export const schema = {
     statisticalModelId: 'string',
     requestedBy: 'string',
     requestedAt: 'date',
+    // D103: edge request id persisted so the worker can propagate to R.
+    requestId: 'string',
     startedAt: 'date',
     finishedAt: 'date',
     request: 'object',
@@ -773,6 +775,21 @@ export const schema = {
     computedAt: 'date',
     payload: 'object',
     createdAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
+  // auditLog — D101 (W21). Append-only accountability trail. Written by
+  // the persistence chokepoint (saveDB) and by recordAuditEvent for
+  // auth/user events — never by an HTTP POST body. No lifecycle status.
+  // ------------------------------------------------------------------
+  auditLog: {
+    id: 'string',
+    at: 'date',
+    actor: 'object',
+    action: 'string',
+    entity: 'object',
+    detail: 'object',
+    requestId: 'string',
   },
 };
 
@@ -5104,6 +5121,36 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         ) {
           errors.push(`analysisArtefacts are immutable — cannot change 'payload' on '${obj.id}'.`);
         }
+      }
+    }
+  }
+
+  /* =====================================================
+     AUDIT LOG — D101, W21
+     Append-only accountability records. Shape is the calendar
+     contract. Written by saveDB / recordAuditEvent only.
+  ===================================================== */
+
+  if (collection === "auditLog") {
+    if (!obj.id) errors.push("id is required.");
+    if (!obj.at) errors.push("at is required.");
+    if (!obj.action || typeof obj.action !== "string") {
+      errors.push("action is required and must be a string.");
+    }
+    if (!obj.actor || typeof obj.actor !== "object" || Array.isArray(obj.actor)) {
+      errors.push("actor is required and must be an object.");
+    }
+    if (!obj.entity || typeof obj.entity !== "object" || Array.isArray(obj.entity)) {
+      errors.push("entity is required and must be an object.");
+    }
+    if (obj.detail !== undefined && (typeof obj.detail !== "object" || Array.isArray(obj.detail))) {
+      errors.push("detail must be an object when present.");
+    }
+
+    if (db && obj.id) {
+      const existing = db.auditLog?.find((a) => a.id === obj.id);
+      if (existing) {
+        errors.push(`auditLog is append-only — cannot mutate entry '${obj.id}'.`);
       }
     }
   }

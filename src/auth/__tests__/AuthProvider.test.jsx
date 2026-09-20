@@ -67,7 +67,13 @@ describe("AuthProvider", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ token, username: "teach1", role: "teacher" }),
+      text: async () =>
+        JSON.stringify({
+          token,
+          refreshToken: "refresh-teach1",
+          username: "teach1",
+          role: "teacher",
+        }),
     });
 
     renderWithProvider();
@@ -81,6 +87,7 @@ describe("AuthProvider", () => {
     expect(stored.username).toBe("teach1");
     expect(stored.role).toBe("teacher");
     expect(stored.token).toBe(token);
+    expect(stored.refreshToken).toBe("refresh-teach1");
   });
 
   it("surfaces the server's error message on a failed login", async () => {
@@ -130,7 +137,13 @@ describe("AuthProvider", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ token: expiredToken, username: "teach1", role: "teacher" }),
+      text: async () =>
+        JSON.stringify({
+          token: expiredToken,
+          refreshToken: "refresh-expired",
+          username: "teach1",
+          role: "teacher",
+        }),
     });
 
     let caughtError = null;
@@ -170,7 +183,13 @@ describe("AuthProvider", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ token, username: "teach1", role: "teacher" }),
+      text: async () =>
+        JSON.stringify({
+          token,
+          refreshToken: "refresh-teach1",
+          username: "teach1",
+          role: "teacher",
+        }),
     });
 
     renderWithProvider();

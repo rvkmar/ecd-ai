@@ -157,6 +157,15 @@ export function parseCalibrationJson(text) {
         );
     }
 
+    // D90: packageVersion on the committed parameter set comes from software
+    // (or an explicit packageVersion). Invented "manual-unspecified" is refused
+    // server-side — surface the gap at parse time.
+    if (!provenance.software && !provenance.packageVersion) {
+        result.errors.push(
+            "provenance.software (or provenance.packageVersion) is required — the active parameter set must name its estimator."
+        );
+    }
+
     /* ---------- kind-specific body ---------- */
 
     if (kind === "irt-parameters") {
@@ -617,6 +626,13 @@ export function buildRecalibrationPayload({
         calibratedBy: pkg.provenance?.calibratedBy || "unknown",
         calibrationMethod: pkg.provenance?.calibrationMethod || "calibration-file-import",
         sampleSize: Number(pkg.provenance?.sampleSize) || 0,
+        packageVersion:
+            (typeof pkg.provenance?.packageVersion === "string" && pkg.provenance.packageVersion.trim()) ||
+            (typeof pkg.provenance?.software === "string" && pkg.provenance.software.trim()) ||
+            "",
+        // File import is only offered after parse validation; state success
+        // explicitly so the server never invents converged:true from omission.
+        converged: true,
         notes: [
             pkg.provenance?.notes,
             pkg.provenance?.population ? `Population: ${pkg.provenance.population}` : null,

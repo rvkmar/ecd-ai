@@ -7,11 +7,29 @@ import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { dbAdapter } from "../utils/dbAdapter.js";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
-import { JWT_SECRET, TOKEN_EXPIRES_IN } from "../config/jwt.js";
-import { validateEntity } from "../../src/utils/schema.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
+import { JWT_SECRET } from "../config/jwt.js";
+import { validatePassword, PASSWORD_POLICY_STATEMENT } from "../config/passwordPolicy.js";
 import { generateTempPassword } from "../../src/utils/generatePassword.js";
+import {
+  issueTokenPair,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  revokeAllForUser,
+  readAuthEpoch,
+  setCachedAuthEpoch,
+} from "../utils/tokenService.js";
+import {
+  findUserByLoginIdentifier,
+  assertPasswordLoginAllowed,
+} from "../auth/localIdentity.js";
+import { tenancyClaimsFromUser } from "../utils/tenancy.js";
+import { recordAuditEvent } from "../../src/utils/db-server.js";
+import { logger } from "../utils/logger.js";
 
 const router = express.Router();
+
+router.use(sanitizeRequestInputs);
 
 const VALID_ROLES = ["admin", "district", "teacher", "student"];
 
@@ -70,51 +88,102 @@ function toSafeUser(u) {
 // results instead of duplicating the validation/hashing/insert logic.
 // ------------------------------
 export async function createUserRecord(payload = {}) {
-  const { username, password, role, email, profile } = payload;
+  const {
+    username,
+    password,
+    role,
+    email,
+    profile,
+    authProvider = "local",
+    mustChangePassword = false,
+  } = payload;
 
-  if (!username || !password || !role) {
-    return { ok: false, status: 400, error: "username, password, and role are required" };
+  if (!username || !role) {
+    return { ok: false, status: 400, error: "username and role are required" };
   }
   if (!VALID_ROLES.includes(role)) {
     return { ok: false, status: 400, error: `role must be one of: ${VALID_ROLES.join(", ")}` };
+  }
+  if (authProvider !== "local" && authProvider !== "oidc" && authProvider !== "saml") {
+    return { ok: false, status: 400, error: "authProvider must be local, oidc, or saml" };
+  }
+  // Local accounts always need a password. Federated accounts may omit one
+  // so SSO can be wired later without inventing throwaway secrets.
+  if (authProvider === "local") {
+    if (!password) {
+      return { ok: false, status: 400, error: "password is required for local accounts" };
+    }
+    const pw = validatePassword(password);
+    if (!pw.ok) {
+      return { ok: false, status: 400, error: pw.error };
+    }
   }
 
   const users = await dbAdapter.list("users");
   if (users.some((u) => u.username === username)) {
     return { ok: false, status: 400, error: "Username already exists" };
   }
+  const emisId = profile?.emisId;
+  const udiseId = profile?.udiseId;
+  if (emisId && users.some((u) => u.profile?.emisId === emisId)) {
+    return { ok: false, status: 400, error: "emisId already exists" };
+  }
+  if (udiseId && users.some((u) => u.profile?.udiseId === udiseId)) {
+    return { ok: false, status: 400, error: "udiseId already exists" };
+  }
 
-  const hashed = await bcrypt.hash(password, 10);
+  const hashed =
+    authProvider === "local" ? await bcrypt.hash(password, 10) : undefined;
   const newUser = {
-    // Every other collection in this app is keyed by a synthetic `id` field
-    // that dbAdapter.get/update/remove all match against. Users never had
-    // one — DELETE /api/users/:username fell back to `target.id ||
-    // target._id?.toString()`, and in JSON DB_MODE neither existed, so
-    // dbAdapter.remove("users", undefined) matched (and wiped) every user
-    // whose `.id` was also undefined, i.e. all of them. Using the username
-    // itself as `id` gives every user record a stable, unique key that
-    // dbAdapter's generic id-based lookups can actually find.
     id: username,
     username,
-    password: hashed,
+    ...(hashed ? { password: hashed } : {}),
     role,
     email: email || "",
     profile: profile || {},
+    authProvider,
+    mustChangePassword: Boolean(mustChangePassword),
+    authEpoch: 0,
   };
 
   try {
     const inserted = await dbAdapter.insert("users", newUser);
     return { ok: true, status: 201, user: toSafeUser(inserted) };
   } catch (err) {
-    return { ok: false, status: 500, error: err.message || "Server error creating user" };
+    const msg = err.message || "Server error creating user";
+    if (/duplicate key|E11000/i.test(msg)) {
+      return { ok: false, status: 400, error: "Username already exists" };
+    }
+    return { ok: false, status: 500, error: msg };
   }
+}
+
+function auditAuthFailure(username, reason) {
+  try {
+    recordAuditEvent({
+      action: "auth.failure",
+      entity: { collection: "users", id: username ? String(username) : null, version: null },
+      detail: { reason },
+      actor: { userId: username ? String(username) : null, role: null },
+    });
+  } catch (err) {
+    // Auth path must still return 401 even if the audit store is unavailable.
+    console.error("audit auth.failure failed:", err?.message || err);
+  }
+  // D103: structured log — username is a login identifier (may be EMIS), not a
+  // display name; still treat as identifier only (no password / profile).
+  logger.warn("auth.failure", {
+    loginId: username ? String(username) : null,
+    reason,
+  });
 }
 
 // ------------------------------
 // POST /api/users/login
 // ------------------------------
 // Body: { username, password, role }
-// Response: { token, username, role }
+// `username` may be the account username, EMIS id, or UDISE id.
+// Response: { token, username, role, mustChangePassword? }
 router.post("/login", loginLimiter, async (req, res) => {
   const { username, password, role } = req.body;
 
@@ -122,8 +191,10 @@ router.post("/login", loginLimiter, async (req, res) => {
     return res.status(400).json({ error: "username, password, and role are required" });
   }
 
-  const lockoutState = getLockoutState(username);
+  const lockoutKey = String(username);
+  const lockoutState = getLockoutState(lockoutKey);
   if (lockoutState.locked) {
+    auditAuthFailure(username, "locked");
     return res.status(423).json({
       error: "Account temporarily locked due to repeated failed login attempts. Please try again later.",
     });
@@ -131,43 +202,113 @@ router.post("/login", loginLimiter, async (req, res) => {
 
   try {
     const users = await dbAdapter.list("users");
-    const user = users.find((u) => u.username === username);
+    const user = findUserByLoginIdentifier(users, username);
 
     // Same generic error for "no such user" and "wrong password" so a caller
-    // can't use this endpoint to enumerate valid usernames.
+    // can't use this endpoint to enumerate valid usernames / EMIS ids.
     if (!user) {
-      recordFailedAttempt(username);
+      recordFailedAttempt(lockoutKey);
+      auditAuthFailure(username, "invalid_credentials");
       return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+    const allowed = assertPasswordLoginAllowed(user);
+    if (!allowed.ok) {
+      recordFailedAttempt(lockoutKey);
+      auditAuthFailure(username, "login_not_allowed");
+      return res.status(allowed.status).json({ error: allowed.error });
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      recordFailedAttempt(username);
+      recordFailedAttempt(lockoutKey);
+      auditAuthFailure(username, "invalid_credentials");
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
     if (user.role !== role) {
-      recordFailedAttempt(username);
+      recordFailedAttempt(lockoutKey);
+      auditAuthFailure(username, "invalid_credentials");
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
-    clearFailedAttempts(username);
+    clearFailedAttempts(lockoutKey);
 
-    const token = jwt.sign(
-      {
-        username: user.username,
-        role: user.role,
-      },
-      JWT_SECRET,
-      { expiresIn: TOKEN_EXPIRES_IN }
-    );
+    const authEpoch = readAuthEpoch(user);
+    const tenancy = tenancyClaimsFromUser(user);
+    const pair = issueTokenPair({
+      username: user.username,
+      role: user.role,
+      authEpoch,
+      districtId: tenancy.districtId,
+      schoolId: tenancy.schoolId,
+    });
 
-    res.json({ token, username: user.username, role: user.role });
+    res.json({
+      token: pair.token,
+      refreshToken: pair.refreshToken,
+      expiresIn: pair.expiresIn,
+      username: user.username,
+      role: user.role,
+      mustChangePassword: Boolean(user.mustChangePassword),
+    });
   } catch (err) {
     console.error("Login failed:", err);
     res.status(500).json({ error: "Server error during login" });
   }
 });
+
+// ------------------------------
+// POST /api/users/refresh
+// Body: { refreshToken } — rotates refresh; detects replay.
+// ------------------------------
+router.post("/refresh", async (req, res) => {
+  const { refreshToken } = req.body || {};
+  const result = rotateRefreshToken(refreshToken);
+  if (!result.ok) {
+    return res.status(result.status).json({ error: result.error });
+  }
+  res.json({
+    token: result.token,
+    refreshToken: result.refreshToken,
+    expiresIn: result.expiresIn,
+    username: result.username,
+    role: result.role,
+  });
+});
+
+// ------------------------------
+// POST /api/users/logout
+// Body: { refreshToken? }. Bearer access optional — when present, its jti
+// is denylisted until natural expiry.
+// ------------------------------
+router.post("/logout", (req, res) => {
+  const { refreshToken } = req.body || {};
+  const authHeader = req.headers["authorization"];
+  const access = authHeader && authHeader.split(" ")[1];
+  let accessPayload = null;
+  if (access) {
+    try {
+      accessPayload = jwt.verify(access, JWT_SECRET);
+    } catch {
+      accessPayload = null;
+    }
+  }
+  revokeRefreshToken(refreshToken, accessPayload);
+  res.status(204).end();
+});
+
+// ------------------------------
+// GET /api/users/password-policy (any authenticated role)
+// ------------------------------
+router.get(
+  "/password-policy",
+  authenticateToken,
+  authorizeRole(["admin", "district", "teacher", "student"]),
+  (_req, res) => {
+    res.json({ policy: PASSWORD_POLICY_STATEMENT });
+  }
+);
 
 // ------------------------------
 // GET /api/users (Admin only)
@@ -283,11 +424,14 @@ router.put(
       if (email !== undefined) updates.email = email;
       if (profile !== undefined) updates.profile = profile;
 
-      const merged = { ...target, ...updates };
-      const { valid, errors } = validateEntity("users", merged);
-      if (!valid) {
-        return res.status(400).json({ error: "Schema validation failed", details: errors });
+      const roleChanged = role !== undefined && role !== target.role;
+      if (roleChanged) {
+        updates.authEpoch = (Number(target.authEpoch) || 0) + 1;
       }
+
+      // Users are the credential store, not an ECD schema collection —
+      // validateEntity("users") always returns "Unknown collection".
+      // Role enum is checked above; email/profile are free-form.
 
       // Same username-keyed lookup as reset-password below, and for the
       // same reason: seed accounts have no `id` to match on.
@@ -297,6 +441,10 @@ router.put(
       });
       if (!updated) {
         return res.status(500).json({ error: "Failed to update user" });
+      }
+      if (roleChanged) {
+        setCachedAuthEpoch(username, updates.authEpoch);
+        revokeAllForUser(username);
       }
       res.json(toSafeUser(updated));
     } catch (err) {
@@ -329,11 +477,13 @@ router.post(
 
       const generated = !newPassword;
       const passwordToSet = newPassword || generateTempPassword();
-      if (passwordToSet.length < 8) {
-        return res.status(400).json({ error: "Password must be at least 8 characters." });
+      const pw = validatePassword(passwordToSet);
+      if (!pw.ok) {
+        return res.status(400).json({ error: pw.error });
       }
 
       const hashed = await bcrypt.hash(passwordToSet, 10);
+      const nextEpoch = (Number(target.authEpoch) || 0) + 1;
 
       // Match on { username }, not on the synthetic `id`. The four seed
       // accounts (admin1/dist1/teach1/stud1) are created by initMongo.js
@@ -346,11 +496,14 @@ router.post(
       const updated = await dbAdapter.updateWhere(
         "users",
         { username },
-        { password: hashed, id: target.id || username }
+        { password: hashed, authEpoch: nextEpoch, id: target.id || username }
       );
       if (!updated) {
         return res.status(500).json({ error: "Failed to reset password" });
       }
+
+      setCachedAuthEpoch(username, nextEpoch);
+      revokeAllForUser(username);
 
       res.json({
         success: true,
@@ -391,6 +544,8 @@ router.delete(
       // and because in JSON mode remove("users", undefined) matched every
       // id-less record, i.e. deleting one seed account wiped them all.
       await dbAdapter.removeWhere("users", { username });
+      revokeAllForUser(username);
+      setCachedAuthEpoch(username, (Number(target.authEpoch) || 0) + 1);
       res.json({ success: true, deleted: username });
     } catch (err) {
       console.error("User deletion failed:", err);

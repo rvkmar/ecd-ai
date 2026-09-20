@@ -101,6 +101,10 @@ describe("every write route declares a role gate", () => {
   const OPEN_BY_DESIGN = new Set([
     // Login is how you get a token in the first place.
     "usersRoutes.js:POST:/login",
+    // D92: refresh and logout authenticate via the refresh token body (and
+    // optional bearer for logout denylist), not a prior access token.
+    "usersRoutes.js:POST:/refresh",
+    "usersRoutes.js:POST:/logout",
     // A session's own lifecycle (create, submit, play, pause, resume, finish,
     // review, archive) is the student's self-service flow, not a
     // privileged action -- gating it by role would block the exact
@@ -118,6 +122,10 @@ describe("every write route declares a role gate", () => {
     // Student Session Wizard Draft→Submit clocks — same ownership-scoped
     // self-service as finish/play; role list would block the examinee.
     "sessionRoutes.js:POST:/:id/wizard-timing",
+    // D104: ErrorBoundary intake — must work before/without a token so a
+    // crashed login/wizard surface can still report. Rate-limited; logs
+    // ids/release/stack only (no response bodies).
+    "healthRoutes.js:POST:/client-errors",
   ]);
 
   const WRITE_METHODS = ["post", "put", "patch", "delete"];
@@ -335,15 +343,15 @@ const DEAD_EXPORT_BASELINE = new Map([
       "src/test/setup.js). The export is unnecessary — deletion candidate.",
   ],
   [
-    "server/routes/usersRoutes.js :: createUserRecord",
-    "Used 5x inside usersRoutes.js; named only in a dbAdapter.js comment. " +
-      "The export is unnecessary — deletion candidate.",
-  ],
-  [
     "server/routes/evidenceModels.js :: calibrationGate",
     "Used 4x inside evidenceModels.js; named in prose in effectiveModel.js and " +
       "in mirrorDrift.test.js (a test, which by design does not count). " +
       "The export is unnecessary — deletion candidate.",
+  ],
+  [
+    "server/utils/tokenService.js :: _resetTokenServiceForTests",
+    "D92 test harness only — clears in-memory refresh/denylist/epoch maps " +
+      "between suites. Not a production caller by design.",
   ],
 ]);
 

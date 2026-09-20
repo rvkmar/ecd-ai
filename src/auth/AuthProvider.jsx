@@ -1,5 +1,5 @@
 // src/auth/AuthProvider.jsx
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { apiFetch, apiErrorMessage } from "../api/apiClient";
@@ -20,6 +20,16 @@ const STORAGE_KEY = "ecd_auth_v1";
 // longer exists (the live route is /api/users/login). Fixed to use Vite's
 // own import.meta.env with the VITE_ prefix.
 const LOGIN_URL = import.meta.env.VITE_AUTH_URL || "/api/users/login";
+const REFRESH_URL = "/api/users/refresh";
+const LOGOUT_URL = "/api/users/logout";
+
+function persistAuth(next) {
+  if (!next) {
+    sessionStorage.removeItem(STORAGE_KEY);
+    return;
+  }
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+}
 
 export function AuthProvider({ children }) {
   const navigate = useNavigate();
@@ -31,27 +41,79 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+  const authRef = useRef(auth);
+  authRef.current = auth;
+  const refreshingRef = useRef(null);
 
-  // Auto-logout when token expires
+  const clearLocalSession = () => {
+    setAuth(null);
+    persistAuth(null);
+    try {
+      history.replaceState({}, "logged-out", "/login");
+    } catch {}
+    navigate("/login", { replace: true });
+  };
+
+  const applySession = (data) => {
+    const next = {
+      username: data.username,
+      role: data.role,
+      token: data.token,
+      refreshToken: data.refreshToken,
+    };
+    setAuth(next);
+    persistAuth(next);
+    return next;
+  };
+
+  const refreshSession = async () => {
+    const current = authRef.current;
+    if (!current?.refreshToken) {
+      clearLocalSession();
+      throw new Error("No refresh token");
+    }
+    if (refreshingRef.current) return refreshingRef.current;
+
+    refreshingRef.current = (async () => {
+      try {
+        const data = await apiFetch(REFRESH_URL, {
+          method: "POST",
+          body: JSON.stringify({ refreshToken: current.refreshToken }),
+        });
+        return applySession(data);
+      } catch (err) {
+        clearLocalSession();
+        throw err;
+      } finally {
+        refreshingRef.current = null;
+      }
+    })();
+
+    return refreshingRef.current;
+  };
+
+  // Refresh shortly before access expiry; fall back to logout if refresh fails.
   useEffect(() => {
     if (!auth?.token) return;
 
     try {
       const { exp } = jwtDecode(auth.token);
       const now = Date.now() / 1000;
-      if (exp) {
-        const timeout = (exp - now) * 1000;
-        if (timeout > 0) {
-          const timer = setTimeout(() => logout(), timeout);
-          return () => clearTimeout(timer);
-        } else {
-          logout();
-        }
+      if (!exp) return undefined;
+      const msUntilRefresh = Math.max((exp - now) * 1000 - 30_000, 0);
+      if (exp <= now) {
+        refreshSession().catch(() => {});
+        return undefined;
       }
+      const timer = setTimeout(() => {
+        refreshSession().catch(() => {});
+      }, msUntilRefresh);
+      return () => clearTimeout(timer);
     } catch {
-      logout();
+      clearLocalSession();
+      return undefined;
     }
-  }, [auth]);
+  }, [auth?.token, auth?.refreshToken]);
 
   const login = async ({ username, password, role }) => {
     if (!username || !password || !role) {
@@ -68,6 +130,9 @@ export function AuthProvider({ children }) {
       });
 
       const token = data.token;
+      if (!data.refreshToken) {
+        throw new Error("Invalid token");
+      }
 
       try {
         const decoded = jwtDecode(token);
@@ -79,33 +144,39 @@ export function AuthProvider({ children }) {
         throw new Error("Invalid token");
       }
 
-      setAuth({ username: data.username, role: data.role, token });
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ username: data.username, role: data.role, token }));
+      applySession(data);
     } catch (err) {
       throw new Error(apiErrorMessage(err, err?.message || "Network/Server error"));
     }
   };
 
   const logout = () => {
-    setAuth(null);
-    sessionStorage.removeItem(STORAGE_KEY);
-    try {
-      history.replaceState({}, "logged-out", "/login");
-    } catch {}
-    navigate("/login", { replace: true });
+    const current = authRef.current;
+    // Best-effort server revoke; local clear always runs.
+    if (current?.refreshToken || current?.token) {
+      apiFetch(
+        LOGOUT_URL,
+        {
+          method: "POST",
+          body: JSON.stringify({ refreshToken: current.refreshToken }),
+        },
+        current
+      ).catch(() => {});
+    }
+    clearLocalSession();
   };
 
   // Force logout on back/navigation or cross-tab clear
   useEffect(() => {
     const handlePop = () => {
-      if (auth) logout();
+      if (authRef.current) logout();
     };
     const handlePageShow = (e) => {
-      if (auth && e.persisted) logout();
+      if (authRef.current && e.persisted) logout();
     };
     const handleStorage = (e) => {
       if (e.key === STORAGE_KEY && !sessionStorage.getItem(STORAGE_KEY)) {
-        if (auth) logout();
+        if (authRef.current) logout();
       }
     };
 
@@ -118,12 +189,13 @@ export function AuthProvider({ children }) {
       window.removeEventListener("pageshow", handlePageShow);
       window.removeEventListener("storage", handleStorage);
     };
-  }, [auth]);
+  }, []);
 
   const value = {
     auth,
     login,
     logout,
+    refreshSession,
     isAuthenticated: !!auth,
   };
 

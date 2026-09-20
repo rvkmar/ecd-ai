@@ -221,7 +221,15 @@ validate_calibration_response <- function(body) {
   }
 
   rows <- lapply(raw, function(row) {
-    as.numeric(unlist(row, use.names = FALSE))
+    # Walk cells without unlist(): unlist() drops NULL and silently shortens
+    # the row. JSON null must become NA (missing), never 0 and never drop.
+    cells <- if (is.list(row)) as.list(row) else as.list(unname(row))
+    vapply(cells, function(cell) {
+      if (is.null(cell)) return(NA_real_)
+      if (length(cell) == 0) return(NA_real_)
+      val <- suppressWarnings(as.numeric(cell)[[1]])
+      if (length(val) == 0 || is.na(val)) NA_real_ else val
+    }, numeric(1))
   })
   lengths <- vapply(rows, length, integer(1))
   if (length(unique(lengths)) != 1) {

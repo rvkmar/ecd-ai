@@ -1,5 +1,6 @@
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs, submitRateLimiter } from "../utils/requestValidation.js";
 import { loadDB, saveDB, finishSession } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
@@ -24,6 +25,8 @@ import {
   frozenScoringContext,
 } from "../delivery/parameterSourceResolution.js";
 import { resolveAssemblyProgress } from "../delivery/assemblyProgress.js";
+import { logger } from "../utils/logger.js";
+import { recordSubmitOutcome } from "../utils/submitStats.js";
 // D56: Activity Selection. /next-task's whole strategy block used to live
 // inline below; it now lives in one module that reads the composite library
 // and the live posteriors instead of db.questions. See that file's header.
@@ -57,6 +60,7 @@ const router = express.Router();
 // (Previously this file had no auth check at all — added as part of the
 // Phase 1 security hardening pass; see AUTH_SECURITY_FIXES.md.)
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 // Most routes below are open to any authenticated role for their own
 // work. A student may not read or mutate another examinee's session
@@ -266,9 +270,20 @@ router.get("/:id", (req, res) => {
 // POST /api/sessions/:id/submit
 // ------------------------------
 // body: { taskId, questionId?, itemId?, rawAnswer, observationId?, scoredValue?, evidenceId?, rubricLevel? }
-router.post("/:id/submit", async (req, res) => {
+router.post("/:id/submit", submitRateLimiter, async (req, res) => {
   const { id } = req.params;
   const { taskId, questionId, itemId, rawAnswer, observationId, scoredValue, evidenceId, rubricLevel } = req.body;
+
+  logger.info("session.submit.start", {
+    sessionId: id,
+    taskId: taskId || null,
+    itemId: itemId || null,
+    questionId: questionId || null,
+  });
+
+  res.on("finish", () => {
+    recordSubmitOutcome(res.statusCode < 400);
+  });
 
   const db = loadDB();
   const session = db.sessions.find(s => s.id === id && !s.isCompleted);
@@ -468,6 +483,15 @@ router.post("/:id/submit", async (req, res) => {
     };
     if (evidence.warning) response.warning = evidence.warning;
 
+    logger.info("session.submit.scored", {
+      sessionId: id,
+      taskId,
+      itemId,
+      observationId: evidence.observationId,
+      observableId: evidence.observableId,
+      parameterSource,
+    });
+
     session.responses.push(response);
     session.currentTaskIndex = Math.min(session.currentTaskIndex + 1, session.taskIds.length);
     session.updatedAt = new Date().toISOString();
@@ -551,6 +575,12 @@ router.post("/:id/submit", async (req, res) => {
     }
 
     saveDB(db);
+    logger.info("session.submit.persisted", {
+      sessionId: id,
+      taskId,
+      itemId,
+      responseCount: (session.responses || []).length,
+    });
     // `assemblyProgress` and `accumulationWarnings` are surfaced in the
     // response only -- see assemblyProgress.js's own module header for why
     // neither is ever persisted or acted on here.

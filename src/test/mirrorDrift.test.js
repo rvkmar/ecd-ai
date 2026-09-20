@@ -28,6 +28,8 @@ import { calibrationGate } from "../../server/routes/evidenceModels.js";
 import { BLOOM_LEVELS as CANONICAL_BLOOM_LEVELS, REASONING_TYPES as CANONICAL_REASONING_TYPES } from "../utils/ecdVocabulary.js";
 import { BLOOM_LEVELS as TASK_MODEL_BLOOM_LEVELS, REASONING_TYPES as TASK_MODEL_REASONING_TYPES } from "../components/taskModels/taskModelConstants.js";
 import { BLOOM_LEVELS as ITEM_BLOOM_LEVELS, REASONING_TYPES as ITEM_REASONING_TYPES } from "../components/itemBank/itemConstants.js";
+import { rolePermissions } from "../config/rolePermissions.js";
+import { viewScopeForRole } from "../../server/utils/tenancy.js";
 
 /* =====================================================
    Shared fixtures -- one valid baseline per entity, mutated per test.
@@ -449,3 +451,38 @@ describe("mirror: BLOOM_LEVELS / REASONING_TYPES canonical source", () => {
     expect(ITEM_REASONING_TYPES).toBe(CANONICAL_REASONING_TYPES);
   });
 });
+
+/* =====================================================
+   6. rolePermissions.restrictions.viewScope <-> viewScopeForRole (server)
+   -----------------------------------------------------
+   D98 / W20. Client UI scope and server ALS binding must stay in step.
+   A change on one side without the other is the D13-class drift that
+   left viewScope as UI-only until D96-D97. This is the sixth mirror.
+===================================================== */
+describe("mirror: rolePermissions.viewScope <-> viewScopeForRole (server)", () => {
+  const ROLES = ["admin", "district", "teacher", "student"];
+
+  it("agrees for every role (client undefined <-> server null)", () => {
+    for (const role of ROLES) {
+      const client = rolePermissions[role]?.restrictions?.viewScope ?? null;
+      expect(viewScopeForRole(role)).toBe(client);
+    }
+  });
+
+  it("covers exactly the roles rolePermissions declares", () => {
+    expect(Object.keys(rolePermissions).sort()).toEqual([...ROLES].sort());
+  });
+
+  it("would fail the build if client scope drifted without the server table", () => {
+    const driftedClient = {
+      ...rolePermissions.district.restrictions,
+      viewScope: "school",
+    };
+    const server = viewScopeForRole("district");
+    expect(server).not.toBe(driftedClient.viewScope);
+    expect(viewScopeForRole("district")).toBe(
+      rolePermissions.district.restrictions.viewScope
+    );
+  });
+});
+

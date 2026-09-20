@@ -470,10 +470,22 @@ export function validateAssemblyModelLifecycle(assemblyModel, db = null, options
     }
   }
 
-  /* CONFIRMED — stopping rules are what make this usable by a session. */
+  /* CONFIRMED — stopping rules are what make this usable by a session.
+     Require at least one of maxItems / minItems / targetsMet — same rule
+     schema.js enforces when the key is present. An empty `{}` must not
+     clear confirmation. */
   if (["confirmed", "operational", "suspended"].includes(status)) {
-    if (!assemblyModel.stoppingRules) {
-      errors.push("Assembly model must declare stoppingRules before confirmation.");
+    const sr = assemblyModel.stoppingRules;
+    if (
+      !sr ||
+      typeof sr !== "object" ||
+      (sr.maxItems === undefined &&
+        sr.minItems === undefined &&
+        sr.targetsMet === undefined)
+    ) {
+      errors.push(
+        "Assembly model must declare stoppingRules (at least one of maxItems, minItems, or targetsMet) before confirmation."
+      );
     }
   }
 

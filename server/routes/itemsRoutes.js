@@ -38,6 +38,7 @@
 
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import {
   validateEntity,
@@ -47,11 +48,17 @@ import { validateItemLifecycle } from "../utils/lifecycleValidation.js";
 import { canTransition, TRANSITIONS } from "../utils/lifecycleMatrix.js";
 import { liveSessionsForItem } from "../utils/sessionDependencies.js";
 import { recordItemUsage } from "../utils/itemExposure.js";
+import {
+  maySeeGlobalExposure,
+  redactItemExposure,
+} from "../utils/aggregatePrivacy.js";
 import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
+import { logger } from "../utils/logger.js";
 
 const router = express.Router();
 
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 // Authoring and governance are admin/district, matching
 // src/config/rolePermissions.js. Reads are left to any authenticated
@@ -190,6 +197,13 @@ router.get("/", (req, res) => {
   }
 
   if (req.query.exposure) {
+    // D99: exposure filter reveals bank-wide usage — admin only.
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({
+        error: "Exposure filters require admin (global bank metrics)",
+        code: "EXPOSURE_ADMIN_ONLY",
+      });
+    }
     items = items.filter((i) => {
       const used = i.exposureControl?.usageCount || 0;
       const ceiling = i.exposureControl?.maxUsageBeforeRetire || 0;
@@ -219,7 +233,8 @@ router.get("/", (req, res) => {
     );
   }
 
-  res.json(items);
+  const allowExposure = maySeeGlobalExposure(req);
+  res.json(items.map((i) => redactItemExposure(i, allowExposure)));
 });
 
 router.get("/:id", (req, res) => {
@@ -228,7 +243,7 @@ router.get("/:id", (req, res) => {
 
   if (!item) return res.status(404).json({ error: "Item not found." });
 
-  res.json(item);
+  res.json(redactItemExposure(item, maySeeGlobalExposure(req)));
 });
 
 /* GET /api/items/:id/simulate
@@ -444,12 +459,22 @@ router.post("/bulk", canAuthor, (req, res) => {
   });
 
   const created = results.filter((r) => r.ok).length;
+  const failed = results.length - created;
 
   // Only touch the file when something actually landed. An all-failed
   // batch used to rewrite the database for no reason.
   if (created > 0) saveDB(db);
 
-  res.status(207).json({ created, failed: results.length - created, results });
+  if (failed > 0) {
+    logger.warn("bulk.failure", {
+      collection: "items",
+      created,
+      failed,
+      errors: results.filter((r) => !r.ok).map((r) => ({ index: r.index, error: r.error })),
+    });
+  }
+
+  res.status(207).json({ created, failed, results });
 });
 
 /* =============================================================

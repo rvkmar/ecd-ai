@@ -43,6 +43,10 @@ export const rolePermissions = {
       // D76: immutable analysis artefacts (DIF / equating / …). Written
       // only by job ingest; admin + district may read for provenance.
       "analysisArtefacts",
+      // D101: append-only audit trail. Admin-only read; writes via saveDB /
+      // recordAuditEvent. Cross-tenant by nature — D105 viewer must keep
+      // this admin-scoped.
+      "auditLog",
       "announcements",
     ],
     canEdit: [
@@ -60,6 +64,7 @@ export const rolePermissions = {
       // generic write. Rebuilding is an admin action against the builder,
       // not an edit of the package's contents.
       // analysisArtefacts is deliberately absent: immutable once written.
+      // auditLog is deliberately absent: append-only via persistence path.
       "qMatrixModels",
       "assemblyModels",
       "calibrationJobs"

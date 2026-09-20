@@ -4,6 +4,7 @@
 
 import express from "express";
 import { authenticateToken } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity, isLinkableEvidenceModel } from "../../src/utils/schema.js";
 import { validateTaskModelLifecycle } from "../utils/lifecycleValidation.js";
@@ -15,6 +16,7 @@ import {
 import { authorizeRole } from "../utils/authMiddleware.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
 import { compileAndActivate } from "../compositeLibrary/activation.js";
+import { logger } from "../utils/logger.js";
 
 const router = express.Router();
 
@@ -22,6 +24,7 @@ const router = express.Router();
 // (Previously this file had no auth check at all — added as part of the
 // Phase 1 security hardening pass; see AUTH_SECURITY_FIXES.md.)
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 // Every write route also needs a role gate: only force-deactivate had
 // one. src/config/rolePermissions.js declares taskModels editing as
@@ -345,7 +348,16 @@ router.post("/bulk", canAuthor, (req, res) => {
   saveDB(db);
 
   const created = results.filter((r) => r.ok).length;
-  res.status(207).json({ created, failed: results.length - created, results });
+  const failed = results.length - created;
+  if (failed > 0) {
+    logger.warn("bulk.failure", {
+      collection: "taskModels",
+      created,
+      failed,
+      errors: results.filter((r) => !r.ok).map((r) => ({ index: r.index, error: r.error })),
+    });
+  }
+  res.status(207).json({ created, failed, results });
 });
 
 /* =====================================================
@@ -711,6 +723,12 @@ router.post("/:id/force-deactivate", authorizeRole(["admin", "district"]), (req,
   };
 
   saveDB(db);
+
+  logger.warn("taskModel.force_deactivate", {
+    taskModelId: model.id,
+    closedSessionCount: closed.length,
+    reason: reason || null,
+  });
 
   res.json({
     message:

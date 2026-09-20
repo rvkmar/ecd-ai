@@ -264,9 +264,35 @@ describe("review stage", () => {
 
     const res = await request(app)
       .post("/api/evidenceModels/em1/recalibrate")
-      .send({ statisticalModelId: "sm1", parameters: {}, calibrationMethod: "x", sampleSize: 1 });
+      .send({
+        statisticalModelId: "sm1",
+        parameters: {},
+        calibrationMethod: "x",
+        sampleSize: 1,
+        packageVersion: "mirt 1.47",
+        converged: true,
+      });
 
     expect(res.status).toBe(400);
+  });
+
+  it("D90: refuses recalibrate when provenance fields are omitted (no invented defaults)", async () => {
+    const { app, db } = await buildApp(makeModel());
+
+    const res = await request(app)
+      .post("/api/evidenceModels/em1/recalibrate")
+      .send({
+        statisticalModelId: "sm1",
+        parameters: { o1: { a: 1.1, b: 0.2 } },
+        calibrationMethod: "mirt 2PL",
+        sampleSize: 900,
+        // deliberately omit packageVersion + converged
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/packageVersion|converged/);
+    expect(db.evidenceModels[0].statisticalModels[0].parameterSets).toHaveLength(1);
+    expect(db.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe("ps1");
   });
 
   it(
@@ -491,6 +517,8 @@ describe("calibration window", () => {
     calibratedBy: "qa@example.org",
     calibrationMethod: "mirt 2PL",
     sampleSize: 900,
+    packageVersion: "mirt 1.47",
+    converged: true,
   };
 
   it("allows recalibration while confirmed", async () => {
@@ -547,7 +575,13 @@ describe("calibration window", () => {
 
   it("blocks parameter-set activation while operational", async () => {
     const model = makeModel({ status: "operational" });
-    model.statisticalModels[0].parameterSets.push({ parameterSetId: "ps2", parameters: {} });
+    model.statisticalModels[0].parameterSets.push({
+      parameterSetId: "ps2",
+      parameters: {},
+      packageVersion: "mirt 1.47",
+      converged: true,
+      sampleSize: 100,
+    });
     const { app } = await buildApp(model);
 
     const res = await request(app)
@@ -556,6 +590,24 @@ describe("calibration window", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/[Dd]eactivate/);
+  });
+
+  it("D90: refuses to activate a parameter set without provenance", async () => {
+    const model = makeModel();
+    model.statisticalModels[0].parameterSets.push({
+      parameterSetId: "ps2",
+      parameters: { o1: { a: 1, b: 0 } },
+      // omit packageVersion / converged / sampleSize
+    });
+    const { app, db } = await buildApp(model);
+
+    const res = await request(app)
+      .post("/api/evidenceModels/em1/activate-parameter-set")
+      .send({ statisticalModelId: "sm1", parameterSetId: "ps2" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/converged|packageVersion|sampleSize/);
+    expect(db.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe("ps1");
   });
 
   it("still blocks everything on a draft, for the original reason", async () => {

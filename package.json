@@ -16,6 +16,7 @@
     "test:ctt": "vitest run server/r/__tests__/cttPipeline.test.js",
     "migrate": "node server/migrations/run.js",
     "migrate:dry-run": "node server/migrations/run.js --dry-run",
+    "seed:tn-users": "node server/utils/seedTamilNaduUsers.js",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },

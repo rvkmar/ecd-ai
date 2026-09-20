@@ -136,7 +136,11 @@ function mountedRouteFiles() {
 
 // Routes that legitimately take no token, because they are how a caller
 // obtains one. Anything else ungated is a finding.
-const UNAUTHENTICATED_BY_DESIGN = new Set(["usersRoutes.js::/login"]);
+const UNAUTHENTICATED_BY_DESIGN = new Set([
+  "usersRoutes.js::/login",
+  "usersRoutes.js::/refresh",
+  "usersRoutes.js::/logout",
+]);
 
 // Strip // line comments before looking for a gate. Without this, a gate
 // that has been COMMENTED OUT still matches the regex looking for it, and
@@ -222,6 +226,22 @@ describe("analysisArtefacts (D76) specifically", () => {
     expect(src, `${file} should import authorizeRole`).toContain("authorizeRole");
     expect(INDEX, "analysisArtefacts should be mounted in server/index.js").toContain(
       `app.use("/api/analysisArtefacts"`
+    );
+  });
+});
+
+describe("auditLog (D101) specifically", () => {
+  it("has a route file, is mounted, and is gated", () => {
+    const file = "auditLogRoutes.js";
+    const full = path.join(ROUTES_DIR, file);
+    expect(fs.existsSync(full), `${file} should exist`).toBe(true);
+    const src = liveCode(fs.readFileSync(full, "utf8"));
+    expect(src, `${file} should apply authenticateToken in LIVE code`).toMatch(
+      HAS_ROUTER_GATE
+    );
+    expect(src, `${file} should import authorizeRole`).toContain("authorizeRole");
+    expect(INDEX, "auditLog should be mounted in server/index.js").toContain(
+      `app.use("/api/auditLog"`
     );
   });
 });

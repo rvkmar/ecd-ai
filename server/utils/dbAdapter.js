@@ -6,6 +6,52 @@ import path from "path";
 import mongoose from "mongoose";
 import { schema } from "../../src/utils/schema.js";
 import { validateEntity } from "../../src/utils/schema.js";
+import { assertSafeEqualityFilter } from "./requestValidation.js";
+import { getTenancyContext, TenancyError } from "./tenancyContext.js";
+import {
+  filterRows,
+  isTenantScopedCollection,
+  rowVisible,
+  assertTenancyAllowsScopedAccess,
+  TENANT_SCOPED_COLLECTIONS,
+} from "./tenancyScope.js";
+import { recordAuditEvent } from "../../src/utils/db-server.js";
+import { getAuditActor } from "./auditContext.js";
+
+// ADR 0006 list must stay live (repoGuards); sessions need peer resolution.
+if (!TENANT_SCOPED_COLLECTIONS.includes("sessions")) {
+  throw new Error("TENANT_SCOPED_COLLECTIONS missing sessions");
+}
+
+function auditUserChange(action, before, after) {
+  try {
+    const username = after?.username || before?.username || after?.id || before?.id || null;
+    const detail = {};
+    if (before?.role !== after?.role) {
+      detail.role = { from: before?.role ?? null, to: after?.role ?? null };
+    }
+    const beforeDistrict = before?.districtId || before?.profile?.districtId || null;
+    const afterDistrict = after?.districtId || after?.profile?.districtId || null;
+    if (String(beforeDistrict || "") !== String(afterDistrict || "")) {
+      detail.districtId = { from: beforeDistrict, to: afterDistrict };
+    }
+    const beforeSchool = before?.schoolId || before?.profile?.schoolId || null;
+    const afterSchool = after?.schoolId || after?.profile?.schoolId || null;
+    if (String(beforeSchool || "") !== String(afterSchool || "")) {
+      detail.schoolId = { from: beforeSchool, to: afterSchool };
+    }
+    if (action === "user.create" || action === "user.delete" || Object.keys(detail).length) {
+      recordAuditEvent({
+        action,
+        entity: { collection: "users", id: username, version: null },
+        detail: action === "user.create" ? { role: after?.role ?? null } : detail,
+        actor: getAuditActor(),
+      });
+    }
+  } catch (err) {
+    console.error("audit user change failed:", err?.message || err);
+  }
+}
 
 // ------------------------------
 // Configuration
@@ -109,6 +155,10 @@ async function initMongo() {
           districtId: String,
           state: String,
         },
+        // "local" (default) | future "oidc" / "saml" — see server/auth/localIdentity.js
+        authProvider: { type: String, default: "local" },
+        mustChangePassword: { type: Boolean, default: false },
+        authEpoch: { type: Number, default: 0 },
       },
       { timestamps: true }
     );
@@ -127,34 +177,97 @@ async function initMongo() {
 
 
 // ------------------------------
+// D97 — tenancy at the adapter boundary
+// ------------------------------
+async function peerSnapshotFor(collection, rows) {
+  const snap = { [collection]: rows || [] };
+  // Sessions resolve district via assignees → students/users (ADR 0006).
+  if (collection === "sessions") {
+    if (DB_MODE === "json") {
+      const db = loadJSON();
+      snap.students = db.students || [];
+      snap.users = db.users || [];
+    } else {
+      await initMongo();
+      snap.students = await ensureMongoModel("Student").find().lean();
+      snap.users = await ensureMongoModel("User").find().lean();
+    }
+  }
+  return snap;
+}
+
+async function applyListFilter(collection, rows) {
+  const ctx = getTenancyContext();
+  const snap = await peerSnapshotFor(collection, rows);
+  return filterRows(collection, rows, ctx, snap);
+}
+
+async function visibleOrNull(collection, row, peerRows) {
+  const ctx = getTenancyContext();
+  if (!ctx || ctx.unscoped || ctx.role === "admin") return row;
+  if (!isTenantScopedCollection(collection)) return row;
+  assertTenancyAllowsScopedAccess(ctx);
+  if (!row) return null;
+  const snap = await peerSnapshotFor(
+    collection,
+    peerRows || (row ? [row] : [])
+  );
+  return rowVisible(collection, row, ctx, snap) ? row : null;
+}
+
+async function assertWriteAllowed(collection, row, peerRows) {
+  const ctx = getTenancyContext();
+  if (!ctx || ctx.unscoped || ctx.role === "admin") return;
+  if (!isTenantScopedCollection(collection)) return;
+  assertTenancyAllowsScopedAccess(ctx);
+  const snap = await peerSnapshotFor(
+    collection,
+    peerRows || (row ? [row] : [])
+  );
+  if (!row || !rowVisible(collection, row, ctx, snap)) {
+    throw new TenancyError("Row out of tenant scope");
+  }
+}
+
+// ------------------------------
 // CRUD adapter
 // ------------------------------
 export const dbAdapter = {
   async list(collection) {
     if (DB_MODE === "json") {
       const db = loadJSON();
-      return db[collection] || [];
+      return await applyListFilter(collection, db[collection] || []);
     }
 
     const models = await initMongo();
     const Model = ensureMongoModel(capitalize(collection));
-    return await Model.find().lean();
+    const rows = await Model.find().lean();
+    return await applyListFilter(collection, rows);
   },
 
   async get(collection, id) {
     if (DB_MODE === "json") {
       const db = loadJSON();
-      return db[collection]?.find((x) => x.id === id);
+      const rows = db[collection] || [];
+      const row = rows.find((x) => x.id === id);
+      return await visibleOrNull(collection, row, rows);
     }
 
     const models = await initMongo();
     const Model = ensureMongoModel(capitalize(collection));
-    return await Model.findOne({ id }).lean();
+    const row = await Model.findOne({ id }).lean();
+    return await visibleOrNull(collection, row, row ? [row] : []);
   },
 
   async insert(collection, obj) {
-    const { valid, errors } = validateEntity(collection, obj);
-    if (!valid) throw new Error(errors.join(", "));
+    // Users are intentionally absent from schema.js (auth records, not ECD
+    // entities). createUserRecord / TN seed still go through this helper.
+    if (collection !== "users") {
+      const { valid, errors } = validateEntity(collection, obj);
+      if (!valid) throw new Error(errors.join(", "));
+    }
+
+    await assertWriteAllowed(collection, obj, [obj]);
 
     obj.createdAt = new Date().toISOString();
     obj.updatedAt = new Date().toISOString();
@@ -164,12 +277,15 @@ export const dbAdapter = {
       db[collection] = db[collection] || [];
       db[collection].push(obj);
       saveJSON(db);
+      if (collection === "users") auditUserChange("user.create", null, obj);
       return obj;
     }
 
     const models = await initMongo();
     const Model = ensureMongoModel(capitalize(collection));
-    return await Model.create(obj);
+    const created = await Model.create(obj);
+    if (collection === "users") auditUserChange("user.create", null, obj);
+    return created;
   },
 
   // Filter-based sibling of update() below, for collections whose records
@@ -182,6 +298,7 @@ export const dbAdapter = {
   // on { username } instead finds those records whether or not they were
   // ever given an id.
   async updateWhere(collection, filter, updates) {
+    assertSafeEqualityFilter(filter);
     updates.updatedAt = new Date().toISOString();
 
     if (DB_MODE === "json") {
@@ -191,31 +308,53 @@ export const dbAdapter = {
         Object.entries(filter).every(([k, v]) => x?.[k] === v)
       );
       if (idx === -1) throw new Error("Not found");
+      await assertWriteAllowed(collection, rows[idx], rows);
+      const before = { ...rows[idx] };
       rows[idx] = { ...rows[idx], ...updates };
+      await assertWriteAllowed(collection, rows[idx], rows);
       db[collection] = rows;
       saveJSON(db);
+      if (collection === "users") auditUserChange("user.update", before, rows[idx]);
       return rows[idx];
     }
 
     const models = await initMongo();
     const Model = ensureMongoModel(capitalize(collection));
-    return await Model.findOneAndUpdate(filter, updates, { new: true }).lean();
+    const existing = await Model.findOne(filter).lean();
+    if (!existing) throw new Error("Not found");
+    await assertWriteAllowed(collection, existing, [existing]);
+    const next = await Model.findOneAndUpdate(filter, updates, { new: true }).lean();
+    await assertWriteAllowed(collection, next, [next]);
+    if (collection === "users") auditUserChange("user.update", existing, next);
+    return next;
   },
 
   // Filter-based sibling of remove(), for the same reason as updateWhere.
   async removeWhere(collection, filter) {
+    assertSafeEqualityFilter(filter);
     if (DB_MODE === "json") {
       const db = loadJSON();
-      db[collection] = (db[collection] || []).filter(
+      const rows = db[collection] || [];
+      const doomed = rows.filter((x) =>
+        Object.entries(filter).every(([k, v]) => x?.[k] === v)
+      );
+      for (const row of doomed) await assertWriteAllowed(collection, row, rows);
+      db[collection] = rows.filter(
         (x) => !Object.entries(filter).every(([k, v]) => x?.[k] === v)
       );
       saveJSON(db);
+      if (collection === "users") {
+        for (const row of doomed) auditUserChange("user.delete", row, null);
+      }
       return true;
     }
 
     const models = await initMongo();
     const Model = ensureMongoModel(capitalize(collection));
+    const existing = await Model.findOne(filter).lean();
+    if (existing) await assertWriteAllowed(collection, existing, [existing]);
     await Model.deleteOne(filter);
+    if (collection === "users" && existing) auditUserChange("user.delete", existing, null);
     return true;
   },
 
@@ -224,29 +363,48 @@ export const dbAdapter = {
 
     if (DB_MODE === "json") {
       const db = loadJSON();
-      const idx = db[collection]?.findIndex((x) => x.id === id);
+      const rows = db[collection] || [];
+      const idx = rows.findIndex((x) => x.id === id);
       if (idx === -1) throw new Error("Not found");
-      db[collection][idx] = { ...db[collection][idx], ...updates };
+      await assertWriteAllowed(collection, rows[idx], rows);
+      const before = { ...rows[idx] };
+      rows[idx] = { ...rows[idx], ...updates };
+      await assertWriteAllowed(collection, rows[idx], rows);
+      db[collection] = rows;
       saveJSON(db);
-      return db[collection][idx];
+      if (collection === "users") auditUserChange("user.update", before, rows[idx]);
+      return rows[idx];
     }
 
     const models = await initMongo();
     const Model = ensureMongoModel(capitalize(collection));
-    return await Model.findOneAndUpdate({ id }, updates, { new: true }).lean();
+    const existing = await Model.findOne({ id }).lean();
+    if (!existing) throw new Error("Not found");
+    await assertWriteAllowed(collection, existing, [existing]);
+    const next = await Model.findOneAndUpdate({ id }, updates, { new: true }).lean();
+    await assertWriteAllowed(collection, next, [next]);
+    if (collection === "users") auditUserChange("user.update", existing, next);
+    return next;
   },
 
   async remove(collection, id) {
     if (DB_MODE === "json") {
       const db = loadJSON();
-      db[collection] = db[collection]?.filter((x) => x.id !== id);
+      const rows = db[collection] || [];
+      const row = rows.find((x) => x.id === id);
+      if (row) await assertWriteAllowed(collection, row, rows);
+      db[collection] = rows.filter((x) => x.id !== id);
       saveJSON(db);
       return true;
     }
 
     const models = await initMongo();
     const Model = ensureMongoModel(capitalize(collection));
-    await Model.deleteOne({ _id: id });
+    const existing = await Model.findOne({ id }).lean();
+    if (existing) await assertWriteAllowed(collection, existing, [existing]);
+    // Prefer id field; fall back to _id for legacy rows.
+    if (existing) await Model.deleteOne({ id });
+    else await Model.deleteOne({ _id: id });
     return true;
   },
 };

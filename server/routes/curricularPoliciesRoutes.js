@@ -16,6 +16,7 @@
 // ------------------------------------------------------------------
 import express from "express";
 import { authenticateToken } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 
@@ -26,6 +27,7 @@ const router = express.Router();
 // admin below. Reads stay open to any logged-in role because Step 3 of the
 // Competency Wizard needs the list and is reachable by non-admin authors.
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 function requireAdmin(req, res, next) {
   const role = req.user?.role;

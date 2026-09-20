@@ -1,4 +1,7 @@
-FROM node:24-alpine AS api
+# Hardened Node base under rvkmar (npm High CVEs patched). Bump after
+# rebuilding/pushing docker/base/Dockerfile.node:
+#   docker buildx imagetools inspect rvkmar/ecd-node:24-alpine --format '{{.Manifest.Digest}}'
+FROM rvkmar/ecd-node:24-alpine@sha256:6f3300189fd2adfb2c7e106fe494e7f20731d0a55884364306f861a9379590aa AS api
 WORKDIR /app
 
 # Install deps

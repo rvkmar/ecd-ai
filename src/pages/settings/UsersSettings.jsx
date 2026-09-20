@@ -39,6 +39,7 @@ const PROFILE_FIELDS_BY_ROLE = {
     { key: "emisId", label: "EMIS ID" },
     { key: "udiseId", label: "UDISE ID" },
     { key: "districtId", label: "District ID" },
+    { key: "schoolId", label: "School ID" },
     { key: "state", label: "State" },
   ],
   student: [
@@ -46,6 +47,7 @@ const PROFILE_FIELDS_BY_ROLE = {
     { key: "apaarId", label: "APAAR ID" },
     { key: "grade", label: "Class / Grade" },
     { key: "districtId", label: "District ID" },
+    { key: "schoolId", label: "School ID" },
     { key: "state", label: "State" },
   ],
   district: [

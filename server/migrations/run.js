@@ -13,21 +13,20 @@
 // nothing; a real run skips anything already applied unless --force is given.
 
 import { runMigration } from "./runner.js";
-import normalizeSessionStatus from "./migrations/001-normalize-session-status.js";
-import normalizeToolsAllowed from "./migrations/002-normalize-tools-allowed.js";
-
-const REGISTRY = [normalizeSessionStatus, normalizeToolsAllowed];
+import { MIGRATION_REGISTRY } from "./registry.js";
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const force = args.includes("--force");
 const onlyId = args.find((a) => !a.startsWith("--"));
 
-const toRun = onlyId ? REGISTRY.filter((m) => m.id === onlyId) : REGISTRY;
+const toRun = onlyId
+  ? MIGRATION_REGISTRY.filter((m) => m.id === onlyId)
+  : MIGRATION_REGISTRY;
 
 if (onlyId && toRun.length === 0) {
   console.error(`No migration named "${onlyId}". Known migrations:`);
-  REGISTRY.forEach((m) => console.error(`  - ${m.id}`));
+  MIGRATION_REGISTRY.forEach((m) => console.error(`  - ${m.id}`));
   process.exit(1);
 }
 

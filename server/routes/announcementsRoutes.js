@@ -1,6 +1,7 @@
 // server/routes/announcementsRoutes.js
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import {
   announcementsForRole,
@@ -10,6 +11,7 @@ import {
 
 const router = express.Router();
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 const canAuthor = authorizeRole(["admin", "district"]);
 

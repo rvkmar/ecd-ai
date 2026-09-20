@@ -26,11 +26,19 @@ import { processJobById } from "../calibrationWorker.js";
 import { postCalibration, getRHealth } from "../rClient.js";
 import { applyNamedCalibrationFixture } from "../calibrationFixtures.js";
 import { validateCalibrationRequest, CALIBRATION_CONTRACT_VERSION } from "../calibrationContract.js";
+import {
+  KNOWN_EQUATING_SLOPE,
+  KNOWN_EQUATING_INTERCEPT,
+  EQUATING_SLOPE_TOLERANCE,
+  EQUATING_INTERCEPT_TOLERANCE,
+  checkKnownEquatingAcceptance,
+  checkRBackendBenchmarkPackages,
+} from "./benchmarkAcceptance.js";
 
-const KNOWN_SLOPE = 1;
-const KNOWN_INTERCEPT = -0.5;
-const SLOPE_TOLERANCE = 0.2;
-const INTERCEPT_TOLERANCE = 0.3;
+const KNOWN_SLOPE = KNOWN_EQUATING_SLOPE;
+const KNOWN_INTERCEPT = KNOWN_EQUATING_INTERCEPT;
+const SLOPE_TOLERANCE = EQUATING_SLOPE_TOLERANCE;
+const INTERCEPT_TOLERANCE = EQUATING_INTERCEPT_TOLERANCE;
 const KNOWN_SEED = 20261202;
 
 const tokenFor = (role) =>
@@ -268,8 +276,9 @@ describe.skipIf(!live)("known equating live R pipeline", () => {
     const health = await getRHealth({ timeoutMs: 15_000 });
     expect(health.ok, health.text || health.error?.message).toBe(true);
     expect(health.json?.status).toBe("healthy");
-    expect(health.json?.packages?.plink).toBeTruthy();
-    expect(health.json?.packages?.mirt).toBeTruthy();
+    // D88 Hub honesty: plink (and the other four) must be on the image.
+    const pkgGate = checkRBackendBenchmarkPackages(health.json);
+    expect(pkgGate.ok, pkgGate.failures.join("; ")).toBe(true);
 
     const app = await jobsApp();
     const enqueue = await request(app)
@@ -311,19 +320,11 @@ describe.skipIf(!live)("known equating live R pipeline", () => {
     expect(processed.ok, liveDump).toBe(true);
     const job = processed.job;
     expect(job.status, liveDump).toBe("succeeded");
-    expect(job.response.converged, liveDump).toBe(true);
-    expect(job.response.packageVersion).toMatch(/^plink /);
-    expect(job.response.sampleSize).toBe(800);
     expect(job.response.jobId).toBe(jobId);
-    expect(job.response.parameters.method).toBe("Mean/Sigma");
-    expect(job.response.parameters.from).toBe("Y");
-    expect(job.response.parameters.to).toBe("X");
-    expect(Math.abs(job.response.parameters.slope - KNOWN_SLOPE)).toBeLessThan(
-      SLOPE_TOLERANCE
-    );
-    expect(Math.abs(job.response.parameters.intercept - KNOWN_INTERCEPT)).toBeLessThan(
-      INTERCEPT_TOLERANCE
-    );
+
+    // D88: same predicates as benchmarkPerturbation.test.js.
+    const acceptance = checkKnownEquatingAcceptance(job.response);
+    expect(acceptance.ok, acceptance.failures.join("; ") || liveDump).toBe(true);
 
     const ingested = await request(app)
       .post(`/api/calibrationJobs/${jobId}/ingest`)

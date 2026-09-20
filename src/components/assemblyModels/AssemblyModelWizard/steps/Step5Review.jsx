@@ -2,15 +2,16 @@
 // (those controls live in WizardStepContainer's nav bar, not here -- this
 // step only surfaces WHY they are or aren't enabled).
 //
-// Each row mirrors one check from validateAssemblyModelLifecycle
-// (server/utils/lifecycleValidation.js) by hand -- see
-// AssemblyModelWizardContext.jsx's header comment on why this is a
-// hand-written mirror, not an import, and that no mirror-agreement test
-// backs it yet (flagged in the D54 handoff).
+// Rows come from assemblyModelReadiness.js (same gates as canProceed /
+// validateAssemblyModelLifecycle). Agreement test: assemblyModelReadiness.test.js.
 
 import React from "react";
 import { Check, X } from "lucide-react";
 import { useAssemblyModelWizard } from "../AssemblyModelWizardContext";
+import {
+  meetsAssemblyReviewedGates,
+  hasAssemblyStoppingRule,
+} from "../../assemblyModelReadiness";
 
 function ReadinessRow({ ok, label }) {
   return (
@@ -27,16 +28,13 @@ function ReadinessRow({ ok, label }) {
 
 export default function Step5Review() {
   const { draft } = useAssemblyModelWizard();
-  const sr = draft.stoppingRules || {};
-
   const hasName = Boolean(draft.name);
   const hasCompetencyModel = Boolean(draft.competencyModelId);
   const hasTargets = Array.isArray(draft.targetsBySMV) && draft.targetsBySMV.length > 0;
   const hasPolicy = Boolean(draft.selectionAlgorithm?.policyId);
-  const hasStoppingRule =
-    sr.maxItems !== undefined || sr.minItems !== undefined || sr.targetsMet !== undefined;
+  const hasStoppingRule = hasAssemblyStoppingRule(draft);
 
-  const reviewedReady = hasName && hasCompetencyModel && hasTargets && hasPolicy;
+  const reviewedReady = meetsAssemblyReviewedGates(draft);
   const confirmedReady = reviewedReady && hasStoppingRule;
 
   const accuracyTargets = (draft.targetsBySMV || []).filter(

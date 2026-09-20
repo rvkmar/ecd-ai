@@ -26,10 +26,16 @@
 import fs from "fs";
 import path from "path";
 
-const DB_FILE = process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
-const LOG_FILE = path.join(path.dirname(DB_FILE), "migrations.log.json");
+function dbFilePath() {
+  return process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
+}
+
+function logFilePath() {
+  return path.join(path.dirname(dbFilePath()), "migrations.log.json");
+}
 
 function readLog() {
+  const LOG_FILE = logFilePath();
   if (!fs.existsSync(LOG_FILE)) return [];
   try {
     return JSON.parse(fs.readFileSync(LOG_FILE, "utf-8"));
@@ -39,6 +45,7 @@ function readLog() {
 }
 
 function appendLog(entry) {
+  const LOG_FILE = logFilePath();
   const log = readLog();
   log.push(entry);
   fs.writeFileSync(LOG_FILE, JSON.stringify(log, null, 2));
@@ -46,6 +53,19 @@ function appendLog(entry) {
 
 export function hasBeenApplied(migrationId) {
   return readLog().some((entry) => entry.id === migrationId);
+}
+
+/** Snapshot for health/metrics — which schema this environment is on. */
+export function getMigrationStatus() {
+  const applied = readLog();
+  const latest = applied.length ? applied[applied.length - 1] : null;
+  return {
+    appliedCount: applied.length,
+    appliedIds: applied.map((e) => e.id),
+    latestId: latest?.id || null,
+    latestAppliedAt: latest?.appliedAt || null,
+    logPath: logFilePath(),
+  };
 }
 
 /**

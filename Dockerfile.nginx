@@ -1,5 +1,7 @@
-# Step 1: Build with Node
-FROM node:24-alpine AS build
+# Step 1: Build with hardened Node (builder only — not in the final image).
+# Bump with:
+#   docker buildx imagetools inspect rvkmar/ecd-node:24-alpine --format '{{.Manifest.Digest}}'
+FROM rvkmar/ecd-node:24-alpine@sha256:6f3300189fd2adfb2c7e106fe494e7f20731d0a55884364306f861a9379590aa AS build
 WORKDIR /app
 
 # Install dependencies
@@ -17,8 +19,10 @@ COPY . .
 ENV NODE_OPTIONS=--max_old_space_size=4096
 RUN npm run build
 
-# Step 2: Serve with Nginx
-FROM nginx:alpine
+# Step 2: Serve with hardened nginx (libxml2/XSLT/njs already removed).
+# Bump with:
+#   docker buildx imagetools inspect rvkmar/ecd-nginx:alpine --format '{{.Manifest.Digest}}'
+FROM rvkmar/ecd-nginx:alpine@sha256:21771fcafa6f462bad7562beef81b8c89d5b2ee32a6776281a140bd97d6f6b99
 
 # Copy build output
 COPY --from=build /app/dist /usr/share/nginx/html

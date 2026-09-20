@@ -27,6 +27,7 @@ import { processJobById } from "../calibrationWorker.js";
 import { postCalibration, getRHealth } from "../rClient.js";
 import { applyNamedCalibrationFixture } from "../calibrationFixtures.js";
 import { validateCalibrationRequest, CALIBRATION_CONTRACT_VERSION } from "../calibrationContract.js";
+import { PLANTED_DIF_ITEM, checkPlantedDifAcceptance } from "./benchmarkAcceptance.js";
 
 const tokenFor = (role) =>
   jwt.sign({ username: `${role}1`, role }, JWT_SECRET, { expiresIn: "1h" });
@@ -34,7 +35,7 @@ const tokenFor = (role) =>
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SAMPLE_PATH = path.resolve(here, "../../../samples/sample-calibration-job-dif-planted.json");
 
-const PLANTED_ITEM = "Item.5";
+const PLANTED_ITEM = PLANTED_DIF_ITEM;
 const PLANTED_SEED = 20261201;
 
 const dbState = { current: {} };
@@ -329,23 +330,14 @@ describe.skipIf(!live)("planted DIF live R pipeline", () => {
     expect(processed.ok, liveDump).toBe(true);
     const job = processed.job;
     expect(job.status, liveDump).toBe("succeeded");
-    expect(job.response.converged, liveDump).toBe(true);
-    expect(job.response.packageVersion).toMatch(/^difR /);
-    expect(job.response.sampleSize).toBe(800);
     expect(job.response.jobId).toBe(jobId);
 
-    const flagged = Object.entries(job.response.parameters)
-      .filter(([, p]) => p.flag === true)
-      .map(([id]) => id);
-    expect(flagged, liveDump).toEqual([PLANTED_ITEM]);
-    expect(job.response.parameters[PLANTED_ITEM].etsClass).toBe("C");
-    expect(Math.abs(job.response.parameters[PLANTED_ITEM].deltaMH)).toBeGreaterThanOrEqual(1.5);
+    // D88: same predicates as benchmarkPerturbation.test.js.
+    const acceptance = checkPlantedDifAcceptance(job.response, {
+      plantedItem: PLANTED_ITEM,
+    });
+    expect(acceptance.ok, acceptance.failures.join("; ") || liveDump).toBe(true);
     expect(job.response.parameters[PLANTED_ITEM].method).toBe("Mantel-Haenszel");
-    for (const id of Object.keys(job.response.parameters).filter((x) => x !== PLANTED_ITEM)) {
-      expect(job.response.parameters[id].flag, `${id} should not be flagged`).toBe(false);
-      expect(job.response.parameters[id].etsClass, `${id} should not be ETS C`).not.toBe("C");
-      expect(Math.abs(job.response.parameters[id].deltaMH)).toBeLessThan(1.5);
-    }
 
     const ingested = await request(app)
       .post(`/api/calibrationJobs/${jobId}/ingest`)

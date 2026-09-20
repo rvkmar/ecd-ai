@@ -1,5 +1,5 @@
 // src/components/assemblyModels/AssemblyModelWizard/AssemblyModelWizardContext.jsx
-// D54 (built, NOT test-verified this session -- see claude/progress-ledger.md).
+// D54 (agreement test closed D90 / W18 block close).
 // ------------------------------------------------------------
 // Assembly Model wizard state, following the established pattern (see
 // CompetencyWizardContext.jsx): data-fetching, draft state, step validity
@@ -13,13 +13,9 @@
 // useTransitionAssemblyModel(), exactly as QMatrixEditor's transitionTo()
 // does, not through a dedicated lifecycle route.
 //
-// canProceed's reviewed/confirmed gates are a hand-written mirror of
-// validateAssemblyModelLifecycle (server/utils/lifecycleValidation.js) --
-// the same "encode the same rule client-side, note it as an unverified
-// mirror" approach QMatrixValidity.js uses (see its own KNOWN GAP comment)
-// rather than importing the server file. No mirror-agreement test backs
-// this yet; flagged honestly in the D54 handoff rather than silently
-// assumed correct.
+// canProceed's reviewed/confirmed gates come from assemblyModelReadiness.js
+// and must agree with validateAssemblyModelLifecycle — see
+// assemblyModelReadiness.test.js. Do not re-hand-write those checks here.
 // ------------------------------------------------------------
 
 import React, {
@@ -40,7 +36,11 @@ import {
   useUpdateAssemblyModel,
   useTransitionAssemblyModel,
 } from "@/api/queries/assemblyModels";
-
+import {
+  meetsAssemblyReviewedGates,
+  meetsAssemblyConfirmedGates,
+  hasAssemblyStoppingRule,
+} from "../assemblyModelReadiness";
 const AssemblyModelWizardContext = createContext(null);
 
 export function useAssemblyModelWizard() {
@@ -159,24 +159,10 @@ export function AssemblyModelWizardProvider({ assemblyModelId, onSaved, children
   }
 
   /* =====================================================
-     STEP VALIDITY -- mirrors validateAssemblyModelLifecycle's REVIEWED
-     and CONFIRMED gates by hand (see file header comment).
+     STEP VALIDITY -- assemblyModelReadiness (D54 agreement).
   ===================================================== */
-  const meetsReviewed = useMemo(() => {
-    return Boolean(
-      draft.name &&
-        draft.competencyModelId &&
-        Array.isArray(draft.targetsBySMV) &&
-        draft.targetsBySMV.length > 0 &&
-        draft.selectionAlgorithm?.policyId
-    );
-  }, [draft.name, draft.competencyModelId, draft.targetsBySMV, draft.selectionAlgorithm]);
-
-  const meetsConfirmed = useMemo(() => {
-    if (!meetsReviewed) return false;
-    const sr = draft.stoppingRules || {};
-    return Boolean(sr.maxItems !== undefined || sr.minItems !== undefined || sr.targetsMet !== undefined);
-  }, [meetsReviewed, draft.stoppingRules]);
+  const meetsReviewed = useMemo(() => meetsAssemblyReviewedGates(draft), [draft]);
+  const meetsConfirmed = useMemo(() => meetsAssemblyConfirmedGates(draft), [draft]);
 
   const stepValidity = useMemo(
     () => ({
@@ -210,9 +196,7 @@ export function AssemblyModelWizardProvider({ assemblyModelId, onSaved, children
      is unconditionally required, not just optional-until-confirm.
   ===================================================== */
   async function persist() {
-    const sr = draft.stoppingRules || {};
-    const hasStoppingRule =
-      sr.maxItems !== undefined || sr.minItems !== undefined || sr.targetsMet !== undefined;
+    const hasStoppingRule = hasAssemblyStoppingRule(draft);
 
     const payload = {
       name: draft.name,

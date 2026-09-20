@@ -5,6 +5,7 @@
 
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
@@ -14,6 +15,7 @@ import {
   normalizeStudentModelBulkRows,
   stripStudentModelImportIdentity,
 } from "../../src/utils/studentModelBulkNormalize.js";
+import { logger } from "../utils/logger.js";
 
 const router = express.Router();
 
@@ -21,6 +23,7 @@ const router = express.Router();
 // (Previously this file had no auth check at all — added as part of the
 // Phase 1 security hardening pass; see AUTH_SECURITY_FIXES.md.)
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 // Every write route also needs a role gate: this file had none at all,
 // while src/config/rolePermissions.js already declared competencyModels
@@ -422,7 +425,19 @@ router.post("/models/bulk", canAuthor, (req, res) => {
   saveDB(db);
 
   const created = results.filter((r) => r.ok).length;
-  res.status(207).json({ created, failed: results.length - created, results });
+  const failed = results.length - created;
+  if (failed > 0) {
+    logger.warn("bulk.failure", {
+      collection: "competencyModels",
+      created,
+      failed,
+      errors: results.filter((r) => !r.ok).map((r) => ({
+        index: r.index,
+        error: r.error,
+      })),
+    });
+  }
+  res.status(207).json({ created, failed, results });
 });
 
 /* =====================================================

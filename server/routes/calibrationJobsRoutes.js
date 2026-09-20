@@ -5,7 +5,9 @@
 
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
+import { getAuditRequestId } from "../utils/auditContext.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { validateCalibrationJobLifecycle } from "../utils/lifecycleValidation.js";
 import { canTransitionCalibrationJob } from "../utils/lifecycleMatrix.js";
@@ -20,9 +22,15 @@ import {
   applyNamedCalibrationFixture,
   CALIBRATION_NAMED_FIXTURES,
 } from "../r/calibrationFixtures.js";
+import {
+  MIN_CELL_SIZE,
+  namedAggregateScope,
+  redactCalibrationJobForViewer,
+} from "../utils/aggregatePrivacy.js";
 
 const router = express.Router();
 router.use(authenticateToken);
+router.use(sanitizeRequestInputs);
 
 const canAuthor = authorizeRole(["admin"]);
 const canView = authorizeRole(["admin", "district"]);
@@ -46,7 +54,17 @@ router.get("/", canView, (req, res) => {
   if (evidenceModelId) rows = rows.filter((j) => j.evidenceModelId === evidenceModelId);
   if (status) rows = rows.filter((j) => j.status === status);
   if (kind) rows = rows.filter((j) => j.kind === kind);
-  res.json(rows);
+  const isAdmin = req.user?.role === "admin";
+  res.json(
+    rows.map((j) => ({
+      ...redactCalibrationJobForViewer(j, isAdmin),
+      scopeMeta: namedAggregateScope(req, {
+        kind: "calibration-job",
+        jobScope: j.scope || null,
+      }),
+      minCellSize: MIN_CELL_SIZE,
+    }))
+  );
 });
 
 // ------------------------------
@@ -63,7 +81,15 @@ router.get("/:id", canView, (req, res) => {
   const db = loadDB();
   const row = (db.calibrationJobs || []).find((j) => j.id === req.params.id);
   if (!row) return res.status(404).json({ error: "Calibration job not found" });
-  res.json(row);
+  const isAdmin = req.user?.role === "admin";
+  res.json({
+    ...redactCalibrationJobForViewer(row, isAdmin),
+    scopeMeta: namedAggregateScope(req, {
+      kind: "calibration-job",
+      jobScope: row.scope || null,
+    }),
+    minCellSize: MIN_CELL_SIZE,
+  });
 });
 
 // ------------------------------
@@ -102,6 +128,8 @@ router.post("/", canAuthor, (req, res) => {
     statisticalModelId: incoming?.statisticalModelId ?? req.body?.statisticalModelId,
     requestedBy: req.user?.username || req.body?.requestedBy || "unknown",
     requestedAt: now,
+    // D103: persist the edge request id so the worker can propagate it to R.
+    requestId: getAuditRequestId() || null,
     startedAt: null,
     finishedAt: null,
     request,

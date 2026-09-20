@@ -36,6 +36,14 @@
   )
 }
 
+# Finite integer seed or NULL (caller returns .failure). D90: never set.seed(NA).
+.require_seed <- function(opts) {
+  .first <- function(x) unlist(x, use.names = FALSE)[[1]]
+  if (is.null(opts) || is.null(opts$seed)) return(NULL)
+  seed <- suppressWarnings(as.integer(.first(opts$seed)))
+  if (length(seed) == 0 || is.na(seed)) NULL else seed
+}
+
 calibrate_not_implemented <- function(req, res, family, day) {
   body <- .parse_json_body(req)
   job_id <- if (!is.null(body$jobId)) .as_char(body$jobId) else "unknown"
@@ -168,7 +176,11 @@ calibrate_irt <- function(body, res) {
   if (is.na(max_iter) || max_iter < 1) max_iter <- 500L
   tol <- if (!is.null(opts$convergenceTolerance)) as.numeric(.first(opts$convergenceTolerance)) else 1e-4
   if (is.na(tol) || tol <= 0) tol <- 1e-4
-  seed <- as.integer(.first(opts$seed))
+  seed <- .require_seed(opts)
+  if (is.null(seed)) {
+    res$status <- 400
+    return(.failure(body$jobId, "options.seed must be a finite integer", "SeedError"))
+  }
   subtype <- .as_char(body$model$subtype)
   itemtype <- switch(subtype, "2PL" = "2PL", "3PL" = "3PL", "Rasch" = "Rasch", "2PL")
 
@@ -336,7 +348,11 @@ calibrate_diagnostic <- function(body, res) {
   if (is.na(max_iter) || max_iter < 1) max_iter <- 2000L
   tol <- if (!is.null(opts$convergenceTolerance)) as.numeric(.first(opts$convergenceTolerance)) else 1e-4
   if (is.na(tol) || tol <= 0) tol <- 1e-4
-  seed <- as.integer(.first(opts$seed))
+  seed <- .require_seed(opts)
+  if (is.null(seed)) {
+    res$status <- 400
+    return(.failure(body$jobId, "options.seed must be a finite integer", "SeedError"))
+  }
   family <- .as_char(body$model$family)
   gdina_model <- if (identical(family, "dina")) "DINA" else "GDINA"
 
@@ -395,13 +411,20 @@ calibrate_diagnostic <- function(body, res) {
   fit_try <- try(.run_gdina(), silent = TRUE)
   if (inherits(fit_try, "try-error")) {
     stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
+    # Retry keeps control (incl. randomseed) — dropping it made the
+    # converging path non-reproducible (D90 P1).
     fit_try <- try(
       GDINA::GDINA(
         dat = resp_df,
         Q = Q,
         model = gdina_model,
         item.names = request_item_ids,
-        verbose = 0
+        verbose = 0,
+        control = list(
+          maxitr = max_iter,
+          conv.crit = tol,
+          randomseed = seed
+        )
       ),
       silent = TRUE
     )
@@ -605,7 +628,11 @@ calibrate_ctt <- function(body, res) {
 
   opts <- body$options
   .first <- function(x) unlist(x, use.names = FALSE)[[1]]
-  seed <- as.integer(.first(opts$seed))
+  seed <- .require_seed(opts)
+  if (is.null(seed)) {
+    res$status <- 400
+    return(.failure(body$jobId, "options.seed must be a finite integer", "SeedError"))
+  }
 
   resp_df <- tryCatch(
     response_matrix_to_df(body$responseMatrix),
@@ -736,7 +763,11 @@ calibrate_item_analysis <- function(body, res) {
 
   opts <- body$options
   .first <- function(x) unlist(x, use.names = FALSE)[[1]]
-  seed <- as.integer(.first(opts$seed))
+  seed <- .require_seed(opts)
+  if (is.null(seed)) {
+    res$status <- 400
+    return(.failure(body$jobId, "options.seed must be a finite integer", "SeedError"))
+  }
 
   resp_df <- tryCatch(
     response_matrix_to_df(body$responseMatrix),
@@ -1003,7 +1034,11 @@ calibrate_test_information <- function(body, res) {
 
   opts <- body$options
   .first <- function(x) unlist(x, use.names = FALSE)[[1]]
-  seed <- as.integer(.first(opts$seed))
+  seed <- .require_seed(opts)
+  if (is.null(seed)) {
+    res$status <- 400
+    return(.failure(body$jobId, "options.seed must be a finite integer", "SeedError"))
+  }
 
   request_item_ids <- vapply(as.list(body$model$itemIds), .as_char, character(1))
 
@@ -1238,7 +1273,11 @@ calibrate_dif <- function(body, res) {
 
   opts <- body$options
   .first <- function(x) unlist(x, use.names = FALSE)[[1]]
-  seed <- as.integer(.first(opts$seed))
+  seed <- .require_seed(opts)
+  if (is.null(seed)) {
+    res$status <- 400
+    return(.failure(body$jobId, "options.seed must be a finite integer", "SeedError"))
+  }
   alpha <- if (!is.null(opts$convergenceTolerance)) as.numeric(.first(opts$convergenceTolerance)) else 0.05
   if (is.na(alpha) || alpha <= 0 || alpha >= 1) alpha <- 0.05
 
@@ -1509,7 +1548,11 @@ calibrate_equating <- function(body, res) {
 
   opts <- body$options
   .first <- function(x) unlist(x, use.names = FALSE)[[1]]
-  seed <- as.integer(.first(opts$seed))
+  seed <- .require_seed(opts)
+  if (is.null(seed)) {
+    res$status <- 400
+    return(.failure(body$jobId, "options.seed must be a finite integer", "SeedError"))
+  }
   max_iter <- if (!is.null(opts$maxIterations)) as.integer(.first(opts$maxIterations)) else 500L
   if (is.na(max_iter) || max_iter < 50L) max_iter <- 500L
 
