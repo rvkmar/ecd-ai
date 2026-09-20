@@ -24,6 +24,9 @@ npm ci
 
 # --- Local dev .env (gitignored) ---------------------------------------------
 # JSON flat-file store means no external MongoDB is needed for local dev.
+# Note: dbAdapter.js hardcodes ./data/db.json while db-server.js honors
+# ECD_DB_FILE, so ECD_DB_FILE below is pinned to ./data/db.json to keep the
+# two JSON stores aligned on one file.
 if [ ! -f .env ]; then
   JWT_SECRET="$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")"
   cat > .env <<EOF
