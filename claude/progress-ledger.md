@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D109** — production-shaped migration rehearsal (never-compress). Handoff: `claude/day109-production-shaped-migration.md`. |
+| Last completed unit | **D110** — load testing + DR runbook; **W22 closed**. Handoff: `claude/day110-load-testing-dr-runbook.md`; block: `claude/day110-w22-block-close.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D110** — load testing + DR runbook + W22 handoff (never-compress). |
+| Next queued | Calendar **D111** — TaskWizard onto shared shell (W23; never-compress). |
 
-| Block | **W22** — Resilience (D106–D110). D106–D109 done; **block gate met** (restore timed, D108). |
+| Block | **W23** next. **W22** (D106–D110) closed 2026-09-20; gate met at D108. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ |
 
@@ -340,6 +340,10 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-20 | D108 | 3, alone | Timed restore rehearsal; four checks pass; RPO 24h / RTO 60m met (restore 3 ms). W22 gate met. Suite **1787 passed / 9 skipped**. Next: D109. |
 
 | 2026-09-20 | D109 | 3, alone | Production-shaped generator + full migration chain (005 strip); rollback/forward-only docs; rehearsal 1000 items / 480 sessions. Suite **1793 passed / 9 skipped**. Next: D110. |
+
+| 2026-09-20 | D110 | 3, alone | Five load numbers + DR runbook from D108; W22 closed. Suite **1794 passed / 9 skipped**. Next: D111. |
+
+| 2026-09-20 | close | — | W22 session close (D109–D110; D106–D108 already landed). Suite re-verify **1794 passed / 9 skipped**; build green. No half-applied work; no new compression debt. Next: D111. |
 
 
 

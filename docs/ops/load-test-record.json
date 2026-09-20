@@ -1,0 +1,261 @@
+{
+  "ok": true,
+  "unit": "D110",
+  "performedAt": "2026-09-20T10:00:28.642Z",
+  "productionShaped": {
+    "seed": 20260920,
+    "counts": {
+      "competencyModels": 2,
+      "evidenceModels": 4,
+      "taskModels": 5,
+      "items": 1000,
+      "students": 320,
+      "sessions": 480,
+      "tasks": 480,
+      "calibrationJobs": 3,
+      "analysisArtefacts": 1
+    },
+    "districts": 8
+  },
+  "scenarios": [
+    {
+      "id": "wizard-autosave-latency",
+      "title": "Wizard autosave under school-network latency",
+      "configuration": {
+        "path": "PUT /api/competencies/models/:id (draft autosave body)",
+        "payloadBytesApprox": 4177,
+        "networkRttMs": 300,
+        "samples": 7,
+        "note": "Server write timed alone; perceived = write + simulated RTT (half up, half down)."
+      },
+      "serverWrite": {
+        "samplesMs": [
+          1.429,
+          1.216,
+          1.538,
+          1.237,
+          1.275,
+          1.617,
+          1.403
+        ],
+        "medianMs": 1.403,
+        "minMs": 1.216,
+        "maxMs": 1.617
+      },
+      "perceivedWithLatency": {
+        "samplesMs": [
+          312.175,
+          313.008,
+          311.917,
+          308.159,
+          311.038,
+          316.938,
+          313.256
+        ],
+        "medianMs": 312.175,
+        "minMs": 308.159,
+        "maxMs": 316.938
+      },
+      "recordedNumber": {
+        "metric": "perceived_autosave_median_ms",
+        "value": 312.175,
+        "unit": "ms"
+      }
+    },
+    {
+      "id": "dashboard-d109-bank",
+      "title": "Dashboard aggregate against D109 production-shaped bank",
+      "configuration": {
+        "seed": 20260920,
+        "items": 1000,
+        "sessions": 480,
+        "students": 320,
+        "districts": 8,
+        "samples": 7,
+        "note": "In-process reduce matching GET /api/reports/dashboard (sessions/students/tasks). Live HTTP cost is storage round-trips on top."
+      },
+      "timing": {
+        "samplesMs": [
+          0.167,
+          0.198,
+          0.152,
+          0.185,
+          0.172,
+          0.174,
+          0.191
+        ],
+        "medianMs": 0.174,
+        "minMs": 0.152,
+        "maxMs": 0.198
+      },
+      "aggregateSnapshot": {
+        "totalSessions": 480,
+        "activeStudents": 320,
+        "taskCount": 480,
+        "avgScore": 0
+      },
+      "recordedNumber": {
+        "metric": "dashboard_shaped_scan_median_ms",
+        "value": 0.174,
+        "unit": "ms"
+      }
+    },
+    {
+      "id": "concurrent-adaptive-selection",
+      "title": "Concurrent sessions — adaptive selection recompute",
+      "configuration": {
+        "cohortSize": 30,
+        "candidateItems": 50,
+        "strategy": "IRT",
+        "concurrency": "Promise.all over cohort",
+        "samples": 7
+      },
+      "wallClockCohort": {
+        "samplesMs": [
+          0.122,
+          0.047,
+          0.066,
+          0.05,
+          0.034,
+          0.027,
+          0.03
+        ],
+        "medianMs": 0.047,
+        "minMs": 0.027,
+        "maxMs": 0.122
+      },
+      "singleCall": {
+        "samplesMs": [
+          0.002,
+          0.004,
+          0.003,
+          0.003,
+          0.003,
+          0.002,
+          0.003
+        ],
+        "medianMs": 0.003,
+        "minMs": 0.002,
+        "maxMs": 0.004
+      },
+      "recordedNumber": {
+        "metric": "cohort_selection_wall_median_ms",
+        "value": 0.047,
+        "unit": "ms"
+      }
+    },
+    {
+      "id": "composite-library-activation",
+      "title": "Composite library build at Task Model activation",
+      "configuration": {
+        "taskModelId": "tm-prod-1",
+        "compiledItemCount": 200,
+        "sourceItemCount": 200,
+        "samples": 7,
+        "warningCount": 0
+      },
+      "timing": {
+        "samplesMs": [
+          0.302,
+          0.151,
+          0.145,
+          0.136,
+          0.248,
+          0.357,
+          0.226
+        ],
+        "medianMs": 0.226,
+        "minMs": 0.136,
+        "maxMs": 0.357
+      },
+      "recordedNumber": {
+        "metric": "buildCompositeLibrary_median_ms",
+        "value": 0.226,
+        "unit": "ms"
+      }
+    },
+    {
+      "id": "calibration-queue-pressure",
+      "title": "Calibration under queue pressure (D87 backpressure)",
+      "configuration": {
+        "queued": 24,
+        "running": 1,
+        "maxConcurrent": 1,
+        "depthAlarmThreshold": 20,
+        "depthAlarm": true,
+        "samples": 7,
+        "note": "Metrics over 25 jobs (1 running + 24 queued). Alarm fires when queued ≥ threshold (default 20)."
+      },
+      "timing": {
+        "samplesMs": [
+          0.007,
+          0.004,
+          0.003,
+          0.005,
+          0.006,
+          0.005,
+          0.044
+        ],
+        "medianMs": 0.005,
+        "minMs": 0.003,
+        "maxMs": 0.044
+      },
+      "admitDecision": {
+        "samplesMs": [
+          0.002,
+          0.002,
+          0.003,
+          0.002,
+          0.002,
+          0.003,
+          0.003
+        ],
+        "medianMs": 0.002,
+        "minMs": 0.002,
+        "maxMs": 0.003
+      },
+      "depthAlarmEmittedAt": "2026-09-20T10:00:28.642Z",
+      "depthAlarmMessage": "[calibrationQueue] depth alarm: queued=24 threshold=20 running=1 maxConcurrent=1 at 2026-09-20T10:00:28.642Z",
+      "recordedNumber": {
+        "metric": "queue_metrics_median_us",
+        "value": 5,
+        "unit": "µs",
+        "also": {
+          "depthAlarm": true,
+          "queued": 24
+        }
+      }
+    }
+  ],
+  "recordedNumbers": [
+    {
+      "metric": "perceived_autosave_median_ms",
+      "value": 312.175,
+      "unit": "ms"
+    },
+    {
+      "metric": "dashboard_shaped_scan_median_ms",
+      "value": 0.174,
+      "unit": "ms"
+    },
+    {
+      "metric": "cohort_selection_wall_median_ms",
+      "value": 0.047,
+      "unit": "ms"
+    },
+    {
+      "metric": "buildCompositeLibrary_median_ms",
+      "value": 0.226,
+      "unit": "ms"
+    },
+    {
+      "metric": "queue_metrics_median_us",
+      "value": 5,
+      "unit": "µs",
+      "also": {
+        "depthAlarm": true,
+        "queued": 24
+      }
+    }
+  ]
+}
