@@ -36,7 +36,7 @@ npm run build
   green
 ```
 
-Tip at session close: **`4289591`** ≡ `main/master`. D110 product: `fecdd5c`. D109: `372720f`.
+Tip at session close: **`0e5b0fa`** ≡ `main/master`. D110 product: `fecdd5c`. D109: `372720f`.
 
 ## Next block
 

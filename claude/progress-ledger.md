@@ -343,7 +343,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-20 | D110 | 3, alone | Five load numbers + DR runbook from D108; W22 closed. Suite **1794 passed / 9 skipped**. Next: D111. |
 
-| 2026-09-20 | close | — | W22 session close (D109–D110; D106–D108 already landed). Suite re-verify **1794 passed / 9 skipped**; build green; tip **`4289591`** ≡ `main/master`. No half-applied work; no new compression debt. Next: D111. |
+| 2026-09-20 | close | — | W22 session close (D109–D110; D106–D108 already landed). Suite re-verify **1794 passed / 9 skipped**; build green; tip **`0e5b0fa`** ≡ `main/master`. No half-applied work; no new compression debt. Next: D111. |
 
 
 
