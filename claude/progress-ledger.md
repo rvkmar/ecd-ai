@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D106** — JSON-vs-Mongo ADR 0007 + production harness boundary. Handoff: `claude/day106-json-vs-mongo-adr.md`. |
+| Last completed unit | **D107** — scheduled encrypted full backup + inventory. Handoff: `claude/day107-backup-encrypted-scheduled.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D107** — backup (W22 Resilience). |
+| Next queued | Calendar **D108** — restore rehearsal, timed (W22; never-compress). |
 
-| Block | **W22** — Resilience (D106–D110). D106 done. |
+| Block | **W22** — Resilience (D106–D110). D106–D107 done. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ **W22 open:** a restore from backup is performed and timed (block gate). |
 
@@ -334,6 +334,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-20 | close | — | W21 session close (D101–D105). Suite re-verify **1767 passed / 9 skipped**; build green; tip **`c55340f`** ≡ `main/master`. No half-applied work; no new compression debt. Next: D106. |
 
 | 2026-09-20 | D106 | 2, alone | ADR 0007: Mongo production / JSON harness; boot refuse + compose pin. Two-store premise rewritten. Suite **1775 passed / 9 skipped**. Next: D107. |
+
+| 2026-09-20 | D107 | 2, alone | Scheduled AES-256-GCM full backup + inventory (jobs/artefacts in ECD JSON); compose key-from-env. Suite **1784 passed / 9 skipped**. Next: D108 (never-compress). |
 
 
 

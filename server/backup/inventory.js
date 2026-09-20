@@ -1,0 +1,173 @@
+/**
+ * D107 — what a full backup must cover (ADR 0007 + calendar exit check).
+ *
+ * Every live collection is either included in the encrypted archive or
+ * explicitly excluded with a reason. Do not add a store without updating this
+ * list — restore (D108) and DR (D110) read it as the contract.
+ */
+
+export const BACKUP_FILE_PREFIX = "ecd-full-";
+export const BACKUP_FILE_SUFFIX = ".ecd.bak.enc";
+
+/** @typedef {{ id: string, store: string, pathInArchive: string | null, reason: string }} BackupInventoryRow */
+
+
+/** @type {readonly BackupInventoryRow[]} */
+export const BACKUP_INVENTORY = Object.freeze([
+  // --- ECD JSON file (loadDB / saveDB) — interim until cutover ---
+  {
+    id: "items",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included — stimulus/materials are inline on items; no separate materials volume today.",
+  },
+  {
+    id: "competencyModels",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included in ECD JSON snapshot.",
+  },
+  {
+    id: "competencies",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included in ECD JSON snapshot.",
+  },
+  {
+    id: "evidenceModels",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included — parameter sets and calibration provenance live here.",
+  },
+  {
+    id: "taskModels",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included in ECD JSON snapshot.",
+  },
+  {
+    id: "tasks",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included in ECD JSON snapshot (local delivery instances).",
+  },
+  {
+    id: "students",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included in ECD JSON snapshot.",
+  },
+  {
+    id: "sessions",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included — examinee responses cannot be rebuilt.",
+  },
+  {
+    id: "announcements",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included in ECD JSON snapshot.",
+  },
+  {
+    id: "policies",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included in ECD JSON snapshot.",
+  },
+  {
+    id: "curricularPolicies",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included in ECD JSON snapshot.",
+  },
+  {
+    id: "assemblyModels",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included in ECD JSON snapshot.",
+  },
+  {
+    id: "qMatrixModels",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included in ECD JSON snapshot.",
+  },
+  {
+    id: "compositeLibrary",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included — rebuildable from operational TMs but retained for exact active packages.",
+  },
+  {
+    id: "calibrationJobs",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included — ADR 0002 provenance; must not be dropped from backup.",
+  },
+  {
+    id: "analysisArtefacts",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included — DIF/equating/CTT artefacts; must not be dropped from backup.",
+  },
+  {
+    id: "auditLog",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included — append-only governance trail.",
+  },
+  {
+    id: "questions",
+    store: "ecd-json-and-mongo",
+    pathInArchive: "mongo/questions.json",
+    reason: "Mongo export when the adapter runs against Mongo; also present in ECD JSON default shape — archive carries the Mongo export as authority for users/questions.",
+  },
+  // --- Mongo (dbAdapter) ---
+  {
+    id: "users",
+    store: "mongo",
+    pathInArchive: "mongo/users.json",
+    reason: "Included — roster + bcrypt hashes; required to restore login.",
+  },
+  // --- Optional filesystem materials ---
+  {
+    id: "uploaded-materials",
+    store: "materials-dir",
+    pathInArchive: "materials/",
+    reason: "Included when ECD_MATERIALS_DIR is set and non-empty; today stimulus is inline on items so this is usually empty.",
+  },
+  // --- Explicit exclusions ---
+  {
+    id: "r-backend-image",
+    store: "excluded",
+    pathInArchive: null,
+    reason: "Excluded — rebuildable from published image pin; not student data.",
+  },
+  {
+    id: "node-modules-and-build",
+    store: "excluded",
+    pathInArchive: null,
+    reason: "Excluded — rebuildable from git + npm ci.",
+  },
+  {
+    id: "opportunistic-db-json-copies",
+    store: "excluded-as-primary",
+    pathInArchive: null,
+    reason: "Excluded as the *scheduled* backup — saveDB still writes unencrypted db.json.* crash copies; health prefers encrypted ecd-full-*.ecd.bak.enc.",
+  },
+  {
+    id: "mongo-volume-raw",
+    store: "deferred-ops",
+    pathInArchive: null,
+    reason: "App-level backup exports users/questions via dbAdapter. Raw mongo_data volume snapshots remain an ops option for D108/D110; not required for this unit's exit check.",
+  },
+]);
+
+export function inventoryIncluded() {
+  return BACKUP_INVENTORY.filter((r) => r.pathInArchive != null);
+}
+
+export function inventoryExcluded() {
+  return BACKUP_INVENTORY.filter((r) => r.pathInArchive == null);
+}

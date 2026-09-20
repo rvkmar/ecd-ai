@@ -276,7 +276,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 
 | T-NET-02 | Compromised `r-backend` calls node APIs | If credentials present in env, lateral movement | **Accepted** + verify | R should not hold user JWTs; confirm env on compose |
 
-| T-NET-03 | Insider edits Mongo / `db.json` | Arbitrary score/param rewrite | **Accepted** (insider) → **Scheduled W21** audit log detects app-path changes only | DB-level integrity needs backup + audit + access control outside app |
+| T-NET-03 | Insider edits Mongo / `db.json` | Arbitrary score/param rewrite | **Accepted** (insider) → **Control** (app-path audit D101) + **Scheduled** backup (D107) | Insider still wins at rest; encrypted scheduled backup + audit detect app-path changes |
 
 | T-NET-04 | JSON `saveDB` race clobbers concurrent writes | Lost updates / integrity | **Accepted** (harness + interim ECD file) → **Scheduled** cutover | ADR 0007: Mongo is production; ECD `loadDB` file remains interim until W22 migration; harness JSON stays out of production via boot guard |
 

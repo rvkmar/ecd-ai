@@ -1,0 +1,35 @@
+# Backup inventory (D107)
+
+Scheduled encrypted backups are written by `server/backup/runFullBackup.js`
+when `ECD_BACKUP_ENABLED=1`. Format: `ecd-full-<iso>.ecd.bak.enc` (AES-256-GCM).
+Encryption key: `ECD_BACKUP_ENCRYPTION_KEY` from the host `.env` / secret
+manager — referenced by compose as `${ECD_BACKUP_ENCRYPTION_KEY}`, never
+inlined in `docker-compose.yml`.
+
+Default schedule: `20 2 * * *` UTC (`ECD_BACKUP_CRON`). Retention: 14 days
+(`ECD_BACKUP_RETENTION_DAYS`). Age is exposed on `/api/health` /
+`/api/metrics` as `backup.ageMs` (prefers encrypted full backups) and
+alarmed as `backup.age` (D105).
+
+## Collection coverage
+
+The authoritative list is `server/backup/inventory.js` (`BACKUP_INVENTORY`).
+Summary:
+
+| Included | How |
+|---|---|
+| ECD entities (items, models, sessions, tasks, students, policies, …) | `ecd/db.json` snapshot |
+| `calibrationJobs`, `analysisArtefacts`, `auditLog` | Inside `ecd/db.json` (must not be skipped) |
+| Task materials | Inline on `items.stimulus` today; optional `ECD_MATERIALS_DIR` → `materials/` |
+| `users`, `questions` | `mongo/users.json`, `mongo/questions.json` via `dbAdapter` |
+
+| Excluded | Why |
+|---|---|
+| R image / node_modules / frontend build | Rebuildable |
+| Opportunistic `db.json.*` crash copies | Not the scheduled encrypted set |
+| Raw `mongo_data` volume dump | Optional ops snapshot; app export covers roster for this unit |
+
+## Restore
+
+Timed restore rehearsal is **D108** (never-compress). Helper to open an
+archive in tests: `openEncryptedBackup` in `runFullBackup.js`.

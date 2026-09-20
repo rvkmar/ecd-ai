@@ -9,6 +9,10 @@ import path from "path";
 import mongoose from "mongoose";
 import { loadDB, backupDirPath } from "../../src/utils/db-server.js";
 import { describeStorageMode } from "../config/storageMode.js";
+import {
+  BACKUP_FILE_PREFIX,
+  BACKUP_FILE_SUFFIX,
+} from "../backup/inventory.js";
 import { getRHealth, rBackendUrl } from "../r/rClient.js";
 import { computeQueueMetrics } from "../r/calibrationQueueLimits.js";
 import { getMigrationStatus } from "../migrations/runner.js";
@@ -57,11 +61,21 @@ function probeUserStore() {
 function probeBackupAge() {
   const dir = backupDirPath();
   if (!fs.existsSync(dir)) {
-    return { ok: true, dir, latestAt: null, ageMs: null, fileCount: 0 };
+    return {
+      ok: true,
+      dir,
+      latestAt: null,
+      ageMs: null,
+      fileCount: 0,
+      encryptedFull: { fileCount: 0, latestAt: null, ageMs: null },
+    };
   }
   let latestAt = null;
   let latestName = null;
   let fileCount = 0;
+  let encLatestAt = null;
+  let encLatestName = null;
+  let encCount = 0;
   for (const name of fs.readdirSync(dir)) {
     const full = path.join(dir, name);
     let st;
@@ -77,14 +91,33 @@ function probeBackupAge() {
       latestAt = ms;
       latestName = name;
     }
+    const isEnc =
+      name.startsWith(BACKUP_FILE_PREFIX) && name.endsWith(BACKUP_FILE_SUFFIX);
+    if (isEnc) {
+      encCount += 1;
+      if (encLatestAt == null || ms > encLatestAt) {
+        encLatestAt = ms;
+        encLatestName = name;
+      }
+    }
   }
+  // Prefer encrypted scheduled backups for age / alerts (D107).
+  const ageSourceAt = encLatestAt != null ? encLatestAt : latestAt;
+  const ageSourceName = encLatestName != null ? encLatestName : latestName;
   return {
     ok: true,
     dir,
-    latestFile: latestName,
-    latestAt: latestAt == null ? null : new Date(latestAt).toISOString(),
-    ageMs: latestAt == null ? null : Date.now() - latestAt,
+    latestFile: ageSourceName,
+    latestAt: ageSourceAt == null ? null : new Date(ageSourceAt).toISOString(),
+    ageMs: ageSourceAt == null ? null : Date.now() - ageSourceAt,
     fileCount,
+    encryptedFull: {
+      fileCount: encCount,
+      latestFile: encLatestName,
+      latestAt:
+        encLatestAt == null ? null : new Date(encLatestAt).toISOString(),
+      ageMs: encLatestAt == null ? null : Date.now() - encLatestAt,
+    },
   };
 }
 

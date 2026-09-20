@@ -28,6 +28,7 @@ import analysisArtefactsRoutes from "./routes/analysisArtefactsRoutes.js";
 import { recoverRunningJobs, processQueuedJobs } from "./r/calibrationWorker.js";
 import { getRHealth, rBackendUrl } from "./r/rClient.js";
 import startScheduledCalibrationCron from "./cron/scheduledCalibrationCron.js";
+import startBackupCron from "./cron/backupCron.js";
 import usersRoutes from "./routes/usersRoutes.js";
 // D48: the three collections that had schema, lifecycle validators and no
 // HTTP surface at all -- artefacts 4 and 6 of the seven-artefact contract
@@ -161,6 +162,16 @@ app.listen(PORT, () => {
       console.log("scheduledCalibrationCron started (enqueue only; never ingests)");
     } catch (err) {
       console.error("scheduledCalibrationCron failed to start:", err);
+    }
+  }
+  // D107: encrypted full backup on a schedule. Key must come from the host
+  // env / secret manager (not hardcoded in compose YAML).
+  if (process.env.ECD_BACKUP_ENABLED === "1") {
+    try {
+      startBackupCron();
+      console.log("backupCron started (encrypted full backup)");
+    } catch (err) {
+      console.error("backupCron failed to start:", err);
     }
   }
 });

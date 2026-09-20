@@ -127,4 +127,11 @@ describe("D94 compose publish posture (mongo unpublished; R expose)", () => {
     expect(block).toMatch(/DB_MODE=mongo/);
     expect(block).not.toMatch(/DB_MODE=json/);
   });
+
+  it("compose enables scheduled backup without inlining the encryption key (D107)", () => {
+    const block = serviceBlock("node");
+    expect(block).toMatch(/ECD_BACKUP_ENABLED=1/);
+    expect(block).toMatch(/ECD_BACKUP_ENCRYPTION_KEY=\$\{ECD_BACKUP_ENCRYPTION_KEY\}/);
+    expect(block).not.toMatch(/ECD_BACKUP_ENCRYPTION_KEY=[0-9a-fA-F]{32,}/);
+  });
 });

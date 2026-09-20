@@ -28,6 +28,13 @@ services:
       - R_WORKERS=1
       - ECD_DB_FILE=/data/db.json
       - ECD_BACKUP_DIR=/data/backups
+      # D107: scheduled encrypted full backup. Set ECD_BACKUP_ENCRYPTION_KEY
+      # in the host .env / secret manager — never commit the key value here.
+      - ECD_BACKUP_ENABLED=1
+      - ECD_BACKUP_CRON=20 2 * * *
+      - ECD_BACKUP_RETENTION_DAYS=14
+      - ECD_BACKUP_ENCRYPTION_KEY=${ECD_BACKUP_ENCRYPTION_KEY}
+      - ALERT_BACKUP_MAX_AGE_MS=129600000
     depends_on:
       - mongo
       - r-backend
