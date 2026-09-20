@@ -25,10 +25,14 @@ submit outcome counters; `toStatus` on audit query; W21 gate test.
 
 ```
 NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
-  1767 passed | 9 skipped (1776) — 154 files (~261s)
+  1767 passed | 9 skipped (1776) — 154 files (~261s at unit close; ~273s at session close)
 
 npm run build
   green (~16s)
+
+git
+  tip c55340f — D105 completed -- audit viewer, four alerts, and W21 gate.
+  master ≡ main/master (pushed)
 ```
 
 ## Delivered

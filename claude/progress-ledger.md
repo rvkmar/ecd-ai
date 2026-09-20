@@ -331,6 +331,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-20 | D105 | 2, alone | Audit viewer + four alerts + W21 gate (TM→operational one query). Suite **1767 passed / 9 skipped**. W21 closed. Next: D106. |
 
+| 2026-09-20 | close | — | W21 session close (D101–D105). Suite re-verify **1767 passed / 9 skipped**; build green; tip **`c55340f`** ≡ `main/master`. No half-applied work; no new compression debt. Next: D106. |
+
 
 
 ## Compression debt

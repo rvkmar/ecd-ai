@@ -15,3 +15,4 @@ evidence” is one `GET /api/auditLog` query (and the Settings → System →
 Audit viewer).
 
 Suite at close: **1767 passed / 9 skipped**. Build green.
+Tip: **`c55340f`** ≡ `main/master`.
