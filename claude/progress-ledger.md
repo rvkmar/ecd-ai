@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D100** — Tenant admin + scope inspector + W20 gate. Handoff: `claude/day100-w20-tenant-admin-scope-inspector.md`; block: `claude/day100-w20-block-close.md`. |
+| Last completed unit | **D101** — auditLog collection + write-path integration (W21). Handoff: `claude/day101-auditlog-write-path.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,11 +52,11 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D101** — auditLog collection + write-path integration (W21, never-compress alone if Tier 3). |
+| Next queued | Calendar **D102** — migrate ad hoc lifecycle fields onto the audit log (W21, **never-compress**, alone). |
 
-| Block | **W20** — Multi-tenancy (**closed** D96–D100). Gate met: district cannot read another district’s data (inspector ≡ API). |
+| Block | **W21** — Auditability and observability (D101–D105). D101 done; gate due at D105. |
 
-| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ |
+| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ **W21 open:** “who promoted this Task Model to operational, when, and on what evidence” is one query (D105). |
 
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 
@@ -320,6 +320,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-19 | D100 | 3, alone | Scope inspector API/UI; W20 gate test (inspector ≡ students API; foreign district 403). Suite **1728 passed / 9 skipped**. W20 closed. |
 | 2026-09-19 | close | — | D100 / W20 session close. Suite **1728 passed / 9 skipped**; build green. No half-applied work; no new compression debt. |
 | 2026-09-19 | close | — | W20 session-close re-verify: suite **1728 passed / 9 skipped**; build green; tip **`7ff7586`** ≡ `main/master`. Exit checks already executed (D100 gate). Next: D101. |
+
+| 2026-09-20 | D101 | 2, alone | auditLog via saveDB chokepoint; auth/user events; admin GET; suite **1742 passed / 9 skipped**. Next: D102 (never-compress). |
 
 
 

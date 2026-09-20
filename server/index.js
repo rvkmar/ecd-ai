@@ -36,6 +36,8 @@ import announcementsRoutes from "./routes/announcementsRoutes.js";
 import tenancyRoutes from "./routes/tenancyRoutes.js";
 import { authenticateToken, authorizeRole } from "./utils/authMiddleware.js";
 import { beginTenancyRequest } from "./utils/tenancyContext.js";
+import { beginAuditRequest } from "./utils/auditContext.js";
+import auditLogRoutes from "./routes/auditLogRoutes.js";
 
 const app = express();
 app.use(express.json());
@@ -46,8 +48,12 @@ app.use(bodyParser.json());
 applyCors(app, cors);
 
 // D98: request-scoped tenancy bag (mutated by authenticateToken).
+// D101: request id + audit actor bag (actor bound on authenticateToken).
 app.use((req, res, next) => {
   beginTenancyRequest();
+  const requestId = beginAuditRequest(req.headers["x-request-id"]);
+  res.setHeader("X-Request-Id", requestId);
+  req.requestId = requestId;
   next();
 });
 
@@ -98,6 +104,7 @@ app.use("/api/curricularPolicies", curricularPoliciesRoutes);
 app.use("/api/calibrate", calibrationRoutes);
 app.use("/api/calibrationJobs", calibrationJobsRoutes);
 app.use("/api/analysisArtefacts", analysisArtefactsRoutes);
+app.use("/api/auditLog", auditLogRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/qMatrixModels", qMatrixModelsRoutes);
 app.use("/api/assemblyModels", assemblyModelsRoutes);

@@ -24,6 +24,7 @@ import {
   assertPasswordLoginAllowed,
 } from "../auth/localIdentity.js";
 import { tenancyClaimsFromUser } from "../utils/tenancy.js";
+import { recordAuditEvent } from "../../src/utils/db-server.js";
 
 const router = express.Router();
 
@@ -156,6 +157,20 @@ export async function createUserRecord(payload = {}) {
   }
 }
 
+function auditAuthFailure(username, reason) {
+  try {
+    recordAuditEvent({
+      action: "auth.failure",
+      entity: { collection: "users", id: username ? String(username) : null, version: null },
+      detail: { reason },
+      actor: { userId: username ? String(username) : null, role: null },
+    });
+  } catch (err) {
+    // Auth path must still return 401 even if the audit store is unavailable.
+    console.error("audit auth.failure failed:", err?.message || err);
+  }
+}
+
 // ------------------------------
 // POST /api/users/login
 // ------------------------------
@@ -172,6 +187,7 @@ router.post("/login", loginLimiter, async (req, res) => {
   const lockoutKey = String(username);
   const lockoutState = getLockoutState(lockoutKey);
   if (lockoutState.locked) {
+    auditAuthFailure(username, "locked");
     return res.status(423).json({
       error: "Account temporarily locked due to repeated failed login attempts. Please try again later.",
     });
@@ -185,23 +201,27 @@ router.post("/login", loginLimiter, async (req, res) => {
     // can't use this endpoint to enumerate valid usernames / EMIS ids.
     if (!user) {
       recordFailedAttempt(lockoutKey);
+      auditAuthFailure(username, "invalid_credentials");
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
     const allowed = assertPasswordLoginAllowed(user);
     if (!allowed.ok) {
       recordFailedAttempt(lockoutKey);
+      auditAuthFailure(username, "login_not_allowed");
       return res.status(allowed.status).json({ error: allowed.error });
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       recordFailedAttempt(lockoutKey);
+      auditAuthFailure(username, "invalid_credentials");
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
     if (user.role !== role) {
       recordFailedAttempt(lockoutKey);
+      auditAuthFailure(username, "invalid_credentials");
       return res.status(401).json({ error: "Invalid username or password" });
     }
 

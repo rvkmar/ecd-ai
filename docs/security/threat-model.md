@@ -327,7 +327,7 @@ Each row: **Threat → Impact → Disposition → Evidence / next unit**.
 | **W20 D97** | Storage-boundary tenancy (ALS + loadDB/dbAdapter). |
 | **W20 D98-D100** | Row-level negatives + aggregate leakage + tenant admin / W20 gate |
 
-| **W21** | Audit log for lifecycle / ingest / auth failures (insider app-path detection) |
+| **W21** | Audit log for lifecycle / ingest / auth failures (insider app-path detection) — **D101 landed** (saveDB chokepoint); D102–D105 remain |
 
 | **W22** | Storage ADR (JSON vs Mongo), backup/restore, T-NET-01/04 operational hardening |
 

@@ -28,6 +28,10 @@ vi.mock("../../utils/dbAdapter.js", () => ({
   },
 }));
 
+vi.mock("../../../src/utils/db-server.js", () => ({
+  recordAuditEvent: vi.fn(),
+}));
+
 const TEST_PASSWORD = "correct-horse-battery-staple";
 
 async function makeTestUser(overrides = {}) {

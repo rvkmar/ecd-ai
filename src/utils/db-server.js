@@ -7,9 +7,18 @@ import {
   mergeScopedDbSave,
 } from "../../server/utils/tenancyScope.js";
 import { getTenancyContext } from "../../server/utils/tenancyContext.js";
+import {
+  applySaveAudits,
+  pushAuditEvent,
+} from "../../server/utils/auditLog.js";
 
-const DB_FILE = process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
-const BACKUP_DIR = process.env.ECD_BACKUP_DIR || path.join(path.dirname(DB_FILE), "backups");
+function dbFilePath() {
+  return process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
+}
+
+function backupDirPath() {
+  return process.env.ECD_BACKUP_DIR || path.join(path.dirname(dbFilePath()), "backups");
+}
 
 // ------------------------------
 // Helpers: atomic write + backup
@@ -22,6 +31,8 @@ function atomicWrite(filePath, dataStr) {
 }
 
 function backupDB() {
+  const BACKUP_DIR = backupDirPath();
+  const DB_FILE = dbFilePath();
   if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupFile = path.join(BACKUP_DIR, `db.json.${timestamp}`);
@@ -46,6 +57,7 @@ function defaultDB() {
     calibrationJobs: [],
     analysisArtefacts: [],
     announcements: [],
+    auditLog: [],
   };
 }
 
@@ -55,6 +67,7 @@ function defaultDB() {
 
 /** Unscoped disk read — boot, merge-on-save, tests that need the full file. */
 export function readRawDB() {
+  const DB_FILE = dbFilePath();
   if (!fs.existsSync(DB_FILE)) {
     fs.writeFileSync(DB_FILE, JSON.stringify(defaultDB(), null, 2));
   }
@@ -81,18 +94,46 @@ export function loadDB() {
 
 /**
  * D97 — merge scoped writes back onto the full file so other tenants are not wiped.
+ * D101 — before write, diff against the previous raw snapshot and append
+ * auditLog rows for lifecycle / ingest / parameter-set changes. Routes do
+ * not import the audit module; a transition that is not logged is a
+ * transition that did not happen (through this path).
+ *
+ * @param {object} db
+ * @param {{ skipAudit?: boolean }} [options]
  */
-export function saveDB(db) {
+export function saveDB(db, options = {}) {
+  const previous = readRawDB();
   const ctx = getTenancyContext();
-  const toWrite =
+  let toWrite =
     ctx && !ctx.unscoped && ctx.role !== "admin"
-      ? mergeScopedDbSave(readRawDB(), db, ctx)
+      ? mergeScopedDbSave(previous, db, ctx)
       : db;
+  toWrite = applySaveAudits(previous, toWrite, options);
+  // When merge produced a new object, mirror auditLog onto the caller's
+  // db so in-memory holders (tests, bulk handlers) see the new rows.
+  if (toWrite !== db && Array.isArray(toWrite.auditLog)) {
+    db.auditLog = toWrite.auditLog;
+  }
   backupDB();
-  atomicWrite(DB_FILE, JSON.stringify(toWrite, null, 2));
+  atomicWrite(dbFilePath(), JSON.stringify(toWrite, null, 2));
+}
+
+/**
+ * D101 — append one audit row for events outside the JSON entity save
+ * path (auth failures, dbAdapter user/role/tenant changes).
+ *
+ * @param {{ action: string, entity?: object, detail?: object, actor?: object }} partial
+ */
+export function recordAuditEvent(partial) {
+  const db = readRawDB();
+  const entry = pushAuditEvent(db, partial);
+  saveDB(db, { skipAudit: true });
+  return entry;
 }
 
 export function clearDB() {
+  const DB_FILE = dbFilePath();
   if (fs.existsSync(DB_FILE)) {
     fs.unlinkSync(DB_FILE);
   }

@@ -12,6 +12,7 @@ import {
   runWithTenancy,
   tenancyContextFromReq,
 } from "./tenancyContext.js";
+import { bindAuditActor } from "./auditContext.js";
 
 const UNSCOPED_AUTH = Object.freeze({
   role: "admin",
@@ -42,6 +43,10 @@ async function resolveAuthEpoch(username) {
 function attachUser(req, user) {
   req.user = user;
   req.viewScope = viewScopeForRole(user.role);
+  bindAuditActor({
+    userId: user.username || user.id || "",
+    role: user.role || "",
+  });
   return tenancyContextFromReq(req);
 }
 
