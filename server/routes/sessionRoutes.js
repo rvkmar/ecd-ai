@@ -26,6 +26,7 @@ import {
 } from "../delivery/parameterSourceResolution.js";
 import { resolveAssemblyProgress } from "../delivery/assemblyProgress.js";
 import { logger } from "../utils/logger.js";
+import { recordSubmitOutcome } from "../utils/submitStats.js";
 // D56: Activity Selection. /next-task's whole strategy block used to live
 // inline below; it now lives in one module that reads the composite library
 // and the live posteriors instead of db.questions. See that file's header.
@@ -278,6 +279,10 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     taskId: taskId || null,
     itemId: itemId || null,
     questionId: questionId || null,
+  });
+
+  res.on("finish", () => {
+    recordSubmitOutcome(res.statusCode < 400);
   });
 
   const db = loadDB();

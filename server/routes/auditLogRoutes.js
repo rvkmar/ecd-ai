@@ -1,6 +1,11 @@
 // server/routes/auditLogRoutes.js
 // D101: append-only audit log. Admin may read; writes happen only through
 // saveDB / recordAuditEvent — there is no POST body path here.
+//
+// D105 / W21 tenancy: auditLog is deliberately NOT in TENANT_SCOPED_COLLECTIONS.
+// This surface is admin-only and returns rows from every tenant — accountability
+// requires seeing who promoted what across the system. District/teacher get 403.
+// Do not "fix" that by applying D97 filters here.
 
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
@@ -17,11 +22,11 @@ const APPEND_ONLY =
   "auditLog is append-only — entries are written by the persistence path, not by HTTP mutation.";
 
 // GET /api/auditLog
-// ?entityCollection=  ?entityId=  ?action=  ?actor=  ?from=  ?to=
+// ?entityCollection=  ?entityId=  ?action=  ?actor=  ?from=  ?to=  ?toStatus=
 router.get("/", canView, (req, res) => {
   const db = loadDB();
   let rows = Array.isArray(db.auditLog) ? [...db.auditLog] : [];
-  const { entityCollection, entityId, action, actor, from, to } = req.query;
+  const { entityCollection, entityId, action, actor, from, to, toStatus } = req.query;
 
   if (entityCollection) {
     rows = rows.filter((r) => r.entity?.collection === entityCollection);
@@ -31,6 +36,9 @@ router.get("/", canView, (req, res) => {
   }
   if (action) {
     rows = rows.filter((r) => r.action === action);
+  }
+  if (toStatus) {
+    rows = rows.filter((r) => r.detail?.to === toStatus);
   }
   if (actor) {
     rows = rows.filter(

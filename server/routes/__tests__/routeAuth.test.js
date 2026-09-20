@@ -44,6 +44,8 @@ import qMatrixModelsRoutes from "../qMatrixModelsRoutes.js";
 import assemblyModelsRoutes from "../assemblyModelsRoutes.js";
 import compositeLibraryRoutes from "../compositeLibraryRoutes.js";
 import announcementsRoutes from "../announcementsRoutes.js";
+import auditLogRoutes from "../auditLogRoutes.js";
+import opsRoutes from "../opsRoutes.js";
 
 // One router per previously-unauthenticated route file, plus the base path
 // it's normally mounted at in server/index.js (used only for a readable
@@ -69,6 +71,8 @@ const PROTECTED_ROUTERS = [
   { name: "assemblyModelsRoutes", path: "/api/assemblyModels", router: assemblyModelsRoutes },
   { name: "compositeLibraryRoutes", path: "/api/compositeLibrary", router: compositeLibraryRoutes },
   { name: "announcementsRoutes", path: "/api/announcements", router: announcementsRoutes },
+  { name: "auditLogRoutes", path: "/api/auditLog", router: auditLogRoutes },
+  { name: "opsRoutes", path: "/api/ops", router: opsRoutes },
 ];
 
 describe.each(PROTECTED_ROUTERS)(

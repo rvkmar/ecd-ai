@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D104** — health, readiness, metrics + client error tracking. Handoff: `claude/day104-health-readiness-metrics.md`. |
+| Last completed unit | **D105** — audit viewer + system health + four alerts; **W21 gate met**. Handoff: `claude/day105-w21-audit-viewer-health-alerts.md`. Block close: `claude/day105-w21-block-close.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,11 +52,11 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D105** — audit viewer + system health screen + four alerts + W21 handoff (gate). |
+| Next queued | Calendar **D106** — JSON-vs-Mongo ADR (W22 Resilience). |
 
-| Block | **W21** — Auditability and observability (D101–D105). D101–D104 done; gate due at D105. |
+| Block | **W22** — Resilience (D106–D110). W21 closed. |
 
-| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ **W21 open:** “who promoted this Task Model to operational, when, and on what evidence” is one query (D105). |
+| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ **W22 open:** a restore from backup is performed and timed (block gate). |
 
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 
@@ -328,6 +328,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-20 | D103 | 2, alone | Structured JSON logs + redaction; request-id through submit and R client; suite **1750 passed / 9 skipped**. Next: D104. |
 
 | 2026-09-20 | D104 | 2, alone | Health≠readiness endpoints + client error tracking/sourcemaps; suite **1757 passed / 9 skipped**. Next: D105 (W21 gate). |
+
+| 2026-09-20 | D105 | 2, alone | Audit viewer + four alerts + W21 gate (TM→operational one query). Suite **1767 passed / 9 skipped**. W21 closed. Next: D106. |
 
 
 

@@ -15,7 +15,8 @@
 //   Data         -> two sub-tabs: Upload (independent JSON bulk-import
 //                   cards, one per entity type) and Download (the matching
 //                   JSON exporters, same entity list, round-trip shaped)
-//   System       -> the old "Clear All Assessment Data" danger-zone action
+//   System       -> Health (D104 metrics + four alerts), Audit viewer (D105),
+//                   and the Clear All danger zone
 // ------------------------------------------------------------
 
 import React from "react";
@@ -27,6 +28,8 @@ import toast from "react-hot-toast";
 
 import UsersSettings from "./settings/UsersSettings";
 import TenancySettings from "./settings/TenancySettings";
+import AuditLogViewer from "./settings/AuditLogViewer";
+import SystemHealthPanel from "./settings/SystemHealthPanel";
 import { PolicyManager } from "@/components/policies/PolicyManager";
 import { CurricularPolicyManager } from "@/components/policies/CurricularPolicyManager";
 import BulkUploadPanel from "./settings/BulkUploadPanel";
@@ -187,7 +190,22 @@ export default function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="system" className="bg-card text-card-foreground rounded-2xl border border-border p-6">
-            <SystemSettings />
+            <Tabs defaultValue="health" className="space-y-6">
+              <TabsList className="flex flex-wrap gap-2 bg-muted p-1.5 rounded-xl h-auto">
+                <TabsTrigger value="health">Health</TabsTrigger>
+                <TabsTrigger value="audit">Audit</TabsTrigger>
+                <TabsTrigger value="danger">Danger zone</TabsTrigger>
+              </TabsList>
+              <TabsContent value="health">
+                <SystemHealthPanel />
+              </TabsContent>
+              <TabsContent value="audit">
+                <AuditLogViewer />
+              </TabsContent>
+              <TabsContent value="danger">
+                <SystemSettings />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </div>

@@ -18,6 +18,7 @@ export function useAuditLog(filters = {}, options = {}) {
   if (filters.actor) params.set("actor", filters.actor);
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
+  if (filters.toStatus) params.set("toStatus", filters.toStatus);
   const qs = params.toString() ? `?${params}` : "";
   return useQuery({
     queryKey: [...auditLogKey, filters],

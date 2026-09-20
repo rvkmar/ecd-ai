@@ -39,6 +39,7 @@ import { beginTenancyRequest } from "./utils/tenancyContext.js";
 import { beginAuditRequest } from "./utils/auditContext.js";
 import auditLogRoutes from "./routes/auditLogRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
+import opsRoutes from "./routes/opsRoutes.js";
 
 const app = express();
 app.use(express.json());
@@ -109,6 +110,7 @@ app.use("/api/calibrate", calibrationRoutes);
 app.use("/api/calibrationJobs", calibrationJobsRoutes);
 app.use("/api/analysisArtefacts", analysisArtefactsRoutes);
 app.use("/api/auditLog", auditLogRoutes);
+app.use("/api/ops", opsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/qMatrixModels", qMatrixModelsRoutes);
 app.use("/api/assemblyModels", assemblyModelsRoutes);
