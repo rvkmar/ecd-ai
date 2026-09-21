@@ -50,6 +50,12 @@ describe("Presentation Model authoring is not the stub", () => {
   it("stub file is gone", () => {
     expect(existsSync(join(here, "../../delivery/PresentationModelStub.jsx"))).toBe(false);
   });
+
+  it("D114 Storybook stories exist for light/dark toolbar review", () => {
+    expect(
+      existsSync(join(here, "../__stories__/PresentationModelWizard.stories.jsx"))
+    ).toBe(true);
+  });
 });
 
 describe("PresentationModelWizard shared-shell imports (convention A)", () => {

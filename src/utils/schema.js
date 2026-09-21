@@ -704,9 +704,9 @@ export const schema = {
   //
   // Item-level stimulus/interaction stays on `items` and still bakes into
   // compositeLibrary per ADR 0003. This collection is the session/task
-  // overlay ItemPresenter already refused to invent locally. Library bake
-  // of a pointer, and SessionPlayer obedience, are later W23 units
-  // (docs/adr/0008-presentation-library-bake.md).
+  // overlay ItemPresenter already refused to invent locally. D114 bakes a
+  // presentationModelId pointer on compositeLibrary (ADR 0008); SessionPlayer
+  // obedience is D115.
   //
   // Named `presentationModels` so dbAdapter.js's trailing-"s" singularizer
   // yields `presentationModel`. Plain-shape style so the deep
@@ -756,6 +756,8 @@ export const schema = {
     id: 'string',
     taskModelId: 'string',
     taskModelVersion: 'number',
+    // D114 / ADR 0008: pointer only — never a baked accessibility/layout copy.
+    presentationModelId: 'string',
     compiledAt: 'date',
     active: 'boolean',
     items: 'array',
@@ -4962,6 +4964,38 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
     if (db && obj.taskModelId && !taskModel) {
       errors.push(`Invalid taskModelId: ${obj.taskModelId}`);
+    }
+
+    // D114 / ADR 0008: optional pointer. When present it must refer to a
+    // Presentation Model bound to the same Task Model (+ version when set).
+    // Overlay fields must never appear on the package (silence that class
+    // of bake by refusing known overlay keys if somehow supplied).
+    if (obj.layout !== undefined || obj.conditionalDisplay !== undefined || obj.accessibility !== undefined) {
+      errors.push(
+        "compositeLibrary must not bake Presentation Model overlay fields (layout, conditionalDisplay, accessibility); use presentationModelId only (ADR 0008)."
+      );
+    }
+    if (obj.presentationModelId != null && obj.presentationModelId !== "") {
+      if (typeof obj.presentationModelId !== "string") {
+        errors.push("presentationModelId must be a string when set.");
+      } else if (db) {
+        const pm = db.presentationModels?.find((m) => m.id === obj.presentationModelId);
+        if (!pm) {
+          errors.push(`Invalid presentationModelId: ${obj.presentationModelId}`);
+        } else if (pm.taskModelId !== obj.taskModelId) {
+          errors.push(
+            `presentationModelId '${obj.presentationModelId}' is bound to taskModelId '${pm.taskModelId}', not this library's '${obj.taskModelId}'.`
+          );
+        } else if (
+          typeof obj.taskModelVersion === "number" &&
+          typeof pm.taskModelVersion === "number" &&
+          pm.taskModelVersion !== obj.taskModelVersion
+        ) {
+          errors.push(
+            `presentationModelId '${obj.presentationModelId}' is bound to taskModelVersion ${pm.taskModelVersion}, not this library's ${obj.taskModelVersion}.`
+          );
+        }
+      }
     }
 
     if (obj.items !== undefined && !Array.isArray(obj.items)) {

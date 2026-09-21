@@ -31,6 +31,8 @@ import {
 
 const PresentationModelWizardContext = createContext(null);
 
+export { PresentationModelWizardContext };
+
 export function usePresentationModelWizard() {
   const ctx = useContext(PresentationModelWizardContext);
   if (!ctx) {

@@ -31,6 +31,8 @@ import { recordSubmitOutcome } from "../utils/submitStats.js";
 // inline below; it now lives in one module that reads the composite library
 // and the live posteriors instead of db.questions. See that file's header.
 import { selectNextActivity } from "../delivery/activitySelection.js";
+import { resolvePresentationModel } from "../delivery/presentationModelResolution.js";
+import { activePackageFor } from "../compositeLibrary/activePackage.js";
 import { recordItemUsage } from "../utils/itemExposure.js";
 // D49b: `import { log2 } from "mathjs"` stood here and was NEVER CALLED --
 // entropy() below has always used the native Math.log2. It was mathjs's only
@@ -701,8 +703,42 @@ router.get("/:id/next-task", (req, res) => {
     saveDB(db);
     return res.json({ ...decision, stopped: session.stopped });
   }
-  return res.json(decision);
+
+  // D114: attach the live Presentation Model overlay (pointer → live
+  // read). SessionPlayer does not yet obey these fields (D115); exposing
+  // them here is the delivery seam that unit will consume.
+  const presentation = attachPresentationOverlay(decision, session, db);
+  return res.json(presentation ? { ...decision, presentation } : decision);
 });
+
+/**
+ * Resolve the Presentation Model overlay for a next-task decision.
+ * Uses the active package's presentationModelId pointer when present,
+ * else live-selects by the task's Task Model binding.
+ */
+function attachPresentationOverlay(decision, session, db) {
+  if (!decision?.taskId) return null;
+  const task = (db.tasks || []).find((t) => t.id === decision.taskId);
+  const taskModelId = task?.taskModelId;
+  if (!taskModelId) return null;
+
+  const taskModel = (db.taskModels || []).find((tm) => tm.id === taskModelId);
+  const pkg = activePackageFor(taskModelId, db);
+  const resolved = resolvePresentationModel(db, {
+    presentationModelId: pkg?.presentationModelId || null,
+    taskModelId,
+    taskModelVersion:
+      typeof taskModel?.versionNumber === "number"
+        ? taskModel.versionNumber
+        : pkg?.taskModelVersion ?? null,
+  });
+
+  if (!resolved.ok) return null;
+  return {
+    presentationModelId: resolved.presentationModelId,
+    ...resolved.overlay,
+  };
+}
 
 // ------------------------------
 // POST /api/sessions/:id/play

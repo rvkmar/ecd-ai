@@ -104,6 +104,19 @@ function makeDb(overrides = {}) {
       makeItem(),
       makeItem({ id: "i2", observationId: "o2", stimulus: { layout: "single", blocks: [] }, interaction: { type: "constructed", responseComponents: [] } }),
     ],
+    presentationModels: [
+      {
+        id: "pm1",
+        name: "Default",
+        taskModelId: "tm1",
+        taskModelVersion: 3,
+        status: "confirmed",
+        locked: true,
+        layout: { itemOrder: "authored", navigation: "linear" },
+        conditionalDisplay: { showFeedback: "after_item" },
+        accessibility: { profile: "default" },
+      },
+    ],
     ...overrides,
   };
 }
@@ -115,9 +128,18 @@ describe("buildCompositeLibrary — happy path", () => {
     expect(record.taskModelId).toBe("tm1");
     expect(record.taskModelVersion).toBe(3);
     expect(record.active).toBe(false);
+    expect(record.presentationModelId).toBe("pm1");
     expect(typeof record.compiledAt).toBe("string");
     expect(record.items).toHaveLength(2);
     expect(warnings).toEqual([]);
+  });
+
+  it("never bakes Presentation Model overlay fields into the package (ADR 0008)", () => {
+    const { record } = buildCompositeLibrary(taskModel, makeDb());
+    expect(record.layout).toBeUndefined();
+    expect(record.accessibility).toBeUndefined();
+    expect(record.conditionalDisplay).toBeUndefined();
+    expect(JSON.stringify(record)).not.toMatch(/"profile":"default"/);
   });
 
   it("bakes in presentation material, interaction params, weight and evidence rule per item", () => {

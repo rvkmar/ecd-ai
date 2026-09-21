@@ -1,7 +1,7 @@
 # ADR 0008 — Presentation Model vs composite-library bake
 
-**Status:** Accepted
-**Date:** 2026-09-21 (Day 113, W23 G8 first slice)
+**Status:** Accepted (pointer bake completed D114)
+**Date:** 2026-09-21 (Day 113 authoring; Day 114 pointer)
 **Deciders:** ecd-claude build
 **Depends on:** [ADR 0003 — Composite library denormalisation boundary](0003-composite-library-denormalisation-boundary.md)
 
@@ -23,12 +23,13 @@ Presentation Model. Baking the wrong thing would either:
 - leave authoring as a stub while SessionPlayer keeps hard-coding chrome.
 
 D113 authors `presentationModels` as a first-class lifecycle-governed
-collection bound to a Task Model. It does **not** change the composite-library
-builder or SessionPlayer.
+collection bound to a Task Model. D114 stamps a `presentationModelId`
+pointer on the compiled package and resolves the overlay live at delivery
+(`/next-task`). SessionPlayer still does not obey the overlay (D115).
 
 ## Decision
 
-**Authored and stored on `presentationModels` (this unit):**
+**Authored and stored on `presentationModels` (D113):**
 
 - Layout: `itemOrder` (`authored` | `random`), `grouping`, `navigation`
 - Conditional display: `showFeedback`, `allowSkip`, `allowReview`, `showProgress`
@@ -40,21 +41,24 @@ builder or SessionPlayer.
 - Per-item stimulus blocks and interaction params
 - Evidence-activation mapping and weights of evidence
 
-**Not baked in D113 (later W23 units):**
+**Baked as pointer only (D114):**
 
-- A `presentationModelId` pointer on the compiled package or the session
-- SessionPlayer / ItemPresenter reading the overlay
+- `compositeLibrary.presentationModelId` — id of a linkable Presentation
+  Model for the same Task Model version. Selected at compile
+  (operational > confirmed > suspended). Never copies overlay fields.
+- Live resolve: `server/delivery/presentationModelResolution.js` re-reads
+  the authored record; a confirmed accessibility edit takes effect on the
+  next `/next-task` without recompile. Revising a Presentation Model does
+  **not** stale the composite library.
 
-Invalidation: revising a Presentation Model does **not** stale the composite
-library. Recalibration still does not stale it (ADR 0003). A later bake, if
-any, should be a pointer (`presentationModelId`), not a copy of accessibility
-or navigation, so an overlay edit takes effect on the next delivery without
-recompiling every package.
+**Still not done (D115):**
+
+- SessionPlayer / ItemPresenter reading and obeying the overlay in the UI
 
 ## Consequences
 
-- D113 authoring can confirm and lock a Presentation Model without pretending
-  the player obeys it.
-- Day 24's builder stays on the ADR 0003 boundary.
-- The next W23 unit that wires delivery must resolve the overlay live (or bake
-  only the id), never copy `accessibility` into `compositeLibrary.items[]`.
+- Delivery can know which Presentation Model applies before the player
+  learns to obey it.
+- Overlay edits do not require package rebuild.
+- `validateEntity("compositeLibrary")` refuses baked `layout` /
+  `conditionalDisplay` / `accessibility` on the package.

@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D113** — Presentation Model authoring (W23 G8 first slice). Handoff: `claude/day113-presentation-model-authoring.md`. |
+| Last completed unit | **D114** — Presentation Model delivery pointer + Storybook (calendar premise rewritten). Handoff: `claude/day114-presentation-pointer-storybook.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D114** — not started. Presentation Model authored; composite-library pointer bake / SessionPlayer obedience still later W23. |
+| Next queued | Calendar **D115** — SessionPlayer obeys Presentation Model + W23 gate (never-compress). Not started. |
 
-| Block | **W23** in progress (D111–D113 done; D114–D115 remain). **W22** (D106–D110) closed 2026-09-20; gate met at D108. W23 gate (Presentation Model changes examinee view) **not** met — SessionPlayer obedience later. |
+| Block | **W23** in progress (D111–D114 done; **D115** remains — never-compress gate). **W22** (D106–D110) closed 2026-09-20; gate met at D108. W23 gate (Presentation Model changes examinee view) **not** met until D115. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ |
 
@@ -165,6 +165,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D113 | product `416d99d` + boot fix `3010a09` + `claude/day113-presentation-model-authoring.md`. Suite **1894 passed / 9 skipped**. |
 
 | HEAD at 2026-09-21 W23 session close (D111–D113) | this close. Suite re-verify **1894 passed / 9 skipped**; build green (21.21s). Tip **`5d747ac`** ≡ `main/master`. Calendar D111–D113 ✅. Next: D114. |
+
+| HEAD at D114 | product + `claude/day114-presentation-pointer-storybook.md`. Suite **1905 passed / 9 skipped**. Pointer bake + live `/next-task` overlay; Storybook. Next: D115 (never-compress). |
 
 
 
@@ -361,6 +363,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-21 | close | — | W23 session close (D111–D113; not full block). Suite re-verify **1894 passed / 9 skipped**; build green; tip **`5d747ac`** ≡ `main/master`. No half-applied work; no new compression debt. Next: D114. |
 
+| 2026-09-21 | D114 | 2, alone | Premise rewritten: wizard already D113. Pointer `presentationModelId` on composite library + live resolve on `/next-task` + Storybook. Suite **1905 passed / 9 skipped**. Next: D115 (never-compress). |
+
 
 
 ## Compression debt
@@ -521,7 +525,9 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 | D112 | Fold ItemWizard like Task (reuse B) or props-only A | Item has real completion ticks, named Next-blocker banner, Step-8 confirm, extra lifecycle toolbar; Step 7 pilot surface is measurement-critical | Shared shell grew **convention C**; Item adapters; A/B unchanged |
 
-| D113 | day81 inventory once labeled W23 = Presentation authoring alone starting at D111 | Calendar put shell folds on D111–D112; authoring on D113 | D111/D112 = shell chrome; D113 = real G8 authoring + ADR 0008 pointer-bake; SessionPlayer obedience later |
+| D113 | day81 inventory once labeled W23 = Presentation authoring alone starting at D111 | Calendar put shell folds on D111–D112; authoring on D113 | D111/D112 = shell chrome; D113 = real G8 authoring + ADR 0008 pointer-bake deferred; SessionPlayer obedience later |
+
+| D114 | Calendar: build Presentation authoring wizard on shared shell + Storybook + a11y | Wizard + a11y already shipped D113; no pointer; no Storybook | Delivery `presentationModelId` pointer + live resolve on `/next-task` + Storybook residual; no new shell; D115 still owns player obedience |
 
 ## Carried-forward gaps
 
@@ -585,7 +591,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - Work Products / Rubrics as first-class objects + multi-phase eval + human rating (W25 / G11–G12) — **open**; file inventory in `claude/day81-offcal-em-remaining-gap-inventory.md`
 
-- ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113 (`claude/day113-presentation-model-authoring.md`). SessionPlayer obedience and library-pointer bake remain later W23.
+- ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113 (`claude/day113-presentation-model-authoring.md`). ~~Library-pointer bake~~ closed D114 (`claude/day114-presentation-pointer-storybook.md`). SessionPlayer obedience remains D115.
 
 - Design Patterns (W27 / G7) — absent; Additional KSAs still notes-only on EMs
 

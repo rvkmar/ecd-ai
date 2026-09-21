@@ -28,8 +28,13 @@
 // counters, or any session-specific state. There is no field anywhere
 // below that copies a parameter value -- if a future change adds one,
 // it is reintroducing exactly the bug ADR 0003 exists to prevent.
+//
+// D114 / ADR 0008: the package may carry a presentationModelId pointer.
+// Overlay fields (layout, conditionalDisplay, accessibility) are NEVER
+// copied here — delivery re-reads the live Presentation Model record.
 
 import { isInstantiableTaskModel, INSTANTIABLE_TASK_MODEL_STATUSES } from "../../src/utils/schema.js";
+import { selectPresentationModelIdForTaskModel } from "../delivery/presentationModelResolution.js";
 
 /**
  * Resolve the Evidence Model evaluation procedure for one observation.
@@ -181,11 +186,25 @@ export function buildCompositeLibrary(taskModel, db) {
     };
   });
 
+  const presentationModelId = selectPresentationModelIdForTaskModel(
+    db,
+    taskModel.id,
+    taskModel.versionNumber
+  );
+
+  if (!presentationModelId && isInstantiableTaskModel(taskModel)) {
+    warnings.push(
+      `No linkable Presentation Model found for task model '${taskModel.id}' version ${taskModel.versionNumber}; package compiled without a presentationModelId pointer.`
+    );
+  }
+
   const record = {
     taskModelId: taskModel.id,
     taskModelVersion: taskModel.versionNumber,
     compiledAt: new Date().toISOString(),
     active: false,
+    // ADR 0008 pointer only — overlay fields resolved live at delivery.
+    presentationModelId: presentationModelId || null,
     items,
   };
 

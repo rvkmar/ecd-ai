@@ -159,7 +159,7 @@ describe("compile every seeded Task Model (the samples/ worked example)", () => 
     const tm1 = db.taskModels.find((t) => t.id === "tm-equivalent-fractions");
     const { record, warnings } = buildCompositeLibrary(tm1, db);
 
-    expect(warnings).toEqual([]);
+    expect(warnings.filter((w) => !/No linkable Presentation Model/.test(w))).toEqual([]);
     expect(record.items).toHaveLength(1);
     expect(record.items[0]).toMatchObject({
       itemId: "item-equivalent-fractions-1",
