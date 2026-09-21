@@ -176,7 +176,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D115b | product + `claude/day115b-instantiated-tasks.md`. Suite **1936 passed / 9 skipped**; build green (10.04s). Instantiated-task schema + item bind; no CAF lifecycle. |
 
-| HEAD at D116 | product + `claude/day116-task-model-variables.md`. Suite **1980 passed / 9 skipped**; build green (7.18s). One TMV consumed by two Task Models. No CAF lifecycle. Next: D117. |
+| HEAD at D116 | product **`5d0717c`** + `claude/day116-task-model-variables.md`. Suite **1980 passed / 9 skipped**; build green (7.18s). One TMV consumed by two Task Models. No CAF lifecycle. Next: D117. |
+
+| HEAD at 2026-09-21 D116 session close | this close. Suite re-verify **1980 passed / 9 skipped** (176 files, 30.69s); build green (7.01s). Tip **`c97b3f7`** ≡ `main`. No new screen. Next: D117. |
 
 
 
@@ -386,6 +388,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-21 | D115b | 2–3, alone | Instantiated tasks schema + item bind. `validateEntity("tasks")` can pass; TasksManager binds instantiable TM + itemId; author tenancy stamped. No CAF status machine. Suite **1936 passed / 9 skipped**. Next: D116. |
 
 | 2026-09-21 | D116 | 2, alone | Task Model Variables (`taskModelVariables` / G13). Typed library records; one id consumed by two Task Models; vocabulary stays `ecdVocabulary.js`. No CAF status. Suite **1980 passed / 9 skipped**. Next: D117. |
+
+| 2026-09-21 | close | 2, alone | D116 session close (Tier 2 alone). Suite re-verify **1980 passed / 9 skipped** (176 files, 30.69s); build green (7.01s); TasksManager chunk 5.27 kB. Tip **`c97b3f7`** ≡ `main`. No half-applied work; no new compression debt. Gate verified by schema + HTTP tests, not a live UI walk. Next: D117. |
 
 
 
