@@ -65,4 +65,4 @@ Tip: `0e5b0fa` ≡ `main/master`. D110 product: `fecdd5c`. D109: `372720f`.
 ## Next
 
 Calendar **D111** — TaskWizard onto shared shell (never-compress refactor).
-**Update (2026-09-21):** D111 shipped — `claude/day111-taskwizard-shared-shell.md`. Next: D112.
+**Update (2026-09-21):** D111 shipped — `claude/day111-taskwizard-shared-shell.md`. D112 shipped — `claude/day112-itemwizard-shared-shell.md`. Next: D113.

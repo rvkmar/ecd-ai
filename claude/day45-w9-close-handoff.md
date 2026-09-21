@@ -77,18 +77,16 @@ deliberately left as-is.
 | Dialog, Combobox | ✅ Day 42 |
 | Toast | ✅ Day 43 (real system fixed; bespoke dead component removed) |
 | Storybook / component gallery | ✅ Day 43 |
-| Reusable wizard shell | ✅ Day 44 for Competency + Evidence; **Task Model and Item explicitly deferred** (Task Model discharged D111 as convention B; Item remains D112) |
+| Reusable wizard shell | ✅ Day 44 for Competency + Evidence; Task Model discharged D111 as convention B; Item discharged D112 as convention C |
 
 ## What remains before the next pass touches these surfaces
 
 Recorded here so a future session starts from an accurate list rather than rediscovering these:
 
-1. **Task Model's and Item's wizards are not on the shared shell.** `taskModels/TaskWizard/` keeps
-   its own `WizardSidebar.jsx`/`WizardStepContainer.jsx`, and `ItemWizard/` was already a known,
-   differently-structured 4th wizard before Day 44 started. Folding Task Model in means either
-   reconciling its context-driven (`useTaskModelWizard()`) data flow with the shared shell's
-   props-driven contract, or growing the shared component a second calling convention — a real,
-   separately-scoped piece of work, not a styling pass. See `claude/day44-wizard-shell.md`.
+1. ~~**Task Model's and Item's wizards are not on the shared shell.**~~ Discharged: Task Model
+   D111 (convention B), Item D112 (convention C). Adapters remain under each wizard folder and
+   import `@/components/wizard`. See `claude/day111-taskwizard-shared-shell.md` and
+   `claude/day112-itemwizard-shared-shell.md`.
 2. **Existing `text-[11px]` (and similar arbitrary-value) call sites were not migrated** to the new
    named tokens. Per Part 5.3, migrate opportunistically as a drive-by edit next time a file is
    already open for another reason — not a task to schedule on its own.
