@@ -9,6 +9,7 @@ import {
 } from "../../src/utils/ecdVocabulary.js";
 import {
   liveSessionsForTaskModel,
+  liveSessionsForItem,
   liveSessionsBlockMessage,
 } from "./sessionDependencies.js";
 
@@ -291,9 +292,6 @@ export function validateTaskModelLifecycle(taskModel, db = null, options = {}) {
 // readiness checks (itemConstants.operationalReadiness) can share the
 // shape. MIRROR: itemConstants.operationalReadiness() reports the
 // `operational` block to the author before they attempt the transition.
-
-import { isInstantiableTaskModel } from "../../src/utils/schema.js";
-import { liveSessionsForItem } from "./sessionDependencies.js";
 
 export function validateItemLifecycle(item, db = null, options = {}) {
   const errors = [];
