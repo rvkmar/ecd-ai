@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Next calendar unit after W23 (D116+). W23 (D111–D115) closed 2026-09-21. |
+| Next queued | Calendar **D116** — W24 TMVs schema (G13). Not started. W23 (D111–D115) closed 2026-09-21. |
 
 | Block | **W23 closed** 2026-09-21 (D111–D115). Gate met at D115. **W22** closed 2026-09-20; gate met at D108. |
 
@@ -169,6 +169,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D114 | product + `claude/day114-presentation-pointer-storybook.md`. Suite **1905 passed / 9 skipped**. Pointer bake + live `/next-task` overlay; Storybook. Next: D115 (never-compress). |
 
 | HEAD at D115 / W23 close | product + `claude/day115-sessionplayer-presentation-w23.md`. Suite **1909 passed / 9 skipped**. W23 gate met. |
+
+| HEAD at 2026-09-21 W23 session close (D114–D115) | this close. Suite re-verify **1909 passed / 9 skipped**; build green (13.52s). Tip **`18232bd`** ≡ `main/master`. Calendar D114–D115 + W23 ✅. Next: D116. |
 
 
 
@@ -369,6 +371,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-21 | D115 | 3, alone | SessionPlayer + ItemPresenter obey Presentation overlay; live-select operational PM; two-PM / one-item exit check in tests. **W23 gate met.** Suite **1909 passed / 9 skipped**. |
 
+| 2026-09-21 | close | — | W23 session close (D114–D115; D111–D113 earlier same day). Suite re-verify **1909 passed / 9 skipped**; build green; tip **`18232bd`** ≡ `main/master`. No half-applied work. Compression debt: D115 live dual-PM `:6060` walk. Next: D116. |
+
 
 
 ## Compression debt
@@ -412,6 +416,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D70 | Live known-equating not executed against Hub `rvkmar/r-backend:latest` | Local `:4000` has equate 2.0.9 / plink 1.5.1; CI still pulls Hub | Docker Hub push of the rebuilt image | **closed D88** — Hub `latest` reports plink 1.5.1; CI package gate fails loudly if missing |
 
 | CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open** |
+
+| D115 | Live `:6060` two-PM / one-item browser walk | Tests proved chrome flip; seeded dual-PM session not walked end-to-end | next live student/admin walk | **open** |
 
 | Admin CAF IA | Live tabs do not match TR9 CAF/delivery | Walk 2026-09-15; wiring is D73b | D73b | **closed** — Admin nested Models / Implementation / Delivery on `:6060`; District/Teacher/Student chrome aligned same session |
 
@@ -595,7 +601,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - Work Products / Rubrics as first-class objects + multi-phase eval + human rating (W25 / G11–G12) — **open**; file inventory in `claude/day81-offcal-em-remaining-gap-inventory.md`
 
-- ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113. ~~Library-pointer bake~~ closed D114. ~~SessionPlayer obedience / W23 gate~~ closed D115 (`claude/day115-sessionplayer-presentation-w23.md`).
+- ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113. ~~Library-pointer bake~~ closed D114. ~~SessionPlayer obedience / W23 gate~~ closed D115 (`claude/day115-sessionplayer-presentation-w23.md`). Live `:6060` dual-PM browser walk — **open** (compression debt D115)
 
 - Design Patterns (W27 / G7) — absent; Additional KSAs still notes-only on EMs
 
