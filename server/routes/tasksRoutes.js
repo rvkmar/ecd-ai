@@ -4,6 +4,7 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB, readRawDB } from "../../src/utils/db-server.js";
 import { sessionAssignedToStudent } from "../../src/utils/sessionPlay.js";
+import { validateEntity } from "../../src/utils/schema.js";
 
 const router = express.Router();
 
@@ -19,6 +20,37 @@ router.use(sanitizeRequestInputs);
 // admin+district -- a teacher can create local tasks but not delete them.
 const canAuthor = authorizeRole(["admin", "district", "teacher"]);
 const canDelete = authorizeRole(["admin", "district"]);
+
+const TASK_WRITE_KEYS = [
+  "taskModelId",
+  "itemId",
+  "questionId",
+  "generatedEvidenceIds",
+  "generatedObservationIds",
+  "startTime",
+  "endTime",
+];
+
+function presentPointer(value) {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+function authorTenancy(req) {
+  return {
+    districtId: req.user?.districtId || null,
+    schoolId: req.user?.schoolId || null,
+    createdBy: req.user?.username || req.user?.id || null,
+  };
+}
+
+function rejectIfInvalid(res, record, db) {
+  const { valid, errors } = validateEntity("tasks", record, db);
+  if (valid) return false;
+  return res.status(400).json({
+    error: errors[0] || "Task validation failed",
+    details: errors,
+  });
+}
 
 /**
  * Authored tasks often have no districtId. Tenant-scoped loadDB then hides
@@ -68,107 +100,33 @@ router.get("/:id", (req, res) => {
 });
 
 // ------------------------------
-// Validate a task's itemId binding (D47).
-// ------------------------------
-// A task names EITHER a legacy questionId or an itemId, never both. The
-// delivery path has to know unambiguously what it is presenting; a task
-// carrying both would let the player and the scorer disagree about which
-// record was answered, which is precisely the kind of quiet failure the
-// item cutover exists to remove.
-//
-// The checks below deliberately mirror the ones sessionRoutes.js already
-// applies at /submit time, so a task cannot be authored that the delivery
-// path would later refuse:
-//   - the item exists;
-//   - its taskModelId matches the task's (Day 30's adversarial-review
-//     finding: otherwise an item's evidence is attributed to the wrong
-//     Task Model instance with no error at all);
-//   - it is not suspended/archived, i.e. deliberately pulled from service.
-// A draft/reviewed/confirmed item is still bindable, matching Day 29's
-// preview/test-delivery design: it scores correctly, it just accrues no
-// exposure.
-function validateItemBinding({ itemId, questionId, taskModelId }, db) {
-  if (!itemId) return null;
-
-  if (questionId) {
-    return "A task may name either questionId or itemId, not both.";
-  }
-
-  const item = (db.items || []).find((it) => it.id === itemId);
-  if (!item) return `Invalid itemId: ${itemId}`;
-
-  if (item.taskModelId !== taskModelId) {
-    return `Item '${itemId}' belongs to Task Model '${item.taskModelId}', not '${taskModelId}'.`;
-  }
-
-  if (["suspended", "archived"].includes(item.status)) {
-    return `Item '${itemId}' is '${item.status}' and cannot be delivered.`;
-  }
-
-  return null;
-}
-
-// ------------------------------
 // POST /api/tasks
 // ------------------------------
 // body: { taskModelId, questionId? | itemId? }
+// D115b: validateEntity("tasks") is the authoring gate (instantiable TM,
+// itemId XOR questionId, coherent item). D47 removed the call because the
+// collection was undeclared and always failed; the schema block now exists
+// and must actually pass.
 router.post("/", canAuthor, (req, res) => {
   const db = loadDB();
   const { taskModelId, questionId, itemId } = req.body;
-
-  if (!taskModelId) {
-    return res.status(400).json({ error: "taskModelId is required" });
-  }
-
-  // ensure taskModel exists
-  if (!db.taskModels.find(tm => tm.id === taskModelId)) {
-    return res.status(400).json({ error: `Invalid taskModelId: ${taskModelId}` });
-  }
-
-  // D47: the item pointer is validated HERE rather than by validateEntity,
-  // because `tasks` has no schema block -- validateEntity("tasks", ...) is
-  // called below but is a no-op for an undeclared collection. Giving tasks
-  // a real schema block is its own unit; this route enforces the binding
-  // it actually depends on rather than assuming validation it does not get.
-  const bindingError = validateItemBinding({ itemId, questionId, taskModelId }, db);
-  if (bindingError) {
-    return res.status(400).json({ error: bindingError });
-  }
+  const now = new Date().toISOString();
+  const tenancy = authorTenancy(req);
 
   const newTask = {
     id: `t${Date.now()}`,
-    taskModelId,
-    questionId: questionId || null,
-    // D47: a task names the ITEM it presents, exactly as it has always
-    // named a question. One pointer, validated on both sides (Part 1.3's
-    // second invariant) -- rather than re-deriving the item at delivery
-    // time from taskModel.itemMappings, which the project itself treats as
-    // best-effort until D154 makes it authoritative.
-    itemId: itemId || null,
-
-    // 🔹 Strict ECD: always initialize as empty arrays
+    taskModelId: presentPointer(taskModelId),
+    questionId: presentPointer(questionId),
+    itemId: presentPointer(itemId),
     generatedEvidenceIds: [],
     generatedObservationIds: [],
-
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    ...tenancy,
+    createdAt: now,
+    updatedAt: now,
   };
 
-  // D47 (finding F6): this used to call validateEntity("tasks", ...) --
-  // which returns {valid:false, errors:["Unknown collection"]} UNCONDITIONALLY,
-  // because `tasks` has never had a schema block in src/utils/schema.js.
-  // The call arrived with the repository's first commit, so POST /api/tasks
-  // has returned 400 for every request in the project's history: task
-  // authoring through the API has never worked, and every task in the system
-  // was seeded directly into the store. TasksManager's create action is a
-  // button that cannot succeed.
-  //
-  // Removed rather than satisfied: giving `tasks` a real schema block is a
-  // schema-design unit in its own right (Part 8, "one entity per session")
-  // and bundling it into this cutover would break the same rule. What the
-  // route actually depends on -- taskModelId resolves, and the item binding
-  // is coherent -- is enforced above, explicitly. The absence of a tasks
-  // schema block is recorded as an open gap, not silently accepted.
+  if (rejectIfInvalid(res, newTask, db)) return;
+
   if (!db.tasks) db.tasks = [];
   db.tasks.push(newTask);
   saveDB(db);
@@ -181,17 +139,32 @@ router.post("/", canAuthor, (req, res) => {
 // ------------------------------
 router.put("/:id", canAuthor, (req, res) => {
   const db = loadDB();
-  const idx = db.tasks.findIndex(t => t.id === req.params.id);
+  const idx = (db.tasks || []).findIndex((t) => t.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Task not found" });
 
-  const updates = req.body;
+  const existing = db.tasks[idx];
+  const patch = {};
+  for (const key of TASK_WRITE_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+      if (key === "itemId" || key === "questionId" || key === "taskModelId") {
+        patch[key] = presentPointer(req.body[key]);
+      } else {
+        patch[key] = req.body[key];
+      }
+    }
+  }
+
   const updatedTask = {
-    ...db.tasks[idx],
-    ...updates,
+    ...existing,
+    ...patch,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    districtId: existing.districtId ?? null,
+    schoolId: existing.schoolId ?? null,
+    createdBy: existing.createdBy ?? null,
     updatedAt: new Date().toISOString(),
   };
 
-  // Ensure arrays exist
   if (!Array.isArray(updatedTask.generatedEvidenceIds)) {
     updatedTask.generatedEvidenceIds = [];
   }
@@ -199,26 +172,8 @@ router.put("/:id", canAuthor, (req, res) => {
     updatedTask.generatedObservationIds = [];
   }
 
-  // D47: the same binding rules as POST. An update is how a task would most
-  // plausibly acquire a bad itemId -- pointing an existing task at an item
-  // belonging to a different Task Model, or at one already pulled from
-  // service -- so it is checked against the MERGED record, not the payload.
-  const bindingError = validateItemBinding(
-    {
-      itemId: updatedTask.itemId,
-      // A task that already has a questionId and is being given an itemId
-      // must be rejected as ambiguous, so the merged value is what counts.
-      questionId: updatedTask.questionId,
-      taskModelId: updatedTask.taskModelId,
-    },
-    db
-  );
-  if (bindingError) {
-    return res.status(400).json({ error: bindingError });
-  }
+  if (rejectIfInvalid(res, updatedTask, db)) return;
 
-  // Same as POST above: validateEntity("tasks", ...) can only ever fail,
-  // so PUT /api/tasks/:id has never succeeded either. See finding F6.
   db.tasks[idx] = updatedTask;
   saveDB(db);
   res.json(updatedTask);
@@ -227,16 +182,21 @@ router.put("/:id", canAuthor, (req, res) => {
 // ------------------------------
 // DELETE /api/tasks/:id
 // ------------------------------
+// D115b reviewed the sessions cascade: a session's taskIds are the roster
+// the player walks. Leaving a deleted taskId on a session 404s GET
+// /api/tasks/:id and breaks /next-task. Keep the existing filter — sessions
+// that listed this task are removed with it. Not a CAF archive.
 router.delete("/:id", canDelete, (req, res) => {
   const db = loadDB();
-  const before = db.tasks.length;
-  db.tasks = db.tasks.filter(t => t.id !== req.params.id);
+  const before = (db.tasks || []).length;
+  db.tasks = (db.tasks || []).filter((t) => t.id !== req.params.id);
   if (db.tasks.length === before) {
     return res.status(404).json({ error: "Task not found" });
   }
 
-  // Cascade: remove linked sessions
-  db.sessions = db.sessions.filter(s => !(s.taskIds || []).includes(req.params.id));
+  db.sessions = (db.sessions || []).filter(
+    (s) => !(s.taskIds || []).includes(req.params.id)
+  );
 
   saveDB(db);
   res.json({ success: true });

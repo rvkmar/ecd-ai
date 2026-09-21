@@ -25,14 +25,22 @@ vi.mock("../../utils/authMiddleware.js", () => ({
 }));
 
 const rawDb = {
-  tasks: [{ id: "t1", taskModelId: "tm1", itemId: "item1" }],
+  tasks: [
+    { id: "t1", taskModelId: "tm1", itemId: "item1" },
+    {
+      id: "t-stamped",
+      taskModelId: "tm1",
+      itemId: "item2",
+      districtId: "d-madurai",
+    },
+  ],
   sessions: [
     {
       id: "s1",
       studentId: "stud1",
       studentIds: ["stud1"],
       status: "in_progress",
-      taskIds: ["t1"],
+      taskIds: ["t1", "t-stamped"],
     },
   ],
   students: [],
@@ -72,5 +80,41 @@ describe("D115 GET /api/tasks/:id under student tenancy", () => {
 
     const res = await request(app).get("/api/tasks/t-other");
     expect(res.status).toBe(404);
+  });
+
+  it("returns a rostered task that already has a districtId (D115b stamp)", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use("/api/tasks", router);
+
+    const res = await request(app).get("/api/tasks/t-stamped");
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe("t-stamped");
+    expect(res.body.itemId).toBe("item2");
+    expect(res.body.districtId).toBe("d-madurai");
+  });
+
+  it("returns a same-district stamped task from scoped loadDB without the raw fallback", async () => {
+    const scoped = {
+      ...rawDb,
+      tasks: [
+        {
+          id: "t-home",
+          taskModelId: "tm1",
+          itemId: "item3",
+          districtId: "d-chennai",
+        },
+      ],
+    };
+    loadDB.mockReturnValue(scoped);
+    readRawDB.mockReturnValue(scoped);
+
+    const app = express();
+    app.use(express.json());
+    app.use("/api/tasks", router);
+
+    const res = await request(app).get("/api/tasks/t-home");
+    expect(res.status).toBe(200);
+    expect(res.body.itemId).toBe("item3");
   });
 });

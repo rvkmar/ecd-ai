@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- D115b: Instantiated tasks schema and item bind. `schema.tasks` is a real
+  collection (no CAF draft→operational machine). POST/PUT call
+  `validateEntity("tasks")` and refuse a Task Model that is not instantiable;
+  D47 `itemId` XOR `questionId` binding stays. TasksManager picks an
+  instantiable Task Model plus a deliverable Item Bank `itemId` (no
+  task-model-only creates). Query hooks in `src/api/queries/tasks.js`. Create
+  stamps author `districtId`/`schoolId`/`createdBy`. Handoff:
+  `claude/day115b-instantiated-tasks.md`.
+
 - D113: Presentation Model authoring (W23 G8 first slice). `presentationModels`
   is a first-class lifecycle-governed collection (layout, conditional display,
   accessibility; bound to a Task Model) with HTTP + admin RBAC, a convention-A
