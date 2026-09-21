@@ -170,7 +170,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D115 / W23 close | product + `claude/day115-sessionplayer-presentation-w23.md`. Suite **1909 passed / 9 skipped**. W23 gate met. |
 
-| HEAD at 2026-09-21 W23 session close (D114–D115) | this close. Suite re-verify **1909 passed / 9 skipped**; build green (13.52s). Tip **`18232bd`** ≡ `main/master`. Calendar D114–D115 + W23 ✅. Next: D116. |
+| HEAD at 2026-09-21 W23 session close (D114–D115) | this close. Suite re-verify **1909 passed / 9 skipped**; build green (13.52s). Tip **`28bce01`** ≡ `main/master`. Calendar D114–D115 + W23 ✅. Next: D116. |
 
 
 
@@ -371,7 +371,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-21 | D115 | 3, alone | SessionPlayer + ItemPresenter obey Presentation overlay; live-select operational PM; two-PM / one-item exit check in tests. **W23 gate met.** Suite **1909 passed / 9 skipped**. |
 
-| 2026-09-21 | close | — | W23 session close (D114–D115; D111–D113 earlier same day). Suite re-verify **1909 passed / 9 skipped**; build green; tip **`18232bd`** ≡ `main/master`. No half-applied work. Compression debt: D115 live dual-PM `:6060` walk. Next: D116. |
+| 2026-09-21 | close | — | W23 session close (D114–D115; D111–D113 earlier same day). Suite re-verify **1909 passed / 9 skipped**; build green; tip **`28bce01`** ≡ `main/master`. No half-applied work. Compression debt: D115 live dual-PM `:6060` walk. Next: D116. |
 
 
 

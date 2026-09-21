@@ -21,7 +21,7 @@ npm run build
   green (13.52s); SessionPlayer chunk 44.44 kB
 ```
 
-- `git status` — clean at product **`6ef8dab`** before this close; tip **`18232bd`** ≡ `main/master`.
+- `git status` — clean at product **`6ef8dab`** before this close; tip **`28bce01`** ≡ `main/master`.
 - No half-applied work.
 - Compression debt: D115 live dual-PM `:6060` walk open (discharge on next live admin/student walk).
 
