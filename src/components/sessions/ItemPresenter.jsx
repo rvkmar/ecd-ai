@@ -18,12 +18,12 @@
 // one.
 //
 // Presentation LOGIC (ordering, conditional display, the accessibility
-// profile) belongs to the Presentation Model (D113 authored; D114 resolves
-// the overlay on /next-task via presentationModelId pointer). SessionPlayer
-// obedience is D115. This renders the item's own stimulus and interaction
-// faithfully and stops there.
+// profile) is applied from the Presentation Model overlay passed by
+// SessionPlayer (D115). Stimulus and interaction still come only from
+// the item — never invented here.
 
 import React from "react";
+import { presentationChrome } from "./presentationChrome.js";
 
 // The raw answer shapes below are what sessionRoutes.js's /submit wraps
 // into a work product:
@@ -66,9 +66,16 @@ function StimulusBlocks({ stimulus }) {
   );
 }
 
-export default function ItemPresenter({ item, value, onChange, disabled = false }) {
+export default function ItemPresenter({
+  item,
+  value,
+  onChange,
+  disabled = false,
+  presentation = null,
+}) {
   if (!item) return null;
 
+  const chrome = presentationChrome(presentation);
   const type = item.interaction?.type;
   const components = Array.isArray(item.interaction?.responseComponents)
     ? item.interaction.responseComponents
@@ -203,7 +210,12 @@ export default function ItemPresenter({ item, value, onChange, disabled = false 
   }
 
   return (
-    <div className="space-y-4">
+    <div
+      className={`space-y-4 ${chrome.rootClassName}`}
+      style={chrome.rootStyle}
+      data-testid="item-presenter"
+      {...chrome.dataAttrs}
+    >
       <StimulusBlocks stimulus={item.stimulus} />
       {renderInteraction()}
     </div>

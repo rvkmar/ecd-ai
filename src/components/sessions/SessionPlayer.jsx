@@ -1,4 +1,5 @@
 import ItemPresenter, { canPresentItem } from "./ItemPresenter";
+import { presentationChrome } from "./presentationChrome";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import Modal from "../ui/Modal";
 import toast from "react-hot-toast";
@@ -49,6 +50,10 @@ export default function SessionPlayer({
   // exactly one of these two paths is live for any given task.
   const [deliveredItem, setDeliveredItem] = useState(null);
   const [itemResponse, setItemResponse] = useState(null);
+  // D115: live Presentation Model overlay from /next-task (never baked into
+  // the item). Null when no linkable PM applies — chrome falls back to
+  // pre-D115 behaviour.
+  const [presentation, setPresentation] = useState(null);
   const [question, setQuestion] = useState(null);
   const [evidenceModels, setEvidenceModels] = useState([]);
   
@@ -371,6 +376,7 @@ export default function SessionPlayer({
         setQuestion(null);
         setTaskModel(null);
         setDeliveredItem(null);
+        setPresentation(null);
         setNoMoreTasks(true);
         setReadingPassage(null);
         setActivePassageId(null);
@@ -384,6 +390,7 @@ export default function SessionPlayer({
         setTask(null);
         setQuestion(null);
         setTaskModel(null);
+        setPresentation(null);
         setNoMoreTasks(true);
 
         // 🔹 Reset reading passage context when session ends
@@ -395,6 +402,9 @@ export default function SessionPlayer({
 
       const tid = data.taskId;
       setCurrentTaskId(tid);
+      // D115: attach overlay for chrome / ItemPresenter. Same item content
+      // with a different PM changes what the examinee sees.
+      setPresentation(data.presentation || null);
 
       // fetch the task from API
       let taskObj = null;
@@ -896,6 +906,7 @@ export default function SessionPlayer({
 
   const progressTotal = (session?.taskIds || []).length || 0;
   const progressDone = (session?.responses || []).length || 0;
+  const chrome = presentationChrome(presentation);
 
   if (!sessionId) return <div className="p-6">Session id not provided.</div>;
   if (loading) return <div className="p-6">Loading session...</div>;
@@ -1028,6 +1039,7 @@ export default function SessionPlayer({
                     value={itemResponse}
                     onChange={setItemResponse}
                     disabled={answerReadOnly || submitting}
+                    presentation={presentation}
                   />
                   {!answerReadOnly && (
                     <button
@@ -1147,7 +1159,12 @@ export default function SessionPlayer({
   };
 
   return (
-    <div className="p-6 space-y-4">
+    <div
+      className={`p-6 space-y-4 ${chrome.rootClassName}`}
+      style={chrome.rootStyle}
+      data-testid="session-player"
+      {...chrome.dataAttrs}
+    >
       {isTeacher && (
         <div className="mb-3 p-3 rounded bg-purple-50 text-purple-800 border border-purple-200 shadow-sm">
           🔍 You are reviewing this session as:{" "}
@@ -1221,8 +1238,9 @@ export default function SessionPlayer({
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div>
+      {/* Progress bar — D115: Presentation Model may hide it */}
+      {chrome.showProgress && (
+      <div data-testid="session-progress">
         <div className="text-sm text-gray-700">
           Progress: {progressDone} / {progressTotal}
         </div>
@@ -1237,6 +1255,7 @@ export default function SessionPlayer({
           />
         </div>
       </div>
+      )}
 
       {loadingTask ? (
         <div>Loading next activity...</div>
@@ -1368,6 +1387,7 @@ export default function SessionPlayer({
                     !session.isCompleted
                   )
                 }
+                presentation={presentation}
               />
               {!isTeacher && (
                 <button
@@ -1562,9 +1582,11 @@ export default function SessionPlayer({
                     >
                       Submit Answer
                     </button>
+                    {chrome.allowSkip && (
                     <button
                       type="button"
                       onClick={loadNextTask}
+                      data-testid="session-skip"
                       disabled={
                         !(
                           session &&
@@ -1578,6 +1600,7 @@ export default function SessionPlayer({
                     >
                       Skip
                     </button>
+                    )}
                     {session?.status !== "completed" && (
                       <button
                         type="button"

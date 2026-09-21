@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D114** — Presentation Model delivery pointer + Storybook (calendar premise rewritten). Handoff: `claude/day114-presentation-pointer-storybook.md`. |
+| Last completed unit | **D115** — SessionPlayer obeys Presentation Model; **W23 gate met**. Handoff: `claude/day115-sessionplayer-presentation-w23.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,11 +52,11 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D115** — SessionPlayer obeys Presentation Model + W23 gate (never-compress). Not started. |
+| Next queued | Next calendar unit after W23 (D116+). W23 (D111–D115) closed 2026-09-21. |
 
-| Block | **W23** in progress (D111–D114 done; **D115** remains — never-compress gate). **W22** (D106–D110) closed 2026-09-20; gate met at D108. W23 gate (Presentation Model changes examinee view) **not** met until D115. |
+| Block | **W23 closed** 2026-09-21 (D111–D115). Gate met at D115. **W22** closed 2026-09-20; gate met at D108. |
 
-| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ |
+| Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ ~~W23: Changing a Presentation Model changes what an examinee sees, without touching item content (D115).~~ |
 
 | Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 
@@ -167,6 +167,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-21 W23 session close (D111–D113) | this close. Suite re-verify **1894 passed / 9 skipped**; build green (21.21s). Tip **`5d747ac`** ≡ `main/master`. Calendar D111–D113 ✅. Next: D114. |
 
 | HEAD at D114 | product + `claude/day114-presentation-pointer-storybook.md`. Suite **1905 passed / 9 skipped**. Pointer bake + live `/next-task` overlay; Storybook. Next: D115 (never-compress). |
+
+| HEAD at D115 / W23 close | product + `claude/day115-sessionplayer-presentation-w23.md`. Suite **1909 passed / 9 skipped**. W23 gate met. |
 
 
 
@@ -364,6 +366,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-21 | close | — | W23 session close (D111–D113; not full block). Suite re-verify **1894 passed / 9 skipped**; build green; tip **`5d747ac`** ≡ `main/master`. No half-applied work; no new compression debt. Next: D114. |
 
 | 2026-09-21 | D114 | 2, alone | Premise rewritten: wizard already D113. Pointer `presentationModelId` on composite library + live resolve on `/next-task` + Storybook. Suite **1905 passed / 9 skipped**. Next: D115 (never-compress). |
+
+| 2026-09-21 | D115 | 3, alone | SessionPlayer + ItemPresenter obey Presentation overlay; live-select operational PM; two-PM / one-item exit check in tests. **W23 gate met.** Suite **1909 passed / 9 skipped**. |
 
 
 
@@ -591,7 +595,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - Work Products / Rubrics as first-class objects + multi-phase eval + human rating (W25 / G11–G12) — **open**; file inventory in `claude/day81-offcal-em-remaining-gap-inventory.md`
 
-- ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113 (`claude/day113-presentation-model-authoring.md`). ~~Library-pointer bake~~ closed D114 (`claude/day114-presentation-pointer-storybook.md`). SessionPlayer obedience remains D115.
+- ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113. ~~Library-pointer bake~~ closed D114. ~~SessionPlayer obedience / W23 gate~~ closed D115 (`claude/day115-sessionplayer-presentation-w23.md`).
 
 - Design Patterns (W27 / G7) — absent; Additional KSAs still notes-only on EMs
 

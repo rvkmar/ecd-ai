@@ -31,7 +31,10 @@ import { recordSubmitOutcome } from "../utils/submitStats.js";
 // inline below; it now lives in one module that reads the composite library
 // and the live posteriors instead of db.questions. See that file's header.
 import { selectNextActivity } from "../delivery/activitySelection.js";
-import { resolvePresentationModel } from "../delivery/presentationModelResolution.js";
+import {
+  selectPresentationModelIdForTaskModel,
+  resolvePresentationModel,
+} from "../delivery/presentationModelResolution.js";
 import { activePackageFor } from "../compositeLibrary/activePackage.js";
 import { recordItemUsage } from "../utils/itemExposure.js";
 // D49b: `import { log2 } from "mathjs"` stood here and was NEVER CALLED --
@@ -713,8 +716,10 @@ router.get("/:id/next-task", (req, res) => {
 
 /**
  * Resolve the Presentation Model overlay for a next-task decision.
- * Uses the active package's presentationModelId pointer when present,
- * else live-selects by the task's Task Model binding.
+ * Live-select prefers operational > confirmed (so changing which PM is
+ * operational changes what the examinee sees without touching item
+ * content — D115 exit check). Package presentationModelId is a fallback
+ * when nothing linkable is live yet.
  */
 function attachPresentationOverlay(decision, session, db) {
   if (!decision?.taskId) return null;
@@ -723,14 +728,20 @@ function attachPresentationOverlay(decision, session, db) {
   if (!taskModelId) return null;
 
   const taskModel = (db.taskModels || []).find((tm) => tm.id === taskModelId);
+  const taskModelVersion =
+    typeof taskModel?.versionNumber === "number"
+      ? taskModel.versionNumber
+      : null;
   const pkg = activePackageFor(taskModelId, db);
+  const liveId =
+    typeof taskModelVersion === "number"
+      ? selectPresentationModelIdForTaskModel(db, taskModelId, taskModelVersion)
+      : null;
+
   const resolved = resolvePresentationModel(db, {
-    presentationModelId: pkg?.presentationModelId || null,
+    presentationModelId: liveId || pkg?.presentationModelId || null,
     taskModelId,
-    taskModelVersion:
-      typeof taskModel?.versionNumber === "number"
-        ? taskModel.versionNumber
-        : pkg?.taskModelVersion ?? null,
+    taskModelVersion: taskModelVersion ?? pkg?.taskModelVersion ?? null,
   });
 
   if (!resolved.ok) return null;

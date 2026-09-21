@@ -1,7 +1,7 @@
 # ADR 0008 — Presentation Model vs composite-library bake
 
-**Status:** Accepted (pointer bake completed D114)
-**Date:** 2026-09-21 (Day 113 authoring; Day 114 pointer)
+**Status:** Accepted (pointer D114; SessionPlayer obedience D115)
+**Date:** 2026-09-21 (Day 113–115, W23 G8)
 **Deciders:** ecd-claude build
 **Depends on:** [ADR 0003 — Composite library denormalisation boundary](0003-composite-library-denormalisation-boundary.md)
 
@@ -22,43 +22,26 @@ Presentation Model. Baking the wrong thing would either:
   or
 - leave authoring as a stub while SessionPlayer keeps hard-coding chrome.
 
-D113 authors `presentationModels` as a first-class lifecycle-governed
-collection bound to a Task Model. D114 stamps a `presentationModelId`
-pointer on the compiled package and resolves the overlay live at delivery
-(`/next-task`). SessionPlayer still does not obey the overlay (D115).
-
 ## Decision
 
-**Authored and stored on `presentationModels` (D113):**
+**Authored on `presentationModels` (D113):** layout, conditionalDisplay,
+accessibility, Task Model binding.
 
-- Layout: `itemOrder` (`authored` | `random`), `grouping`, `navigation`
-- Conditional display: `showFeedback`, `allowSkip`, `allowReview`, `showProgress`
-- Accessibility: `profile`, `fontScale`, `timeMultiplier`
-- Binding: `taskModelId` + `taskModelVersion` (PADI task-template home)
+**Still baked into `compositeLibrary.items[]` (ADR 0003):** item stimulus,
+interaction, evidence activation — never accessibility/navigation.
 
-**Still baked into `compositeLibrary.items[]` per ADR 0003 (unchanged):**
+**Pointer + live resolve (D114):** `compositeLibrary.presentationModelId`.
+`/next-task` attaches a live overlay. Delivery live-select prefers
+operational > confirmed so switching which PM is operational changes the
+overlay without touching item content.
 
-- Per-item stimulus blocks and interaction params
-- Evidence-activation mapping and weights of evidence
-
-**Baked as pointer only (D114):**
-
-- `compositeLibrary.presentationModelId` — id of a linkable Presentation
-  Model for the same Task Model version. Selected at compile
-  (operational > confirmed > suspended). Never copies overlay fields.
-- Live resolve: `server/delivery/presentationModelResolution.js` re-reads
-  the authored record; a confirmed accessibility edit takes effect on the
-  next `/next-task` without recompile. Revising a Presentation Model does
-  **not** stale the composite library.
-
-**Still not done (D115):**
-
-- SessionPlayer / ItemPresenter reading and obeying the overlay in the UI
+**SessionPlayer obedience (D115):** `presentationChrome()` drives progress /
+skip chrome and accessibility profile classes on SessionPlayer +
+ItemPresenter. Stimulus text still comes only from the item.
 
 ## Consequences
 
-- Delivery can know which Presentation Model applies before the player
-  learns to obey it.
-- Overlay edits do not require package rebuild.
-- `validateEntity("compositeLibrary")` refuses baked `layout` /
-  `conditionalDisplay` / `accessibility` on the package.
+- W23 gate: changing a Presentation Model changes what an examinee sees
+  without touching item content (proven by two-overlay / one-item tests).
+- Overlay edits and operational flips do not require package rebuild.
+- `validateEntity("compositeLibrary")` still refuses baked overlay fields.

@@ -136,3 +136,21 @@
 .dark .border-slate-300 {
   border-color: hsl(var(--border));
 }
+/* D115 — Presentation Model accessibility profiles on SessionPlayer / ItemPresenter */
+.presentation-large-text {
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+.presentation-high-contrast {
+  background-color: #000;
+  color: #fff;
+}
+.presentation-high-contrast .border-border,
+.presentation-high-contrast .border-slate-200,
+.presentation-high-contrast .border-gray-200 {
+  border-color: #fff;
+}
+.presentation-high-contrast a,
+.presentation-high-contrast button {
+  color: inherit;
+}
