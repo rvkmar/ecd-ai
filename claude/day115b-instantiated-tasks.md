@@ -63,14 +63,27 @@ until both are chosen.
 
 ## Verification
 
-Filled after the suite run on this branch.
-
 ```
-npx vitest run server/routes/__tests__/d115TaskDeliveryTenancy.test.js
-npx vitest run -t "tasks"
 NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
+  1936 passed | 9 skipped (1945) — 173 files (~31s)
+
+npx vitest run server/routes/__tests__/d115TaskDeliveryTenancy.test.js
+  + d115bInstantiatedTasks + tasksSchema + TasksManager + d47ItemDelivery
+  36 passed (5 files)
+
+npx vitest run -t "tasks"
+  37 passed | 1908 skipped
+
+npx vitest run server/routes/__tests__/d47ItemWalkthrough.test.js
+  5 passed (real POST /api/tasks still creates item-bound rows)
+
 npm run build
+  green (~10s); TasksManager chunk 5.27 kB
 ```
+
+D115 live-debt close was **1913 passed / 9 skipped**. Delta: **+23 tests / +3 files** (`tasksSchema.test.js`, `d115bInstantiatedTasks.test.js`, `TasksManager.test.jsx`) plus two extra student-GET cases on the existing tenancy file. Skips unchanged.
+
+Live Implementation → Instantiated tasks click-through on `:6060` was not walked in this environment (no compose stack). UI contract is the TasksManager test; student GET remains the D115 tenancy tests.
 
 ## Next
 
