@@ -1,22 +1,28 @@
 // components/wizard/WizardSidebar.jsx
-// 🧭 Shared Wizard Sidebar (Day 44 — Part 5.4 wizard shell; D111 TM convention)
+// 🧭 Shared Wizard Sidebar (Day 44 — Part 5.4 wizard shell; D111 TM / D112 Item)
 // ------------------------------------------------------------
-// Two calling conventions, both tested:
+// Three calling conventions, all tested:
 //
 //   A (CM / EM / AM — Day 44): props-only. `onStepClick` fires for every
 //     rail click; the parent decides whether to actually change step.
-//     No readiness dots. This is the default when `canNavigateTo` and
-//     `outstandingWork` are omitted.
+//     No readiness dots. Completion ticks follow the cursor
+//     (`index < currentStepIndex`). Default when the B/C props are omitted.
 //
 //   B (Task Model — D111): the rail itself gates forward navigation
 //     (`canNavigateTo(index)` → button disabled, callback not fired) and
 //     may render per-step outstanding-work amber dots via
 //     `outstandingWork(step, index)`. Forward travel is Next-only while
-//     editing; a read-only model keeps every step reachable.
+//     editing; a read-only model keeps every step reachable. Ticks stay
+//     cursor-based.
 //
-// Task Model still maps `useTaskModelWizard()` → these props in a thin
-// adapter (`taskModels/TaskWizard/WizardSidebar.jsx`). The shared shell
-// stays props-driven so CM/EM/AM are not forced onto TM's context.
+//   C (Item — D112): reuse B's `canNavigateTo` (Item allows the current
+//     step as well as earlier ones). Completion ticks come from
+//     `isStepComplete(step, index)` — real step readiness, not cursor
+//     position. Optional `statusLabel` (e.g. "draft · v2") and `step.blurb`
+//     on the active rail item. No amber dots.
+//
+// Adapters map context → these props. The shared shell stays props-driven
+// so CM/EM/AM are not forced onto TM's or Item's context.
 // ------------------------------------------------------------
 
 import React from "react";
@@ -57,15 +63,21 @@ export default function WizardSidebar({
     // Convention B (Task Model). Omitted = Convention A (ungated rail).
     canNavigateTo,
     outstandingWork,
+    // Convention C (Item). Omitted = cursor-position ticks (A/B).
+    isStepComplete,
+    statusLabel,
 }) {
     // Purely a visual/UI concern local to this component -- folding the
     // rail doesn't affect wizard state, so it isn't lifted to context.
     const [collapsed, setCollapsed] = React.useState(false);
 
-    function getStepState(index) {
-        if (index < currentStepIndex) return "completed";
-        if (index === currentStepIndex) return "active";
-        return "pending";
+    function getStepState(index, step) {
+        const complete = isStepComplete
+            ? isStepComplete(step, index) === true
+            : index < currentStepIndex;
+        if (index === currentStepIndex) return { state: "active", complete };
+        if (complete) return { state: "completed", complete };
+        return { state: "pending", complete };
     }
 
     return (
@@ -110,7 +122,7 @@ export default function WizardSidebar({
                             className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${STATUS_COLORS[status] || STATUS_COLORS.draft
                                 }`}
                         >
-                            {status}
+                            {statusLabel || status}
                         </span>
 
                         {locked && (
@@ -141,7 +153,7 @@ export default function WizardSidebar({
             >
                 <ol className="relative">
                     {steps.map((step, index) => {
-                        const state = getStepState(index);
+                        const { state, complete } = getStepState(index, step);
                         const isLastItem = index === steps.length - 1;
                         const allowed = canNavigateTo ? canNavigateTo(index) : true;
                         const hasOutstanding =
@@ -190,24 +202,35 @@ export default function WizardSidebar({
                                     <span
                                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition ${circleClasses}`}
                                     >
-                                        {state === "completed" ? (
-                                            <Check size={14} strokeWidth={2.5} />
+                                        {complete ? (
+                                            <Check
+                                                size={14}
+                                                strokeWidth={2.5}
+                                                data-testid="wizard-step-complete-check"
+                                            />
                                         ) : (
                                             index + 1
                                         )}
                                     </span>
                                     {!collapsed && (
-                                        <span
-                                            className={`${hasOutstanding ? "flex items-center gap-1.5 " : ""
-                                                }text-sm transition ${labelClasses}`}
-                                        >
-                                            {step.label}
-                                            {hasOutstanding && (
-                                                <span
-                                                    title="This step has outstanding required fields"
-                                                    data-testid="wizard-outstanding-dot"
-                                                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
-                                                />
+                                        <span className="min-w-0">
+                                            <span
+                                                className={`${hasOutstanding ? "flex items-center gap-1.5 " : ""
+                                                    }text-sm transition ${labelClasses}`}
+                                            >
+                                                {step.label}
+                                                {hasOutstanding && (
+                                                    <span
+                                                        title="This step has outstanding required fields"
+                                                        data-testid="wizard-outstanding-dot"
+                                                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+                                                    />
+                                                )}
+                                            </span>
+                                            {state === "active" && step.blurb && (
+                                                <span className="mt-0.5 block text-xs text-slate-500">
+                                                    {step.blurb}
+                                                </span>
                                             )}
                                         </span>
                                     )}

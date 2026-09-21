@@ -18,8 +18,9 @@
 //      non-blocking so the author sees a confirmation failure coming
 //      instead of hitting it. A rule added to schema.js and not to
 //      this mirror becomes a confirmation failure with no warning.
-//   2. ITEM_WIZARD_STEPS[].key  <->  the switch in ItemWizard.jsx's
-//      renderStep(). A key with no case renders a blank step.
+//   2. ITEM_WIZARD_STEPS[].key  <->  STEP_COMPONENTS in
+//      ItemWizard/WizardStepContainer.jsx. A key with no case renders
+//      a blank step.
 //   3. operationalReadiness()    <->  validateItemLifecycle()'s
 //      `operational` block in server/utils/lifecycleValidation.js.
 //
@@ -899,7 +900,7 @@ export function blockingNotes(item, ctx) {
 /* =====================================================
    WIZARD STEPS
    -----------------------------------------------------
-   MIRROR: every `key` here needs a case in ItemWizard.jsx renderStep().
+   MIRROR: every `key` here needs a case in ItemWizard/WizardStepContainer.jsx.
 
    Ten steps became eight. Removed: the standalone "Task Alignment" step
    (step 7), which recomputed a subset of the readiness checks and

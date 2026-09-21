@@ -15,9 +15,11 @@
 // Lock & Confirm button set and their gating, the discard-changes modal --
 // was byte-identical and is unified as-is.
 //
-// Two calling conventions, both tested (D111 folded Task Model in
+// Three calling conventions, all tested (D111 folded Task Model in
 // without dropping its named-blocking-reason toast or promote/save
-// paths -- see WizardSidebar.jsx for the matching rail decision):
+// paths; D112 folded Item without dropping per-step Next gating, the
+// named blockers banner, or the extra lifecycle transitions -- see
+// WizardSidebar.jsx for the matching rail decision):
 //
 //   A (CM / EM / AM / Q-matrix): children for steps; Cancel/OK and
 //     locked-notice text parameterised; Next/Save/Confirm gated by
@@ -26,11 +28,19 @@
 //   B (Task Model): same chrome, plus `blockingReason` (title + toast
 //     when toastOnBlock) and `lockedNotice` (status-aware copy). The TM
 //     adapter still owns step routing and maps context → these props.
+//
+//   C (Item): same chrome, plus a named `blockersBanner` (not a toast),
+//     `hidePromoteActions` (Item confirm/reject/activate live in the
+//     review step and a `toolbarActions` slot, not Save-for-Review /
+//     Lock-&-Confirm), `cancelLabel` ("Close"), and optional `editable`
+//     so a locked-or-not item is not forced onto the draft/reviewed
+//     canEdit rule. The Item adapter still owns step routing and
+//     lifecycle transitions.
 // ------------------------------------------------------------
 
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import { ChevronLeft, ChevronRight, Lock, X } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Lock, X } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 
 export default function WizardStepContainer({
@@ -54,6 +64,14 @@ export default function WizardStepContainer({
     blockingReason,
     toastOnBlock = false,
     lockedNotice,
+    // Convention C (Item). Omitted = Convention A/B promote chrome.
+    blockersBanner,
+    hidePromoteActions = false,
+    toolbarActions,
+    cancelLabel,
+    stepTitle,
+    showProgressPercent = false,
+    editable,
     children,
 }) {
     const [saving, setSaving] = useState(false);
@@ -63,10 +81,13 @@ export default function WizardStepContainer({
          draft     -- being authored. Last step offers Save.
          reviewed  -- saved and reopened via the list's Review button.
                       Last step offers Lock & Confirm.
-       Confirmed/locked is read-only: no Next, no Save, no Confirm. */
+       Confirmed/locked is read-only: no Next, no Save, no Confirm.
+       Convention C may pass `editable` so an Item's locked flag, not
+       the draft/reviewed pair, decides whether Next is gated. */
     const isDraft = status === "draft";
     const isReviewMode = status === "reviewed" && !locked;
-    const canEdit = (isDraft || isReviewMode) && !locked;
+    const statusAllowsEdit = isDraft || isReviewMode;
+    const canEdit = (editable ?? statusAllowsEdit) && !locked;
     const progressPercent = Math.min(100, Math.round((step / totalSteps) * 100));
 
     /* =====================================================
@@ -209,7 +230,8 @@ export default function WizardStepContainer({
     // a bare "OK" once the model is read-only. Both are preserved verbatim
     // via adaptiveCancelLabel rather than picking one behavior for both.
     const showCancelIcon = !adaptiveCancelLabel || canEdit;
-    const cancelText = adaptiveCancelLabel ? (canEdit ? "Cancel" : "OK") : "Cancel";
+    const cancelText =
+        cancelLabel ?? (adaptiveCancelLabel ? (canEdit ? "Cancel" : "OK") : "Cancel");
 
     function renderNavigation() {
         return (
@@ -228,6 +250,17 @@ export default function WizardStepContainer({
                     <div className="flex flex-1 flex-col items-center px-4">
                         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                             Step {step} of {totalSteps}
+                            {stepTitle ? (
+                                <span className="font-medium normal-case tracking-normal text-slate-500">
+                                    {" "}
+                                    — {stepTitle}
+                                </span>
+                            ) : null}
+                            {showProgressPercent ? (
+                                <span className="ml-2 font-medium normal-case tracking-normal text-slate-400">
+                                    {progressPercent}%
+                                </span>
+                            ) : null}
                         </span>
                         <div className="mt-1.5 h-1 w-full max-w-xs overflow-hidden rounded-full bg-slate-100">
                             <div
@@ -238,7 +271,7 @@ export default function WizardStepContainer({
                     </div>
 
                     {/* Controls */}
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex flex-wrap items-center justify-end gap-2.5">
                         {saving && (
                             <span className="mr-0.5 text-xs font-medium text-slate-400">
                                 Saving…
@@ -283,8 +316,11 @@ export default function WizardStepContainer({
                                 </button>
                             )}
 
-                        {/* Save -- final step while still a draft */}
-                        {isLast &&
+                        {/* Save -- final step while still a draft.
+                            Convention C hides this set: Item send-to-review
+                            / confirm live on the review step. */}
+                        {!hidePromoteActions &&
+                            isLast &&
                             canEdit &&
                             !isReviewMode &&
                             wrapIfToastOnBlock(
@@ -303,7 +339,7 @@ export default function WizardStepContainer({
                             )}
 
                         {/* Return to draft -- reviewer rejection, review mode only */}
-                        {isLast && isReviewMode && onReturnToDraft && (
+                        {!hidePromoteActions && isLast && isReviewMode && onReturnToDraft && (
                             <button
                                 onClick={handleReturnToDraft}
                                 disabled={saving}
@@ -314,7 +350,8 @@ export default function WizardStepContainer({
                         )}
 
                         {/* Lock & Confirm -- final step in review mode */}
-                        {isLast &&
+                        {!hidePromoteActions &&
+                            isLast &&
                             isReviewMode &&
                             wrapIfToastOnBlock(
                                 !canProceed || saving,
@@ -330,8 +367,20 @@ export default function WizardStepContainer({
                                     {saving ? "Processing…" : "Lock & Confirm"}
                                 </button>
                             )}
+
+                        {toolbarActions}
                     </div>
                 </div>
+
+                {blockersBanner ? (
+                    <div
+                        data-testid="wizard-step-blockers"
+                        className="flex items-start gap-2 border-t border-amber-100 bg-amber-50 px-8 py-2.5 text-xs text-amber-800"
+                    >
+                        <AlertTriangle size={14} strokeWidth={2.25} className="mt-0.5 shrink-0" />
+                        <span>{blockersBanner}</span>
+                    </div>
+                ) : null}
             </div>
         );
     }
