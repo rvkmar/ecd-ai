@@ -36,6 +36,7 @@ import usersRoutes from "./routes/usersRoutes.js";
 // lifecycle-governed; compositeLibrary is a read-only build artifact.
 import qMatrixModelsRoutes from "./routes/qMatrixModelsRoutes.js";
 import assemblyModelsRoutes from "./routes/assemblyModelsRoutes.js";
+import presentationModelsRoutes from "./routes/presentationModelsRoutes.js";
 import compositeLibraryRoutes from "./routes/compositeLibraryRoutes.js";
 import announcementsRoutes from "./routes/announcementsRoutes.js";
 import tenancyRoutes from "./routes/tenancyRoutes.js";
@@ -119,6 +120,7 @@ app.use("/api/ops", opsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/qMatrixModels", qMatrixModelsRoutes);
 app.use("/api/assemblyModels", assemblyModelsRoutes);
+app.use("/api/presentationModels", presentationModelsRoutes);
 app.use("/api/compositeLibrary", compositeLibraryRoutes);
 app.use("/api/announcements", announcementsRoutes);
 app.use("/api/tenancy", tenancyRoutes);

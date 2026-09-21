@@ -616,3 +616,133 @@ export function jobKindIngestsParameterSets(kind) {
 export function jobKindIngestsAnalysisArtefact(kind) {
   return calibrationJobKind(kind)?.ingests === "analysisArtefact";
 }
+
+/* =====================================================
+   10. Presentation Model vocabulary (D113 / W23 G8)
+   -----------------------------------------------------
+   PADI TR9 Fig. 7 "Materials & Presentation" is the CAF object for how
+   a task is shown. ItemPresenter already names the three concerns this
+   collection owns: ordering, conditional display, accessibility
+   profile. Item-level stimulus/interaction stays on items and still
+   bakes per ADR 0003; this overlay is the authored Presentation Model.
+   SessionPlayer does not consume it yet (later W23 unit).
+===================================================== */
+
+export const PRESENTATION_ITEM_ORDERS = [
+  {
+    value: "authored",
+    label: "Authored order",
+    hint: "Items appear in the order the Task Model / item bank declares.",
+  },
+  {
+    value: "random",
+    label: "Randomised",
+    hint: "Shuffle item order at session start. Adaptive reordering is out of this field.",
+  },
+];
+
+export const PRESENTATION_GROUPINGS = [
+  {
+    value: "single_item",
+    label: "One item at a time",
+    hint: "Each item is its own screen.",
+  },
+  {
+    value: "shared_stimulus",
+    label: "Shared stimulus",
+    hint: "A parent stimulus stays visible across a group of items.",
+  },
+  {
+    value: "section",
+    label: "Section",
+    hint: "Items grouped into named sections the examinee pages through.",
+  },
+];
+
+export const PRESENTATION_NAVIGATIONS = [
+  {
+    value: "linear",
+    label: "Linear",
+    hint: "Forward only; no return to a previous item.",
+  },
+  {
+    value: "reviewable",
+    label: "Reviewable",
+    hint: "Forward with a review pass before submit.",
+  },
+  {
+    value: "free",
+    label: "Free",
+    hint: "Examinee may move to any presented item.",
+  },
+];
+
+export const PRESENTATION_FEEDBACK_TIMINGS = [
+  {
+    value: "none",
+    label: "No item feedback",
+    hint: "Score is accumulated; nothing is shown per item.",
+  },
+  {
+    value: "immediate",
+    label: "Immediate",
+    hint: "Feedback after each response. Identification still runs server-side.",
+  },
+  {
+    value: "delayed_end",
+    label: "End of session",
+    hint: "Feedback withheld until the session stops.",
+  },
+];
+
+export const PRESENTATION_ACCESSIBILITY_PROFILES = [
+  {
+    value: "default",
+    label: "Default",
+    hint: "Standard delivery chrome.",
+  },
+  {
+    value: "large_text",
+    label: "Large text",
+    hint: "Larger type; pairs with fontScale.",
+  },
+  {
+    value: "high_contrast",
+    label: "High contrast",
+    hint: "High-contrast palette.",
+  },
+  {
+    value: "screen_reader",
+    label: "Screen reader",
+    hint: "Prefer text equivalents and announced controls.",
+  },
+];
+
+export const PRESENTATION_ITEM_ORDER_VALUES = PRESENTATION_ITEM_ORDERS.map((x) => x.value);
+export const PRESENTATION_GROUPING_VALUES = PRESENTATION_GROUPINGS.map((x) => x.value);
+export const PRESENTATION_NAVIGATION_VALUES = PRESENTATION_NAVIGATIONS.map((x) => x.value);
+export const PRESENTATION_FEEDBACK_TIMING_VALUES = PRESENTATION_FEEDBACK_TIMINGS.map(
+  (x) => x.value
+);
+export const PRESENTATION_ACCESSIBILITY_PROFILE_VALUES =
+  PRESENTATION_ACCESSIBILITY_PROFILES.map((x) => x.value);
+
+function vocabLabel(list, value) {
+  return list.find((x) => x.value === value)?.label || value || "—";
+}
+
+export function presentationItemOrderLabel(value) {
+  return vocabLabel(PRESENTATION_ITEM_ORDERS, value);
+}
+export function presentationGroupingLabel(value) {
+  return vocabLabel(PRESENTATION_GROUPINGS, value);
+}
+export function presentationNavigationLabel(value) {
+  return vocabLabel(PRESENTATION_NAVIGATIONS, value);
+}
+export function presentationFeedbackTimingLabel(value) {
+  return vocabLabel(PRESENTATION_FEEDBACK_TIMINGS, value);
+}
+export function presentationAccessibilityProfileLabel(value) {
+  return vocabLabel(PRESENTATION_ACCESSIBILITY_PROFILES, value);
+}

@@ -44,6 +44,7 @@ beforeEach(() => {
   dbState.current = {
     qMatrixModels: [],
     assemblyModels: [],
+    presentationModels: [],
     compositeLibrary: [],
     taskModels: [],
     evidenceModels: [],
@@ -62,6 +63,11 @@ describe("qMatrixModels + assemblyModels write gates", () => {
       name: "assemblyModels",
       path: "/api/assemblyModels",
       importer: () => import("../assemblyModelsRoutes.js"),
+    },
+    {
+      name: "presentationModels",
+      path: "/api/presentationModels",
+      importer: () => import("../presentationModelsRoutes.js"),
     },
   ];
 

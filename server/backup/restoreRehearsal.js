@@ -134,6 +134,7 @@ function buildRehearsalFixture() {
     curricularPolicies: [],
     assemblyModels: [],
     qMatrixModels: [],
+    presentationModels: [],
     compositeLibrary: [],
     questions: [],
   };

@@ -45,8 +45,8 @@ const TasksManager = lazyPanel(() => import("@/components/tasks/TasksManager"));
 const EvidenceAccumulationInspector = lazyPanel(() =>
   import("@/components/delivery/EvidenceAccumulationInspector")
 );
-const PresentationModelStub = lazyPanel(() =>
-  import("@/components/delivery/PresentationModelStub")
+const PresentationModelBuilder = lazyPanel(() =>
+  import("@/components/presentationModels/PresentationModelBuilder")
 );
 
 export default function AdminPage() {
@@ -96,7 +96,7 @@ export default function AdminPage() {
           tabs: [
             { id: "sessions", label: "Sessions", content: <SessionBuilder /> },
             { id: "accumulation", label: "Evidence Accumulation (inspect)", content: <EvidenceAccumulationInspector /> },
-            { id: "presentation", label: "Presentation", content: <PresentationModelStub /> },
+            { id: "presentation", label: "Presentation", content: <PresentationModelBuilder /> },
             { id: "psychometrics", label: "Psychometrics", content: <PsychometricsDashboard /> },
             { id: "reports", label: "Reports", content: <AnalyticsReports /> },
           ],

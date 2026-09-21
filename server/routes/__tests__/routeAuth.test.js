@@ -42,6 +42,7 @@ import calibrationRoutes from "../calibrationRoutes.js";
 import calibrationJobsRoutes from "../calibrationJobsRoutes.js";
 import qMatrixModelsRoutes from "../qMatrixModelsRoutes.js";
 import assemblyModelsRoutes from "../assemblyModelsRoutes.js";
+import presentationModelsRoutes from "../presentationModelsRoutes.js";
 import compositeLibraryRoutes from "../compositeLibraryRoutes.js";
 import announcementsRoutes from "../announcementsRoutes.js";
 import auditLogRoutes from "../auditLogRoutes.js";
@@ -69,6 +70,7 @@ const PROTECTED_ROUTERS = [
   // routers are created, so the gate can never be removed silently.
   { name: "qMatrixModelsRoutes", path: "/api/qMatrixModels", router: qMatrixModelsRoutes },
   { name: "assemblyModelsRoutes", path: "/api/assemblyModels", router: assemblyModelsRoutes },
+  { name: "presentationModelsRoutes", path: "/api/presentationModels", router: presentationModelsRoutes },
   { name: "compositeLibraryRoutes", path: "/api/compositeLibrary", router: compositeLibraryRoutes },
   { name: "announcementsRoutes", path: "/api/announcements", router: announcementsRoutes },
   { name: "auditLogRoutes", path: "/api/auditLog", router: auditLogRoutes },

@@ -46,6 +46,11 @@ import {
   ANALYSIS_ARTEFACT_KIND_VALUES,
   BLOOM_LEVEL_VALUES,
   REASONING_TYPE_VALUES,
+  PRESENTATION_ITEM_ORDER_VALUES,
+  PRESENTATION_GROUPING_VALUES,
+  PRESENTATION_NAVIGATION_VALUES,
+  PRESENTATION_FEEDBACK_TIMING_VALUES,
+  PRESENTATION_ACCESSIBILITY_PROFILE_VALUES,
 } from "./ecdVocabulary.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 
@@ -683,6 +688,40 @@ export const schema = {
     status: 'string',
     // Day 21 (Week 5): lifecycle wiring -- see the identical comment on
     // assemblyModels above.
+    locked: 'boolean',
+    versionNumber: 'number',
+    parentModelId: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
+  // presentationModels — D113 (W23 G8). First-class authored overlay for
+  // PADI TR9 Materials & Presentation: item order, grouping, navigation,
+  // conditional display, accessibility profile. Bound to a Task Model
+  // (Fig. 7 places Materials & Presentation on the task template), not a
+  // fifth CAF sibling of Student/Evidence/Task/Assembly.
+  //
+  // Item-level stimulus/interaction stays on `items` and still bakes into
+  // compositeLibrary per ADR 0003. This collection is the session/task
+  // overlay ItemPresenter already refused to invent locally. Library bake
+  // of a pointer, and SessionPlayer obedience, are later W23 units
+  // (docs/adr/0008-presentation-library-bake.md).
+  //
+  // Named `presentationModels` so dbAdapter.js's trailing-"s" singularizer
+  // yields `presentationModel`. Plain-shape style so the deep
+  // `collection === "presentationModels"` checks below actually run.
+  // ------------------------------------------------------------------
+  presentationModels: {
+    id: 'string',
+    name: 'string',
+    description: 'string',
+    taskModelId: 'string',
+    taskModelVersion: 'number',
+    layout: 'object',
+    conditionalDisplay: 'object',
+    accessibility: 'object',
+    status: 'string',
     locked: 'boolean',
     versionNumber: 'number',
     parentModelId: 'string',
@@ -5120,6 +5159,119 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           JSON.stringify(existing.payload) !== JSON.stringify(obj.payload)
         ) {
           errors.push(`analysisArtefacts are immutable — cannot change 'payload' on '${obj.id}'.`);
+        }
+      }
+    }
+  }
+
+  /* =====================================================
+     PRESENTATION MODELS — D113 (W23 G8)
+     Structural + referential-integrity validation here. Promotion-
+     readiness completeness lives in validatePresentationModelLifecycle.
+     Drafts may omit layout / conditionalDisplay / accessibility keys;
+     when a key is present it must be a legal vocabulary value.
+  ===================================================== */
+
+  if (collection === "presentationModels") {
+    if (!obj.name) errors.push("Presentation model name is required.");
+    if (!obj.taskModelId) errors.push("taskModelId is required.");
+    if (!obj.status) {
+      errors.push("status is required.");
+    } else if (!STATUS.includes(obj.status)) {
+      errors.push(`Invalid presentation model status '${obj.status}'.`);
+    }
+    if (obj.status === "confirmed" && !obj.locked) {
+      errors.push("Confirmed presentation models must be locked.");
+    }
+
+    const taskModel =
+      db && obj.taskModelId
+        ? db.taskModels?.find((m) => m.id === obj.taskModelId)
+        : undefined;
+
+    if (db && obj.taskModelId && !taskModel) {
+      errors.push(`Invalid taskModelId: ${obj.taskModelId}`);
+    }
+
+    if (obj.layout !== undefined && obj.layout !== null) {
+      const layout = obj.layout;
+      if (typeof layout !== "object" || Array.isArray(layout)) {
+        errors.push("layout should be object");
+      } else {
+        if (
+          layout.itemOrder !== undefined &&
+          !PRESENTATION_ITEM_ORDER_VALUES.includes(layout.itemOrder)
+        ) {
+          errors.push(
+            `Invalid layout.itemOrder '${layout.itemOrder}'. Must be one of: ${PRESENTATION_ITEM_ORDER_VALUES.join(", ")}.`
+          );
+        }
+        if (
+          layout.grouping !== undefined &&
+          !PRESENTATION_GROUPING_VALUES.includes(layout.grouping)
+        ) {
+          errors.push(
+            `Invalid layout.grouping '${layout.grouping}'. Must be one of: ${PRESENTATION_GROUPING_VALUES.join(", ")}.`
+          );
+        }
+        if (
+          layout.navigation !== undefined &&
+          !PRESENTATION_NAVIGATION_VALUES.includes(layout.navigation)
+        ) {
+          errors.push(
+            `Invalid layout.navigation '${layout.navigation}'. Must be one of: ${PRESENTATION_NAVIGATION_VALUES.join(", ")}.`
+          );
+        }
+      }
+    }
+
+    if (obj.conditionalDisplay !== undefined && obj.conditionalDisplay !== null) {
+      const cd = obj.conditionalDisplay;
+      if (typeof cd !== "object" || Array.isArray(cd)) {
+        errors.push("conditionalDisplay should be object");
+      } else {
+        if (
+          cd.showFeedback !== undefined &&
+          !PRESENTATION_FEEDBACK_TIMING_VALUES.includes(cd.showFeedback)
+        ) {
+          errors.push(
+            `Invalid conditionalDisplay.showFeedback '${cd.showFeedback}'. Must be one of: ${PRESENTATION_FEEDBACK_TIMING_VALUES.join(", ")}.`
+          );
+        }
+        for (const key of ["allowSkip", "allowReview", "showProgress"]) {
+          if (cd[key] !== undefined && typeof cd[key] !== "boolean") {
+            errors.push(`conditionalDisplay.${key} should be boolean`);
+          }
+        }
+      }
+    }
+
+    if (obj.accessibility !== undefined && obj.accessibility !== null) {
+      const a11y = obj.accessibility;
+      if (typeof a11y !== "object" || Array.isArray(a11y)) {
+        errors.push("accessibility should be object");
+      } else {
+        if (
+          a11y.profile !== undefined &&
+          !PRESENTATION_ACCESSIBILITY_PROFILE_VALUES.includes(a11y.profile)
+        ) {
+          errors.push(
+            `Invalid accessibility.profile '${a11y.profile}'. Must be one of: ${PRESENTATION_ACCESSIBILITY_PROFILE_VALUES.join(", ")}.`
+          );
+        }
+        if (a11y.fontScale !== undefined) {
+          if (typeof a11y.fontScale !== "number" || a11y.fontScale < 1 || a11y.fontScale > 2) {
+            errors.push("accessibility.fontScale must be a number in [1, 2].");
+          }
+        }
+        if (a11y.timeMultiplier !== undefined) {
+          if (
+            typeof a11y.timeMultiplier !== "number" ||
+            a11y.timeMultiplier < 1 ||
+            a11y.timeMultiplier > 3
+          ) {
+            errors.push("accessibility.timeMultiplier must be a number in [1, 3].");
+          }
         }
       }
     }

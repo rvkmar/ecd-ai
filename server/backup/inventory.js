@@ -94,6 +94,12 @@ export const BACKUP_INVENTORY = Object.freeze([
     reason: "Included in ECD JSON snapshot.",
   },
   {
+    id: "presentationModels",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included — D113 Presentation Model overlay; delivery chrome is authored here.",
+  },
+  {
     id: "compositeLibrary",
     store: "ecd-json",
     pathInArchive: "ecd/db.json",

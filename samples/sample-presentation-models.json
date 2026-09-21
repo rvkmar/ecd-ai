@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Grade 6 Fractions — linear presentation",
+    "description": "PADI Materials & Presentation overlay for the Equivalent Fractions Task Model. Replace the placeholder taskModelId with a real id after confirming that Task Model.",
+    "taskModelId": "<REPLACE_WITH_REAL_TASK_MODEL_ID>",
+    "layout": {
+      "itemOrder": "authored",
+      "grouping": "single_item",
+      "navigation": "linear"
+    },
+    "conditionalDisplay": {
+      "showFeedback": "none",
+      "allowSkip": false,
+      "allowReview": false,
+      "showProgress": true
+    },
+    "accessibility": {
+      "profile": "default",
+      "fontScale": 1,
+      "timeMultiplier": 1
+    }
+  }
+]
