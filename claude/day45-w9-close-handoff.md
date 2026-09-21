@@ -77,7 +77,7 @@ deliberately left as-is.
 | Dialog, Combobox | ✅ Day 42 |
 | Toast | ✅ Day 43 (real system fixed; bespoke dead component removed) |
 | Storybook / component gallery | ✅ Day 43 |
-| Reusable wizard shell | ✅ Day 44 for Competency + Evidence; **Task Model and Item explicitly deferred** |
+| Reusable wizard shell | ✅ Day 44 for Competency + Evidence; **Task Model and Item explicitly deferred** (Task Model discharged D111 as convention B; Item remains D112) |
 
 ## What remains before the next pass touches these surfaces
 

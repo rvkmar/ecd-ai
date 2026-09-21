@@ -5,7 +5,10 @@ found across the Competency/Evidence/Task wizards is extracted into one reusable
 rail, per-step gating, readiness panel, error boundary) and all three wizards are re-pointed at
 it.
 
-**Status: DONE, scope narrowed after audit — see below.**
+**Status: DONE, scope narrowed after audit — see below.** D111 (2026-09-21)
+discharged the Task Model deferral onto the shared shell as convention B —
+see `claude/day111-taskwizard-shared-shell.md`. ItemWizard remains deferred
+(D112).
 
 ## Why the plan changed before any code was written
 
@@ -103,4 +106,6 @@ clean.
 Day 45: Week 9 walkthrough and handoff — closing out the design-system pass (tokens, primitives,
 Toast fix, Storybook, and this narrowed wizard-shell extraction) with a summary of what shipped,
 what was deliberately deferred (Task Model's and Item's wizard re-pointing chief among it), and
-what Week 10 should pick up.
+what Week 10 should pick up. **Update (D111):** Task Model re-pointing
+shipped as a tested second calling convention on the same shared shell;
+Item remains D112.

@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D110** — load testing + DR runbook; **W22 closed**. Handoff: `claude/day110-load-testing-dr-runbook.md`; block: `claude/day110-w22-block-close.md`. |
+| Last completed unit | **D111** — TaskWizard onto shared wizard shell (convention B). Handoff: `claude/day111-taskwizard-shared-shell.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D111** — TaskWizard onto shared shell (W23; never-compress). |
+| Next queued | Calendar **D112** — ItemWizard onto shared shell (W23; never-compress). |
 
 | Block | **W23** next. **W22** (D106–D110) closed 2026-09-20; gate met at D108. |
 
@@ -344,6 +344,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-20 | D110 | 3, alone | Five load numbers + DR runbook from D108; W22 closed. Suite **1794 passed / 9 skipped**. Next: D111. |
 
 | 2026-09-20 | close | — | W22 session close (D109–D110; D106–D108 already landed). Suite re-verify **1794 passed / 9 skipped**; build green; tip **`0e5b0fa`** ≡ `main/master`. No half-applied work; no new compression debt. Next: D111. |
+
+| 2026-09-21 | D111 | 1, alone | TaskWizard onto shared `src/components/wizard/` shell as convention B (rail gating, amber-dots, named blocking toasts, promote/save). CM/EM stay convention A. Suite **1821 passed / 9 skipped** (+27 D111 tests; skips unchanged). Next: D112. |
 
 
 
