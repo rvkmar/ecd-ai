@@ -77,6 +77,7 @@ describe("POST /api/sessions/:id/submit rate limit", () => {
   it("returns 429 after the per-user submit budget is exhausted", async () => {
     vi.doMock("../../src/utils/db-server.js", () => ({
       loadDB: () => ({ sessions: [], students: [], users: [], items: [], questions: [] }),
+      readRawDB: () => ({ sessions: [], students: [], users: [], items: [], questions: [], tasks: [], taskModels: [], presentationModels: [] }),
       saveDB: () => {},
       finishSession: () => {},
     }));

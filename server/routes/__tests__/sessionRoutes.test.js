@@ -35,11 +35,16 @@ vi.mock("../../utils/authMiddleware.js", () => ({
   },
 }));
 
-vi.mock("../../../src/utils/db-server.js", () => ({
-  loadDB: vi.fn(),
-  saveDB: vi.fn(),
-  finishSession: vi.fn(),
-}));
+vi.mock("../../../src/utils/db-server.js", () => {
+  const loadDB = vi.fn();
+  return {
+    loadDB,
+    saveDB: vi.fn(),
+    finishSession: vi.fn(),
+    // D115: presentation overlay reads the unscoped content store.
+    readRawDB: (...args) => loadDB(...args),
+  };
+});
 
 const { loadDB, saveDB } = await import("../../../src/utils/db-server.js");
 const { default: router } = await import("../sessionRoutes.js");

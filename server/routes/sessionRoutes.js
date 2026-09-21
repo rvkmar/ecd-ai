@@ -1,7 +1,7 @@
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs, submitRateLimiter } from "../utils/requestValidation.js";
-import { loadDB, saveDB, finishSession } from "../../src/utils/db-server.js";
+import { loadDB, saveDB, finishSession, readRawDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
 import {
@@ -720,25 +720,32 @@ router.get("/:id/next-task", (req, res) => {
  * operational changes what the examinee sees without touching item
  * content — D115 exit check). Package presentationModelId is a fallback
  * when nothing linkable is live yet.
+ *
+ * Uses readRawDB (not the request-scoped `db`) because Presentation Models
+ * are system-level delivery chrome, while `tasks` are tenant-scoped: a
+ * student whose district claim hides authored tasks without districtId
+ * would otherwise get taskId from selection but never a presentation
+ * overlay (live dual-PM walk / D115).
  */
-function attachPresentationOverlay(decision, session, db) {
+function attachPresentationOverlay(decision, _session, _db) {
   if (!decision?.taskId) return null;
-  const task = (db.tasks || []).find((t) => t.id === decision.taskId);
+  const contentDb = readRawDB();
+  const task = (contentDb.tasks || []).find((t) => t.id === decision.taskId);
   const taskModelId = task?.taskModelId;
   if (!taskModelId) return null;
 
-  const taskModel = (db.taskModels || []).find((tm) => tm.id === taskModelId);
+  const taskModel = (contentDb.taskModels || []).find((tm) => tm.id === taskModelId);
   const taskModelVersion =
     typeof taskModel?.versionNumber === "number"
       ? taskModel.versionNumber
       : null;
-  const pkg = activePackageFor(taskModelId, db);
+  const pkg = activePackageFor(taskModelId, contentDb);
   const liveId =
     typeof taskModelVersion === "number"
-      ? selectPresentationModelIdForTaskModel(db, taskModelId, taskModelVersion)
+      ? selectPresentationModelIdForTaskModel(contentDb, taskModelId, taskModelVersion)
       : null;
 
-  const resolved = resolvePresentationModel(db, {
+  const resolved = resolvePresentationModel(contentDb, {
     presentationModelId: liveId || pkg?.presentationModelId || null,
     taskModelId,
     taskModelVersion: taskModelVersion ?? pkg?.taskModelVersion ?? null,

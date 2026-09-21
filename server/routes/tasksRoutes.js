@@ -2,7 +2,8 @@
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
-import { loadDB, saveDB } from "../../src/utils/db-server.js";
+import { loadDB, saveDB, readRawDB } from "../../src/utils/db-server.js";
+import { sessionAssignedToStudent } from "../../src/utils/sessionPlay.js";
 
 const router = express.Router();
 
@@ -19,6 +20,24 @@ router.use(sanitizeRequestInputs);
 const canAuthor = authorizeRole(["admin", "district", "teacher"]);
 const canDelete = authorizeRole(["admin", "district"]);
 
+/**
+ * Authored tasks often have no districtId. Tenant-scoped loadDB then hides
+ * them from students even when the task sits on their session roster —
+ * /next-task still returns taskId, but GET /api/tasks/:id 404s and the
+ * player never mounts ItemPresenter (D115 live walk). Allow the raw row
+ * when the caller is assigned a session that includes this taskId.
+ */
+function taskOnAssigneeSession(taskId, user, rawDb) {
+  if (!user || user.role !== "student") return false;
+  const students = rawDb.students || [];
+  const users = rawDb.users || [];
+  return (rawDb.sessions || []).some(
+    (s) =>
+      (s.taskIds || []).includes(taskId) &&
+      sessionAssignedToStudent(s, user, students, users)
+  );
+}
+
 // ------------------------------
 // GET /api/tasks
 // ------------------------------
@@ -32,7 +51,18 @@ router.get("/", (req, res) => {
 // ------------------------------
 router.get("/:id", (req, res) => {
   const db = loadDB();
-  const task = db.tasks.find(t => t.id === req.params.id);
+  let task = (db.tasks || []).find((t) => t.id === req.params.id);
+  if (!task) {
+    const raw = readRawDB();
+    const candidate = (raw.tasks || []).find((t) => t.id === req.params.id);
+    if (
+      candidate &&
+      (req.user?.role === "admin" ||
+        taskOnAssigneeSession(candidate.id, req.user, raw))
+    ) {
+      task = candidate;
+    }
+  }
   if (!task) return res.status(404).json({ error: "Task not found" });
   res.json(task);
 });

@@ -56,6 +56,7 @@ const fixture = {
 
 vi.mock("../../../src/utils/db-server.js", () => ({
   loadDB: vi.fn(() => applyTenancyToDb(fixture)),
+  readRawDB: vi.fn(() => fixture),
   saveDB: vi.fn(),
   finishSession: vi.fn(),
 }));

@@ -13,7 +13,7 @@
 | Two PMs → different examinee surface; same item stimulus | **Yes** — `presentationObedience.test.jsx` (ItemPresenter profile/chrome flip; stimulus text unchanged) + `presentationLiveSelect.test.js` (operational flip changes resolved overlay) |
 | SessionPlayer applies overlay (progress / skip / a11y classes) | **Yes** — `presentation` from `/next-task`; `presentationChrome`; ItemPresenter `data-presentation-profile` |
 | No overlay bake into items / compositeLibrary | **Yes** — ADR 0008 unchanged boundary |
-| Live browser two-PM walk on `:6060` | **Partial** — stack reachable; seeded dual-PM + item session not walked end-to-end this session. Behaviour proven in tests that mirror the exit check. Recorded as residual for a follow-on live walk if procurement needs a screen recording. |
+| Live browser two-PM walk on `:6060` | **Yes** — 2026-09-21 on `s1789988990327` (`tm-d56` / `itemA`). Flipping operational PM (`large_text` ↔ `high_contrast`) changed `data-presentation-profile` / chrome classes without editing the item. Fixed student tenancy gaps that had blocked the walk (presentation attach + task GET). |
 
 ## Premise
 

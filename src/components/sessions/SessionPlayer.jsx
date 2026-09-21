@@ -514,7 +514,9 @@ export default function SessionPlayer({
   }
 
   // Load a specific activity from the session's task list (wizard nav /
-  // review). Does not ask /next-task — that remains the adaptive path.
+  // review). Does not ask /next-task for selection — that remains the
+  // adaptive path — but re-reads the live Presentation Model overlay so
+  // a PM flip lands without waiting for the next adaptive advance (D115).
   async function loadTaskById(tid) {
     if (!tid) return;
     setLoadingTask(true);
@@ -522,6 +524,18 @@ export default function SessionPlayer({
     setNoMoreTasks(false);
     try {
       setCurrentTaskId(tid);
+      try {
+        const next = await apiFetch(
+          `/api/sessions/${sessionIdRef.current}/next-task`,
+          {},
+          auth
+        );
+        if (next && !next.stopped) {
+          setPresentation(next.presentation || null);
+        }
+      } catch {
+        /* keep prior overlay */
+      }
       let taskObj = null;
       try {
         taskObj = await fetchJsonSafe(`/api/tasks/${tid}`);
@@ -938,7 +952,12 @@ export default function SessionPlayer({
     };
 
     return (
-      <div className="p-4 md:p-6">
+      <div
+        className={`p-4 md:p-6 ${chrome.rootClassName}`}
+        style={chrome.rootStyle}
+        data-testid="student-session-player"
+        {...chrome.dataAttrs}
+      >
         {banner}
         <StudentSessionWizard
           sessionId={sessionId}

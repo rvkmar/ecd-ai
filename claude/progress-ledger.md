@@ -373,6 +373,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-21 | close | — | W23 session close (D114–D115; D111–D113 earlier same day). Suite re-verify **1909 passed / 9 skipped**; build green; tip **`28bce01`** ≡ `main/master`. No half-applied work. Compression debt: D115 live dual-PM `:6060` walk. Next: D116. |
 
+| 2026-09-21 | D115 debt | — | Live `:6060` dual-PM walk closed. Root cause: student tenancy hid tasks (no `districtId`) so `/next-task` omitted presentation and `/api/tasks/:id` 404'd. Fixed attach via `readRawDB` + rostered task GET; student player chrome wrapper. Session `s1789988990327`; PMs `pm1789988809911001` / `pm1789988810055002`. |
+
 
 
 ## Compression debt
@@ -417,7 +419,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open** |
 
-| D115 | Live `:6060` two-PM / one-item browser walk | Tests proved chrome flip; seeded dual-PM session not walked end-to-end | next live student/admin walk | **open** |
+| D115 | Live `:6060` two-PM / one-item browser walk | Tests proved chrome flip; seeded dual-PM session not walked end-to-end | next live student/admin walk | **closed** — 2026-09-21 live walk on `s1789988990327` / `tm-d56` / `itemA`; student tenancy bugs fixed (presentation attach + task GET); chrome flipped `large_text` → `high_contrast` without item edits |
 
 | Admin CAF IA | Live tabs do not match TR9 CAF/delivery | Walk 2026-09-15; wiring is D73b | D73b | **closed** — Admin nested Models / Implementation / Delivery on `:6060`; District/Teacher/Student chrome aligned same session |
 
@@ -601,7 +603,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - Work Products / Rubrics as first-class objects + multi-phase eval + human rating (W25 / G11–G12) — **open**; file inventory in `claude/day81-offcal-em-remaining-gap-inventory.md`
 
-- ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113. ~~Library-pointer bake~~ closed D114. ~~SessionPlayer obedience / W23 gate~~ closed D115 (`claude/day115-sessionplayer-presentation-w23.md`). Live `:6060` dual-PM browser walk — **open** (compression debt D115)
+- ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113. ~~Library-pointer bake~~ closed D114. ~~SessionPlayer obedience / W23 gate~~ closed D115 (`claude/day115-sessionplayer-presentation-w23.md`). ~~Live `:6060` dual-PM browser walk~~ closed 2026-09-21 (compression debt D115).
 
 - Design Patterns (W27 / G7) — absent; Additional KSAs still notes-only on EMs
 
