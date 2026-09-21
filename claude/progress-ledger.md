@@ -54,7 +54,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Next queued | Calendar **D114** — not started. Presentation Model authored; composite-library pointer bake / SessionPlayer obedience still later W23. |
 
-| Block | **W23** next. **W22** (D106–D110) closed 2026-09-20; gate met at D108. |
+| Block | **W23** in progress (D111–D113 done; D114–D115 remain). **W22** (D106–D110) closed 2026-09-20; gate met at D108. W23 gate (Presentation Model changes examinee view) **not** met — SessionPlayer obedience later. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ |
 
@@ -157,6 +157,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-18 W19 session close | this close. Suite re-run **1665 passed / 6 failed (load flakes) / 9 skipped**; isolation of failing files green; build green. Calendar W19 block ✅. Next: D96. |
 
 | HEAD at D96 | product `80afcfe` + `claude/day96-tenancy-adr-jwt-claims.md`. Suite close re-run **1677 passed / 9 skipped**; build green (~17s). Live `:6060` JWT claims (`tn-chennai` on dist1/teach1/stud1; admin omits). |
+
+| HEAD at D111 | product `daac216` + `claude/day111-taskwizard-shared-shell.md`. Suite **1821 passed / 9 skipped**. Convention B. |
+
+| HEAD at D112 | product `f44f222` + `claude/day112-itemwizard-shared-shell.md`. Suite **1850 passed / 9 skipped**. Convention C. |
+
+| HEAD at D113 | product `416d99d` + boot fix `3010a09` + `claude/day113-presentation-model-authoring.md`. Suite **1894 passed / 9 skipped**. |
+
+| HEAD at 2026-09-21 W23 session close (D111–D113) | this close. Suite re-verify **1894 passed / 9 skipped**; build green (21.21s). Tip **`3010a09`** ≡ `main/master`. Calendar D111–D113 ✅. Next: D114. |
 
 
 
@@ -351,6 +359,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-21 | D113 | 1, alone | Presentation Model authoring (W23 G8 first slice): collection + lifecycle + HTTP/RBAC + convention-A wizard replacing the stub. SessionPlayer obedience out of scope. Suite **1894 passed / 9 skipped** (+44 tests / +4 files; skips unchanged). Next: D114. |
 
+| 2026-09-21 | close | — | W23 session close (D111–D113; not full block). Suite re-verify **1894 passed / 9 skipped**; build green; tip **`3010a09`** ≡ `main/master`. No half-applied work; no new compression debt. Next: D114. |
+
 
 
 ## Compression debt
@@ -506,6 +516,12 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D97 | Enforce in/above `dbAdapter` only | Most tenant reads use `loadDB`; save without merge would wipe tenants | Shared ALS filter on loadDB + dbAdapter; mergeScopedDbSave; path-param guard |
 
 | D106 | `dbAdapter` alone has JSON + Mongo; decide one production story | Two stores: ECD via `loadDB`/`ECD_DB_FILE`; users/questions via `dbAdapter`. Compose already `DB_MODE=mongo` + ECD file | ADR 0007: Mongo is production of record (ECD target included); JSON harness only; ECD file interim until cutover; boot refuse + compose pin |
+
+| D111 | Props-only fold of TaskWizard onto CM/EM shared shell | TM is context-driven: gated rail, amber readiness dots, step container doubles as router | Shared shell grew **convention B**; TM adapters map `useTaskModelWizard()`; CM/EM stay convention A |
+
+| D112 | Fold ItemWizard like Task (reuse B) or props-only A | Item has real completion ticks, named Next-blocker banner, Step-8 confirm, extra lifecycle toolbar; Step 7 pilot surface is measurement-critical | Shared shell grew **convention C**; Item adapters; A/B unchanged |
+
+| D113 | day81 inventory once labeled W23 = Presentation authoring alone starting at D111 | Calendar put shell folds on D111–D112; authoring on D113 | D111/D112 = shell chrome; D113 = real G8 authoring + ADR 0008 pointer-bake; SessionPlayer obedience later |
 
 ## Carried-forward gaps
 
