@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- D113: Presentation Model authoring (W23 G8 first slice). `presentationModels`
+  is a first-class lifecycle-governed collection (layout, conditional display,
+  accessibility; bound to a Task Model) with HTTP + admin RBAC, a convention-A
+  wizard on the shared shell replacing `PresentationModelStub`, readiness
+  agreement tests, and ADR 0008 (do not bake the overlay into composite
+  library; SessionPlayer obedience is a later W23 unit). Handoff:
+  `claude/day113-presentation-model-authoring.md`.
+
 - D70: linking / equating through R. `{ fixture: "known-equating" }` is a
   seeded NEAT common-item design (seed 20261202): 400 Form X + 400 Form Y,
   6 common items, Form Y generated 0.5 logits harder. `POST /calibrate/equating`

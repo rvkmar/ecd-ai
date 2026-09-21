@@ -2,7 +2,7 @@
 
 // Updated lifecycle validation aligned with latest ECD Task Model architecture
 import { canTransition, canTransitionCalibrationJob, CALIBRATION_JOB_STATUS } from "../utils/lifecycleMatrix.js";
-import { isLinkableCompetencyModel } from "../../src/utils/schema.js";
+import { isLinkableCompetencyModel, isInstantiableTaskModel } from "../../src/utils/schema.js";
 import {
   CALIBRATION_JOB_KIND_VALUES,
   statisticalModelTypesForJobKind,
@@ -647,6 +647,82 @@ export function validateQMatrixModelLifecycle(qMatrixModel, db = null, options =
       }
       if (qMatrixModel.competencyModelVersion !== cm.versionNumber) {
         errors.push(`Q-matrix cannot be activated: competencyModelVersion (${qMatrixModel.competencyModelVersion}) does not match the competency model's current version (${cm.versionNumber}).`);
+      }
+    }
+  }
+
+  return errors;
+}
+
+// -------------------------------------
+// PRESENTATION MODEL lifecycle validation — D113, W23
+// -------------------------------------
+// Same self-contained promotion validator shape as assembly/qMatrix:
+// legal transitions plus REVIEWED / CONFIRMED / ACTIVATION gates.
+// SessionPlayer does not consume this record yet; activation still
+// requires the bound Task Model to be instantiable so a later player
+// unit cannot promote an overlay whose parent blueprint is still draft.
+export function validatePresentationModelLifecycle(presentationModel, db = null, options = {}) {
+  const errors = [];
+  const status = presentationModel.status || "draft";
+
+  if (db && presentationModel.id) {
+    const existing = db.presentationModels?.find((m) => m.id === presentationModel.id);
+    if (existing && existing.status !== status && !canTransition(existing.status, status)) {
+      errors.push(
+        `Illegal presentation model status transition: '${existing.status}' -> '${status}'.`
+      );
+    }
+  }
+
+  /* REVIEWED — identity + how items are laid out. */
+  if (["reviewed", "confirmed", "operational", "suspended"].includes(status)) {
+    if (!presentationModel.name) {
+      errors.push("Presentation model must have a name before review.");
+    }
+    if (!presentationModel.taskModelId) {
+      errors.push("Presentation model must reference a taskModelId before review.");
+    }
+    if (!presentationModel.layout?.itemOrder) {
+      errors.push("Presentation model must declare layout.itemOrder before review.");
+    }
+    if (!presentationModel.layout?.navigation) {
+      errors.push("Presentation model must declare layout.navigation before review.");
+    }
+  }
+
+  /* CONFIRMED — feedback timing + an accessibility profile so delivery
+     has a complete overlay, not a layout-only stub. */
+  if (["confirmed", "operational", "suspended"].includes(status)) {
+    if (!presentationModel.conditionalDisplay?.showFeedback) {
+      errors.push(
+        "Presentation model must declare conditionalDisplay.showFeedback before confirmation."
+      );
+    }
+    if (!presentationModel.accessibility?.profile) {
+      errors.push("Presentation model must declare accessibility.profile before confirmation.");
+    }
+  }
+
+  /* ACTIVATION — bound Task Model must be a frozen instantiable parent
+     at the authored version (same isInstantiableTaskModel used by items). */
+  if (status === "operational" && db) {
+    const tm = db.taskModels?.find((m) => m.id === presentationModel.taskModelId);
+
+    if (!tm) {
+      errors.push(
+        `Presentation model cannot be activated: task model '${presentationModel.taskModelId}' not found.`
+      );
+    } else {
+      if (!isInstantiableTaskModel(tm)) {
+        errors.push(
+          `Presentation model cannot be activated: bound task model must be a locked, non-archived parent (confirmed, operational, or suspended); found '${tm.status}'${tm.locked ? "" : ", unlocked"}.`
+        );
+      }
+      if (presentationModel.taskModelVersion !== tm.versionNumber) {
+        errors.push(
+          `Presentation model cannot be activated: taskModelVersion (${presentationModel.taskModelVersion}) does not match the task model's current version (${tm.versionNumber}).`
+        );
       }
     }
   }

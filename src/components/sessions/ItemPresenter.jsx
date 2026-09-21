@@ -18,8 +18,10 @@
 // one.
 //
 // Presentation LOGIC (ordering, conditional display, the accessibility
-// profile) belongs to the Presentation Model at W23. This renders the
-// item's own stimulus and interaction faithfully and stops there.
+// profile) belongs to the Presentation Model (D113 authored the
+// collection; SessionPlayer obedience is a later W23 unit). This
+// renders the item's own stimulus and interaction faithfully and
+// stops there.
 
 import React from "react";
 

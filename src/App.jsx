@@ -41,6 +41,9 @@ const QMatrixModelBuilder = lazyPanel(() =>
 const AssemblyModelBuilder = lazyPanel(() =>
   import("./components/assemblyModels/AssemblyModelBuilder")
 );
+const PresentationModelBuilder = lazyPanel(() =>
+  import("./components/presentationModels/PresentationModelBuilder")
+);
 const TasksManager = lazyPanel(() => import("./components/tasks/TasksManager"));
 const SessionBuilder = lazyPanel(() =>
   import("./components/sessions/SessionBuilder")
@@ -134,6 +137,11 @@ export default function App() {
                         rolePermissions.js's reasoning: a system-level
                         measurement decision, not local authoring. */}
                     <Route path="assembly-models" element={<AssemblyModelBuilder />} />
+
+                    {/* D113: Presentation Model authoring (W23 G8). Admin-authored
+                        overlay; district may read the HTTP surface. Also a Delivery
+                        tab on AdminPage so the surface is not URL-only. */}
+                    <Route path="presentation-models" element={<PresentationModelBuilder />} />
 
                     {/* D65: calibration job console. Also a tab on
                         AdminPage so the surface is not URL-only. */}

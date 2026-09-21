@@ -21,6 +21,7 @@ import { describe, it, expect } from "vitest";
 import {
   validateAssemblyModelLifecycle,
   validateQMatrixModelLifecycle,
+  validatePresentationModelLifecycle,
 } from "../lifecycleValidation.js";
 
 const operationalCompetencyModel = {
@@ -48,6 +49,21 @@ const db = {
   competencyModels: [operationalCompetencyModel, confirmedCompetencyModel, draftCompetencyModel],
   assemblyModels: [],
   qMatrixModels: [],
+  presentationModels: [],
+  taskModels: [
+    {
+      id: "tm1",
+      status: "confirmed",
+      locked: true,
+      versionNumber: 2,
+    },
+    {
+      id: "tm-draft",
+      status: "draft",
+      locked: false,
+      versionNumber: 1,
+    },
+  ],
 };
 
 function makeAssemblyModel(overrides = {}) {
@@ -265,5 +281,90 @@ describe("validateQMatrixModelLifecycle", () => {
       db
     );
     expect(errors.join(" ")).toMatch(/at least one item-attribute entry before confirmation/);
+  });
+});
+
+describe("validatePresentationModelLifecycle", () => {
+  function makePm(overrides = {}) {
+    return {
+      id: "pm1",
+      name: "Fractions linear presentation",
+      taskModelId: "tm1",
+      taskModelVersion: 2,
+      layout: { itemOrder: "authored", navigation: "linear" },
+      conditionalDisplay: { showFeedback: "none" },
+      accessibility: { profile: "default" },
+      status: "draft",
+      ...overrides,
+    };
+  }
+
+  it("allows a new draft with almost nothing filled in", () => {
+    expect(validatePresentationModelLifecycle({ id: "pm-new", status: "draft" }, db)).toEqual([]);
+  });
+
+  it("refuses reviewed without a name, taskModelId, itemOrder, or navigation", () => {
+    const errors = validatePresentationModelLifecycle({ id: "pm-new", status: "reviewed" }, db);
+    expect(errors.join(" ")).toMatch(/name before review/);
+    expect(errors.join(" ")).toMatch(/taskModelId before review/);
+    expect(errors.join(" ")).toMatch(/layout\.itemOrder/);
+    expect(errors.join(" ")).toMatch(/layout\.navigation/);
+  });
+
+  it("allows reviewed when identity and layout are set", () => {
+    expect(
+      validatePresentationModelLifecycle(
+        makePm({ status: "reviewed", conditionalDisplay: undefined, accessibility: undefined }),
+        db
+      )
+    ).toEqual([]);
+  });
+
+  it("refuses confirmed without feedback timing and accessibility profile", () => {
+    const errors = validatePresentationModelLifecycle(
+      makePm({
+        status: "confirmed",
+        locked: true,
+        conditionalDisplay: {},
+        accessibility: {},
+      }),
+      db
+    );
+    expect(errors.join(" ")).toMatch(/showFeedback/);
+    expect(errors.join(" ")).toMatch(/accessibility\.profile/);
+  });
+
+  it("allows operational when the bound Task Model is instantiable at the authored version", () => {
+    expect(
+      validatePresentationModelLifecycle(makePm({ status: "operational", locked: true }), db)
+    ).toEqual([]);
+  });
+
+  it("refuses activation on a draft Task Model", () => {
+    const errors = validatePresentationModelLifecycle(
+      makePm({ status: "operational", locked: true, taskModelId: "tm-draft", taskModelVersion: 1 }),
+      db
+    );
+    expect(errors.join(" ")).toMatch(/locked, non-archived parent/);
+  });
+
+  it("refuses activation on a taskModelVersion mismatch", () => {
+    const errors = validatePresentationModelLifecycle(
+      makePm({ status: "operational", locked: true, taskModelVersion: 1 }),
+      db
+    );
+    expect(errors.join(" ")).toMatch(/does not match the task model's current version/);
+  });
+
+  it("refuses an illegal transition against the stored record", () => {
+    const dbWithExisting = {
+      ...db,
+      presentationModels: [makePm({ status: "draft" })],
+    };
+    const errors = validatePresentationModelLifecycle(
+      makePm({ status: "operational", locked: true }),
+      dbWithExisting
+    );
+    expect(errors.join(" ")).toMatch(/Illegal presentation model status transition/);
   });
 });

@@ -54,8 +54,8 @@ vi.mock("@/components/sessions/SessionBuilder", () => ({
 vi.mock("@/components/delivery/EvidenceAccumulationInspector", () => ({
   default: () => <div>Accumulation inspector</div>,
 }));
-vi.mock("@/components/delivery/PresentationModelStub", () => ({
-  default: () => <div>Presentation stub</div>,
+vi.mock("@/components/presentationModels/PresentationModelBuilder", () => ({
+  default: () => <div>Presentation builder</div>,
 }));
 vi.mock("@/components/home/HomeAnnouncements", () => ({
   default: () => <div>Home announcements</div>,
@@ -91,8 +91,11 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(src).toMatch(/id: "reports"/);
     expect(src).toMatch(/id: "psychometrics"/);
     expect(src).toMatch(/PsychometricsDashboard/);
+    expect(src).toMatch(/PresentationModelBuilder/);
+    expect(src).not.toMatch(/PresentationModelStub/);
     expect(app).toMatch(/path="psychometrics"/);
     expect(app).toMatch(/PsychometricsPage/);
+    expect(app).toMatch(/path="presentation-models"/);
     expect(src).not.toMatch(/TabsTrigger value="competencies"/);
     expect(src).not.toMatch(/>Analytics</);
     expect(src).not.toMatch(/Delivery Model/);
@@ -163,6 +166,10 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(screen.getByRole("tab", { name: "Psychometrics" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Reports" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Sessions surface")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("tab", { name: "Presentation" }));
+    await waitFor(() => expect(screen.getByText("Presentation builder")).toBeInTheDocument());
+    expect(screen.queryByText("Presentation stub")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Psychometrics" }));
     await waitFor(() => expect(screen.getByText("Psychometrics shell")).toBeInTheDocument());

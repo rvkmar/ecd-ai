@@ -58,6 +58,7 @@ describe("D107 backup inventory", () => {
     expect(ids).toContain("analysisArtefacts");
     expect(ids).toContain("users");
     expect(ids).toContain("sessions");
+    expect(ids).toContain("presentationModels");
     const jobs = BACKUP_INVENTORY.find((r) => r.id === "calibrationJobs");
     expect(jobs.pathInArchive).toBe("ecd/db.json");
   });

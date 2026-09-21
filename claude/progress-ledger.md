@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D112** — ItemWizard onto shared wizard shell (convention C). Handoff: `claude/day112-itemwizard-shared-shell.md`. |
+| Last completed unit | **D113** — Presentation Model authoring (W23 G8 first slice). Handoff: `claude/day113-presentation-model-authoring.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D113** — not started. Presentation Model authoring remains stub-only (W23 G8). |
+| Next queued | Calendar **D114** — not started. Presentation Model authored; composite-library pointer bake / SessionPlayer obedience still later W23. |
 
 | Block | **W23** next. **W22** (D106–D110) closed 2026-09-20; gate met at D108. |
 
@@ -349,6 +349,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-21 | D112 | 1, alone | ItemWizard onto shared `src/components/wizard/` shell as convention C (real completion ticks, named Next-blocker banner, extra lifecycle transitions). CM/EM stay A; TaskWizard stays B. Suite **1850 passed / 9 skipped** (+29 D112 tests; skips unchanged). Next: D113. |
 
+| 2026-09-21 | D113 | 1, alone | Presentation Model authoring (W23 G8 first slice): collection + lifecycle + HTTP/RBAC + convention-A wizard replacing the stub. SessionPlayer obedience out of scope. Suite **1894 passed / 9 skipped** (+44 tests / +4 files; skips unchanged). Next: D114. |
+
 
 
 ## Compression debt
@@ -567,7 +569,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - Work Products / Rubrics as first-class objects + multi-phase eval + human rating (W25 / G11–G12) — **open**; file inventory in `claude/day81-offcal-em-remaining-gap-inventory.md`
 
-- Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)
+- ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113 (`claude/day113-presentation-model-authoring.md`). SessionPlayer obedience and library-pointer bake remain later W23.
 
 - Design Patterns (W27 / G7) — absent; Additional KSAs still notes-only on EMs
 

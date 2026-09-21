@@ -286,6 +286,7 @@ export function generateProductionShapedDataset(options = {}) {
     auditLog: [],
     assemblyModels: [],
     qMatrixModels: [],
+    presentationModels: [],
     policies: [],
     curricularPolicies: [],
     compositeLibraries: [],
@@ -333,6 +334,7 @@ function countLifecycleMeta(db) {
     "items",
     "assemblyModels",
     "qMatrixModels",
+    "presentationModels",
   ]) {
     for (const row of db[col] || []) {
       if (row.reviewMeta) n += 1;

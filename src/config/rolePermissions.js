@@ -36,6 +36,7 @@ export const rolePermissions = {
       // shipped rather than after.
       "qMatrixModels",
       "assemblyModels",
+      "presentationModels",
       "compositeLibrary",
       // D62: calibration job queue. Admin authors; district may view
       // (a calibration run is a system-level measurement decision).
@@ -67,6 +68,7 @@ export const rolePermissions = {
       // auditLog is deliberately absent: append-only via persistence path.
       "qMatrixModels",
       "assemblyModels",
+      "presentationModels",
       "calibrationJobs"
     ],
     canApprove: ["questions", "items"], // promote from review → confirmed
@@ -83,6 +85,7 @@ export const rolePermissions = {
       "students",
       "qMatrixModels",
       "assemblyModels",
+      "presentationModels",
       "calibrationJobs",
       "announcements",
     ],
@@ -106,13 +109,13 @@ export const rolePermissions = {
       "sessions",
       "reports",
       "teacherReports",
-      // Read-only: a Q-matrix and an assembly model are system-level
-      // measurement decisions (which attributes a diagnostic model
-      // estimates; when any session built on the spec may stop), not
-      // local authoring. District users need to SEE the spec their
-      // sessions run under without being able to change it.
+      // Read-only: a Q-matrix, assembly model, and presentation model
+      // are system-level measurement/delivery decisions, not local
+      // authoring. District users need to SEE the spec their sessions
+      // run under without being able to change it.
       "qMatrixModels",
       "assemblyModels",
+      "presentationModels",
       "calibrationJobs",
       "analysisArtefacts",
       "announcements",

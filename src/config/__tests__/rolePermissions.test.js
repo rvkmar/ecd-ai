@@ -80,6 +80,25 @@ describe("calibrationJobs (D65 console RBAC)", () => {
   });
 });
 
+describe("presentationModels (D113 authoring RBAC)", () => {
+  it("admin can view, edit, and delete presentation models", () => {
+    expect(can("admin", "view", "presentationModels")).toBe(true);
+    expect(can("admin", "edit", "presentationModels")).toBe(true);
+    expect(can("admin", "delete", "presentationModels")).toBe(true);
+  });
+
+  it("district can view and cannot write them", () => {
+    expect(can("district", "view", "presentationModels")).toBe(true);
+    expect(can("district", "edit", "presentationModels")).toBeFalsy();
+    expect(can("district", "delete", "presentationModels")).toBeFalsy();
+  });
+
+  it("teacher and student cannot see the entity", () => {
+    expect(can("teacher", "view", "presentationModels")).toBe(false);
+    expect(can("student", "view", "presentationModels")).toBe(false);
+  });
+});
+
 describe("unknown input", () => {
   it("returns false for a role that doesn't exist", () => {
     expect(can("superuser", "view", "sessions")).toBe(false);
