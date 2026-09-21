@@ -35,6 +35,7 @@ import competencyModels from "../competencyModels.js";
 import evidenceModels from "../evidenceModels.js";
 import tasksRoutes from "../tasksRoutes.js";
 import taskModelsRoutes from "../taskModelsRoutes.js";
+import taskModelVariablesRoutes from "../taskModelVariablesRoutes.js";
 import reportsRoutes from "../reportsRoutes.js";
 import studentsRoutes from "../studentsRoutes.js";
 import policiesRoutes from "../policiesRoutes.js";
@@ -60,6 +61,7 @@ const PROTECTED_ROUTERS = [
   { name: "evidenceModels", path: "/api/evidenceModels", router: evidenceModels },
   { name: "tasksRoutes", path: "/api/tasks", router: tasksRoutes },
   { name: "taskModelsRoutes", path: "/api/taskModels", router: taskModelsRoutes },
+  { name: "taskModelVariablesRoutes", path: "/api/taskModelVariables", router: taskModelVariablesRoutes },
   { name: "reportsRoutes", path: "/api/reports", router: reportsRoutes },
   { name: "studentsRoutes", path: "/api/students", router: studentsRoutes },
   { name: "policiesRoutes", path: "/api/policies", router: policiesRoutes },

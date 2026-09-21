@@ -25,11 +25,15 @@ import { interactionTypesForObservable, deriveAllowedScoringMethods } from "../u
 import { validateItemLifecycle } from "../../server/utils/lifecycleValidation.js";
 import { calibrationGate } from "../../server/routes/evidenceModels.js";
 
-import { BLOOM_LEVELS as CANONICAL_BLOOM_LEVELS, REASONING_TYPES as CANONICAL_REASONING_TYPES } from "../utils/ecdVocabulary.js";
-import { BLOOM_LEVELS as TASK_MODEL_BLOOM_LEVELS, REASONING_TYPES as TASK_MODEL_REASONING_TYPES } from "../components/taskModels/taskModelConstants.js";
+import { BLOOM_LEVELS as CANONICAL_BLOOM_LEVELS, REASONING_TYPES as CANONICAL_REASONING_TYPES, PRESENTATION_MODES as CANONICAL_PRESENTATION_MODES, RESPONSE_FORMATS as CANONICAL_RESPONSE_FORMATS, STIMULUS_POLICIES as CANONICAL_STIMULUS_POLICIES, TMV_TYPE_VALUES, TMV_VALUE_SET_SOURCES } from "../utils/ecdVocabulary.js";
+import { BLOOM_LEVELS as TASK_MODEL_BLOOM_LEVELS, REASONING_TYPES as TASK_MODEL_REASONING_TYPES, PRESENTATION_MODES as TASK_MODEL_PRESENTATION_MODES, RESPONSE_FORMATS as TASK_MODEL_RESPONSE_FORMATS, STIMULUS_POLICIES as TASK_MODEL_STIMULUS_POLICIES } from "../components/taskModels/taskModelConstants.js";
 import { BLOOM_LEVELS as ITEM_BLOOM_LEVELS, REASONING_TYPES as ITEM_REASONING_TYPES } from "../components/itemBank/itemConstants.js";
 import { rolePermissions } from "../config/rolePermissions.js";
 import { viewScopeForRole } from "../../server/utils/tenancy.js";
+import {
+  TASK_MODEL_VARIABLE_TYPE_MIRROR,
+  TASK_MODEL_VARIABLE_VALUE_SET_MIRROR,
+} from "../utils/taskModelVariableReadiness.js";
 
 /* =====================================================
    Shared fixtures -- one valid baseline per entity, mutated per test.
@@ -450,6 +454,12 @@ describe("mirror: BLOOM_LEVELS / REASONING_TYPES canonical source", () => {
     expect(ITEM_BLOOM_LEVELS).toBe(CANONICAL_BLOOM_LEVELS);
     expect(ITEM_REASONING_TYPES).toBe(CANONICAL_REASONING_TYPES);
   });
+
+  it("taskModelConstants.js re-exports the task-structure design-feature arrays", () => {
+    expect(TASK_MODEL_PRESENTATION_MODES).toBe(CANONICAL_PRESENTATION_MODES);
+    expect(TASK_MODEL_RESPONSE_FORMATS).toBe(CANONICAL_RESPONSE_FORMATS);
+    expect(TASK_MODEL_STIMULUS_POLICIES).toBe(CANONICAL_STIMULUS_POLICIES);
+  });
 });
 
 /* =====================================================
@@ -483,6 +493,29 @@ describe("mirror: rolePermissions.viewScope <-> viewScopeForRole (server)", () =
     expect(viewScopeForRole("district")).toBe(
       rolePermissions.district.restrictions.viewScope
     );
+  });
+});
+
+/* =====================================================
+   7. Task Model Variable value sets <-> ecdVocabulary
+   -----------------------------------------------------
+   D116. A TMV may name bloomLevel / reasoningType / the task-structure
+   design features. Those levels must be the vocabulary arrays themselves,
+   not a copy. The readiness mirror keeps its own type and value-set key
+   lists; they must stay equal to the vocabulary module.
+===================================================== */
+describe("mirror: Task Model Variable value sets <-> ecdVocabulary", () => {
+  it("aligned value sets are the vocabulary arrays, not copies", () => {
+    expect(TMV_VALUE_SET_SOURCES.bloomLevel).toBe(CANONICAL_BLOOM_LEVELS);
+    expect(TMV_VALUE_SET_SOURCES.reasoningType).toBe(CANONICAL_REASONING_TYPES);
+    expect(TMV_VALUE_SET_SOURCES.presentationMode).toBe(CANONICAL_PRESENTATION_MODES);
+    expect(TMV_VALUE_SET_SOURCES.responseFormat).toBe(CANONICAL_RESPONSE_FORMATS);
+    expect(TMV_VALUE_SET_SOURCES.stimulusPolicy).toBe(CANONICAL_STIMULUS_POLICIES);
+  });
+
+  it("readiness type and value-set keys agree with ecdVocabulary", () => {
+    expect(TASK_MODEL_VARIABLE_TYPE_MIRROR).toEqual([...TMV_TYPE_VALUES]);
+    expect(TASK_MODEL_VARIABLE_VALUE_SET_MIRROR).toEqual(Object.keys(TMV_VALUE_SET_SOURCES));
   });
 });
 

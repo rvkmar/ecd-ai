@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- D116: Task Model Variables (W24 G13). `taskModelVariables` is a library
+  collection of typed reusable design features (no CAF status machine).
+  One variable is consumed by any number of Task Models via
+  `taskModelVariableIds`, with per-model settings in
+  `taskModelVariableSettings`. Aligned levels (`bloomLevel`,
+  `reasoningType`, presentation mode, response format, stimulus policy)
+  stay in `ecdVocabulary.js`; a record names `valueSet` and does not copy
+  the list. Create stamps author `districtId`/`schoolId`/`createdBy`.
+  Handoff: `claude/day116-task-model-variables.md`.
+
 - D115b: Instantiated tasks schema and item bind. `schema.tasks` is a real
   collection (no CAF draft→operational machine). POST/PUT call
   `validateEntity("tasks")` and refuse a Task Model that is not instantiable;

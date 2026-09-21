@@ -51,6 +51,12 @@ import {
   PRESENTATION_NAVIGATION_VALUES,
   PRESENTATION_FEEDBACK_TIMING_VALUES,
   PRESENTATION_ACCESSIBILITY_PROFILE_VALUES,
+  PRESENTATION_MODE_VALUES,
+  RESPONSE_FORMAT_VALUES,
+  STIMULUS_POLICY_VALUES,
+  TMV_TYPE_VALUES,
+  TMV_VALUE_SET_KEYS,
+  taskModelVariableValueIds,
 } from "./ecdVocabulary.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 
@@ -477,6 +483,19 @@ export const schema = {
     equivalenceGroupId: 'string',
 
     /* ---------------------------------------------
+      7b. TASK MODEL VARIABLES (D116 / W24 G13)
+
+      Optional consumption of reusable design features. One
+      taskModelVariables row may appear in many Task Models.
+      taskModelVariableSettings is the per-model constraint (allowed
+      levels, numeric window, required) — the library record stays
+      shared. Absent means "this Task Model binds no variables".
+      Templates are not a collection yet; this is the binding surface.
+    --------------------------------------------- */
+    taskModelVariableIds: 'array',
+    taskModelVariableSettings: 'array',
+
+    /* ---------------------------------------------
       8️⃣ GOVERNANCE
     --------------------------------------------- */
     status: 'string',        // draft | reviewed | confirmed | operational | archived
@@ -511,6 +530,40 @@ export const schema = {
     generatedObservationIds: 'array',
     startTime: 'date',
     endTime: 'date',
+    districtId: 'string',
+    schoolId: 'string',
+    createdBy: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
+  // taskModelVariables — D116 (W24 G13). Reusable Task Model Variables:
+  // a typed design feature with possible values, defined once and
+  // consumed by any number of Task Models (taskModelVariableIds).
+  //
+  // Library records, not CAF models. No draft→operational status
+  // machine — same posture as instantiated `tasks`, for a different
+  // reason: a variable is a shared definition, not a governed model
+  // and not a delivery instance. Student Model Variables stay embedded
+  // on competencyModels.smVariables; do not fold these into that array.
+  //
+  // `valueSet`, when set, names an ecdVocabulary.js list (Bloom,
+  // reasoning, presentation mode, response format, stimulus policy).
+  // The record must not copy those levels into possibleValues.
+  //
+  // Plain-shape style so the deep collection === "taskModelVariables"
+  // block runs (the JSON-schema branch returns early). Named so
+  // dbAdapter's trailing-"s" singularizer yields taskModelVariable.
+  // ------------------------------------------------------------------
+  taskModelVariables: {
+    id: 'string',
+    name: 'string',
+    description: 'string',
+    type: 'string',
+    possibleValues: 'array',
+    range: 'object',
+    valueSet: 'string',
     districtId: 'string',
     schoolId: 'string',
     createdBy: 'string',
@@ -997,6 +1050,147 @@ export function isDeliverableItem(item) {
 
 function hasTaskBindingPointer(value) {
   return typeof value === "string" && value.trim() !== "";
+}
+
+/* Task Models that list this variable id. Shared so delete/update can
+   refuse a change that would leave a dangling or illegal binding. */
+export function taskModelsConsumingVariable(db, variableId) {
+  if (!variableId) return [];
+  return (db?.taskModels || []).filter(
+    (tm) =>
+      Array.isArray(tm?.taskModelVariableIds) &&
+      tm.taskModelVariableIds.includes(variableId)
+  );
+}
+
+function settingEntryValue(entry) {
+  if (typeof entry === "string") return entry.trim() === "" ? null : entry;
+  if (entry && typeof entry === "object" && typeof entry.value === "string") {
+    return entry.value.trim() === "" ? null : entry.value;
+  }
+  return null;
+}
+
+/* Per-Task-Model constraints on a shared Task Model Variable.
+   Referential: the id must be listed and, when db is present, exist.
+   Value validity of a present setting is never gated on `strict`. */
+export function taskModelVariableBindingErrors(obj, db) {
+  const errors = [];
+  const ids = obj?.taskModelVariableIds;
+  const bound = new Set();
+
+  if (ids !== undefined && ids !== null) {
+    if (!Array.isArray(ids)) {
+      errors.push("taskModelVariableIds should be array");
+    } else {
+      ids.forEach((id) => {
+        if (typeof id !== "string" || id.trim() === "") {
+          errors.push("taskModelVariableIds entries must be non-empty strings.");
+          return;
+        }
+        if (bound.has(id)) {
+          errors.push(`Duplicate taskModelVariableId '${id}'.`);
+        }
+        bound.add(id);
+        if (db && !(db.taskModelVariables || []).some((v) => v.id === id)) {
+          errors.push(`Invalid taskModelVariableId '${id}'.`);
+        }
+      });
+    }
+  }
+
+  const settings = obj?.taskModelVariableSettings;
+  if (settings === undefined || settings === null) return errors;
+  if (!Array.isArray(settings)) {
+    errors.push("taskModelVariableSettings should be array");
+    return errors;
+  }
+
+  const seen = new Set();
+  settings.forEach((setting, i) => {
+    const tag = `taskModelVariableSettings[${i}]`;
+    if (!setting || typeof setting !== "object" || Array.isArray(setting)) {
+      errors.push(`${tag} must be an object.`);
+      return;
+    }
+    const id = setting.taskModelVariableId;
+    if (typeof id !== "string" || id.trim() === "") {
+      errors.push(`${tag} requires taskModelVariableId.`);
+      return;
+    }
+    if (seen.has(id)) {
+      errors.push(`${tag} duplicates taskModelVariableId '${id}'.`);
+    }
+    seen.add(id);
+    if (!bound.has(id)) {
+      errors.push(
+        `${tag} taskModelVariableId '${id}' is not listed in taskModelVariableIds.`
+      );
+    }
+    if (setting.required !== undefined && typeof setting.required !== "boolean") {
+      errors.push(`${tag}.required must be boolean.`);
+    }
+
+    const variable = db
+      ? (db.taskModelVariables || []).find((v) => v.id === id)
+      : undefined;
+    if (!variable) return;
+
+    if (variable.type === "numeric") {
+      if (Array.isArray(setting.allowedValues) && setting.allowedValues.length > 0) {
+        errors.push(
+          `${tag} cannot constrain a numeric Task Model Variable with allowedValues.`
+        );
+      }
+      const { min, max } = setting;
+      if (min !== undefined && typeof min !== "number") {
+        errors.push(`${tag}.min must be numeric.`);
+      }
+      if (max !== undefined && typeof max !== "number") {
+        errors.push(`${tag}.max must be numeric.`);
+      }
+      if (typeof min === "number" && typeof max === "number" && min >= max) {
+        errors.push(`${tag}.min must be less than max.`);
+      }
+      const range = variable.range || {};
+      if (typeof range.min === "number" && typeof min === "number" && min < range.min) {
+        errors.push(`${tag}.min is outside the Task Model Variable range.`);
+      }
+      if (typeof range.max === "number" && typeof max === "number" && max > range.max) {
+        errors.push(`${tag}.max is outside the Task Model Variable range.`);
+      }
+      return;
+    }
+
+    if (setting.min !== undefined || setting.max !== undefined) {
+      errors.push(`${tag} min/max apply only to numeric Task Model Variables.`);
+    }
+    if (setting.allowedValues === undefined || setting.allowedValues === null) return;
+    if (!Array.isArray(setting.allowedValues)) {
+      errors.push(`${tag}.allowedValues should be array`);
+      return;
+    }
+    const allowed = taskModelVariableValueIds(variable);
+    const seenVal = new Set();
+    for (const raw of setting.allowedValues) {
+      const value = settingEntryValue(raw);
+      if (!value) {
+        errors.push(`${tag}.allowedValues entries must be non-empty strings.`);
+        continue;
+      }
+      if (seenVal.has(value)) {
+        errors.push(`${tag} duplicates allowed value '${value}'.`);
+      }
+      seenVal.add(value);
+      if (!allowed.includes(value)) {
+        errors.push(
+          `${tag} allowed value '${value}' is not a possible value of Task Model Variable '${id}'.`
+        );
+      }
+    }
+  });
+
+  return errors;
 }
 
 export function validateEntity(collection, obj, db = null, options = {}) {
@@ -3742,39 +3936,21 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
       const ts = obj.taskStructure;
 
-      const allowedPresentation = [
-        "interactive",
-        "simulation",
-        "performance",
-        "constructed"
-      ];
-
-      const allowedResponse = [
-        "selected",
-        "constructed",
-        "hybrid"
-      ];
-
-      const allowedStimulus = [
-        "static",
-        "parameterized",
-        "generative"
-      ];
-
-      /* An unset value is "not authored yet" and only matters at
-         confirmation; a SET value outside the enum is always wrong. */
-      if (strict ? !allowedPresentation.includes(ts.presentationMode)
-                 : Boolean(ts.presentationMode) && !allowedPresentation.includes(ts.presentationMode)) {
+      /* Design-feature levels are ecdVocabulary.js (D116). Task Models
+         still store the chosen string here; a Task Model Variable may
+         name the same list via valueSet without copying it. */
+      if (strict ? !PRESENTATION_MODE_VALUES.includes(ts.presentationMode)
+                 : Boolean(ts.presentationMode) && !PRESENTATION_MODE_VALUES.includes(ts.presentationMode)) {
         errors.push("Invalid taskStructure.presentationMode.");
       }
 
-      if (strict ? !allowedResponse.includes(ts.responseFormat)
-                 : Boolean(ts.responseFormat) && !allowedResponse.includes(ts.responseFormat)) {
+      if (strict ? !RESPONSE_FORMAT_VALUES.includes(ts.responseFormat)
+                 : Boolean(ts.responseFormat) && !RESPONSE_FORMAT_VALUES.includes(ts.responseFormat)) {
         errors.push("Invalid taskStructure.responseFormat.");
       }
 
-      if (strict ? !allowedStimulus.includes(ts.stimulusPolicy)
-                 : Boolean(ts.stimulusPolicy) && !allowedStimulus.includes(ts.stimulusPolicy)) {
+      if (strict ? !STIMULUS_POLICY_VALUES.includes(ts.stimulusPolicy)
+                 : Boolean(ts.stimulusPolicy) && !STIMULUS_POLICY_VALUES.includes(ts.stimulusPolicy)) {
         errors.push("Invalid taskStructure.stimulusPolicy.");
       }
 
@@ -3880,6 +4056,8 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       errors.push("TaskModel cannot reference itself as a sub-task.");
     }
 
+    errors.push(...taskModelVariableBindingErrors(obj, db));
+
     /* ---------------------------------------------------
       TASK MODEL VERSION GOVERNANCE
     --------------------------------------------------- */
@@ -3932,7 +4110,9 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           "taskStructure",
           "blueprintConstraints",
           "taskCompositionType",
-          "subTaskIds"
+          "subTaskIds",
+          "taskModelVariableIds",
+          "taskModelVariableSettings"
         ];
 
         const structuralChanged = structuralFields.some(field =>
@@ -4000,7 +4180,9 @@ export function validateEntity(collection, obj, db = null, options = {}) {
             "taskStructure",
             "blueprintConstraints",
             "taskCompositionType",
-            "subTaskIds"
+            "subTaskIds",
+            "taskModelVariableIds",
+            "taskModelVariableSettings"
           ];
 
           const structuralChanged = structuralFields.some(field =>
@@ -5370,6 +5552,123 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       const existing = db.auditLog?.find((a) => a.id === obj.id);
       if (existing) {
         errors.push(`auditLog is append-only — cannot mutate entry '${obj.id}'.`);
+      }
+    }
+  }
+
+  /* =====================================================
+     TASK MODEL VARIABLES — D116 (W24 G13)
+     Library records. strict requires a complete type + values.
+     A present illegal type, valueSet, or range is always rejected.
+     No CAF status. Name is unique across the collection.
+  ===================================================== */
+
+  if (collection === "taskModelVariables") {
+    if (!obj.name || String(obj.name).trim() === "") {
+      errors.push("Task Model Variable name is required.");
+    }
+
+    if (strict && !obj.type) {
+      errors.push("Task Model Variable type is required.");
+    } else if (obj.type && !TMV_TYPE_VALUES.includes(obj.type)) {
+      errors.push(
+        `Invalid Task Model Variable type '${obj.type}'. Must be one of: ${TMV_TYPE_VALUES.join(", ")}.`
+      );
+    }
+
+    const valueSetPresent =
+      obj.valueSet !== undefined && obj.valueSet !== null && obj.valueSet !== "";
+    if (valueSetPresent && !TMV_VALUE_SET_KEYS.includes(obj.valueSet)) {
+      errors.push(
+        `Unknown valueSet '${obj.valueSet}'. Known sets: ${TMV_VALUE_SET_KEYS.join(", ")}.`
+      );
+    }
+    if (valueSetPresent && obj.type && obj.type !== "categorical") {
+      errors.push("valueSet applies only to categorical Task Model Variables.");
+    }
+    if (valueSetPresent && obj.possibleValues != null) {
+      errors.push(
+        "possibleValues must be omitted when valueSet is set; levels come from ecdVocabulary."
+      );
+    }
+
+    const discrete = obj.type === "categorical" || obj.type === "ordinal";
+    if (discrete && !valueSetPresent) {
+      if (obj.possibleValues == null) {
+        if (strict) {
+          errors.push(
+            `Task Model Variable (${obj.type}) requires at least 2 possibleValues.`
+          );
+        }
+      } else if (!Array.isArray(obj.possibleValues)) {
+        errors.push("possibleValues should be array");
+      } else {
+        const seen = new Set();
+        obj.possibleValues.forEach((entry, i) => {
+          const tag = `possibleValues[${i}]`;
+          if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+            errors.push(`${tag} must be an object with a value.`);
+            return;
+          }
+          if (typeof entry.value !== "string" || entry.value.trim() === "") {
+            errors.push(`${tag}.value must be a non-empty string.`);
+            return;
+          }
+          if (entry.label !== undefined && typeof entry.label !== "string") {
+            errors.push(`${tag}.label must be a string.`);
+          }
+          if (seen.has(entry.value)) {
+            errors.push(`Duplicate possible value '${entry.value}'.`);
+          }
+          seen.add(entry.value);
+        });
+        if (strict && seen.size < 2) {
+          errors.push(
+            `Task Model Variable (${obj.type}) requires at least 2 possibleValues.`
+          );
+        }
+      }
+    }
+
+    if (obj.type === "numeric") {
+      if (Array.isArray(obj.possibleValues) && obj.possibleValues.length > 0) {
+        errors.push("A numeric Task Model Variable does not take possibleValues; use range.");
+      }
+      if (obj.range == null) {
+        if (strict) errors.push("A numeric Task Model Variable requires range.min < range.max.");
+      } else if (typeof obj.range !== "object" || Array.isArray(obj.range)) {
+        errors.push("range should be object");
+      } else {
+        const { min, max } = obj.range;
+        const both = typeof min === "number" && typeof max === "number";
+        if (both && min >= max) {
+          errors.push("range.min must be less than range.max.");
+        } else if (strict && !both) {
+          errors.push("A numeric Task Model Variable requires range.min < range.max.");
+        }
+      }
+    } else if (obj.range != null) {
+      errors.push("range applies only to numeric Task Model Variables.");
+    }
+
+    if (obj.type === "boolean" && obj.possibleValues != null) {
+      errors.push(
+        "A boolean Task Model Variable does not take possibleValues; levels are true and false."
+      );
+    }
+
+    if (db && obj.name && String(obj.name).trim() !== "") {
+      const needle = String(obj.name).trim().toLowerCase();
+      const clash = (db.taskModelVariables || []).find(
+        (row) =>
+          row &&
+          row.id !== obj.id &&
+          String(row.name || "").trim().toLowerCase() === needle
+      );
+      if (clash) {
+        errors.push(
+          `Task Model Variable name '${obj.name}' is already used by '${clash.id}'.`
+        );
       }
     }
   }

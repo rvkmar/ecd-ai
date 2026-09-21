@@ -99,6 +99,29 @@ describe("presentationModels (D113 authoring RBAC)", () => {
   });
 });
 
+describe("taskModelVariables (D116 library RBAC)", () => {
+  it("admin can view, edit, and delete Task Model Variables", () => {
+    expect(can("admin", "view", "taskModelVariables")).toBe(true);
+    expect(can("admin", "edit", "taskModelVariables")).toBe(true);
+    expect(can("admin", "delete", "taskModelVariables")).toBe(true);
+  });
+
+  it("district can view and edit them, and cannot delete them", () => {
+    expect(can("district", "view", "taskModelVariables")).toBe(true);
+    expect(can("district", "edit", "taskModelVariables")).toBe(true);
+    expect(can("district", "delete", "taskModelVariables")).toBeFalsy();
+  });
+
+  it("teacher can view and cannot write them", () => {
+    expect(can("teacher", "view", "taskModelVariables")).toBe(true);
+    expect(can("teacher", "edit", "taskModelVariables")).toBeFalsy();
+  });
+
+  it("student cannot see the entity", () => {
+    expect(can("student", "view", "taskModelVariables")).toBe(false);
+  });
+});
+
 describe("unknown input", () => {
   it("returns false for a role that doesn't exist", () => {
     expect(can("superuser", "view", "sessions")).toBe(false);

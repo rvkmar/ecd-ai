@@ -46,6 +46,12 @@ export const BACKUP_INVENTORY = Object.freeze([
     reason: "Included in ECD JSON snapshot.",
   },
   {
+    id: "taskModelVariables",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included — D116 reusable Task Model Variables; shared design features.",
+  },
+  {
     id: "tasks",
     store: "ecd-json",
     pathInArchive: "ecd/db.json",
