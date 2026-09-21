@@ -13,7 +13,7 @@
 | Two PMs → different examinee surface; same item stimulus | **Yes** — `presentationObedience.test.jsx` (ItemPresenter profile/chrome flip; stimulus text unchanged) + `presentationLiveSelect.test.js` (operational flip changes resolved overlay) |
 | SessionPlayer applies overlay (progress / skip / a11y classes) | **Yes** — `presentation` from `/next-task`; `presentationChrome`; ItemPresenter `data-presentation-profile` |
 | No overlay bake into items / compositeLibrary | **Yes** — ADR 0008 unchanged boundary |
-| Live browser two-PM walk on `:6060` | **Yes** — 2026-09-21 on `s1789988990327` (`tm-d56` / `itemA`). Flipping operational PM (`large_text` ↔ `high_contrast`) changed `data-presentation-profile` / chrome classes without editing the item. Fixed student tenancy gaps that had blocked the walk (presentation attach + task GET). |
+| Live browser two-PM walk on `:6060` | **Yes** — 2026-09-21 follow-on: `claude/day115-live-dual-pm-walk.md`. Student tenancy fixed; chrome flipped `large_text` → `high_contrast` on `s1789988990327` / `itemA`. |
 
 ## Premise
 
@@ -56,4 +56,6 @@ Gate: *Changing a Presentation Model changes what an examinee sees, without touc
 
 ## Next
 
-Calendar **D116** / next block after W23. Do not start W25 from this close.
+Calendar **D115b** (outlined) — Instantiated tasks schema & item bind — may
+be taken before **D116** W24 TMVs without renumbering the W24 block. Outline:
+`claude/day115b-instantiated-tasks-unit-outline.md`.

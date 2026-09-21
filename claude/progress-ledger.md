@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D115** — SessionPlayer obeys Presentation Model; **W23 gate met**. Handoff: `claude/day115-sessionplayer-presentation-w23.md`. |
+| Last completed unit | **D115** — SessionPlayer obeys Presentation Model; **W23 gate met**. Live `:6060` dual-PM debt closed same day (`claude/day115-live-dual-pm-walk.md`). |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D116** — W24 TMVs schema (G13). Not started. W23 (D111–D115) closed 2026-09-21. |
+| Next queued | **D115b** (outlined) — Instantiated tasks schema & item bind (`claude/day115b-instantiated-tasks-unit-outline.md`). May precede calendar **D116** W24 TMVs without renumbering W24. |
 
 | Block | **W23 closed** 2026-09-21 (D111–D115). Gate met at D115. **W22** closed 2026-09-20; gate met at D108. |
 
@@ -171,6 +171,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D115 / W23 close | product + `claude/day115-sessionplayer-presentation-w23.md`. Suite **1909 passed / 9 skipped**. W23 gate met. |
 
 | HEAD at 2026-09-21 W23 session close (D114–D115) | this close. Suite re-verify **1909 passed / 9 skipped**; build green (13.52s). Tip **`28bce01`** ≡ `main/master`. Calendar D114–D115 + W23 ✅. Next: D116. |
+
+| HEAD at D115 live debt | product **`17ce5c2`** + this close. Suite **1913 passed / 9 skipped**; build green (11.55s). Live dual-PM walk closed. D115b outlined. |
 
 
 
@@ -373,7 +375,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-21 | close | — | W23 session close (D114–D115; D111–D113 earlier same day). Suite re-verify **1909 passed / 9 skipped**; build green; tip **`28bce01`** ≡ `main/master`. No half-applied work. Compression debt: D115 live dual-PM `:6060` walk. Next: D116. |
 
-| 2026-09-21 | D115 debt | — | Live `:6060` dual-PM walk closed. Root cause: student tenancy hid tasks (no `districtId`) so `/next-task` omitted presentation and `/api/tasks/:id` 404'd. Fixed attach via `readRawDB` + rostered task GET; student player chrome wrapper. Session `s1789988990327`; PMs `pm1789988809911001` / `pm1789988810055002`. |
+| 2026-09-21 | D115 debt | — | Live `:6060` dual-PM walk closed. Root cause: student tenancy hid tasks (no `districtId`) so `/next-task` omitted presentation and `/api/tasks/:id` 404'd. Fixed attach via `readRawDB` + rostered task GET; student player chrome wrapper. Session `s1789988990327`; PMs `pm1789988809911001` / `pm1789988810055002`. Product `17ce5c2`. |
+
+| 2026-09-21 | close | — | D115 live-debt session close. Suite **1913 passed / 9 skipped**; build green. Tip pin after this commit. D115b Instantiated-tasks unit outlined (schema + item bind; no CAF lifecycle). Next: D115b or D116. |
 
 
 
@@ -540,6 +544,10 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D113 | day81 inventory once labeled W23 = Presentation authoring alone starting at D111 | Calendar put shell folds on D111–D112; authoring on D113 | D111/D112 = shell chrome; D113 = real G8 authoring + ADR 0008 pointer-bake deferred; SessionPlayer obedience later |
 
 | D114 | Calendar: build Presentation authoring wizard on shared shell + Storybook + a11y | Wizard + a11y already shipped D113; no pointer; no Storybook | Delivery `presentationModelId` pointer + live resolve on `/next-task` + Storybook residual; no new shell; D115 still owns player obedience |
+
+| D115 live | Live dual-PM walk “just exercise existing overlay” | Student tenancy hid tasks without districtId → no presentation + task 404 | `readRawDB` attach + rostered task GET + student chrome; debt closed |
+
+| D115b | (outline) Possible full CAF lifecycle on Instantiated tasks | Tasks are runtime instances, not CAF models; schema commented; UI cannot bind itemId | Schema + instantiable-TM + itemId authoring + tenancy stamp; **no** draft→operational machine |
 
 ## Carried-forward gaps
 
