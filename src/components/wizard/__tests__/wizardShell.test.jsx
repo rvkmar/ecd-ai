@@ -1,12 +1,17 @@
-// Day 44 + D111 — shared wizard shell tests.
+// Day 44 + D111 + D112 — shared wizard shell tests.
 //
 // Convention A (CM/EM): unconditional step-click callback with 0-based
 // indices, adaptive Cancel/OK, model-specific locked-notice text, and
-// the Next/Save/Lock&Confirm button-gating rules.
+// the Next/Save/Lock&Confirm button-gating rules. Completion ticks follow
+// the cursor.
 //
 // Convention B (Task Model, D111): canNavigateTo rail gating, outstanding
 // work amber-dots, named blockingReason title + toastOnBlock, status-aware
 // lockedNotice, and Save vs Confirm promote paths staying distinct.
+//
+// Convention C (Item, D112): isStepComplete ticks (not cursor), named
+// blockersBanner, hidePromoteActions + toolbarActions, cancelLabel,
+// optional editable override. Does not toast on a gated Next.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import toast from "react-hot-toast";
@@ -135,6 +140,82 @@ describe("shared WizardSidebar", () => {
         expect(screen.getByText("Identity").parentElement).not.toContainElement(
             dots[0]
         );
+    });
+
+    it("ticks past steps from cursor position when isStepComplete is omitted (convention A)", () => {
+        render(
+            <WizardSidebar
+                steps={STEPS}
+                currentStepIndex={2}
+                onStepClick={() => {}}
+                status="draft"
+                title="Test Wizard"
+                brandInitial="T"
+                footerLabel="Test Layer"
+            />
+        );
+        const identity = screen.getByText("Identity").closest("button");
+        const details = screen.getByText("Details").closest("button");
+        const review = screen.getByText("Review").closest("button");
+        expect(
+            identity.querySelector("[data-testid='wizard-step-complete-check']")
+        ).not.toBeNull();
+        expect(
+            details.querySelector("[data-testid='wizard-step-complete-check']")
+        ).not.toBeNull();
+        expect(
+            review.querySelector("[data-testid='wizard-step-complete-check']")
+        ).toBeNull();
+        expect(review).toHaveTextContent("3");
+    });
+
+    it("ticks from isStepComplete, not cursor position (convention C)", () => {
+        render(
+            <WizardSidebar
+                steps={STEPS}
+                currentStepIndex={2}
+                onStepClick={() => {}}
+                isStepComplete={(step) => step.id === 1}
+                status="draft"
+                title="Item Wizard"
+                brandInitial="I"
+                footerLabel="Item Layer"
+            />
+        );
+        const identity = screen.getByText("Identity").closest("button");
+        const details = screen.getByText("Details").closest("button");
+        const review = screen.getByText("Review").closest("button");
+        expect(
+            identity.querySelector("[data-testid='wizard-step-complete-check']")
+        ).not.toBeNull();
+        expect(
+            details.querySelector("[data-testid='wizard-step-complete-check']")
+        ).toBeNull();
+        expect(details).toHaveTextContent("2");
+        expect(
+            review.querySelector("[data-testid='wizard-step-complete-check']")
+        ).toBeNull();
+    });
+
+    it("renders an active-step blurb and statusLabel when provided (convention C)", () => {
+        render(
+            <WizardSidebar
+                steps={[
+                    { id: "instantiation", label: "Instantiation", blurb: "Bind a Task Model." },
+                    { id: "review", label: "Review" },
+                ]}
+                currentStepIndex={0}
+                onStepClick={() => {}}
+                status="draft"
+                statusLabel="draft · v2"
+                title="Item Wizard"
+                brandInitial="I"
+                footerLabel="Item Layer"
+            />
+        );
+        expect(screen.getByText("Bind a Task Model.")).toBeInTheDocument();
+        expect(screen.getByText("draft · v2")).toBeInTheDocument();
+        expect(screen.queryByText(/^draft$/)).not.toBeInTheDocument();
     });
 });
 
@@ -346,5 +427,86 @@ describe("shared WizardStepContainer", () => {
             expect(onConfirm).toHaveBeenCalledTimes(1);
         });
         expect(onSaveAndReview).not.toHaveBeenCalled();
+    });
+
+    it("renders the named blockers banner and does not toast (convention C)", () => {
+        render(
+            <WizardStepContainer
+                {...baseProps}
+                canProceed={false}
+                blockingReason="Task Model is bound."
+                blockersBanner="Task Model is bound. — Pick a Task Model before continuing."
+            >
+                <div>content</div>
+            </WizardStepContainer>
+        );
+        const banner = screen.getByTestId("wizard-step-blockers");
+        expect(banner).toHaveTextContent(
+            "Task Model is bound. — Pick a Task Model before continuing."
+        );
+        const next = screen.getByText("Next").closest("button");
+        expect(next).toBeDisabled();
+        expect(next).toHaveAttribute("title", "Task Model is bound.");
+        fireEvent.click(next);
+        expect(next.closest("[data-wizard-block-wrap]")).toBeNull();
+        expect(toast.error).not.toHaveBeenCalled();
+        expect(baseProps.onNext).not.toHaveBeenCalled();
+    });
+
+    it("hides Save for Review / Lock & Confirm when hidePromoteActions is set (convention C)", () => {
+        const { rerender } = render(
+            <WizardStepContainer
+                {...baseProps}
+                isLast
+                status="draft"
+                hidePromoteActions
+                toolbarActions={<button type="button">Activate</button>}
+            >
+                <div>content</div>
+            </WizardStepContainer>
+        );
+        expect(screen.queryByText("Save for Review")).not.toBeInTheDocument();
+        expect(screen.getByText("Activate")).toBeInTheDocument();
+
+        rerender(
+            <WizardStepContainer
+                {...baseProps}
+                isLast
+                status="reviewed"
+                hidePromoteActions
+                onReturnToDraft={vi.fn()}
+                toolbarActions={<button type="button">Send back to draft</button>}
+            >
+                <div>content</div>
+            </WizardStepContainer>
+        );
+        expect(screen.queryByText("Lock & Confirm")).not.toBeInTheDocument();
+        expect(screen.queryByText("Return to draft")).not.toBeInTheDocument();
+        expect(screen.getByText("Send back to draft")).toBeInTheDocument();
+    });
+
+    it("uses cancelLabel verbatim instead of Cancel (convention C)", () => {
+        render(
+            <WizardStepContainer {...baseProps} cancelLabel="Close">
+                <div>content</div>
+            </WizardStepContainer>
+        );
+        expect(screen.getByText("Close")).toBeInTheDocument();
+        expect(screen.queryByText("Cancel")).not.toBeInTheDocument();
+    });
+
+    it("does not gate Next on canProceed when editable is false (convention C locked override)", () => {
+        render(
+            <WizardStepContainer
+                {...baseProps}
+                canProceed={false}
+                status="draft"
+                locked={false}
+                editable={false}
+            >
+                <div>content</div>
+            </WizardStepContainer>
+        );
+        expect(screen.getByText("Next").closest("button")).not.toBeDisabled();
     });
 });

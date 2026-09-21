@@ -7,8 +7,8 @@ it.
 
 **Status: DONE, scope narrowed after audit — see below.** D111 (2026-09-21)
 discharged the Task Model deferral onto the shared shell as convention B —
-see `claude/day111-taskwizard-shared-shell.md`. ItemWizard remains deferred
-(D112).
+see `claude/day111-taskwizard-shared-shell.md`. ItemWizard discharged D112
+as convention C — see `claude/day112-itemwizard-shared-shell.md`.
 
 ## Why the plan changed before any code was written
 
@@ -107,5 +107,5 @@ Day 45: Week 9 walkthrough and handoff — closing out the design-system pass (t
 Toast fix, Storybook, and this narrowed wizard-shell extraction) with a summary of what shipped,
 what was deliberately deferred (Task Model's and Item's wizard re-pointing chief among it), and
 what Week 10 should pick up. **Update (D111):** Task Model re-pointing
-shipped as a tested second calling convention on the same shared shell;
-Item remains D112.
+shipped as a tested second calling convention on the same shared shell.
+**Update (D112):** Item re-pointing shipped as convention C on the same shell.

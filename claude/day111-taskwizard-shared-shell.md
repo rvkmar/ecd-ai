@@ -78,5 +78,6 @@ builders.
 
 ## Next
 
-Calendar **D112** — ItemWizard onto shared shell (never-compress). Do not
-conflate with Presentation Model authoring (still stub-only).
+Calendar **D112** — ItemWizard onto shared shell (never-compress). **Update
+(2026-09-21):** D112 shipped — `claude/day112-itemwizard-shared-shell.md`. Next: D113.
+Do not conflate with Presentation Model authoring (still stub-only).
