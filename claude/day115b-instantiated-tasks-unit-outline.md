@@ -1,8 +1,9 @@
 # D115b — Instantiated tasks schema & item bind (unit outline)
 
-**Status: OUTLINED (not started).** Calendar insert between W23 close and W24
-TMVs. Implementation debt from D47 F6 / TasksManager — **not** Presentation
+**Status: DONE.** Calendar insert between W23 close and W24 TMVs.
+Implementation debt from D47 F6 / TasksManager — **not** Presentation
 Model work, and **not** a copy of the CAF model lifecycle machine.
+Handoff: `claude/day115b-instantiated-tasks.md`.
 
 ## Placement
 

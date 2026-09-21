@@ -488,17 +488,35 @@ export const schema = {
     updatedAt: 'date',
   },
 
-  // tasks: {
-  //   id: 'string',
-  //   taskModelId: 'string',
-  //   questionId: 'string',
-  //   generatedEvidenceIds: 'array',
-  //   generatedObservationIds: 'array',
-  //   startTime: 'date',
-  //   endTime: 'date',
-  //   createdAt: 'date',
-  //   updatedAt: 'date',
-  // },
+  // ------------------------------------------------------------------
+  // tasks — D115b. Runtime *instances* of a Task Model bound to one
+  // Item Bank `itemId` (or a legacy `questionId`). Session delivery
+  // schedules these rows; they are not CAF models and have NO
+  // draft→reviewed→confirmed→operational status machine.
+  //
+  // `itemId` XOR `questionId` is the D47 delivery invariant: the player
+  // and the scorer must never disagree about which record was answered.
+  // Tenancy fields are optional so older seeded rows without districtId
+  // still validate; POST stamps them from the author.
+  //
+  // Plain-shape style so the deep `collection === "tasks"` block below
+  // actually runs (the JSON-schema branch returns early).
+  // ------------------------------------------------------------------
+  tasks: {
+    id: 'string',
+    taskModelId: 'string',
+    itemId: 'string',
+    questionId: 'string',
+    generatedEvidenceIds: 'array',
+    generatedObservationIds: 'array',
+    startTime: 'date',
+    endTime: 'date',
+    districtId: 'string',
+    schoolId: 'string',
+    createdBy: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
 
   students: {
     id: 'string',
@@ -964,6 +982,21 @@ export function isInstantiableTaskModel(tm) {
     !!tm.locked &&
     INSTANTIABLE_TASK_MODEL_STATUSES.includes(tm.status)
   );
+}
+
+/* An Item a task may bind for delivery (D47 / D115b).
+
+   Draft / reviewed / confirmed / operational items are bindable —
+   preview and test delivery still score; they just accrue no exposure.
+   Suspended / archived items have been pulled from service. Missing
+   status is treated as bindable so older seeded rows still work. */
+export function isDeliverableItem(item) {
+  if (!item) return false;
+  return !["suspended", "archived"].includes(item.status);
+}
+
+function hasTaskBindingPointer(value) {
+  return typeof value === "string" && value.trim() !== "";
 }
 
 export function validateEntity(collection, obj, db = null, options = {}) {
@@ -5337,6 +5370,58 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       const existing = db.auditLog?.find((a) => a.id === obj.id);
       if (existing) {
         errors.push(`auditLog is append-only — cannot mutate entry '${obj.id}'.`);
+      }
+    }
+  }
+
+  /* =====================================================
+     TASKS — D115b
+     Instantiated Task Model rows consumed by session delivery.
+     Binding lifecycle (itemId XOR questionId, instantiable TM,
+     coherent item) lives here. There is NO CAF status machine:
+     tasks are runtime instances, not governed models.
+  ===================================================== */
+
+  if (collection === "tasks") {
+    if (!obj.taskModelId) {
+      errors.push("taskModelId is required");
+    }
+
+    const hasItem = hasTaskBindingPointer(obj.itemId);
+    const hasQuestion = hasTaskBindingPointer(obj.questionId);
+
+    if (hasItem && hasQuestion) {
+      errors.push("A task may name either questionId or itemId, not both.");
+    } else if (!hasItem && !hasQuestion) {
+      errors.push("A task must name either itemId or questionId.");
+    }
+
+    if (db && obj.taskModelId) {
+      const tm = db.taskModels?.find((m) => m.id === obj.taskModelId);
+      if (!tm) {
+        errors.push(`Invalid taskModelId: ${obj.taskModelId}`);
+      } else if (!allowDraftParents && !isInstantiableTaskModel(tm)) {
+        errors.push(
+          `Tasks can only instantiate confirmed, operational or suspended Task Models, and only locked ones (this one is '${tm.status}'${tm.locked ? "" : ", unlocked"}).`
+        );
+      }
+    }
+
+    if (hasItem && db) {
+      const item = db.items?.find((it) => it.id === obj.itemId);
+      if (!item) {
+        errors.push(`Invalid itemId: ${obj.itemId}`);
+      } else {
+        if (obj.taskModelId && item.taskModelId !== obj.taskModelId) {
+          errors.push(
+            `Item '${obj.itemId}' belongs to Task Model '${item.taskModelId}', not '${obj.taskModelId}'.`
+          );
+        }
+        if (!isDeliverableItem(item)) {
+          errors.push(
+            `Item '${obj.itemId}' is '${item.status}' and cannot be delivered.`
+          );
+        }
       }
     }
   }
