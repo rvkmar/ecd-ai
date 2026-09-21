@@ -29,8 +29,7 @@ npm run build
   green (21.21s); PresentationModelBuilder 18.21 kB (peer of Assembly 18.40 kB)
 ```
 
-- `git status` — clean at **`3010a09`** before this close commit.
-- `master` ≡ `main/master` ≡ `main/main` at `3010a09` (boot-fix follow-up on D113).
+- `git status` — clean at product **`3010a09`** before this close commit; close tip **`5d747ac`** ≡ `main/master`.
 - No half-applied work. No new compression debt.
 
 ## What landed (commits already on tip)

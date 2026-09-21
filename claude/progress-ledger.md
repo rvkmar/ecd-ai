@@ -164,7 +164,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D113 | product `416d99d` + boot fix `3010a09` + `claude/day113-presentation-model-authoring.md`. Suite **1894 passed / 9 skipped**. |
 
-| HEAD at 2026-09-21 W23 session close (D111–D113) | this close. Suite re-verify **1894 passed / 9 skipped**; build green (21.21s). Tip **`3010a09`** ≡ `main/master`. Calendar D111–D113 ✅. Next: D114. |
+| HEAD at 2026-09-21 W23 session close (D111–D113) | this close. Suite re-verify **1894 passed / 9 skipped**; build green (21.21s). Tip **`5d747ac`** ≡ `main/master`. Calendar D111–D113 ✅. Next: D114. |
 
 
 
@@ -359,7 +359,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-21 | D113 | 1, alone | Presentation Model authoring (W23 G8 first slice): collection + lifecycle + HTTP/RBAC + convention-A wizard replacing the stub. SessionPlayer obedience out of scope. Suite **1894 passed / 9 skipped** (+44 tests / +4 files; skips unchanged). Next: D114. |
 
-| 2026-09-21 | close | — | W23 session close (D111–D113; not full block). Suite re-verify **1894 passed / 9 skipped**; build green; tip **`3010a09`** ≡ `main/master`. No half-applied work; no new compression debt. Next: D114. |
+| 2026-09-21 | close | — | W23 session close (D111–D113; not full block). Suite re-verify **1894 passed / 9 skipped**; build green; tip **`5d747ac`** ≡ `main/master`. No half-applied work; no new compression debt. Next: D114. |
 
 
 
