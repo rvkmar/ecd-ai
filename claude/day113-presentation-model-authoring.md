@@ -59,8 +59,17 @@ bake, if any, should be a pointer.
 
 ## Verification
 
-See the close of this session (suite + build numbers). D112 close was
-**1850 passed / 9 skipped**.
+```
+NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
+  1894 passed | 9 skipped (1903) — 165 files (~29s)
+
+npm run build
+  green (~6.7s); PresentationModelBuilder chunk 18.21 kB (peer of Assembly 18.40 kB)
+```
+
+D112 close was **1850 passed / 9 skipped** (161 files). Delta: **+44 tests / +4 files**. New files: `presentationModels.test.js`, `presentationModelsLifecycle.test.js`, `presentationModelReadiness.test.js`, `presentationModelWizard.test.jsx` (25 tests). Remaining +19 are extensions of existing guards (lifecycle, RBAC, collection surface, routeAuth, admin IA). Skips unchanged.
+
+Shared `WizardStepContainer` remains its own production chunk. CM/EM/TM/Item wizards still green.
 
 ## Delivered
 

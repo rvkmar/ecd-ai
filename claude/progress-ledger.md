@@ -349,7 +349,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-21 | D112 | 1, alone | ItemWizard onto shared `src/components/wizard/` shell as convention C (real completion ticks, named Next-blocker banner, extra lifecycle transitions). CM/EM stay A; TaskWizard stays B. Suite **1850 passed / 9 skipped** (+29 D112 tests; skips unchanged). Next: D113. |
 
-| 2026-09-21 | D113 | 1, alone | Presentation Model authoring (W23 G8 first slice): collection + lifecycle + HTTP/RBAC + convention-A wizard replacing the stub. SessionPlayer obedience out of scope. Suite count in handoff. Next: D114. |
+| 2026-09-21 | D113 | 1, alone | Presentation Model authoring (W23 G8 first slice): collection + lifecycle + HTTP/RBAC + convention-A wizard replacing the stub. SessionPlayer obedience out of scope. Suite **1894 passed / 9 skipped** (+44 tests / +4 files; skips unchanged). Next: D114. |
 
 
 
