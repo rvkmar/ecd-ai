@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D115b** — Instantiated tasks schema & item bind. Handoff: `claude/day115b-instantiated-tasks.md`. |
+| Last completed unit | **D116** — Task Model Variables (W24 G13). Handoff: `claude/day116-task-model-variables.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D116** W24 TMVs (`taskModelVariables` / G13). Do not fork `ecdVocabulary.js`. |
+| Next queued | Calendar **D117** — W24 remainder (Task Model Variable settings on the authoring surface). D119 enum re-point stays later, alone. Do not start W25. |
 
 | Block | **W23 closed** 2026-09-21 (D111–D115). Gate met at D115. **W22** closed 2026-09-20; gate met at D108. |
 
@@ -175,6 +175,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D115 live debt | product **`17ce5c2`** + this close. Suite **1913 passed / 9 skipped**; build green (11.55s). Live dual-PM walk closed. D115b outlined. |
 
 | HEAD at D115b | product + `claude/day115b-instantiated-tasks.md`. Suite **1936 passed / 9 skipped**; build green (10.04s). Instantiated-task schema + item bind; no CAF lifecycle. |
+
+| HEAD at D116 | product + `claude/day116-task-model-variables.md`. Suite **1980 passed / 9 skipped**; build green (7.18s). One TMV consumed by two Task Models. No CAF lifecycle. Next: D117. |
 
 
 
@@ -382,6 +384,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-21 | close | — | D115 live-debt session close. Suite **1913 passed / 9 skipped**; build green. Tip pin after this commit. D115b Instantiated-tasks unit outlined (schema + item bind; no CAF lifecycle). Next: D115b or D116. |
 
 | 2026-09-21 | D115b | 2–3, alone | Instantiated tasks schema + item bind. `validateEntity("tasks")` can pass; TasksManager binds instantiable TM + itemId; author tenancy stamped. No CAF status machine. Suite **1936 passed / 9 skipped**. Next: D116. |
+
+| 2026-09-21 | D116 | 2, alone | Task Model Variables (`taskModelVariables` / G13). Typed library records; one id consumed by two Task Models; vocabulary stays `ecdVocabulary.js`. No CAF status. Suite **1980 passed / 9 skipped**. Next: D117. |
 
 
 

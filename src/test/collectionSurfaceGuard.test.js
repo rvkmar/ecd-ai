@@ -246,6 +246,24 @@ describe("auditLog (D101) specifically", () => {
   });
 });
 
+describe("taskModelVariables (D116) specifically", () => {
+  it("has a route file, is mounted, and is gated", () => {
+    const file = "taskModelVariablesRoutes.js";
+    const full = path.join(ROUTES_DIR, file);
+    expect(fs.existsSync(full), `${file} should exist`).toBe(true);
+    const src = liveCode(fs.readFileSync(full, "utf8"));
+    expect(src, `${file} should apply authenticateToken in LIVE code`).toMatch(
+      HAS_ROUTER_GATE
+    );
+    expect(src, `${file} should import authorizeRole for its write gates`).toContain(
+      "authorizeRole"
+    );
+    expect(INDEX, "taskModelVariables should be mounted in server/index.js").toContain(
+      `app.use("/api/taskModelVariables"`
+    );
+  });
+});
+
 describe("presentationModels (D113) specifically", () => {
   it("has a route file, is mounted, and is gated", () => {
     const file = "presentationModelsRoutes.js";

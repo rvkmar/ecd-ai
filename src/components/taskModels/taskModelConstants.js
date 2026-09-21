@@ -8,34 +8,22 @@
 // the wizard context and the review step.
 //
 // IMPORTANT: the option values here are contractual. `presentationMode`,
-// `responseFormat` and `stimulusPolicy` are validated against the same
-// literals in src/utils/schema.js; `allowedInteractionTypes` and
-// `allowedScoringMethods` are the blueprint whitelists that
-// src/utils/schema.js enforces against `item.interaction.type` and
-// `item.scoring.method`. Change a value here and you must change it
-// there in the same commit.
+// `responseFormat` and `stimulusPolicy` are the ecdVocabulary.js lists
+// re-exported below — schema.js imports those same arrays.
+// `allowedInteractionTypes` and `allowedScoringMethods` are the blueprint
+// whitelists that src/utils/schema.js enforces against
+// `item.interaction.type` and `item.scoring.method`.
 // ------------------------------------------------------------
 
 /* ---------------- Task structure ---------------- */
 
-export const PRESENTATION_MODES = [
-    { value: "interactive", label: "Interactive", hint: "Examinee works through a responsive on-screen task." },
-    { value: "simulation", label: "Simulation", hint: "Task is embedded in a modelled environment or scenario." },
-    { value: "performance", label: "Performance", hint: "Observed performance, rated by an assessor." },
-    { value: "constructed", label: "Constructed", hint: "Static prompt eliciting an authored response." },
-];
-
-export const RESPONSE_FORMATS = [
-    { value: "selected", label: "Selected Response", hint: "Examinee chooses from supplied options." },
-    { value: "constructed", label: "Constructed Response", hint: "Examinee produces the response." },
-    { value: "hybrid", label: "Hybrid", hint: "Both selection and production within one task." },
-];
-
-export const STIMULUS_POLICIES = [
-    { value: "static", label: "Static", hint: "One fixed stimulus for every administration." },
-    { value: "parameterized", label: "Parameterized", hint: "Stimulus varies over a declared parameter space." },
-    { value: "generative", label: "Generative", hint: "Stimulus is generated per administration under constraints." },
-];
+/* PRESENTATION_MODES, RESPONSE_FORMATS and STIMULUS_POLICIES are NOT
+ * defined here as of D116. Same move as BLOOM_LEVELS (Day 22): the
+ * lists used to be copied into schema.js as bare string arrays, so a
+ * `<select>` could offer a level the validator rejected (or the reverse).
+ * They live in src/utils/ecdVocabulary.js. Re-exported below. Task
+ * Models still store the chosen string on taskStructure; binding those
+ * fields to Task Model Variable ids is a later unit. */
 
 export const COMPOSITION_TYPES = [
     { value: "atomic", label: "Atomic", hint: "A single indivisible unit of work." },
@@ -104,7 +92,15 @@ export const LOAD_LEVELS = [
 // Relative, not the "@/" alias: only vite resolves that, and this module
 // is also loaded directly by node in verification scripts. Same reason
 // src/utils/schema.js imports lifecycleMatrix.js by relative path.
-export { INTERACTION_TYPES, SCORING_METHODS, BLOOM_LEVELS, REASONING_TYPES } from "../../utils/ecdVocabulary.js";
+export {
+    INTERACTION_TYPES,
+    SCORING_METHODS,
+    BLOOM_LEVELS,
+    REASONING_TYPES,
+    PRESENTATION_MODES,
+    RESPONSE_FORMATS,
+    STIMULUS_POLICIES,
+} from "../../utils/ecdVocabulary.js";
 
 // Blueprint whitelists (`allowedInteractionTypes`, `allowedScoringMethods`)
 // are validated against those same values in src/utils/schema.js, so the

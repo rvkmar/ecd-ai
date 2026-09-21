@@ -746,3 +746,101 @@ export function presentationFeedbackTimingLabel(value) {
 export function presentationAccessibilityProfileLabel(value) {
   return vocabLabel(PRESENTATION_ACCESSIBILITY_PROFILES, value);
 }
+
+/* =====================================================
+   11. Task Model Variables (D116 / W24 G13)
+   -----------------------------------------------------
+   A Task Model Variable is a reusable design feature: one record,
+   many Task Models. It is not a Student Model Variable (those stay
+   on competencyModels.smVariables) and it is not a CAF model.
+
+   Types live here. When a variable's legal levels ARE an existing
+   vocabulary (Bloom, reasoning, or the task-structure design
+   features below), the record names that valueSet and does not copy
+   the list. schema.js and the readiness mirror both resolve levels
+   through TMV_VALUE_SET_SOURCES, so a forked Bloom array cannot
+   sneak in as "possible values".
+
+   PRESENTATION_MODES / RESPONSE_FORMATS / STIMULUS_POLICIES moved
+   here from taskModelConstants.js (same Day-22 move as Bloom).
+   Task Models still store the chosen string on taskStructure;
+   re-pointing those fields at TMV ids is a later unit (D119), alone.
+===================================================== */
+
+export const PRESENTATION_MODES = [
+  { value: "interactive", label: "Interactive", hint: "Examinee works through a responsive on-screen task." },
+  { value: "simulation", label: "Simulation", hint: "Task is embedded in a modelled environment or scenario." },
+  { value: "performance", label: "Performance", hint: "Observed performance, rated by an assessor." },
+  { value: "constructed", label: "Constructed", hint: "Static prompt eliciting an authored response." },
+];
+
+export const RESPONSE_FORMATS = [
+  { value: "selected", label: "Selected Response", hint: "Examinee chooses from supplied options." },
+  { value: "constructed", label: "Constructed Response", hint: "Examinee produces the response." },
+  { value: "hybrid", label: "Hybrid", hint: "Both selection and production within one task." },
+];
+
+export const STIMULUS_POLICIES = [
+  { value: "static", label: "Static", hint: "One fixed stimulus for every administration." },
+  { value: "parameterized", label: "Parameterized", hint: "Stimulus varies over a declared parameter space." },
+  { value: "generative", label: "Generative", hint: "Stimulus is generated per administration under constraints." },
+];
+
+export const PRESENTATION_MODE_VALUES = PRESENTATION_MODES.map((m) => m.value);
+export const RESPONSE_FORMAT_VALUES = RESPONSE_FORMATS.map((m) => m.value);
+export const STIMULUS_POLICY_VALUES = STIMULUS_POLICIES.map((m) => m.value);
+
+export const TMV_TYPES = [
+  {
+    value: "categorical",
+    label: "Categorical",
+    hint: "Unordered design feature. Possible values are the legal levels.",
+  },
+  {
+    value: "ordinal",
+    label: "Ordinal",
+    hint: "Ordered design feature. Possible values are ranked levels.",
+  },
+  {
+    value: "numeric",
+    label: "Numeric",
+    hint: "A number inside a declared range.",
+  },
+  {
+    value: "boolean",
+    label: "Boolean",
+    hint: "Present or absent. Levels are true and false.",
+  },
+];
+
+export const TMV_TYPE_VALUES = TMV_TYPES.map((t) => t.value);
+
+export function tmvTypeLabel(value) {
+  return TMV_TYPES.find((t) => t.value === value)?.label || value || "—";
+}
+
+/* Keys whose levels are an existing vocabulary array, not an author list. */
+export const TMV_VALUE_SET_SOURCES = Object.freeze({
+  bloomLevel: BLOOM_LEVELS,
+  reasoningType: REASONING_TYPES,
+  presentationMode: PRESENTATION_MODES,
+  responseFormat: RESPONSE_FORMATS,
+  stimulusPolicy: STIMULUS_POLICIES,
+});
+
+export const TMV_VALUE_SET_KEYS = Object.freeze(Object.keys(TMV_VALUE_SET_SOURCES));
+
+export function taskModelVariableValueIds(variable) {
+  if (!variable || typeof variable !== "object") return [];
+  const source = variable.valueSet ? TMV_VALUE_SET_SOURCES[variable.valueSet] : null;
+  if (source) return source.map((entry) => entry.value);
+  if (variable.type === "boolean") return ["true", "false"];
+  if (!Array.isArray(variable.possibleValues)) return [];
+  return variable.possibleValues
+    .map((entry) => {
+      if (typeof entry === "string") return entry;
+      if (entry && typeof entry.value === "string") return entry.value;
+      return "";
+    })
+    .filter((value) => value !== "");
+}
