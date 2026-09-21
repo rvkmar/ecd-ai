@@ -33,6 +33,15 @@ jobs:
   # D94 — dependency + secret scanners must FAIL the job (not warn).
   security-scanners:
     runs-on: ubuntu-latest
+    # gitleaks-action@v2 on pull_request lists /pulls/{n}/commits. The
+    # default GITHUB_TOKEN cannot do that (403 "Resource not accessible
+    # by integration"; x-accepted-github-permissions: pull_requests=read),
+    # so the PR twin fails while the push twin (local git history only)
+    # is green. contents:read is already implied; pull-requests:read is
+    # the missing grant. Not a leak.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:

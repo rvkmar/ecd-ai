@@ -15,22 +15,21 @@
 // Lock & Confirm button set and their gating, the discard-changes modal --
 // was byte-identical and is unified as-is.
 //
-// Task Model's step container (taskModels/TaskWizard/WizardStepContainer.jsx)
-// is deliberately NOT folded in here (see WizardSidebar.jsx's header
-// comment for the matching sidebar decision). It takes almost no props,
-// pulling draft/step state from `useTaskModelWizard()` context instead, and
-// it doubles as the step ROUTER -- it imports and switches between
-// Step1Identity..Step8Review itself, where Competency/Evidence's containers
-// just render externally-provided `children`. Its lifecycle button set also
-// differs (a named blocking-reason toast, a `Saving…` progress label tied to
-// its own save flow). Reconciling that would mean either changing Task
-// Model's context/data-flow architecture as a side effect of a shell
-// extraction, or growing this shared component a second, incompatible
-// calling convention -- both out of scope for Day 44. See
-// claude/day44-wizard-shell.md.
+// Two calling conventions, both tested (D111 folded Task Model in
+// without dropping its named-blocking-reason toast or promote/save
+// paths -- see WizardSidebar.jsx for the matching rail decision):
+//
+//   A (CM / EM / AM / Q-matrix): children for steps; Cancel/OK and
+//     locked-notice text parameterised; Next/Save/Confirm gated by
+//     canProceed with no named reason.
+//
+//   B (Task Model): same chrome, plus `blockingReason` (title + toast
+//     when toastOnBlock) and `lockedNotice` (status-aware copy). The TM
+//     adapter still owns step routing and maps context → these props.
 // ------------------------------------------------------------
 
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 import { ChevronLeft, ChevronRight, Lock, X } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 
@@ -51,6 +50,10 @@ export default function WizardStepContainer({
     onReturnToDraft,
     modelLabel = "Model",
     adaptiveCancelLabel = false,
+    // Convention B (Task Model). Omitted = Convention A.
+    blockingReason,
+    toastOnBlock = false,
+    lockedNotice,
     children,
 }) {
     const [saving, setSaving] = useState(false);
@@ -71,7 +74,15 @@ export default function WizardStepContainer({
        already wraps the caller's own draft-save)
     ===================================================== */
 
+    function notifyBlocked() {
+        if (toastOnBlock && blockingReason) toast.error(blockingReason);
+    }
+
     async function handleNext() {
+        if (canEdit && !canProceed) {
+            notifyBlocked();
+            return;
+        }
         if (saving) return;
         try {
             setSaving(true);
@@ -89,6 +100,10 @@ export default function WizardStepContainer({
     ===================================================== */
 
     async function handleSave() {
+        if (canEdit && !canProceed) {
+            notifyBlocked();
+            return;
+        }
         if (saving) return;
         try {
             setSaving(true);
@@ -109,6 +124,10 @@ export default function WizardStepContainer({
 
     async function handleLockAndConfirm() {
         if (!onConfirm || !isReviewMode) return;
+        if (!canProceed) {
+            notifyBlocked();
+            return;
+        }
 
         try {
             setSaving(true);
@@ -164,6 +183,27 @@ export default function WizardStepContainer({
             ? "cursor-not-allowed bg-slate-200 text-slate-400 shadow-none"
             : tone
         }`;
+
+    // Convention B: a native-disabled button swallows clicks (and they
+    // do not bubble), so the named blocking-reason toast would never
+    // fire. Wrap so a click still names the failing check. Convention A
+    // omits the wrap and keeps HTML-disabled with no toast.
+    function wrapIfToastOnBlock(blocked, button) {
+        if (!toastOnBlock) return button;
+        return (
+            <span
+                data-wizard-block-wrap=""
+                className="inline-flex"
+                onClick={() => {
+                    if (blocked) notifyBlocked();
+                }}
+            >
+                <span className={blocked ? "pointer-events-none inline-flex" : "inline-flex"}>
+                    {button}
+                </span>
+            </span>
+        );
+    }
 
     // Cancel label: Competency always shows "Cancel" + X; Evidence swaps to
     // a bare "OK" once the model is read-only. Both are preserved verbatim
@@ -225,32 +265,42 @@ export default function WizardStepContainer({
                             its flag, so `canProceed` is false for reasons that
                             have nothing to do with the model). onNext skips the
                             auto-save when locked -- see the wizard controller. */}
-                        {!isLast && (
-                            <button
-                                onClick={handleNext}
-                                disabled={saving || (canEdit && !canProceed)}
-                                className={primaryButtonClasses(
-                                    saving || (canEdit && !canProceed)
-                                )}
-                            >
-                                Next
-                                <ChevronRight size={15} strokeWidth={2.25} />
-                            </button>
-                        )}
+                        {!isLast &&
+                            wrapIfToastOnBlock(
+                                saving || (canEdit && !canProceed),
+                                <button
+                                    onClick={handleNext}
+                                    disabled={saving || (canEdit && !canProceed)}
+                                    title={
+                                        canEdit && !canProceed ? blockingReason : undefined
+                                    }
+                                    className={primaryButtonClasses(
+                                        saving || (canEdit && !canProceed)
+                                    )}
+                                >
+                                    Next
+                                    <ChevronRight size={15} strokeWidth={2.25} />
+                                </button>
+                            )}
 
                         {/* Save -- final step while still a draft */}
-                        {isLast && canEdit && !isReviewMode && (
-                            <button
-                                onClick={handleSave}
-                                disabled={!canProceed || saving}
-                                className={primaryButtonClasses(
-                                    !canProceed || saving,
-                                    "bg-emerald-600 hover:bg-emerald-700"
-                                )}
-                            >
-                                {saving ? "Saving…" : "Save for Review"}
-                            </button>
-                        )}
+                        {isLast &&
+                            canEdit &&
+                            !isReviewMode &&
+                            wrapIfToastOnBlock(
+                                !canProceed || saving,
+                                <button
+                                    onClick={handleSave}
+                                    disabled={!canProceed || saving}
+                                    title={!canProceed ? blockingReason : undefined}
+                                    className={primaryButtonClasses(
+                                        !canProceed || saving,
+                                        "bg-emerald-600 hover:bg-emerald-700"
+                                    )}
+                                >
+                                    {saving ? "Saving…" : "Save for Review"}
+                                </button>
+                            )}
 
                         {/* Return to draft -- reviewer rejection, review mode only */}
                         {isLast && isReviewMode && onReturnToDraft && (
@@ -264,18 +314,22 @@ export default function WizardStepContainer({
                         )}
 
                         {/* Lock & Confirm -- final step in review mode */}
-                        {isLast && isReviewMode && (
-                            <button
-                                onClick={handleLockAndConfirm}
-                                disabled={!canProceed || saving}
-                                className={primaryButtonClasses(
-                                    !canProceed || saving,
-                                    "bg-blue-600 hover:bg-blue-700"
-                                )}
-                            >
-                                {saving ? "Processing…" : "Lock & Confirm"}
-                            </button>
-                        )}
+                        {isLast &&
+                            isReviewMode &&
+                            wrapIfToastOnBlock(
+                                !canProceed || saving,
+                                <button
+                                    onClick={handleLockAndConfirm}
+                                    disabled={!canProceed || saving}
+                                    title={!canProceed ? blockingReason : undefined}
+                                    className={primaryButtonClasses(
+                                        !canProceed || saving,
+                                        "bg-blue-600 hover:bg-blue-700"
+                                    )}
+                                >
+                                    {saving ? "Processing…" : "Lock & Confirm"}
+                                </button>
+                            )}
                     </div>
                 </div>
             </div>
@@ -301,8 +355,8 @@ export default function WizardStepContainer({
                         <div className="mt-8 flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3.5 text-sm text-emerald-800">
                             <Lock size={16} strokeWidth={2.25} className="mt-0.5 shrink-0" />
                             <span>
-                                This {modelLabel} is confirmed and locked.
-                                Structural changes require cloning.
+                                {lockedNotice ||
+                                    `This ${modelLabel} is confirmed and locked. Structural changes require cloning.`}
                             </span>
                         </div>
                     )}

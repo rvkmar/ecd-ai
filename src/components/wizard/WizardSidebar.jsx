@@ -1,26 +1,22 @@
 // components/wizard/WizardSidebar.jsx
-// 🧭 Shared Wizard Sidebar (Day 44 — Part 5.4 wizard shell)
+// 🧭 Shared Wizard Sidebar (Day 44 — Part 5.4 wizard shell; D111 TM convention)
 // ------------------------------------------------------------
-// Extracted from competencies/CompetencyWizard/WizardSidebar.jsx and
-// evidences/EvidenceWizard/WizardSidebar.jsx, which a Day 44 audit found to
-// be byte-identical apart from branding text and prop-naming conventions
-// (`currentStep`/`onStepClick`/1-based `step.id` vs `currentStepIndex`/
-// `goToStep`/0-based array index). This shared version standardises on
-// 0-based indices -- callers that used to think in 1-based step ids (the
-// Competency wizard) adapt at the call site, which is a couple of lines,
-// rather than baking two numbering conventions into the shared component.
+// Two calling conventions, both tested:
 //
-// Task Model's sidebar (taskModels/TaskWizard/WizardSidebar.jsx) is
-// deliberately NOT folded in here. It is not a styling variant of this
-// component: it reads from `useTaskModelWizard()` context instead of props,
-// bakes in a materially different navigation-gating rule
-// (`canNavigateBack = isEditable ? index < currentStep : true`, i.e. forward
-// navigation is never allowed via the rail, only via Next), and renders an
-// extra per-step "outstanding readiness work" indicator that Competency and
-// Evidence have no equivalent of. Forcing that into this contract would mean
-// either dropping the readiness indicator or growing this component a
-// second, parallel prop surface just for Task Model -- both worse than
-// leaving it as its own component. See claude/day44-wizard-shell.md.
+//   A (CM / EM / AM — Day 44): props-only. `onStepClick` fires for every
+//     rail click; the parent decides whether to actually change step.
+//     No readiness dots. This is the default when `canNavigateTo` and
+//     `outstandingWork` are omitted.
+//
+//   B (Task Model — D111): the rail itself gates forward navigation
+//     (`canNavigateTo(index)` → button disabled, callback not fired) and
+//     may render per-step outstanding-work amber dots via
+//     `outstandingWork(step, index)`. Forward travel is Next-only while
+//     editing; a read-only model keeps every step reachable.
+//
+// Task Model still maps `useTaskModelWizard()` → these props in a thin
+// adapter (`taskModels/TaskWizard/WizardSidebar.jsx`). The shared shell
+// stays props-driven so CM/EM/AM are not forced onto TM's context.
 // ------------------------------------------------------------
 
 import React from "react";
@@ -58,6 +54,9 @@ export default function WizardSidebar({
     subtitle = "Guided authoring workflow",
     brandInitial,
     footerLabel,
+    // Convention B (Task Model). Omitted = Convention A (ungated rail).
+    canNavigateTo,
+    outstandingWork,
 }) {
     // Purely a visual/UI concern local to this component -- folding the
     // rail doesn't affect wizard state, so it isn't lifted to context.
@@ -144,6 +143,9 @@ export default function WizardSidebar({
                     {steps.map((step, index) => {
                         const state = getStepState(index);
                         const isLastItem = index === steps.length - 1;
+                        const allowed = canNavigateTo ? canNavigateTo(index) : true;
+                        const hasOutstanding =
+                            !collapsed && outstandingWork?.(step, index) === true;
 
                         const circleClasses = {
                             active:
@@ -171,15 +173,19 @@ export default function WizardSidebar({
                                     />
                                 )}
 
-                                {/* Locked = read-only inputs, not a frozen rail: a
-                                    confirmed model still has to be walkable to be
-                                    readable (both source wizards agreed on this). */}
+                                {/* Convention A: locked = read-only inputs, not a
+                                    frozen rail -- click still fires so the parent
+                                    gates. Convention B: canNavigateTo disables
+                                    the button and swallows the click. */}
                                 <button
                                     type="button"
-                                    onClick={() => onStepClick?.(index)}
+                                    disabled={!allowed}
+                                    onClick={() => {
+                                        if (allowed) onStepClick?.(index);
+                                    }}
                                     title={collapsed ? step.label : undefined}
-                                    className={`group relative z-10 flex w-full cursor-pointer items-center gap-3 rounded-md text-left transition ${collapsed ? "justify-center" : ""
-                                        }`}
+                                    className={`group relative z-10 flex w-full items-center gap-3 rounded-md text-left transition ${allowed ? "cursor-pointer" : "cursor-not-allowed"
+                                        } ${collapsed ? "justify-center" : ""}`}
                                 >
                                     <span
                                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition ${circleClasses}`}
@@ -191,8 +197,18 @@ export default function WizardSidebar({
                                         )}
                                     </span>
                                     {!collapsed && (
-                                        <span className={`text-sm transition ${labelClasses}`}>
+                                        <span
+                                            className={`${hasOutstanding ? "flex items-center gap-1.5 " : ""
+                                                }text-sm transition ${labelClasses}`}
+                                        >
                                             {step.label}
+                                            {hasOutstanding && (
+                                                <span
+                                                    title="This step has outstanding required fields"
+                                                    data-testid="wizard-outstanding-dot"
+                                                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+                                                />
+                                            )}
                                         </span>
                                     )}
                                 </button>

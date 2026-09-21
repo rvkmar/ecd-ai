@@ -5,6 +5,10 @@
 // Pure orchestration: provider, sidebar rail, step container. No
 // business logic, no fetching.
 //
+// D111: `./WizardSidebar` and `./WizardStepContainer` are thin
+// adapters onto `@/components/wizard` (convention B: Next-only rail
+// gating, readiness amber-dots, named blocking-reason toasts).
+//
 // The `competencies` prop is gone. A Task Model binds to Evidence
 // Models and derives its construct from them; see the header comment on
 // TaskModelWizardContext.jsx for the full rationale.
