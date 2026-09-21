@@ -63,6 +63,8 @@ D115b close was **1936 passed / 9 skipped** (173 files). Delta: **+44 tests / +3
 
 No new screen, so there was no browser walk. The gate is the schema test and the HTTP test that posts one variable and two Task Models.
 
+Session-close re-run 2026-09-21 on clean `main` at product tip `5d0717c`: same counts, **1980 passed / 9 skipped** (1989) across 176 files in 30.69s; `npm run build` green in 7.01s (product session recorded 7.18s); TasksManager chunk still 5.27 kB. Still no browser walk.
+
 ## Next
 
 Calendar **D117** — remainder of W24 (Task Model Variable settings on the authoring surface). Do not start D119 (enum re-point; never-compress, alone), W25, or SessionPlayer work from this unit.
