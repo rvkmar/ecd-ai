@@ -55,10 +55,10 @@ export default function TasksManager({ notify }) {
       });
       setSelectedModelId("");
       setSelectedItemId("");
-      notify?.("Activity created");
+      notify?.("Instantiated task created");
     } catch (err) {
       console.error(err);
-      notify?.("❌ Failed to create activity: " + apiErrorMessage(err, err.message));
+      notify?.("❌ Failed to create instantiated task: " + apiErrorMessage(err, err.message));
     }
   };
 
@@ -71,9 +71,9 @@ export default function TasksManager({ notify }) {
     if (!taskId) return setDeleteModal({ open: false, taskId: null });
     try {
       await deleteTask.mutateAsync(taskId);
-      notify?.("✅ Activity deleted successfully");
+      notify?.("✅ Instantiated task deleted");
     } catch (err) {
-      notify?.("❌ Failed to delete activity: " + apiErrorMessage(err, err.message));
+      notify?.("❌ Failed to delete instantiated task: " + apiErrorMessage(err, err.message));
     } finally {
       setDeleteModal({ open: false, taskId: null });
     }
@@ -159,7 +159,7 @@ export default function TasksManager({ notify }) {
           disabled={!canSubmit}
           className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Create activity
+          Create instantiated task
         </button>
       </form>
 
@@ -194,14 +194,14 @@ export default function TasksManager({ notify }) {
           })}
         </ul>
       ) : (
-        <p className="text-sm text-gray-500">No activities defined yet</p>
+        <p className="text-sm text-gray-500">No instantiated tasks yet</p>
       )}
       <Modal
         isOpen={deleteModal.open}
         onClose={() => setDeleteModal({ open: false, taskId: null })}
         onConfirm={performDeleteTask}
         title="Confirm Delete"
-        message="Are you sure you want to delete this task?"
+        message="Are you sure you want to delete this instantiated task?"
         confirmClass="bg-red-500 hover:bg-red-600 text-white"
       />
     </div>

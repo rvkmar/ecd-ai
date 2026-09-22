@@ -86,7 +86,7 @@ describe("TasksManager instantiable TM + item bind (D115b)", () => {
     expect(itemSelect).not.toHaveTextContent("Retired item");
     expect(itemSelect).not.toHaveTextContent("Wrong TM item");
 
-    const submit = screen.getByRole("button", { name: "Create activity" });
+    const submit = screen.getByRole("button", { name: "Create instantiated task" });
     expect(submit).toBeDisabled();
 
     await user.selectOptions(itemSelect, "itemA");
@@ -97,7 +97,7 @@ describe("TasksManager instantiable TM + item bind (D115b)", () => {
       taskModelId: "tm-live",
       itemId: "itemA",
     });
-    expect(notify).toHaveBeenCalledWith("Activity created");
+    expect(notify).toHaveBeenCalledWith("Instantiated task created");
   });
 
   it("does not post a task-model-only payload", async () => {
@@ -106,7 +106,7 @@ describe("TasksManager instantiable TM + item bind (D115b)", () => {
     render(<TasksManager notify={notify} />);
 
     await user.selectOptions(screen.getByLabelText("Task Model"), "tm-live");
-    const submit = screen.getByRole("button", { name: "Create activity" });
+    const submit = screen.getByRole("button", { name: "Create instantiated task" });
     expect(submit).toBeDisabled();
     expect(mutateAsync).not.toHaveBeenCalled();
   });
