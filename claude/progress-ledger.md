@@ -54,7 +54,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Next queued | **D124** — Human-rating queue and adjudication UI. Do not start W26 casually. |
 
-| Block | **W24 closed** 2026-09-22 (D116–D120). Gate met (TMV once → ≥2 TMs; family settings; design-feature re-point). **W23 closed** 2026-09-21 (D111–D115). **W22** closed 2026-09-20. |
+| Block | **W25 in progress** (D121–D123 done; D124–D125 open). **W24 closed** 2026-09-22 (D116–D120). **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ ~~W23: Changing a Presentation Model changes what an examinee sees, without touching item content (D115).~~ |
 
@@ -194,7 +194,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D122 | product **`e0a463a`** + `claude/day122-rubric-objects-exemplars.md`. Suite **2030 passed / 9 skipped**; build green. rubrics + exemplars; shared across EMs; .backup deleted. Next: D123 alone (never-compress). |
 
-| HEAD at D123 | product **`687c382`** + `claude/day123-multi-phase-evaluation.md`. Suite **2039 passed / 9 skipped**; build green. phases + pending_human pause + human-rating route; Accumulation skips provisional. Next: D124 alone. |
+| HEAD at D123 | product **`687c382`** + close **`9b1c336`** ≡ `main/master` + `claude/day123-multi-phase-evaluation.md` + `claude/day123-w25-session-close.md`. Suite **2039 passed / 9 skipped** (re-verified at session close); build green. phases + pending_human pause + human-rating route; Accumulation skips provisional. Next: D124 alone. |
 
 
 
@@ -422,6 +422,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-22 | D122 | 2, alone | Rubrics with exemplars; EM rubricId; bake into composite library; .backup deleted. Suite **2030 passed / 9 skipped**. No D123. Next: D123 alone (never-compress). |
 
 | 2026-09-22 | D123 | 3, alone | Never-compress. Multi-phase eval onto existing procedures; Identification holds pending_human; staff human-rating completes; honest pendingHumanRatings. Suite **2039 passed / 9 skipped**. No D124 UI. Next: D124 alone. |
+
+| 2026-09-22 | close | 3→1 session | W25 session close D121–D123. Suite re-verify **2039 passed / 9 skipped**; build green; tip `9b1c336` ≡ `main/master`. No half-applied work; no new compression debt. Next: D124 alone. |
 
 
 

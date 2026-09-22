@@ -50,7 +50,9 @@ npm run build
 
 D122 close: **2030 passed / 9 skipped**. Delta: **+9 tests**.
 
-Product tip: **`687c382`**.
+Product tip: **`687c382`**. Session-close tip: **`9b1c336`** ≡ `main/master`
+(re-verified 2026-09-22: **2039 passed / 9 skipped**; build green).
+Session close: `claude/day123-w25-session-close.md`.
 
 ## Next
 
