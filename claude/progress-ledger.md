@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Re-calibrate before **W25**. W24 calendar units D116–D120 complete. Do not start W26 casually. |
+| Next queued | **W25 / D121** — Work Product as an object (G12). Calibrated 2026-09-22. Do not pair with D122 (second schema). **D123 is never-compress** — alone when started. Do not start W26 casually. |
 
-| Block | **W23 closed** 2026-09-21 (D111–D115). Gate met at D115. **W22** closed 2026-09-20; gate met at D108. |
+| Block | **W24 closed** 2026-09-22 (D116–D120). Gate met (TMV once → ≥2 TMs; family settings; design-feature re-point). **W23 closed** 2026-09-21 (D111–D115). **W22** closed 2026-09-20. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ ~~W23: Changing a Presentation Model changes what an examinee sees, without touching item content (D115).~~ |
 
@@ -582,6 +582,12 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D115b | (outline) Possible full CAF lifecycle on Instantiated tasks | Tasks are runtime instances, not CAF models; schema commented; UI cannot bind itemId | Schema + instantiable-TM + itemId authoring + tenancy stamp; **no** draft→operational machine. Closed D115b. |
 
 | D117 | Calendar: routes, lifecycle, query hooks (seven-artefact remainder after D116 schema) | D116 already shipped routes/hooks/readiness/permissions; **no** CAF lifecycle on TMVs by design; zero UI | Authoring UI (library + wizard Variables + settings bind) — calendar D118 create/list early. D118 residual: consumer graph + Storybook themes. |
+
+| D121 | Collapse WP into interaction; identifyEvidence anticipates separation | Collapse true; no workProducts collection; identifyEvidence `workProduct` is raw response blob; EM already has free-string workProductType/Id | Elevate to first-class collection + lifecycle; exit check unchanged (one WP × two interactions × same EM). Tier 2 alone. |
+
+| D122 | No rubric objects; criteria invented at EM time; revive RubricManager.backup | Inline EM rubric artifacts executable (EM-R1); no first-class collection/exemplars; .backup dead (0 importers) | Promote reusable rubrics+exemplars; do not claim zero rubric structure; revive or delete .backup. Tier 2 alone (never with D121). |
+
+| D123 | Add evaluationProcedures[] with phases; Identification pauses for human | evaluationProcedures[] already exist (key/rubric/auto/process_log); no phases; Identification still sync one-pass | Add phases + human pause onto existing procedures. **Never-compress** (fixed §3). Alone. |
 
 
 
