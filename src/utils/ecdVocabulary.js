@@ -111,13 +111,13 @@ export function interactionLabel(value) {
 /* =====================================================
    3. Compatibility: which interactions may elicit which observable
    -----------------------------------------------------
-   An empty list means "no on-screen interaction can capture this
-   observable" -- performance, artifact, behavior and process_trace are
-   rated or logged, not answered, and the platform has no rater workflow
-   yet. Those are deliberately NOT silently mapped onto `constructed`:
-   pretending a rated performance is a text box would let an author
-   confirm an item that collects the wrong evidence entirely. The wizard
-   says so plainly instead and blocks the binding.
+   An empty list means "no on-screen ItemPresenter widget captures this
+   observable." performance / artifact / behavior / process_trace are
+   rated or logged, not answered in a response component. That is
+   intentional — see WORK_PRODUCT_TYPE_DISPOSITIONS (D125). Do NOT map
+   them onto `constructed`: pretending a rated performance is a text box
+   would let an author confirm an item that collects the wrong evidence.
+   The wizard says so plainly and blocks the binding.
 ===================================================== */
 
 export const INTERACTION_COMPATIBILITY = {
@@ -129,6 +129,114 @@ export const INTERACTION_COMPATIBILITY = {
   behavior: [],
   process_trace: [],
 };
+
+/**
+ * D125 / W25 — dispositions for every work-product (observable response)
+ * type. Resolves the conformance-schedule §6 deferred entry that held
+ * performance / artifact / behavior / process_trace as "unsupported until
+ * 3.4–3.5." Those objects now exist (D121–D124); each type has an
+ * explicit status:
+ *   supported     — authorable and evaluable on the current path
+ *   later         — named prerequisite before support
+ *   out_of_scope  — deliberately not this platform, with reason
+ *
+ * Empty INTERACTION_COMPATIBILITY for the four performance-assessment
+ * types is part of the disposition (external / logged capture), not a
+ * missing feature to silently fill with `constructed`.
+ */
+export const WORK_PRODUCT_DISPOSITION_STATUS = Object.freeze({
+  SUPPORTED: "supported",
+  LATER: "later",
+  OUT_OF_SCOPE: "out_of_scope",
+});
+
+export const WORK_PRODUCT_TYPE_DISPOSITIONS = Object.freeze({
+  selected_response: {
+    status: WORK_PRODUCT_DISPOSITION_STATUS.SUPPORTED,
+    resolvedAt: "D121",
+    capture: "interaction",
+    evaluation: ["automated", "human", "hybrid"],
+    interactionTypes: ["mcq", "multiselect", "likert"],
+    prerequisite: null,
+    note: "Captured by ItemPresenter selection widgets; Identification via key/auto/map.",
+  },
+  constructed_response: {
+    status: WORK_PRODUCT_DISPOSITION_STATUS.SUPPORTED,
+    resolvedAt: "D121",
+    capture: "interaction",
+    evaluation: ["automated", "human", "hybrid"],
+    interactionTypes: ["constructed"],
+    prerequisite: null,
+    note: "Captured by constructed text widget; often human/rubric phases.",
+  },
+  numeric_response: {
+    status: WORK_PRODUCT_DISPOSITION_STATUS.SUPPORTED,
+    resolvedAt: "D121",
+    capture: "interaction",
+    evaluation: ["automated", "human", "hybrid"],
+    interactionTypes: ["numeric"],
+    prerequisite: null,
+    note: "Captured by numeric widget; Identification via key/auto.",
+  },
+  performance: {
+    status: WORK_PRODUCT_DISPOSITION_STATUS.SUPPORTED,
+    resolvedAt: "D125",
+    capture: "external_observation",
+    evaluation: ["human", "hybrid"],
+    interactionTypes: [],
+    prerequisite: null,
+    note:
+      "Observed performance is a Work Product (D121) rated against a library rubric (D122) through multi-phase evaluation (D123) on the blinded HumanRatingQueue (D124). No on-screen answer widget — assessor observes and rates.",
+  },
+  artifact: {
+    status: WORK_PRODUCT_DISPOSITION_STATUS.SUPPORTED,
+    resolvedAt: "D125",
+    capture: "external_artifact",
+    evaluation: ["human", "hybrid"],
+    interactionTypes: [],
+    prerequisite: null,
+    note:
+      "Produced artifacts are Work Products rated via human/hybrid phases and rubrics. Dedicated file-upload ItemPresenter chrome is a later enhancement; type is authorable and rater-evaluable now (payload as work-product content).",
+  },
+  behavior: {
+    status: WORK_PRODUCT_DISPOSITION_STATUS.SUPPORTED,
+    resolvedAt: "D125",
+    capture: "external_observation",
+    evaluation: ["human", "hybrid"],
+    interactionTypes: [],
+    prerequisite: null,
+    note:
+      "Discrete observed behaviours are recorded as Work Products and rated on the human-rating path. No examinee-facing interaction widget.",
+  },
+  process_trace: {
+    status: WORK_PRODUCT_DISPOSITION_STATUS.SUPPORTED,
+    resolvedAt: "D125",
+    capture: "process_log",
+    evaluation: ["automated", "human", "hybrid"],
+    interactionTypes: [],
+    prerequisite: null,
+    note:
+      "Action sequences are evidence via process_log / auto artifacts (EM-R1) and optional human phases. Capture is instrumentation, not an ItemPresenter interaction.",
+  },
+});
+
+/** @returns {typeof WORK_PRODUCT_TYPE_DISPOSITIONS[string] | null} */
+export function workProductTypeDisposition(type) {
+  if (!type) return null;
+  return WORK_PRODUCT_TYPE_DISPOSITIONS[type] || null;
+}
+
+/** Conformance §6 performance-assessment set (the deferred four). */
+export const PERFORMANCE_ASSESSMENT_WORK_PRODUCT_TYPES = Object.freeze([
+  "performance",
+  "artifact",
+  "behavior",
+  "process_trace",
+]);
+
+export function isPerformanceAssessmentWorkProductType(type) {
+  return PERFORMANCE_ASSESSMENT_WORK_PRODUCT_TYPES.includes(type);
+}
 
 export function interactionTypesForObservable(observableType) {
   if (!observableType) return [];
@@ -172,7 +280,19 @@ export function interactionCompatibilityMessage(observableType, interactionType)
   }
 
   if (allowed.length === 0) {
-    return `Observables of type '${observableType}' are rated or logged rather than answered on screen, so no interaction type can capture them yet. Bind an observable with a selected, constructed or numeric response mode.`;
+    const disposition = workProductTypeDisposition(observableType);
+    if (
+      disposition?.status === WORK_PRODUCT_DISPOSITION_STATUS.SUPPORTED &&
+      isPerformanceAssessmentWorkProductType(observableType)
+    ) {
+      return (
+        `Observables of type '${observableType}' use ${disposition.capture.replace(/_/g, " ")} ` +
+        `capture and ${disposition.evaluation.join("/")} evaluation — not an on-screen answer widget. ` +
+        `Author a Work Product of this type and rate it on the human-rating path; ` +
+        `do not bind a selected/constructed/numeric ItemPresenter interaction.`
+      );
+    }
+    return `Observables of type '${observableType}' are rated or logged rather than answered on screen, so no interaction type can capture them. Bind an observable with a selected, constructed or numeric response mode.`;
   }
 
   if (!interactionType) {

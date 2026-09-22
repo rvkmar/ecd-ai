@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D124** — Human-rating queue and adjudication (G11). Handoff: `claude/day124-human-rating-queue.md`. |
+| Last completed unit | **D125** — Performance WP dispositions; **W25 block closed**. Handoff: `claude/day125-performance-wp-dispositions.md` + `claude/day125-w25-block-close.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D125** — Performance WP dispositions + W25 handoff. Alone. Do not start W26 casually. |
+| Next queued | **D126** — templates schema (W26). Re-calibrate before starting. Do not start W26 casually. |
 
-| Block | **W25 in progress** (D121–D124 done; D125 open). **W24 closed** 2026-09-22 (D116–D120). **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
+| Block | **W25 closed** 2026-09-22 (D121–D125). Gate met (WP/rubrics objects; multi-phase; blinded rating; four performance dispositions). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ ~~W23: Changing a Presentation Model changes what an examinee sees, without touching item content (D115).~~ |
 
@@ -197,6 +197,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D123 | product **`687c382`** + pin **`9b1c336`** + session close on tip ≡ `main/master` + `claude/day123-multi-phase-evaluation.md` + `claude/day123-w25-session-close.md`. Suite **2039 passed / 9 skipped** (re-verified at session close); build green. phases + pending_human pause + human-rating route; Accumulation skips provisional. Next: D124 alone. |
 
 | HEAD at D124 | product tip ≡ `main/master` + `claude/day124-human-rating-queue.md`. Suite **2043 passed / 9 skipped**; build green. Blinded rating queue + audit + Delivery UI. Next: D125 alone. |
+
+| HEAD at D125 | product tip ≡ `main/master` + `claude/day125-performance-wp-dispositions.md` + `claude/day125-w25-block-close.md`. Suite **2047 passed / 9 skipped**; build green. Four performance WP dispositions; W25 gate met. Next: re-calibrate before D126. |
 
 
 
@@ -428,6 +430,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-22 | close | 3→1 session | W25 session close D121–D123. Suite re-verify **2039 passed / 9 skipped**; build green; tip `9b1c336` ≡ `main/master`. No half-applied work; no new compression debt. Next: D124 alone. |
 
 | 2026-09-22 | D124 | 2, alone | Blinded human-rating queue + adjudication UI; audit on saveDB; Delivery tab. Suite **2043 passed / 9 skipped**. Live rating-queue API on rebuilt :6060. No D125. Next: D125 alone. |
+
+| 2026-09-22 | D125 | 2, alone | Performance WP dispositions (all four supported); W25 block close. Suite **2047 passed / 9 skipped**. No W26. Next: re-calibrate D126. |
 
 
 
@@ -673,7 +677,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - Live Newtonian console walk beyond suite ingest fixture — **open**
 
-- Work Products / Rubrics as first-class objects ~~+ multi-phase eval + human rating UI~~ (W25 / G11–G12) — **partial**; D121–D124 done; D125 dispositions + block handoff open
+- ~~Work Products / Rubrics as first-class objects + multi-phase eval + human rating UI (W25 / G11–G12)~~ closed D125 (`claude/day125-w25-block-close.md`)
 
 - ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113. ~~Library-pointer bake~~ closed D114. ~~SessionPlayer obedience / W23 gate~~ closed D115 (`claude/day115-sessionplayer-presentation-w23.md`). ~~Live `:6060` dual-PM browser walk~~ closed 2026-09-21 (compression debt D115).
 

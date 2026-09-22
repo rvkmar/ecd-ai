@@ -30,6 +30,7 @@ import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { useCompetencies } from "@/api/queries/competencies";
 import { isInstantiableTaskModel } from "@/utils/schema";
 import { versionLabel, interactionLabel } from "../../itemConstants";
+import { interactionCompatibilityMessage } from "@/utils/ecdVocabulary";
 
 function Field({ label, value, mono = false }) {
   return (
@@ -285,12 +286,7 @@ export default function Step1Instantiation() {
           {ctx.observable && ctx.observableInteractions.length === 0 && (
             <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               <AlertTriangle size={16} strokeWidth={2.25} className="mt-0.5 shrink-0" />
-              <span>
-                This observable captures a <strong>{ctx.observable.type}</strong>,
-                which is rated or logged rather than answered on screen. No item
-                can capture it yet — choose an observation with a selected,
-                constructed or numeric response mode.
-              </span>
+              <span>{interactionCompatibilityMessage(ctx.observable.type, null)}</span>
             </div>
           )}
 

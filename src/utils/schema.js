@@ -3728,7 +3728,7 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         if (strict && observable &&
             interactionTypesForObservable(observable.type).length === 0) {
           errors.push(
-            `Observables of type '${observable.type}' are rated or logged rather than answered on screen, so no item can capture them yet.`
+            interactionCompatibilityMessage(observable.type, null)
           );
         }
 

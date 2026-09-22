@@ -23,6 +23,7 @@ import { Lock, Info, AlertTriangle } from "lucide-react";
 import { useItemWizard } from "../ItemWizardContext";
 import ResponseComponentEditor from "../components/ResponseComponentEditor";
 import { interactionLabel } from "../../itemConstants";
+import { interactionCompatibilityMessage } from "@/utils/ecdVocabulary";
 
 export default function Step4Interaction() {
   const { item, ctx, replaceObject, canEdit, chainLoading } = useItemWizard();
@@ -100,7 +101,7 @@ export default function Step4Interaction() {
           <AlertTriangle size={16} strokeWidth={2.25} className="mt-0.5 shrink-0" />
           <span>
             {observableInteractions.length === 0
-              ? `Observables of type '${observable?.type}' are rated or logged rather than answered on screen. No item can capture one yet — rebind this item to an observation with a selected, constructed or numeric response mode.`
+              ? interactionCompatibilityMessage(observable?.type, null)
               : "The Task Model blueprint permits no interaction that can elicit this observable. Fix the contradiction on the Task Model."}
           </span>
         </div>
