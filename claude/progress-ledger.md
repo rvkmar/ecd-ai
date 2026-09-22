@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D118** — TMV registry residuals (consumers + Storybook). Handoff: `claude/day118-tmv-registry-residuals.md`. |
+| Last completed unit | **D120** — Per-template TMV settings + W24 worked example. Handoff: `claude/day120-tmv-family-settings.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D120** (per-template TMV settings + W24 worked example) — re-calibrate. **D119** enum re-point is never-compress, alone. Do not start W25. |
+| Next queued | Calendar **D119** — enum re-point (never-compress, alone). Or re-calibrate before W25. Do not start W25/W26 casually. |
 
 | Block | **W23 closed** 2026-09-21 (D111–D115). Gate met at D115. **W22** closed 2026-09-20; gate met at D108. |
 
@@ -185,6 +185,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-09-22 D117 session close | this close. Suite re-verify **1983 passed / 9 skipped** (178 files, 86.98s); build green (1m 20s). Tip after this commit ≡ `main/master`. Calendar D117 ✅; D118 annotated. |
 
 | HEAD at D118 | product **`85f2582`** + `claude/day118-tmv-registry-residuals.md`. Suite **1987 passed / 9 skipped**; build green. Consumers before edit; valueSet read-only; Storybook. Next: D120 (re-calibrate); D119 alone later. |
+
+| HEAD at D120 | product + `claude/day120-tmv-family-settings.md` + worked example. Suite **1993 passed / 9 skipped**; build green. fixed/varying settings + ten-spec family. Next: D119 alone. |
 
 
 
@@ -402,6 +404,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-22 | close | 2, alone | D117 session close. Suite re-verify **1983 passed / 9 skipped** (178 files, 86.98s); build green (1m 20s). Calendar D117 ✅ (premise rewrite); D118 residual note. No half-applied work; no new compression debt. Next: D118 residuals. |
 
 | 2026-09-22 | D118 | 1, alone | TMV registry residuals. Consumers visible before edit/delete; valueSet levels read-only; Storybook light/dark. Suite **1987 passed / 9 skipped**. No D119. Next: D120 (re-calibrate). |
+
+| 2026-09-22 | D120 | 2, alone | Per-TM fixed/varying TMV settings + family projection; W24 ten-spec worked example. Suite **1993 passed / 9 skipped**. Skipped D119 (never-compress). Live :6060 admin TMV tab smoke. Next: D119 alone. |
 
 
 

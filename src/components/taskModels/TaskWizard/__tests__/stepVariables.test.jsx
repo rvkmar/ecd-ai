@@ -54,7 +54,7 @@ describe("StepVariables (D117)", () => {
 
     expect(draft.taskModelVariableIds).toEqual(["tmv-bloom"]);
     expect(draft.taskModelVariableSettings).toEqual([
-      { taskModelVariableId: "tmv-bloom", required: false },
+      { taskModelVariableId: "tmv-bloom", required: false, variation: "varying" },
     ]);
 
     await user.click(screen.getByRole("checkbox", { name: /Required on this Task Model/i }));
@@ -62,6 +62,12 @@ describe("StepVariables (D117)", () => {
 
     await user.click(screen.getByRole("checkbox", { name: "analyze" }));
     expect(draft.taskModelVariableSettings[0].allowedValues).toContain("analyze");
+    expect(screen.getByTestId("tmv-family-size")).toHaveTextContent("1");
+
+    await user.click(screen.getByRole("radio", { name: "Fixed" }));
+    expect(draft.taskModelVariableSettings[0].variation).toBe("fixed");
+    expect(draft.taskModelVariableSettings[0].fixedValue).toBeTruthy();
+    expect(screen.getByTestId("tmv-family-size")).toHaveTextContent("1");
   });
 
   it("preserves the same variable id shape two Task Models can share", () => {

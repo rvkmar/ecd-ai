@@ -489,7 +489,10 @@ export const schema = {
       taskModelVariables row may appear in many Task Models.
       taskModelVariableSettings is the per-model constraint (allowed
       levels, numeric window, required) — the library record stays
-      shared. Absent means "this Task Model binds no variables".
+      shared. D120 adds variation: "fixed" | "varying" so a future
+      template (W26) can fix some variables and vary others across
+      allowedValues / fixedValue. Absent variation means varying
+      (D117 compat). Absent means "this Task Model binds no variables".
       Templates are not a collection yet; this is the binding surface.
     --------------------------------------------- */
     taskModelVariableIds: 'array',
@@ -1131,10 +1134,68 @@ export function taskModelVariableBindingErrors(obj, db) {
       errors.push(`${tag}.required must be boolean.`);
     }
 
+    if (setting.variation !== undefined && setting.variation !== null) {
+      if (setting.variation !== "fixed" && setting.variation !== "varying") {
+        errors.push(`${tag}.variation must be "fixed" or "varying".`);
+      }
+    }
+
     const variable = db
       ? (db.taskModelVariables || []).find((v) => v.id === id)
       : undefined;
     if (!variable) return;
+
+    const variation =
+      setting.variation === "fixed" || setting.variation === "varying"
+        ? setting.variation
+        : null;
+
+    if (variation === "fixed") {
+      const fixedRaw = setting.fixedValue;
+      const fixed =
+        typeof fixedRaw === "number" && Number.isFinite(fixedRaw)
+          ? String(fixedRaw)
+          : typeof fixedRaw === "string"
+            ? fixedRaw.trim()
+            : "";
+      if (!fixed) {
+        errors.push(`${tag}.fixedValue is required when variation is "fixed".`);
+      } else if (variable.type === "numeric") {
+        const n = Number(fixed);
+        if (!Number.isFinite(n)) {
+          errors.push(`${tag}.fixedValue must be numeric for a numeric variable.`);
+        } else {
+          const range = variable.range || {};
+          if (typeof range.min === "number" && n < range.min) {
+            errors.push(`${tag}.fixedValue is outside the Task Model Variable range.`);
+          }
+          if (typeof range.max === "number" && n > range.max) {
+            errors.push(`${tag}.fixedValue is outside the Task Model Variable range.`);
+          }
+        }
+      } else {
+        const allowed = taskModelVariableValueIds(variable);
+        if (allowed.length && !allowed.includes(fixed)) {
+          errors.push(
+            `${tag}.fixedValue '${fixed}' is not a possible value of Task Model Variable '${id}'.`
+          );
+        }
+      }
+      if (
+        Array.isArray(setting.allowedValues) &&
+        setting.allowedValues.length > 0 &&
+        !(
+          setting.allowedValues.length === 1 &&
+          settingEntryValue(setting.allowedValues[0]) === fixed
+        )
+      ) {
+        errors.push(
+          `${tag} with variation "fixed" must not list a multi-value allowedValues set.`
+        );
+      }
+    } else if (setting.fixedValue !== undefined && setting.fixedValue !== null) {
+      errors.push(`${tag}.fixedValue is only valid when variation is "fixed".`);
+    }
 
     if (variable.type === "numeric") {
       if (Array.isArray(setting.allowedValues) && setting.allowedValues.length > 0) {
