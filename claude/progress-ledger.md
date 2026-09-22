@@ -603,6 +603,10 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 | D123 | Add evaluationProcedures[] with phases; Identification pauses for human | evaluationProcedures[] already exist (key/rubric/auto/process_log); no phases; Identification still sync one-pass | Add phases + human pause onto existing procedures. **Never-compress** (fixed §3). Alone. |
 
+| D124 | Build rater queue + adjudication from scratch | D123 shipped human-rating API + adjudication; zero UI; **blinding broken** (`provisionalActivated` on pendingHumanRatings); no audit on rating write; tenancy unconfirmed for cross-district | Blinded rater UI + strip automated/identity from rater projection; audit ratings; tenancy. Consume D123 — do not rebuild phase runner. Tier 2 alone. |
+
+| D125 | Invent support for four performance WP types after 3.4/3.5 | Types already in ecdVocabulary with empty interaction maps (deliberate); two-phase already D123; D124 still open for W25 gate | Disposition decisions only after D124; resolve §6 deferred list; W25 handoff. Tier 2 alone. Never with D126. |
+
 
 
 ## Carried-forward gaps
