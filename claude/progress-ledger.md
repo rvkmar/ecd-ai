@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D126** — templates schema (W26). Re-calibrate before starting. Do not start W26 casually. |
+| Next queued | **D126** — templates schema (W26). Calibrated 2026-09-22 (`claude/day126-w26-calibration.md`). Alone (Tier 2). |
 
-| Block | **W25 closed** 2026-09-22 (D121–D125). Gate met (WP/rubrics objects; multi-phase; blinded rating; four performance dispositions). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
+| Block | **W26 open** (D126–D130). Gate: Template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ ~~W23: Changing a Presentation Model changes what an examinee sees, without touching item content (D115).~~ |
 
@@ -435,6 +435,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-22 | close | 2, alone | W25 session close D124–D125 (block). Suite re-verify **2047 passed / 9 skipped**; build green; tip ≡ `main/master`. No half-applied work; no new compression debt. Calendar D124–D125 ✅; W25 block ✅. Next: re-calibrate D126. |
 
+| 2026-09-22 | calibrate | — | W26 start calibration. Tip `ae2b653`. D126–D128 premises rewritten (templates still absent; TM settings on Task Models; D48 = collectionSurfaceGuard; DINA joint ≠ continuous joint). D129 never-compress flagged. Work order: D126 alone. Handoff: `claude/day126-w26-calibration.md`. |
+
 
 
 ## Compression debt
@@ -616,6 +618,10 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D124 | Build rater queue + adjudication from scratch | D123 shipped human-rating API + adjudication; zero UI; **blinding broken** (`provisionalActivated` on pendingHumanRatings); no audit on rating write; tenancy unconfirmed for cross-district | Blinded rater UI + strip automated/identity from rater projection; audit ratings; tenancy. Consume D123 — do not rebuild phase runner. Tier 2 alone. |
 
 | D125 | Invent support for four performance WP types after 3.4/3.5 | Types already in ecdVocabulary with empty interaction maps (deliberate); two-phase already D123; D124 still open for W25 gate | Disposition decisions only after D124; resolve §6 deferred list; W25 handoff. Tier 2 alone. Never with D126. |
+
+| D126 | Greenfield templates + invent per-template TMV settings | No `templates` in schema (true); D120 settings already on Task Models; PM↔TM coherence on compositeLibrary; D48 = `collectionSurfaceGuard` | Seven-artefact `templates`; consume TM settings; reuse PM/TM rule; routes same session. Tier 2 alone. |
+
+| D128 | No joint language anywhere | Per-SMV marginal priors only; DINA attribute-profile joint already exists | Continuous/covariance joint prior schema only; do not confuse with DINA. Alone after D126. |
 
 
 
