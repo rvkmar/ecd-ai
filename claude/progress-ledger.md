@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D117** — TMV authoring UI (W24 remainder). Handoff: `claude/day117-tmv-authoring-ui.md`. |
+| Last completed unit | **D118** — TMV registry residuals (consumers + Storybook). Handoff: `claude/day118-tmv-registry-residuals.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D118** residuals (consumer graph before edit; Storybook both themes). Create/list/bind already under D117. D119 enum re-point stays later, alone. Do not start W25. Re-calibrate before starting. |
+| Next queued | Calendar **D120** (per-template TMV settings + W24 worked example) — re-calibrate. **D119** enum re-point is never-compress, alone. Do not start W25. |
 
 | Block | **W23 closed** 2026-09-21 (D111–D115). Gate met at D115. **W22** closed 2026-09-20; gate met at D108. |
 
@@ -183,6 +183,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D117 | product **`61018ee`** + pin **`64ae908`** + `claude/day117-tmv-authoring-ui.md`. Suite **1983 passed / 9 skipped**; build green. Library + wizard Variables step; no D119. Calendar ✅ (premise rewrite). Next: D118 residuals. |
 
 | HEAD at 2026-09-22 D117 session close | this close. Suite re-verify **1983 passed / 9 skipped** (178 files, 86.98s); build green (1m 20s). Tip after this commit ≡ `main/master`. Calendar D117 ✅; D118 annotated. |
+
+| HEAD at D118 | product + `claude/day118-tmv-registry-residuals.md`. Suite **1987 passed / 9 skipped**; build green. Consumers before edit; valueSet read-only; Storybook. Next: D120 (re-calibrate); D119 alone later. |
 
 
 
@@ -398,6 +400,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-22 | D117 | 2, alone | TMV authoring UI. Models → Task Model Variables library; Task Model Wizard Variables step binds ids + settings. Suite **1983 passed / 9 skipped**. No D119. Calendar premise rewrite: original D117 routes/hooks already in D116; this slot = authoring UI. ✅ marked. Next: D118 residuals. |
 
 | 2026-09-22 | close | 2, alone | D117 session close. Suite re-verify **1983 passed / 9 skipped** (178 files, 86.98s); build green (1m 20s). Calendar D117 ✅ (premise rewrite); D118 residual note. No half-applied work; no new compression debt. Next: D118 residuals. |
+
+| 2026-09-22 | D118 | 1, alone | TMV registry residuals. Consumers visible before edit/delete; valueSet levels read-only; Storybook light/dark. Suite **1987 passed / 9 skipped**. No D119. Next: D120 (re-calibrate). |
 
 
 
