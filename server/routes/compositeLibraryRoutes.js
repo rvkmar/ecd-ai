@@ -113,7 +113,11 @@ router.get("/:id/staleness", (req, res) => {
   );
 
   try {
-    const stale = isCompositeLibraryStale(row, { taskModel, evidenceModels });
+    const stale = isCompositeLibraryStale(row, {
+      taskModel,
+      evidenceModels,
+      rubrics: db.rubrics || [],
+    });
     res.json({ id: row.id, taskModelId: row.taskModelId, stale });
   } catch (e) {
     res.status(400).json({ error: e.message });

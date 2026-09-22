@@ -63,6 +63,9 @@ vi.mock("@/components/taskModelVariables/TaskModelVariableBuilder", () => ({
 vi.mock("@/components/workProducts/WorkProductBuilder", () => ({
   default: () => <div>Work Products library</div>,
 }));
+vi.mock("@/components/rubrics/RubricBuilder", () => ({
+  default: () => <div>Rubrics library</div>,
+}));
 vi.mock("@/components/home/HomeAnnouncements", () => ({
   default: () => <div>Home announcements</div>,
 }));

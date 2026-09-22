@@ -35,6 +35,7 @@ import {
   TASK_MODEL_VARIABLE_VALUE_SET_MIRROR,
 } from "../utils/taskModelVariableReadiness.js";
 import { WORK_PRODUCT_TYPE_MIRROR } from "../utils/workProductReadiness.js";
+import { RUBRIC_STATUS_MIRROR } from "../utils/rubricReadiness.js";
 
 /* =====================================================
    Shared fixtures -- one valid baseline per entity, mutated per test.
@@ -522,6 +523,12 @@ describe("mirror: Task Model Variable value sets <-> ecdVocabulary", () => {
 describe("mirror: Work Product types <-> ecdVocabulary (D121)", () => {
   it("readiness type list agrees with WORK_PRODUCT_TYPE_VALUES", () => {
     expect(WORK_PRODUCT_TYPE_MIRROR).toEqual([...WORK_PRODUCT_TYPE_VALUES]);
+  });
+});
+
+describe("mirror: Rubric status list (D122)", () => {
+  it("readiness statuses are draft and confirmed only", () => {
+    expect(RUBRIC_STATUS_MIRROR).toEqual(["draft", "confirmed"]);
   });
 });
 

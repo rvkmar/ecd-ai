@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D121** — Work Product as an object (G12). Handoff: `claude/day121-work-product-as-object.md`. |
+| Last completed unit | **D122** — Rubric objects with exemplars (G11). Handoff: `claude/day122-rubric-objects-exemplars.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D122** — Rubric objects with exemplars (Tier 2, alone). **D123** never-compress — alone when started. Do not start W26 casually. |
+| Next queued | **D123** — Multi-phase evaluation (never-compress, alone). Do not start on a thin budget. Do not start W26 casually. |
 
 | Block | **W24 closed** 2026-09-22 (D116–D120). Gate met (TMV once → ≥2 TMs; family settings; design-feature re-point). **W23 closed** 2026-09-21 (D111–D115). **W22** closed 2026-09-20. |
 
@@ -191,6 +191,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D119 | product **`99c4d85`** + close **`f2973b9`** ≡ `main/master` + `claude/day119-design-feature-registry-repoint.md`. Suite **1996 passed / 9 skipped** (re-verified at session close); build green. Design features via TMV valueSet path; D22 floor held. W24 calendar + block ✅ complete. |
 
 | HEAD at D121 | product **`5ecb5bc`** + `claude/day121-work-product-as-object.md`. Suite **2016 passed / 9 skipped**; build green. workProducts library; one WP × two interactions identical score. Next: D122 alone. |
+
+| HEAD at D122 | product + `claude/day122-rubric-objects-exemplars.md`. Suite **2030 passed / 9 skipped**; build green. rubrics + exemplars; shared across EMs; .backup deleted. Next: D123 alone (never-compress). |
 
 
 
@@ -414,6 +416,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-22 | D119 | 3, alone | Never-compress. Task Model structure/blueprint design features via TMV valueSet registry path; D22 value floor; mirror-drift green. Suite **1996 passed / 9 skipped**. W24 calendar D116–D120 done. Next: re-calibrate W25. |
 
 | 2026-09-22 | D121 | 2, alone | Work Product as object. Collection + library UI; item.interaction.workProductId; mcq/likert identical Identification via same EM. Suite **2016 passed / 9 skipped**. No D122/D123. Next: D122 alone. |
+
+| 2026-09-22 | D122 | 2, alone | Rubrics with exemplars; EM rubricId; bake into composite library; .backup deleted. Suite **2030 passed / 9 skipped**. No D123. Next: D123 alone (never-compress). |
 
 
 

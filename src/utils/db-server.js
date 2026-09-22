@@ -54,6 +54,7 @@ function defaultDB() {
     taskModels: [],
     taskModelVariables: [],
     workProducts: [],
+    rubrics: [],
     students: [],
     questions: [],      // ✅ added
     calibrationJobs: [],

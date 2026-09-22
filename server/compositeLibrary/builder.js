@@ -35,19 +35,31 @@
 
 import { isInstantiableTaskModel, INSTANTIABLE_TASK_MODEL_STATUSES } from "../../src/utils/schema.js";
 import { selectPresentationModelIdForTaskModel } from "../delivery/presentationModelResolution.js";
+import { artifactFromRubric } from "../../src/utils/rubricDelivery.js";
 
 /**
  * Resolve the Evidence Model evaluation procedure for one observation.
  * When several procedures share an observableId (multi-extraction), bake
  * the first; Identification still receives the full baked object.
+ * D122: when rubricId is set, bake dimensions from the library rubric
+ * (inline artifact wins if already present with dimensions).
  */
-function resolveEvaluationProcedure(evidenceModel, observationId) {
+function resolveEvaluationProcedure(evidenceModel, observationId, db) {
   if (!evidenceModel || !observationId) return null;
   const matches = (evidenceModel.evaluationProcedures || []).filter(
     (p) => p && p.observableId === observationId
   );
   if (matches.length === 0) return null;
   const proc = matches[0];
+  let artifact = proc.artifact ?? null;
+  if (
+    proc.rubricId &&
+    (!artifact || !Array.isArray(artifact.dimensions) || artifact.dimensions.length === 0)
+  ) {
+    const rubric = (db?.rubrics || []).find((r) => r?.id === proc.rubricId);
+    const projected = artifactFromRubric(rubric);
+    if (projected) artifact = projected;
+  }
   // Bake a plain structural copy — including optional scoring artifact —
   // so Identification never re-walks live EM records (ADR 0003a).
   return {
@@ -55,10 +67,11 @@ function resolveEvaluationProcedure(evidenceModel, observationId) {
     observableId: proc.observableId,
     workProductType: proc.workProductType ?? null,
     workProductId: proc.workProductId ?? null,
+    rubricId: proc.rubricId ?? null,
     method: proc.method ?? null,
     description: proc.description ?? null,
     artifactRef: proc.artifactRef ?? null,
-    artifact: proc.artifact ?? null,
+    artifact,
   };
 }
 
@@ -153,7 +166,8 @@ export function buildCompositeLibrary(taskModel, db) {
 
     const evaluationProcedure = resolveEvaluationProcedure(
       evidenceModel,
-      item.observationId
+      item.observationId,
+      db
     );
 
     if (
@@ -224,12 +238,12 @@ export function buildCompositeLibrary(taskModel, db) {
  *
  * @param {object} libraryRecord - a compiled compositeLibrary record (the
  *   output of buildCompositeLibrary, plus whatever `id` the caller assigned)
- * @param {{ taskModel: object, evidenceModels?: object[] }} current - the
+ * @param {{ taskModel: object, evidenceModels?: object[], rubrics?: object[] }} current - the
  *   CURRENT state of the Task Model and any Evidence Models to check
  *   against (only the ones referenced by libraryRecord.items are consulted)
  * @returns {{ stale: boolean, reasons: string[] }}
  */
-export function isCompositeLibraryStale(libraryRecord, { taskModel, evidenceModels = [] } = {}) {
+export function isCompositeLibraryStale(libraryRecord, { taskModel, evidenceModels = [], rubrics = [] } = {}) {
   if (!libraryRecord || !taskModel) {
     throw new Error("isCompositeLibraryStale requires both a libraryRecord and the current taskModel.");
   }
@@ -243,6 +257,7 @@ export function isCompositeLibraryStale(libraryRecord, { taskModel, evidenceMode
   }
 
   const evidenceModelsById = new Map(evidenceModels.map((em) => [em.id, em]));
+  const dbSlice = { rubrics };
   const checkedEvidenceModelIds = new Set();
 
   for (const entry of libraryRecord.items || []) {
@@ -267,7 +282,11 @@ export function isCompositeLibraryStale(libraryRecord, { taskModel, evidenceMode
     // same-version edit to the procedure for this observation still
     // invalidates the package so Identification cannot use a stale key/rubric.
     if (currentEm) {
-      const currentProc = resolveEvaluationProcedure(currentEm, entry.observationId);
+      const currentProc = resolveEvaluationProcedure(
+        currentEm,
+        entry.observationId,
+        dbSlice
+      );
       const baked = entry.evaluationProcedure ?? null;
       if (JSON.stringify(currentProc) !== JSON.stringify(baked)) {
         reasons.push(

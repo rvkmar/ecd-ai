@@ -19,6 +19,7 @@ export const rolePermissions = {
       // too (same split as taskModels). Not a CAF model.
       "taskModelVariables",
       "workProducts",
+      "rubrics",
       "tasks",
       "sessions",
       "policies",
@@ -61,6 +62,7 @@ export const rolePermissions = {
       "taskModels",
       "taskModelVariables",
       "workProducts",
+      "rubrics",
       "items",
       "tasks",
       "policies",
@@ -85,6 +87,7 @@ export const rolePermissions = {
       "taskModels",
       "taskModelVariables",
       "workProducts",
+      "rubrics",
       "items",
       "tasks",
       "policies",
@@ -115,6 +118,7 @@ export const rolePermissions = {
       "taskModels",
       "taskModelVariables",
       "workProducts",
+      "rubrics",
       "tasks",
       "sessions",
       "reports",
@@ -135,6 +139,7 @@ export const rolePermissions = {
       "taskModels",         // can clone and modify published task models
       "taskModelVariables", // shared design features those models consume
       "workProducts",       // D121: what examinees produce (library)
+      "rubrics",            // D122: reusable scoring rubrics
       "items"               // authors and governs bank items
     ],
     canApprove: ["questions", "items"],
@@ -155,6 +160,7 @@ export const rolePermissions = {
       "taskModels",
       "taskModelVariables",
       "workProducts",
+      "rubrics",
       "tasks",
       "sessions",
       "reports",

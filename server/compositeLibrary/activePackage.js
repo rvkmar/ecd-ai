@@ -87,6 +87,7 @@ export function resolveIdentificationStructure(item, db, options = {}) {
   const { stale, reasons } = isCompositeLibraryStale(pkg, {
     taskModel,
     evidenceModels: db.evidenceModels || [],
+    rubrics: db.rubrics || [],
   });
 
   if (stale) {

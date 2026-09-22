@@ -61,6 +61,7 @@ import {
   isDesignFeatureValueAllowed,
   vocabularyValuesForDesignFeature,
 } from "./taskModelDesignFeatureRegistry.js";
+import { exemplarCount, levelValues } from "./rubricDelivery.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 
 // Canonical session status spellings -- see src/utils/sessionStatus.js for
@@ -347,6 +348,7 @@ export const schema = {
       method: 'string',          // key | rubric | auto | process_log
       description: 'string',
       artifactRef: 'string',
+      rubricId: 'string',        // D122: shared rubrics collection id
       // Executable scoring asset baked into the composite library.
       // kind: key → { correctPatterns: responsePattern[] }
       // kind: rubric → { dimensions: [{ id, levels, activatesAt? }] }
@@ -354,6 +356,7 @@ export const schema = {
       //   activatingPatterns + optional classByEvent; or activatingPatterns alone)
       // kind: process_log → { eventSchema } (treated like process_log_v1 config)
       // Work-product contracts: see server/delivery/evaluationArtifacts.js (EM-R1).
+      // When rubricId is set, builder bakes dimensions from the library rubric.
       artifact: 'object',
     }],
     fairnessNotes: 'string',
@@ -590,6 +593,25 @@ export const schema = {
     name: 'string',
     description: 'string',
     type: 'string',
+    districtId: 'string',
+    schoolId: 'string',
+    createdBy: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
+  // rubrics — D122 (W25 G11). Reusable scoring rubrics with exemplars.
+  // Referenced by evaluationProcedures.rubricId (many EMs → one rubric).
+  // Delivery shape is projected via rubricDelivery.artifactFromRubric.
+  // status: draft | confirmed (confirm = ready to bind; no CAF operational).
+  // ------------------------------------------------------------------
+  rubrics: {
+    id: 'string',
+    name: 'string',
+    description: 'string',
+    status: 'string',
+    dimensions: 'array',
     districtId: 'string',
     schoolId: 'string',
     createdBy: 'string',
@@ -1094,6 +1116,14 @@ export function itemsConsumingWorkProduct(db, workProductId) {
   if (!workProductId) return [];
   return (db?.items || []).filter(
     (item) => item?.interaction?.workProductId === workProductId
+  );
+}
+
+/** Evidence Models that cite this rubric on an evaluationProcedure (D122). */
+export function evidenceModelsConsumingRubric(db, rubricId) {
+  if (!rubricId) return [];
+  return (db?.evidenceModels || []).filter((em) =>
+    (em?.evaluationProcedures || []).some((p) => p?.rubricId === rubricId)
   );
 }
 
@@ -1613,6 +1643,7 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         if (needsEvalArtifacts && proc?.method && ARTIFACT_METHODS.includes(proc.method)) {
           const hasRef = proc.artifactRef && String(proc.artifactRef).trim().length > 0;
           const art = proc.artifact;
+          const hasRubricId = proc.rubricId && String(proc.rubricId).trim().length > 0;
           let artifactOk = false;
           if (art && typeof art === "object" && !Array.isArray(art) && art.kind) {
             if (art.kind === "key") {
@@ -1627,14 +1658,27 @@ export function validateEntity(collection, obj, db = null, options = {}) {
               );
             }
           }
-          if (!hasRef && !artifactOk) {
+          // D122: a confirmed library rubric satisfies the artifact requirement.
+          if (!artifactOk && hasRubricId && proc.method === "rubric" && db) {
+            const rubric = (db.rubrics || []).find(
+              (r) => r?.id === String(proc.rubricId).trim()
+            );
+            if (
+              rubric?.status === "confirmed" &&
+              Array.isArray(rubric.dimensions) &&
+              rubric.dimensions.length > 0
+            ) {
+              artifactOk = true;
+            }
+          }
+          if (!hasRef && !artifactOk && !hasRubricId) {
             errors.push(
               `evaluationProcedure ${proc?.id || "(missing id)"} method '${proc.method}' requires artifactRef or a valid artifact object from reviewed onward.`
             );
           }
           if (art && typeof art === "object" && art.kind === "key" && Array.isArray(art.correctPatterns)) {
             // ok
-          } else if (hasRef && !art) {
+          } else if (hasRef && !art && !hasRubricId) {
             // external ref alone is accepted at authoring; Identification needs
             // inline artifact for delivery — warn only under strict confirm.
             if (strict) {
@@ -1712,6 +1756,29 @@ export function validateEntity(collection, obj, db = null, options = {}) {
             ) {
               errors.push(
                 `evaluationProcedure '${proc.id || wpId}' workProductType '${proc.workProductType}' disagrees with Work Product '${wpId}' type '${wp.type}'.`
+              );
+            }
+          }
+          // D122: rubricId must resolve; method should be rubric; confirmed
+          // rubrics may satisfy artifact presence when inline artifact absent.
+          for (const proc of obj.evaluationProcedures) {
+            const rid = proc?.rubricId && String(proc.rubricId).trim();
+            if (!rid) continue;
+            const rubric = (db.rubrics || []).find((r) => r?.id === rid);
+            if (!rubric) {
+              errors.push(
+                `evaluationProcedure '${proc.id || rid}' rubricId '${rid}' does not match any Rubric.`
+              );
+              continue;
+            }
+            if (proc.method && proc.method !== "rubric") {
+              errors.push(
+                `evaluationProcedure '${proc.id || rid}' cites rubricId but method is '${proc.method}' (expected rubric).`
+              );
+            }
+            if (strict && rubric.status !== "confirmed") {
+              errors.push(
+                `evaluationProcedure '${proc.id || rid}' cites Rubric '${rid}' which is not confirmed.`
               );
             }
           }
@@ -5869,6 +5936,81 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       if (clash) {
         errors.push(
           `Work Product name '${obj.name}' is already used by '${clash.id}'.`
+        );
+      }
+    }
+  }
+
+  /* =====================================================
+     rubrics — D122 (W25 G11)
+     Library records with draft|confirmed. Confirmed requires
+     dimensions + at least one exemplar. No CAF operational.
+  ===================================================== */
+
+  if (collection === "rubrics") {
+    if (!obj.name || String(obj.name).trim() === "") {
+      errors.push("Rubric name is required.");
+    }
+
+    const RUBRIC_STATUSES = ["draft", "confirmed"];
+    if (obj.status == null || obj.status === "") {
+      if (strict) errors.push("Rubric status is required.");
+    } else if (!RUBRIC_STATUSES.includes(obj.status)) {
+      errors.push(
+        `Invalid rubric status '${obj.status}'. Must be draft or confirmed.`
+      );
+    }
+
+    const dims = obj.dimensions;
+    if (dims == null) {
+      if (strict || obj.status === "confirmed") {
+        errors.push("Rubric requires at least one dimension.");
+      }
+    } else if (!Array.isArray(dims)) {
+      errors.push("dimensions should be array");
+    } else {
+      if ((strict || obj.status === "confirmed") && dims.length === 0) {
+        errors.push("Rubric requires at least one dimension.");
+      }
+      const seenIds = new Set();
+      dims.forEach((dim, i) => {
+        const tag = `dimensions[${i}]`;
+        if (!dim || typeof dim !== "object" || Array.isArray(dim)) {
+          errors.push(`${tag} must be an object.`);
+          return;
+        }
+        if (!dim.id || String(dim.id).trim() === "") {
+          errors.push(`${tag}.id is required.`);
+        } else if (seenIds.has(dim.id)) {
+          errors.push(`Duplicate dimension id '${dim.id}'.`);
+        } else {
+          seenIds.add(dim.id);
+        }
+        const values = levelValues(dim.levels);
+        if ((strict || obj.status === "confirmed") && values.length === 0) {
+          errors.push(`${tag} requires at least one level.`);
+        }
+        if (dim.exemplars != null && (typeof dim.exemplars !== "object" || Array.isArray(dim.exemplars))) {
+          errors.push(`${tag}.exemplars must be an object keyed by level value.`);
+        }
+      });
+    }
+
+    if (obj.status === "confirmed" && exemplarCount(obj) < 1) {
+      errors.push("A confirmed rubric requires at least one level exemplar.");
+    }
+
+    if (db && obj.name && String(obj.name).trim() !== "") {
+      const needle = String(obj.name).trim().toLowerCase();
+      const clash = (db.rubrics || []).find(
+        (row) =>
+          row &&
+          row.id !== obj.id &&
+          String(row.name || "").trim().toLowerCase() === needle
+      );
+      if (clash) {
+        errors.push(
+          `Rubric name '${obj.name}' is already used by '${clash.id}'.`
         );
       }
     }

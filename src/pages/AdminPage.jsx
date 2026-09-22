@@ -54,6 +54,9 @@ const TaskModelVariableBuilder = lazyPanel(() =>
 const WorkProductBuilder = lazyPanel(() =>
   import("@/components/workProducts/WorkProductBuilder")
 );
+const RubricBuilder = lazyPanel(() =>
+  import("@/components/rubrics/RubricBuilder")
+);
 
 export default function AdminPage() {
   const { auth, logout } = useAuth();
@@ -92,6 +95,11 @@ export default function AdminPage() {
               id: "workproducts",
               label: "Work Products",
               content: <WorkProductBuilder />,
+            },
+            {
+              id: "rubrics",
+              label: "Rubrics",
+              content: <RubricBuilder />,
             },
             { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
             { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },
