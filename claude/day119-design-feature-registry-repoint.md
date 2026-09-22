@@ -42,13 +42,14 @@ that path. Re-point = authoring + TM validation use
 
 ```
 NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
-  1996 passed | 9 skipped (2005) — 180 files (~148s)
+  1996 passed | 9 skipped (2005) — 180 files (~113s at close re-verify)
 
 npm run build
-  green (2m 15s)
+  green (~19s at close re-verify)
 ```
 
-Product tip: **`99c4d85`**. D120 close: **1993 passed / 9 skipped**. Delta: **+3 tests** / +1 file.
+Product: **`99c4d85`**. Close tip: **`38df7f2`** ≡ `main/master`.
+D120 close: **1993 passed / 9 skipped**. Delta: **+3 tests** / +1 file.
 
 ## Next
 
