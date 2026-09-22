@@ -128,6 +128,8 @@ describe("identifyEvidence — happy path against the repo's own worked example"
       rationale: "1/2 is equivalent to 2/4.",
       evaluationMethod: "key",
       evaluationProcedureId: "ep-o1",
+      workProductId: null,
+      workProductType: "mcq_selection",
     });
   });
 

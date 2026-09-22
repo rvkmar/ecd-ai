@@ -54,6 +54,7 @@ import {
   TMV_TYPE_VALUES,
   TMV_VALUE_SET_KEYS,
   taskModelVariableValueIds,
+  WORK_PRODUCT_TYPE_VALUES,
 } from "./ecdVocabulary.js";
 import {
   designFeatureContextFromTaskModel,
@@ -93,7 +94,8 @@ export const schema = {
       3️⃣ INTERACTION INSTANTIATION (Blueprint Constrained)
     --------------------------------------------- */
     interaction: {
-      type: 'string',               // must match observable.type
+      type: 'string',               // delivery widget (mcq, constructed, …)
+      workProductId: 'string',      // D121: what is produced (workProducts row)
       responseComponents: 'array'   // structured response capture
     },
 
@@ -569,6 +571,25 @@ export const schema = {
     possibleValues: 'array',
     range: 'object',
     valueSet: 'string',
+    districtId: 'string',
+    schoolId: 'string',
+    createdBy: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
+  // workProducts — D121 (W25 G12). What the examinee produces, distinct
+  // from the interaction that captures it. Type vocabulary is
+  // WORK_PRODUCT_TYPE_VALUES (= observable response modes). Library
+  // records: no CAF status. Items bind via interaction.workProductId;
+  // EM evaluationProcedures may cite the same id.
+  // ------------------------------------------------------------------
+  workProducts: {
+    id: 'string',
+    name: 'string',
+    description: 'string',
+    type: 'string',
     districtId: 'string',
     schoolId: 'string',
     createdBy: 'string',
@@ -1065,6 +1086,14 @@ export function taskModelsConsumingVariable(db, variableId) {
     (tm) =>
       Array.isArray(tm?.taskModelVariableIds) &&
       tm.taskModelVariableIds.includes(variableId)
+  );
+}
+
+/** Items that bind this Work Product via interaction.workProductId (D121). */
+export function itemsConsumingWorkProduct(db, workProductId) {
+  if (!workProductId) return [];
+  return (db?.items || []).filter(
+    (item) => item?.interaction?.workProductId === workProductId
   );
 }
 
@@ -1666,6 +1695,25 @@ export function validateEntity(collection, obj, db = null, options = {}) {
             errors.push(
               `workProductId '${wpId}' is shared by evaluationProcedures with differing workProductType values.`
             );
+          }
+        }
+        // D121: when workProductId names a workProducts collection row,
+        // workProductType must match that row. Free-string ids that are
+        // not in the collection remain legal (pre-D121 EM samples).
+        if (db) {
+          for (const proc of obj.evaluationProcedures) {
+            const wpId = proc?.workProductId && String(proc.workProductId).trim();
+            if (!wpId) continue;
+            const wp = (db.workProducts || []).find((w) => w?.id === wpId);
+            if (!wp) continue;
+            if (
+              proc.workProductType &&
+              proc.workProductType !== wp.type
+            ) {
+              errors.push(
+                `evaluationProcedure '${proc.id || wpId}' workProductType '${proc.workProductType}' disagrees with Work Product '${wpId}' type '${wp.type}'.`
+              );
+            }
           }
         }
       }
@@ -3370,6 +3418,30 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       errors.push(
         `Unknown interaction type '${obj.interaction.type}'. Known types: ${INTERACTION_TYPE_VALUES.join(", ")}.`
       );
+    }
+
+    // D121: interaction.workProductId binds the capture widget to a Work
+    // Product type. Optional for back-compat; when present it must resolve
+    // and the interaction must be compatible with that type.
+    if (obj.interaction?.workProductId) {
+      const wpId = String(obj.interaction.workProductId).trim();
+      if (!wpId) {
+        errors.push("interaction.workProductId must be a non-empty string when set.");
+      } else if (db) {
+        const wp = (db.workProducts || []).find((w) => w?.id === wpId);
+        if (!wp) {
+          errors.push(
+            `interaction.workProductId '${wpId}' does not match any Work Product.`
+          );
+        } else if (
+          obj.interaction.type &&
+          !isInteractionCompatible(wp.type, obj.interaction.type)
+        ) {
+          errors.push(
+            interactionCompatibilityMessage(wp.type, obj.interaction.type)
+          );
+        }
+      }
     }
 
     if (obj.scoring?.method &&
@@ -5762,6 +5834,41 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       if (clash) {
         errors.push(
           `Task Model Variable name '${obj.name}' is already used by '${clash.id}'.`
+        );
+      }
+    }
+  }
+
+  /* =====================================================
+     workProducts — D121 (W25 G12)
+     Library records. Type from WORK_PRODUCT_TYPE_VALUES.
+     No CAF status. Name unique across the collection.
+  ===================================================== */
+
+  if (collection === "workProducts") {
+    if (!obj.name || String(obj.name).trim() === "") {
+      errors.push("Work Product name is required.");
+    }
+
+    if (strict && !obj.type) {
+      errors.push("Work Product type is required.");
+    } else if (obj.type && !WORK_PRODUCT_TYPE_VALUES.includes(obj.type)) {
+      errors.push(
+        `Invalid Work Product type '${obj.type}'. Must be one of: ${WORK_PRODUCT_TYPE_VALUES.join(", ")}.`
+      );
+    }
+
+    if (db && obj.name && String(obj.name).trim() !== "") {
+      const needle = String(obj.name).trim().toLowerCase();
+      const clash = (db.workProducts || []).find(
+        (row) =>
+          row &&
+          row.id !== obj.id &&
+          String(row.name || "").trim().toLowerCase() === needle
+      );
+      if (clash) {
+        errors.push(
+          `Work Product name '${obj.name}' is already used by '${clash.id}'.`
         );
       }
     }

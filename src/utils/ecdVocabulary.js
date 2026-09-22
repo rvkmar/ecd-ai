@@ -140,6 +140,27 @@ export function isInteractionCompatible(observableType, interactionType) {
   return interactionTypesForObservable(observableType).includes(interactionType);
 }
 
+/* =====================================================
+   3b. Work Product types (D121 / W25 G12)
+   -----------------------------------------------------
+   A Work Product is what the examinee produces; an interaction is how
+   it is captured. The type vocabulary is the same evidence-level list
+   as observable response modes — one definition, aliased here so
+   authoring and Identification never invent a second enum.
+===================================================== */
+
+export const WORK_PRODUCT_TYPES = OBSERVABLE_RESPONSE_MODES;
+export const WORK_PRODUCT_TYPE_VALUES = OBSERVABLE_RESPONSE_MODE_VALUES;
+
+export function workProductTypeLabel(value) {
+  return WORK_PRODUCT_TYPES.find((t) => t.value === value)?.label || value || "—";
+}
+
+/** Interactions that may capture this work-product type (same map as observables). */
+export function interactionTypesForWorkProduct(workProductType) {
+  return interactionTypesForObservable(workProductType);
+}
+
 /* Human-readable explanation of an incompatibility, used verbatim by both
    the wizard advisory and the server error so the author reads the same
    sentence in both places. */

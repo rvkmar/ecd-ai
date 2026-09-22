@@ -53,6 +53,7 @@ function defaultDB() {
     competencies: [],   // ✅ added
     taskModels: [],
     taskModelVariables: [],
+    workProducts: [],
     students: [],
     questions: [],      // ✅ added
     calibrationJobs: [],

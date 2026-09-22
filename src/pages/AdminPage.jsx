@@ -51,6 +51,9 @@ const PresentationModelBuilder = lazyPanel(() =>
 const TaskModelVariableBuilder = lazyPanel(() =>
   import("@/components/taskModelVariables/TaskModelVariableBuilder")
 );
+const WorkProductBuilder = lazyPanel(() =>
+  import("@/components/workProducts/WorkProductBuilder")
+);
 
 export default function AdminPage() {
   const { auth, logout } = useAuth();
@@ -84,6 +87,11 @@ export default function AdminPage() {
               id: "taskmodelvariables",
               label: "Task Model Variables",
               content: <TaskModelVariableBuilder />,
+            },
+            {
+              id: "workproducts",
+              label: "Work Products",
+              content: <WorkProductBuilder />,
             },
             { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
             { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },

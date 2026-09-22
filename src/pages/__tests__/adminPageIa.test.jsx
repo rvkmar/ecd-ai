@@ -60,6 +60,9 @@ vi.mock("@/components/presentationModels/PresentationModelBuilder", () => ({
 vi.mock("@/components/taskModelVariables/TaskModelVariableBuilder", () => ({
   default: () => <div>TMV library</div>,
 }));
+vi.mock("@/components/workProducts/WorkProductBuilder", () => ({
+  default: () => <div>Work Products library</div>,
+}));
 vi.mock("@/components/home/HomeAnnouncements", () => ({
   default: () => <div>Home announcements</div>,
 }));

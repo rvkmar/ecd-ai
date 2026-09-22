@@ -18,6 +18,7 @@ export const rolePermissions = {
       // D116: reusable design features. Admin authors; district authors
       // too (same split as taskModels). Not a CAF model.
       "taskModelVariables",
+      "workProducts",
       "tasks",
       "sessions",
       "policies",
@@ -59,6 +60,7 @@ export const rolePermissions = {
       "evidenceModels",
       "taskModels",
       "taskModelVariables",
+      "workProducts",
       "items",
       "tasks",
       "policies",
@@ -82,6 +84,7 @@ export const rolePermissions = {
       "evidenceModels",
       "taskModels",
       "taskModelVariables",
+      "workProducts",
       "items",
       "tasks",
       "policies",
@@ -111,6 +114,7 @@ export const rolePermissions = {
       "evidenceModels",
       "taskModels",
       "taskModelVariables",
+      "workProducts",
       "tasks",
       "sessions",
       "reports",
@@ -130,6 +134,7 @@ export const rolePermissions = {
       "tasks",              // can create local tasks
       "taskModels",         // can clone and modify published task models
       "taskModelVariables", // shared design features those models consume
+      "workProducts",       // D121: what examinees produce (library)
       "items"               // authors and governs bank items
     ],
     canApprove: ["questions", "items"],
@@ -149,6 +154,7 @@ export const rolePermissions = {
       "evidenceModels",
       "taskModels",
       "taskModelVariables",
+      "workProducts",
       "tasks",
       "sessions",
       "reports",

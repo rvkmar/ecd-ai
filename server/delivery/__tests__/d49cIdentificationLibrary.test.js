@@ -94,6 +94,8 @@ describe("D49c — happy path: package matching the authoring graph scores ident
       rationale: "Correct.",
       evaluationMethod: null,
       evaluationProcedureId: null,
+      workProductId: null,
+      workProductType: null,
     });
   });
 

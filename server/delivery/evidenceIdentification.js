@@ -215,5 +215,14 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
       null,
     evaluationMethod: evaluationProcedure?.method ?? null,
     evaluationProcedureId: evaluationProcedure?.id ?? null,
+    // D121: Identification runs against the work product; interaction is
+    // capture detail. Surface the bound Work Product id/type when present.
+    workProductId: item.interaction?.workProductId ?? null,
+    workProductType: (() => {
+      const wpId = item.interaction?.workProductId;
+      if (!wpId) return evaluationProcedure?.workProductType ?? null;
+      const wp = (db.workProducts || []).find((w) => w?.id === wpId);
+      return wp?.type ?? evaluationProcedure?.workProductType ?? null;
+    })(),
   };
 }
