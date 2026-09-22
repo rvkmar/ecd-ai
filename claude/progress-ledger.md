@@ -188,7 +188,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D120 | product **`f5b3d5c`** + `claude/day120-tmv-family-settings.md` + worked example. Suite **1993 passed / 9 skipped**; build green. fixed/varying settings + ten-spec family. Next: D119 alone. |
 
-| HEAD at D119 | product **`99c4d85`** + close **`38df7f2`** ≡ `main/master` + `claude/day119-design-feature-registry-repoint.md`. Suite **1996 passed / 9 skipped** (re-verified at session close); build green. Design features via TMV valueSet path; D22 floor held. W24 calendar complete. |
+| HEAD at D119 | product **`99c4d85`** + close **`26cf336`** ≡ `main/master` + `claude/day119-design-feature-registry-repoint.md`. Suite **1996 passed / 9 skipped** (re-verified at session close); build green. Design features via TMV valueSet path; D22 floor held. W24 calendar + block ✅ complete. |
 
 
 

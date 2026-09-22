@@ -48,8 +48,8 @@ npm run build
   green (~19s at close re-verify)
 ```
 
-Product: **`99c4d85`**. Close tip: **`38df7f2`** ≡ `main/master`.
-D120 close: **1993 passed / 9 skipped**. Delta: **+3 tests** / +1 file.
+Product: **`99c4d85`**. Close tip: **`26cf336`** ≡ `main/master` (session-close re-verify).
+Prior pin **`38df7f2`**. D120 close: **1993 passed / 9 skipped**. Delta: **+3 tests** / +1 file.
 
 ## Next
 
