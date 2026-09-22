@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D125** — Performance WP dispositions; **W25 block closed**. Handoff: `claude/day125-performance-wp-dispositions.md` + `claude/day125-w25-block-close.md`. |
+| Last completed unit | **D125** — Performance WP dispositions; **W25 block closed**. Handoff: `claude/day125-performance-wp-dispositions.md` + `claude/day125-w25-block-close.md` + `claude/day125-w25-session-close.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -198,7 +198,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D124 | product tip ≡ `main/master` + `claude/day124-human-rating-queue.md`. Suite **2043 passed / 9 skipped**; build green. Blinded rating queue + audit + Delivery UI. Next: D125 alone. |
 
-| HEAD at D125 | product tip ≡ `main/master` + `claude/day125-performance-wp-dispositions.md` + `claude/day125-w25-block-close.md`. Suite **2047 passed / 9 skipped**; build green. Four performance WP dispositions; W25 gate met. Next: re-calibrate before D126. |
+| HEAD at D125 | product **`0f9c5db`** + session close tip ≡ `main/master` + `claude/day125-performance-wp-dispositions.md` + `claude/day125-w25-block-close.md` + `claude/day125-w25-session-close.md`. Suite **2047 passed / 9 skipped** (re-verified at session close); build green. Four performance WP dispositions; W25 gate met. Next: re-calibrate before D126. |
 
 
 
@@ -432,6 +432,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-22 | D124 | 2, alone | Blinded human-rating queue + adjudication UI; audit on saveDB; Delivery tab. Suite **2043 passed / 9 skipped**. Live rating-queue API on rebuilt :6060. No D125. Next: D125 alone. |
 
 | 2026-09-22 | D125 | 2, alone | Performance WP dispositions (all four supported); W25 block close. Suite **2047 passed / 9 skipped**. No W26. Next: re-calibrate D126. |
+
+| 2026-09-22 | close | 2, alone | W25 session close D124–D125 (block). Suite re-verify **2047 passed / 9 skipped**; build green; tip ≡ `main/master`. No half-applied work; no new compression debt. Calendar D124–D125 ✅; W25 block ✅. Next: re-calibrate D126. |
 
 
 

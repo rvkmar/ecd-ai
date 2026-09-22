@@ -30,7 +30,8 @@ answer widget).
 
 ## Verification
 
-Suite and build recorded on the D125 handoff / tip pin.
+Session close re-run 2026-09-22: **2047 passed / 9 skipped**; build green.
+See `claude/day125-w25-session-close.md`.
 
 ## Next
 

@@ -46,6 +46,9 @@ npm run build
 
 D124 close: **2043 passed / 9 skipped**. Delta: **+4 tests**.
 
+Session close re-verify (2026-09-22): same suite count; build green (~19s).
+See `claude/day125-w25-session-close.md`.
+
 ## Next
 
 **W26 / D126** — templates schema (four CAF bindings). Do not start casually;
