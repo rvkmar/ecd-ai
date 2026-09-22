@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D122** — Rubric objects with exemplars (G11). Handoff: `claude/day122-rubric-objects-exemplars.md`. |
+| Last completed unit | **D123** — Multi-phase evaluation (G11, never-compress). Handoff: `claude/day123-multi-phase-evaluation.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D123** — Multi-phase evaluation (never-compress, alone). Do not start on a thin budget. Do not start W26 casually. |
+| Next queued | **D124** — Human-rating queue and adjudication UI. Do not start W26 casually. |
 
 | Block | **W24 closed** 2026-09-22 (D116–D120). Gate met (TMV once → ≥2 TMs; family settings; design-feature re-point). **W23 closed** 2026-09-21 (D111–D115). **W22** closed 2026-09-20. |
 
@@ -193,6 +193,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D121 | product **`5ecb5bc`** + `claude/day121-work-product-as-object.md`. Suite **2016 passed / 9 skipped**; build green. workProducts library; one WP × two interactions identical score. Next: D122 alone. |
 
 | HEAD at D122 | product **`e0a463a`** + `claude/day122-rubric-objects-exemplars.md`. Suite **2030 passed / 9 skipped**; build green. rubrics + exemplars; shared across EMs; .backup deleted. Next: D123 alone (never-compress). |
+
+| HEAD at D123 | product **`687c382`** + `claude/day123-multi-phase-evaluation.md`. Suite **2039 passed / 9 skipped**; build green. phases + pending_human pause + human-rating route; Accumulation skips provisional. Next: D124 alone. |
 
 
 
@@ -418,6 +420,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-22 | D121 | 2, alone | Work Product as object. Collection + library UI; item.interaction.workProductId; mcq/likert identical Identification via same EM. Suite **2016 passed / 9 skipped**. No D122/D123. Next: D122 alone. |
 
 | 2026-09-22 | D122 | 2, alone | Rubrics with exemplars; EM rubricId; bake into composite library; .backup deleted. Suite **2030 passed / 9 skipped**. No D123. Next: D123 alone (never-compress). |
+
+| 2026-09-22 | D123 | 3, alone | Never-compress. Multi-phase eval onto existing procedures; Identification holds pending_human; staff human-rating completes; honest pendingHumanRatings. Suite **2039 passed / 9 skipped**. No D124 UI. Next: D124 alone. |
 
 
 
@@ -659,7 +663,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - Live Newtonian console walk beyond suite ingest fixture — **open**
 
-- Work Products / Rubrics as first-class objects + multi-phase eval + human rating (W25 / G11–G12) — **open**; file inventory in `claude/day81-offcal-em-remaining-gap-inventory.md`
+- Work Products / Rubrics as first-class objects ~~+ multi-phase eval~~ + human rating UI (W25 / G11–G12) — **partial**; D121–D123 done; D124 queue UI open; file inventory in `claude/day81-offcal-em-remaining-gap-inventory.md`
 
 - ~~Presentation Model authoring (W23) — stub only (`PresentationModelStub.jsx`)~~ closed D113. ~~Library-pointer bake~~ closed D114. ~~SessionPlayer obedience / W23 gate~~ closed D115 (`claude/day115-sessionplayer-presentation-w23.md`). ~~Live `:6060` dual-PM browser walk~~ closed 2026-09-21 (compression debt D115).
 
