@@ -99,6 +99,25 @@ describe("presentationModels (D113 authoring RBAC)", () => {
   });
 });
 
+describe("templates (D126 authoring RBAC)", () => {
+  it("admin can view, edit, and delete templates", () => {
+    expect(can("admin", "view", "templates")).toBe(true);
+    expect(can("admin", "edit", "templates")).toBe(true);
+    expect(can("admin", "delete", "templates")).toBe(true);
+  });
+
+  it("district can view and cannot write them", () => {
+    expect(can("district", "view", "templates")).toBe(true);
+    expect(can("district", "edit", "templates")).toBeFalsy();
+    expect(can("district", "delete", "templates")).toBeFalsy();
+  });
+
+  it("teacher and student cannot see the entity", () => {
+    expect(can("teacher", "view", "templates")).toBe(false);
+    expect(can("student", "view", "templates")).toBe(false);
+  });
+});
+
 describe("taskModelVariables (D116 library RBAC)", () => {
   it("admin can view, edit, and delete Task Model Variables", () => {
     expect(can("admin", "view", "taskModelVariables")).toBe(true);

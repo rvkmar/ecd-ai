@@ -20,6 +20,7 @@ export const rolePermissions = {
       "taskModelVariables",
       "workProducts",
       "rubrics",
+      "templates",
       "tasks",
       "sessions",
       "policies",
@@ -63,6 +64,7 @@ export const rolePermissions = {
       "taskModelVariables",
       "workProducts",
       "rubrics",
+      "templates",
       "items",
       "tasks",
       "policies",
@@ -88,6 +90,7 @@ export const rolePermissions = {
       "taskModelVariables",
       "workProducts",
       "rubrics",
+      "templates",
       "items",
       "tasks",
       "policies",
@@ -119,14 +122,15 @@ export const rolePermissions = {
       "taskModelVariables",
       "workProducts",
       "rubrics",
+      "templates",
       "tasks",
       "sessions",
       "reports",
       "teacherReports",
-      // Read-only: a Q-matrix, assembly model, and presentation model
-      // are system-level measurement/delivery decisions, not local
-      // authoring. District users need to SEE the spec their sessions
-      // run under without being able to change it.
+      // Read-only: a Q-matrix, assembly model, presentation model, and
+      // template are system-level measurement/delivery decisions, not
+      // local authoring. District users need to SEE the spec their
+      // sessions run under without being able to change it.
       "qMatrixModels",
       "assemblyModels",
       "presentationModels",

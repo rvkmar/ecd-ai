@@ -503,7 +503,8 @@ export const schema = {
       template (W26) can fix some variables and vary others across
       allowedValues / fixedValue. Absent variation means varying
       (D117 compat). Absent means "this Task Model binds no variables".
-      Templates are not a collection yet; this is the binding surface.
+      D126 templates consume these settings from the bound Task Model;
+      they do not store a second copy.
     --------------------------------------------- */
     taskModelVariableIds: 'array',
     taskModelVariableSettings: 'array',
@@ -852,6 +853,35 @@ export const schema = {
   },
 
   // ------------------------------------------------------------------
+  // templates — D126 (W26 G14). Family-generating blueprint binding
+  // Student (competencyModels) + Evidence + Task + Presentation.
+  // GENERATES NOTHING YET (W31); validation of the four bindings is the
+  // contract W28/W31 will read. TMV fixed|varying settings are consumed
+  // from the bound Task Model's taskModelVariableSettings (D120) — this
+  // record does not redesign that axis. status: draft | confirmed
+  // (confirm = bindings coherent and ready to reference; no CAF
+  // operational until generation exists).
+  //
+  // Named `templates` so dbAdapter's trailing-"s" singularizer yields
+  // `template`. Distinct from shelved AIG ITEM_MODEL_REGISTRY templateId.
+  // ------------------------------------------------------------------
+  templates: {
+    id: 'string',
+    name: 'string',
+    description: 'string',
+    competencyModelId: 'string',
+    evidenceModelId: 'string',
+    taskModelId: 'string',
+    presentationModelId: 'string',
+    status: 'string',
+    districtId: 'string',
+    schoolId: 'string',
+    createdBy: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
   // compositeLibrary — Day 19 (Week 4 core schema). Schema declaration
   // only: the actual builder (`compositeLibrary/builder.js`, walking
   // Task Model -> items -> evidence models to COMPILE a package) is Day
@@ -1055,6 +1085,97 @@ export const INSTANTIABLE_TASK_MODEL_STATUSES = [
   "operational",
   "suspended",
 ];
+
+/** D126: templates use draft|confirmed (confirm = four bindings coherent). */
+export const TEMPLATE_STATUS_VALUES = Object.freeze(["draft", "confirmed"]);
+
+/**
+ * Collect binding / coherence errors for a template. Used by validateEntity
+ * and by readiness so the exit-check refusal path has one definition.
+ *
+ * @param {object} obj
+ * @param {object|null} db
+ * @param {{ requireAllBindings?: boolean }} [options]
+ * @returns {string[]}
+ */
+export function templateBindingErrors(obj, db = null, options = {}) {
+  const requireAll = options.requireAllBindings === true;
+  const errors = [];
+  const ids = {
+    competencyModelId: obj?.competencyModelId,
+    evidenceModelId: obj?.evidenceModelId,
+    taskModelId: obj?.taskModelId,
+    presentationModelId: obj?.presentationModelId,
+  };
+
+  for (const [key, value] of Object.entries(ids)) {
+    if (value == null || value === "") {
+      if (requireAll) errors.push(`${key} is required.`);
+      continue;
+    }
+    if (typeof value !== "string") {
+      errors.push(`${key} must be a string.`);
+    }
+  }
+
+  if (!db) return errors;
+
+  const cmId = typeof ids.competencyModelId === "string" ? ids.competencyModelId : null;
+  const emId = typeof ids.evidenceModelId === "string" ? ids.evidenceModelId : null;
+  const tmId = typeof ids.taskModelId === "string" ? ids.taskModelId : null;
+  const pmId = typeof ids.presentationModelId === "string" ? ids.presentationModelId : null;
+
+  const cm = cmId ? db.competencyModels?.find((m) => m.id === cmId) : undefined;
+  if (cmId && !cm) errors.push(`Invalid competencyModelId: ${cmId}`);
+
+  const em = emId ? db.evidenceModels?.find((m) => m.id === emId) : undefined;
+  if (emId && !em) errors.push(`Invalid evidenceModelId: ${emId}`);
+
+  const tm = tmId ? db.taskModels?.find((m) => m.id === tmId) : undefined;
+  if (tmId && !tm) errors.push(`Invalid taskModelId: ${tmId}`);
+
+  const pm = pmId ? db.presentationModels?.find((m) => m.id === pmId) : undefined;
+  if (pmId && !pm) errors.push(`Invalid presentationModelId: ${pmId}`);
+
+  // Evidence → Student: EM's competency must belong to the bound CM.
+  if (em && cmId) {
+    const competency = db.competencies?.find((c) => c.id === em.competencyId);
+    if (!competency) {
+      errors.push(
+        `evidenceModelId '${emId}' references unknown competencyId '${em.competencyId}'.`
+      );
+    } else if (competency.modelId && competency.modelId !== cmId) {
+      errors.push(
+        `evidenceModelId '${emId}' is bound to competency model '${competency.modelId}', not this template's '${cmId}'.`
+      );
+    } else if (!competency.modelId) {
+      errors.push(
+        `evidenceModelId '${emId}' competency '${em.competencyId}' has no modelId; cannot verify Student Model binding.`
+      );
+    }
+  }
+
+  // Task → Evidence: EM must be among the Task Model's declared EMs.
+  if (tm && emId) {
+    const emIds = Array.isArray(tm.evidenceModelIds) ? tm.evidenceModelIds : [];
+    if (!emIds.includes(emId)) {
+      errors.push(
+        `evidenceModelId '${emId}' is not among task model '${tmId}' evidenceModelIds.`
+      );
+    }
+  }
+
+  // Presentation → Task: same coherence compositeLibrary / ADR 0008 uses.
+  if (pm && tmId) {
+    if (pm.taskModelId !== tmId) {
+      errors.push(
+        `presentationModelId '${pmId}' is bound to taskModelId '${pm.taskModelId}', not this template's '${tmId}'.`
+      );
+    }
+  }
+
+  return errors;
+}
 
 /* ------------------------------------------------------------
    taskStructure.resourceConstraints.toolsAllowed
@@ -5789,6 +5910,30 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         }
       }
     }
+  }
+
+  /* =====================================================
+     TEMPLATES — D126, W26
+     Four CAF bindings; confirm requires coherence (esp. PM↔TM).
+  ===================================================== */
+
+  if (collection === "templates") {
+    if (!obj.name || String(obj.name).trim() === "") {
+      errors.push("Template name is required.");
+    }
+    if (!obj.status) {
+      errors.push("status is required.");
+    } else if (!TEMPLATE_STATUS_VALUES.includes(obj.status)) {
+      errors.push(
+        `Invalid template status '${obj.status}'. Must be draft or confirmed.`
+      );
+    }
+
+    const requireAll =
+      strict || obj.status === "confirmed";
+    errors.push(
+      ...templateBindingErrors(obj, db, { requireAllBindings: requireAll })
+    );
   }
 
   /* =====================================================

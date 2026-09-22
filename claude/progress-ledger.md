@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D125** — Performance WP dispositions; **W25 block closed**. Handoff: `claude/day125-performance-wp-dispositions.md` + `claude/day125-w25-block-close.md` + `claude/day125-w25-session-close.md`. |
+| Last completed unit | **D126** — Templates schema (four CAF bindings). Handoff: `claude/day126-templates-schema.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D126** — templates schema (W26). Calibrated 2026-09-22 (`claude/day126-w26-calibration.md`). Alone (Tier 2). |
+| Next queued | **D127** — Template builder UI (W26). Alone after D126. Do not start D128/D129 casually. |
 
 | Block | **W26 open** (D126–D130). Gate: Template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -199,6 +199,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D124 | product tip ≡ `main/master` + `claude/day124-human-rating-queue.md`. Suite **2043 passed / 9 skipped**; build green. Blinded rating queue + audit + Delivery UI. Next: D125 alone. |
 
 | HEAD at D125 | product **`0f9c5db`** + session close tip ≡ `main/master` + `claude/day125-performance-wp-dispositions.md` + `claude/day125-w25-block-close.md` + `claude/day125-w25-session-close.md`. Suite **2047 passed / 9 skipped** (re-verified at session close); build green. Four performance WP dispositions; W25 gate met. Next: re-calibrate before D126. |
+
+| HEAD at D126 | product tip ≡ `main/master` + `claude/day126-templates-schema.md`. Suite **2067 passed / 9 skipped**; build green. templates seven-artefact; four-binding coherence; D48 guard green. Next: D127 alone. |
 
 
 
@@ -436,6 +438,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-22 | close | 2, alone | W25 session close D124–D125 (block). Suite re-verify **2047 passed / 9 skipped**; build green; tip ≡ `main/master`. No half-applied work; no new compression debt. Calendar D124–D125 ✅; W25 block ✅. Next: re-calibrate D126. |
 
 | 2026-09-22 | calibrate | — | W26 start calibration. Tip `ae2b653`. D126–D128 premises rewritten (templates still absent; TM settings on Task Models; D48 = collectionSurfaceGuard; DINA joint ≠ continuous joint). D129 never-compress flagged. Work order: D126 alone. Handoff: `claude/day126-w26-calibration.md`. |
+
+| 2026-09-22 | D126 | 2, alone | templates collection + four-binding coherence (PM↔TM); D48 guard; no UI/generation. Suite **2067 passed / 9 skipped**. No D127/D128/D129. Next: D127 alone. |
 
 
 

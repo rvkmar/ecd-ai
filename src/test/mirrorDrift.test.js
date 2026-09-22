@@ -16,7 +16,7 @@
 
 import { describe, it, expect } from "vitest";
 
-import { validateEntity } from "../utils/schema.js";
+import { validateEntity, TEMPLATE_STATUS_VALUES } from "../utils/schema.js";
 import { itemCompatibilityNotes, operationalReadiness } from "../components/itemBank/itemConstants.js";
 import { evidenceCompatibilityNotes } from "../components/taskModels/taskModelConstants.js";
 import { resolveCalibrationWindow } from "../components/evidences/calibration/engines/effectiveModel.js";
@@ -36,6 +36,7 @@ import {
 } from "../utils/taskModelVariableReadiness.js";
 import { WORK_PRODUCT_TYPE_MIRROR } from "../utils/workProductReadiness.js";
 import { RUBRIC_STATUS_MIRROR } from "../utils/rubricReadiness.js";
+import { TEMPLATE_STATUS_MIRROR } from "../utils/templateReadiness.js";
 
 /* =====================================================
    Shared fixtures -- one valid baseline per entity, mutated per test.
@@ -529,6 +530,12 @@ describe("mirror: Work Product types <-> ecdVocabulary (D121)", () => {
 describe("mirror: Rubric status list (D122)", () => {
   it("readiness statuses are draft and confirmed only", () => {
     expect(RUBRIC_STATUS_MIRROR).toEqual(["draft", "confirmed"]);
+  });
+});
+
+describe("mirror: Template status list (D126)", () => {
+  it("readiness statuses agree with TEMPLATE_STATUS_VALUES", () => {
+    expect(TEMPLATE_STATUS_MIRROR).toEqual([...TEMPLATE_STATUS_VALUES]);
   });
 });
 

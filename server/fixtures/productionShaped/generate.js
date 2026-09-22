@@ -287,6 +287,7 @@ export function generateProductionShapedDataset(options = {}) {
     assemblyModels: [],
     qMatrixModels: [],
     presentationModels: [],
+    templates: [],
     policies: [],
     curricularPolicies: [],
     compositeLibraries: [],
