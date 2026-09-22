@@ -1,7 +1,8 @@
 # D118 — TMV registry residuals (consumers + Storybook)
 
 **Status: DONE.** Calendar unit **D118**, alone (Tier 1). Started from
-`d59c191` (post-D117 close). Did not start D119, D120, or W25.
+`d59c191` (post-D117 close). Product tip **`85f2582`**. Did not start D119,
+D120, or W25.
 
 ## Exit check
 

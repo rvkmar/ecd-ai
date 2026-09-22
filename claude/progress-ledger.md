@@ -184,7 +184,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at 2026-09-22 D117 session close | this close. Suite re-verify **1983 passed / 9 skipped** (178 files, 86.98s); build green (1m 20s). Tip after this commit ≡ `main/master`. Calendar D117 ✅; D118 annotated. |
 
-| HEAD at D118 | product + `claude/day118-tmv-registry-residuals.md`. Suite **1987 passed / 9 skipped**; build green. Consumers before edit; valueSet read-only; Storybook. Next: D120 (re-calibrate); D119 alone later. |
+| HEAD at D118 | product **`85f2582`** + `claude/day118-tmv-registry-residuals.md`. Suite **1987 passed / 9 skipped**; build green. Consumers before edit; valueSet read-only; Storybook. Next: D120 (re-calibrate); D119 alone later. |
 
 
 
