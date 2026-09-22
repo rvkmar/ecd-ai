@@ -194,7 +194,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D122 | product **`e0a463a`** + `claude/day122-rubric-objects-exemplars.md`. Suite **2030 passed / 9 skipped**; build green. rubrics + exemplars; shared across EMs; .backup deleted. Next: D123 alone (never-compress). |
 
-| HEAD at D123 | product **`687c382`** + pin **`9b1c336`** + session close **`a4b9ade`** ≡ `main/master` + `claude/day123-multi-phase-evaluation.md` + `claude/day123-w25-session-close.md`. Suite **2039 passed / 9 skipped** (re-verified at session close); build green. phases + pending_human pause + human-rating route; Accumulation skips provisional. Next: D124 alone. |
+| HEAD at D123 | product **`687c382`** + pin **`9b1c336`** + session close on tip ≡ `main/master` + `claude/day123-multi-phase-evaluation.md` + `claude/day123-w25-session-close.md`. Suite **2039 passed / 9 skipped** (re-verified at session close); build green. phases + pending_human pause + human-rating route; Accumulation skips provisional. Next: D124 alone. |
 
 
 
