@@ -22,6 +22,7 @@ import Step2EvidenceBinding from "./steps/Step2EvidenceBinding";
 import Step3Observables from "./steps/Step3Observables";
 import Step4TaskStructure from "./steps/Step4TaskStructure";
 import Step5Blueprint from "./steps/Step5Blueprint";
+import StepVariables from "./steps/StepVariables";
 import Step6ItemMapping from "./steps/Step6ItemMapping";
 import Step7Fairness from "./steps/Step7Fairness";
 import Step8Review from "./steps/Step8Review";
@@ -100,6 +101,15 @@ export default function TaskModelWizardStepContainer({ onCancel }) {
                         setDraft={setDraft}
                         disabled={disabled}
                         evidenceModels={linkableEvidenceModels}
+                    />
+                );
+
+            case "variables":
+                return (
+                    <StepVariables
+                        draft={draft}
+                        setDraft={setDraft}
+                        disabled={disabled}
                     />
                 );
 

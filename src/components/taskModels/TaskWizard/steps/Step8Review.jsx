@@ -299,6 +299,14 @@ export default function Step8Review({
                     </dl>
                 </SummaryBlock>
 
+                <SummaryBlock label="Task Model Variables">
+                    <span className="text-slate-700">
+                        {(draft.taskModelVariableIds || []).length === 0
+                            ? "None bound"
+                            : `${(draft.taskModelVariableIds || []).length} bound · ${(draft.taskModelVariableSettings || []).filter((s) => s.required).length} required`}
+                    </span>
+                </SummaryBlock>
+
                 <SummaryBlock label="Fairness">
                     <span className="text-slate-700">
                         {risks.length === 0

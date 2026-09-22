@@ -13,6 +13,7 @@ export const TASK_MODEL_STEP_LABELS = {
     observables: "Observable Targeting",
     structure: "Task Structure",
     blueprint: "Blueprint Constraints",
+    variables: "Task Model Variables",
     itemMapping: "Item Mapping",
     fairness: "Fairness & Accessibility",
     review: "Review & Lifecycle",

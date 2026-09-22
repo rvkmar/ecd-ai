@@ -30,6 +30,7 @@ vi.mock("../steps/Step2EvidenceBinding", () => ({ default: () => <div>step-evide
 vi.mock("../steps/Step3Observables", () => ({ default: () => <div>step-observables</div> }));
 vi.mock("../steps/Step4TaskStructure", () => ({ default: () => <div>step-structure</div> }));
 vi.mock("../steps/Step5Blueprint", () => ({ default: () => <div>step-blueprint</div> }));
+vi.mock("../steps/StepVariables", () => ({ default: () => <div>step-variables</div> }));
 vi.mock("../steps/Step6ItemMapping", () => ({ default: () => <div>step-itemMapping</div> }));
 vi.mock("../steps/Step7Fairness", () => ({ default: () => <div>step-fairness</div> }));
 vi.mock("../steps/Step8Review", () => ({ default: () => <div>step-review</div> }));
@@ -136,19 +137,28 @@ describe("taskWizardShellContract", () => {
             "Observable Targeting",
             "Task Structure",
             "Blueprint Constraints",
+            "Task Model Variables",
             "Item Mapping",
             "Fairness & Accessibility",
             "Review & Lifecycle",
         ]);
     });
 
-    it("never flags advisory steps (itemMapping, fairness, review) as outstanding", () => {
+    it("never flags advisory steps (variables, itemMapping, fairness, review) as outstanding", () => {
+        expect(TASK_MODEL_STEP_READINESS_KEYS.variables).toBeUndefined();
         expect(TASK_MODEL_STEP_READINESS_KEYS.itemMapping).toBeUndefined();
         expect(TASK_MODEL_STEP_READINESS_KEYS.fairness).toBeUndefined();
         expect(TASK_MODEL_STEP_READINESS_KEYS.review).toBeUndefined();
         expect(
             taskModelStepHasOutstandingWork(
                 "itemMapping",
+                { checks: INCOMPLETE_CHECKS },
+                true
+            )
+        ).toBe(false);
+        expect(
+            taskModelStepHasOutstandingWork(
+                "variables",
                 { checks: INCOMPLETE_CHECKS },
                 true
             )
@@ -232,7 +242,7 @@ describe("TaskWizard sidebar adapter", () => {
         render(<TaskModelWizardSidebar />);
         expect(screen.queryByTestId("wizard-outstanding-dot")).not.toBeInTheDocument();
         fireEvent.click(screen.getByText("Review & Lifecycle"));
-        expect(mockCtx.setCurrentStep).toHaveBeenCalledWith(7);
+        expect(mockCtx.setCurrentStep).toHaveBeenCalledWith(8);
     });
 });
 
@@ -287,7 +297,7 @@ describe("TaskWizard step-container adapter", () => {
 
     it("Save for Review promotes to reviewed, not confirmed", async () => {
         mockCtx = makeCtx({
-            currentStep: 7,
+            currentStep: 8,
             isStructurallyComplete: true,
             canGoNext: true,
         });
@@ -302,7 +312,7 @@ describe("TaskWizard step-container adapter", () => {
 
     it("Lock & Confirm promotes to confirmed", async () => {
         mockCtx = makeCtx({
-            currentStep: 7,
+            currentStep: 8,
             lifecycleStatus: "reviewed",
             isEditable: true,
             isReviewMode: true,
@@ -320,7 +330,7 @@ describe("TaskWizard step-container adapter", () => {
 
     it("Return to draft promotes to draft without a completeness gate", async () => {
         mockCtx = makeCtx({
-            currentStep: 7,
+            currentStep: 8,
             lifecycleStatus: "reviewed",
             isEditable: true,
             isReviewMode: true,
@@ -337,7 +347,7 @@ describe("TaskWizard step-container adapter", () => {
 
     it("Return to draft still persists a dirty incomplete model (reviewer rejection)", async () => {
         mockCtx = makeCtx({
-            currentStep: 7,
+            currentStep: 8,
             lifecycleStatus: "reviewed",
             isEditable: true,
             isReviewMode: true,

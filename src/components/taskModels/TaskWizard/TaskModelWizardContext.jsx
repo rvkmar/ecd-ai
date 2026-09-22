@@ -59,6 +59,7 @@ export const STEPS = [
     "observables",
     "structure",
     "blueprint",
+    "variables",
     "itemMapping",
     "fairness",
     "review",
@@ -133,6 +134,14 @@ export function buildInitialDraft(model) {
 
         selectedItemIds: m.selectedItemIds || [],
         itemMappings: m.itemMappings || [],
+
+        // D117: shared Task Model Variable bindings (library + per-model settings).
+        taskModelVariableIds: Array.isArray(m.taskModelVariableIds)
+            ? [...m.taskModelVariableIds]
+            : [],
+        taskModelVariableSettings: Array.isArray(m.taskModelVariableSettings)
+            ? m.taskModelVariableSettings.map((s) => ({ ...s }))
+            : [],
 
         fairnessRisks: m.fairnessRisks || [],
         fairnessNotes: m.fairnessNotes || "",
@@ -235,16 +244,17 @@ export default function TaskModelWizardProvider({
         [readiness]
     );
 
-    // Index-aligned with STEPS. Item mapping and fairness never block
-    // forward navigation: item mapping is advisory by design, and
-    // accessibility assumptions are only required at activation, not at
-    // confirmation.
+    // Index-aligned with STEPS (excluding review). Item mapping, variables,
+    // and fairness never block forward navigation: variables are optional
+    // until an author chooses them; item mapping is advisory; accessibility
+    // assumptions are only required at activation, not at confirmation.
     const stepCanAdvance = [
         checkPassed("identity"),
         checkPassed("evidence"),
         checkPassed("observables") && checkPassed("weights"),
         checkPassed("structure"),
         checkPassed("blueprint"),
+        true, // variables (D117)
         true, // itemMapping
         true, // fairness
     ];

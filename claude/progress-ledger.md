@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D116** — Task Model Variables (W24 G13). Handoff: `claude/day116-task-model-variables.md`. |
+| Last completed unit | **D117** — TMV authoring UI (W24 remainder). Handoff: `claude/day117-tmv-authoring-ui.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D117** — W24 remainder (Task Model Variable settings on the authoring surface). D119 enum re-point stays later, alone. Do not start W25. |
+| Next queued | Calendar **D118** (next W24 unit after D117). D119 enum re-point stays later, alone. Do not start W25. Re-calibrate before starting. |
 
 | Block | **W23 closed** 2026-09-21 (D111–D115). Gate met at D115. **W22** closed 2026-09-20; gate met at D108. |
 
@@ -179,6 +179,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D116 | product **`5d0717c`** + `claude/day116-task-model-variables.md`. Suite **1980 passed / 9 skipped**; build green (7.18s). One TMV consumed by two Task Models. No CAF lifecycle. Next: D117. |
 
 | HEAD at 2026-09-21 D116 session close | this close. Suite re-verify **1980 passed / 9 skipped** (176 files, 30.69s); build green (7.01s). Tip **`c97b3f7`** ≡ `main`. No new screen. Next: D117. |
+
+| HEAD at D117 | product + `claude/day117-tmv-authoring-ui.md`. Suite **1983 passed / 9 skipped**; build green. Library + wizard Variables step; no D119. Next: D118. |
 
 
 
@@ -390,6 +392,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-21 | D116 | 2, alone | Task Model Variables (`taskModelVariables` / G13). Typed library records; one id consumed by two Task Models; vocabulary stays `ecdVocabulary.js`. No CAF status. Suite **1980 passed / 9 skipped**. Next: D117. |
 
 | 2026-09-21 | close | 2, alone | D116 session close (Tier 2 alone). Suite re-verify **1980 passed / 9 skipped** (176 files, 30.69s); build green (7.01s); TasksManager chunk 5.27 kB. Tip **`c97b3f7`** ≡ `main`. No half-applied work; no new compression debt. Gate verified by schema + HTTP tests, not a live UI walk. Next: D117. |
+
+| 2026-09-22 | D117 | 2, alone | TMV authoring UI. Models → Task Model Variables library; Task Model Wizard Variables step binds ids + settings. Suite **1983 passed / 9 skipped**. No D119. Calendar MCP unavailable — mark ✅ when reachable. Next: D118. |
 
 
 

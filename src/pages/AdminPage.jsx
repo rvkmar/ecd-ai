@@ -48,6 +48,9 @@ const EvidenceAccumulationInspector = lazyPanel(() =>
 const PresentationModelBuilder = lazyPanel(() =>
   import("@/components/presentationModels/PresentationModelBuilder")
 );
+const TaskModelVariableBuilder = lazyPanel(() =>
+  import("@/components/taskModelVariables/TaskModelVariableBuilder")
+);
 
 export default function AdminPage() {
   const { auth, logout } = useAuth();
@@ -77,6 +80,11 @@ export default function AdminPage() {
             { id: "student", label: "Student Model", content: <CompetencyModelBuilder /> },
             { id: "evidence", label: "Evidence Model", content: <EvidenceModelBuilder /> },
             { id: "taskmodels", label: "Task Model", content: <TaskModelBuilder /> },
+            {
+              id: "taskmodelvariables",
+              label: "Task Model Variables",
+              content: <TaskModelVariableBuilder />,
+            },
             { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
             { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },
             { id: "calibration", label: "Parameter estimation", content: <CalibrationConsole /> },
