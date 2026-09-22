@@ -17,6 +17,11 @@ import {
 import { applyWizardTimingToSession } from "../../src/utils/sessionWizardTiming.js";
 import { identifyEvidence } from "../delivery/evidenceIdentification.js";
 import {
+  completeHumanEvaluation,
+  pendingHumanRatingsFromSession,
+  EVALUATION_STATUS,
+} from "../delivery/evaluationPhases.js";
+import {
   accumulateEvidence,
   applyPosteriorsToSession,
 } from "../delivery/evidenceAccumulation.js";
@@ -268,7 +273,13 @@ router.get("/:id", (req, res) => {
   const session = (db.sessions || []).find(s => s.id === req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
   if (rejectUnassignedStudent(req, res, session, db)) return;
-  res.json(session);
+  // D123: honest pending-human reporting — never present provisional as final.
+  const pendingHumanRatings = pendingHumanRatingsFromSession(session);
+  res.json(
+    pendingHumanRatings.length > 0
+      ? { ...session, pendingHumanRatings }
+      : session
+  );
 });
 
 // ------------------------------
@@ -480,13 +491,23 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
       rawAnswer: rawAnswer ?? null,
       observationId: evidence.observationId,
       observableId: evidence.observableId,
+      // D123: when phases need human, activated stays null until rating;
+      // provisionalActivated is never the final OV.
       activated: evidence.activated,
       direction: evidence.direction,
       strength: evidence.strength,
       rationale: evidence.rationale,
+      evaluationStatus: evidence.evaluationStatus ?? EVALUATION_STATUS.COMPLETE,
       timestamp: new Date().toISOString(),
     };
     if (evidence.warning) response.warning = evidence.warning;
+    if (evidence.evaluationStatus === EVALUATION_STATUS.PENDING_HUMAN) {
+      response.provisionalActivated = evidence.provisionalActivated ?? null;
+      response.provisionalStrength = evidence.provisionalStrength ?? null;
+      response.pendingPhase = evidence.pendingPhase ?? null;
+      response.automatedPhaseResult = evidence.automatedPhaseResult ?? null;
+      response.evaluationProcedureId = evidence.evaluationProcedureId ?? null;
+    }
 
     logger.info("session.submit.scored", {
       sessionId: id,
@@ -589,7 +610,13 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     // `assemblyProgress` and `accumulationWarnings` are surfaced in the
     // response only -- see assemblyProgress.js's own module header for why
     // neither is ever persisted or acted on here.
-    return res.json({ ...session, assemblyProgress, accumulationWarnings });
+    const pendingHumanRatings = pendingHumanRatingsFromSession(session);
+    return res.json({
+      ...session,
+      assemblyProgress,
+      accumulationWarnings,
+      ...(pendingHumanRatings.length > 0 ? { pendingHumanRatings } : {}),
+    });
   }
 
   // 🔹 Validation: observationId & evidenceId
@@ -671,6 +698,77 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
   res.json(session);
 });
 
+// ------------------------------
+// POST /api/sessions/:id/human-rating
+// ------------------------------
+// D123: complete a pending_human Identification. Body:
+//   { responseIndex?: number, taskId?: string, activated: boolean,
+//     strength?: number, rationale?: string, adjudicationRule?: string }
+// Staff only — students must not finalize their own OV.
+const staffRater = authorizeRole(["admin", "district", "teacher"]);
+router.post("/:id/human-rating", staffRater, (req, res) => {
+  const db = loadDB();
+  const session = (db.sessions || []).find((s) => s.id === req.params.id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+
+  const { responseIndex, taskId, activated, strength, rationale, adjudicationRule } =
+    req.body || {};
+
+  let index = typeof responseIndex === "number" ? responseIndex : -1;
+  if (index < 0 && taskId) {
+    index = (session.responses || []).findIndex(
+      (r) =>
+        r?.taskId === taskId &&
+        r?.evaluationStatus === EVALUATION_STATUS.PENDING_HUMAN
+    );
+  }
+  if (index < 0 || !session.responses?.[index]) {
+    return res.status(404).json({
+      error: "No pending_human response matched responseIndex or taskId.",
+    });
+  }
+
+  let completed;
+  try {
+    completed = completeHumanEvaluation(session.responses[index], {
+      activated,
+      strength,
+      rationale,
+      adjudicationRule,
+      ratedBy: req.user?.id ?? null,
+    });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  session.responses[index] = completed;
+  session.updatedAt = new Date().toISOString();
+
+  let assemblyProgress = [];
+  let accumulationWarnings = [];
+  try {
+    const accumulation = accumulateEvidence(session, db);
+    applyPosteriorsToSession(session, accumulation);
+    assemblyProgress = resolveAssemblyProgress(accumulation.posteriors, db);
+    accumulationWarnings = accumulation.warnings || [];
+  } catch (err) {
+    completed.accumulationNote = `Evidence accumulation failed: ${err.message}`;
+  }
+
+  const { valid, errors } = validateEntity("sessions", session, db);
+  if (!valid) {
+    return res.status(400).json({ error: "Schema validation failed", details: errors });
+  }
+
+  saveDB(db);
+  const pendingHumanRatings = pendingHumanRatingsFromSession(session);
+  return res.json({
+    ...session,
+    assemblyProgress,
+    accumulationWarnings,
+    pendingHumanRatings,
+  });
+});
 
 // ------------------------------
 // GET /api/sessions/:id/next-task

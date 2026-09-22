@@ -31,6 +31,7 @@ import {
   applyEvaluationArtifact,
   matchesResponsePattern,
 } from "./evaluationArtifacts.js";
+import { applyPhaseGate } from "./evaluationPhases.js";
 
 /**
  * True if `pattern`'s keys all match the corresponding keys on
@@ -155,32 +156,38 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
         };
       }
     } else if (artifactResult?.warning) {
-      return {
+      return applyPhaseGate(
+        {
+          observationId,
+          observableId,
+          activated: null,
+          direction: evidenceRule?.direction ?? null,
+          strength: null,
+          rationale: null,
+          evaluationMethod: evaluationProcedure.method ?? null,
+          evaluationProcedureId: evaluationProcedure.id ?? null,
+          warning: artifactResult.warning,
+        },
+        evaluationProcedure
+      );
+    }
+  }
+
+  if (!matchedEntry) {
+    return applyPhaseGate(
+      {
         observationId,
         observableId,
         activated: null,
         direction: evidenceRule?.direction ?? null,
         strength: null,
         rationale: null,
-        evaluationMethod: evaluationProcedure.method ?? null,
-        evaluationProcedureId: evaluationProcedure.id ?? null,
-        warning: artifactResult.warning,
-      };
-    }
-  }
-
-  if (!matchedEntry) {
-    return {
-      observationId,
-      observableId,
-      activated: null,
-      direction: evidenceRule?.direction ?? null,
-      strength: null,
-      rationale: null,
-      evaluationMethod: evaluationProcedure?.method ?? null,
-      evaluationProcedureId: evaluationProcedure?.id ?? null,
-      warning: `Work product did not match any declared responsePattern on item '${item.id}'.`,
-    };
+        evaluationMethod: evaluationProcedure?.method ?? null,
+        evaluationProcedureId: evaluationProcedure?.id ?? null,
+        warning: `Work product did not match any declared responsePattern on item '${item.id}'.`,
+      },
+      evaluationProcedure
+    );
   }
 
   // A matched entry missing `activatesObservable` (an authoring mistake --
@@ -189,40 +196,46 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
   // `undefined` to `false`, indistinguishable from a deliberate
   // non-activating rule). Caught by an adversarial review of this module.
   if (typeof matchedEntry.activatesObservable !== "boolean") {
-    return {
-      observationId,
-      observableId,
-      activated: null,
-      direction: evidenceRule?.direction ?? null,
-      strength: null,
-      rationale: matchedEntry.rationale ?? null,
-      evaluationMethod: evaluationProcedure?.method ?? null,
-      evaluationProcedureId: evaluationProcedure?.id ?? null,
-      warning: `Item '${item.id}''s matched activation rule does not declare activatesObservable as a boolean.`,
-    };
+    return applyPhaseGate(
+      {
+        observationId,
+        observableId,
+        activated: null,
+        direction: evidenceRule?.direction ?? null,
+        strength: null,
+        rationale: matchedEntry.rationale ?? null,
+        evaluationMethod: evaluationProcedure?.method ?? null,
+        evaluationProcedureId: evaluationProcedure?.id ?? null,
+        warning: `Item '${item.id}''s matched activation rule does not declare activatesObservable as a boolean.`,
+      },
+      evaluationProcedure
+    );
   }
 
-  return {
-    observationId,
-    observableId,
-    activated: matchedEntry.activatesObservable,
-    direction: evidenceRule?.direction ?? null,
-    strength: matchedEntry.strengthOverride ?? evidenceRule?.strengthLevel ?? null,
-    rationale:
-      matchedEntry.rationale ??
-      evidenceRule?.justification ??
-      evaluationProcedure?.description ??
-      null,
-    evaluationMethod: evaluationProcedure?.method ?? null,
-    evaluationProcedureId: evaluationProcedure?.id ?? null,
-    // D121: Identification runs against the work product; interaction is
-    // capture detail. Surface the bound Work Product id/type when present.
-    workProductId: item.interaction?.workProductId ?? null,
-    workProductType: (() => {
-      const wpId = item.interaction?.workProductId;
-      if (!wpId) return evaluationProcedure?.workProductType ?? null;
-      const wp = (db.workProducts || []).find((w) => w?.id === wpId);
-      return wp?.type ?? evaluationProcedure?.workProductType ?? null;
-    })(),
-  };
+  return applyPhaseGate(
+    {
+      observationId,
+      observableId,
+      activated: matchedEntry.activatesObservable,
+      direction: evidenceRule?.direction ?? null,
+      strength: matchedEntry.strengthOverride ?? evidenceRule?.strengthLevel ?? null,
+      rationale:
+        matchedEntry.rationale ??
+        evidenceRule?.justification ??
+        evaluationProcedure?.description ??
+        null,
+      evaluationMethod: evaluationProcedure?.method ?? null,
+      evaluationProcedureId: evaluationProcedure?.id ?? null,
+      // D121: Identification runs against the work product; interaction is
+      // capture detail. Surface the bound Work Product id/type when present.
+      workProductId: item.interaction?.workProductId ?? null,
+      workProductType: (() => {
+        const wpId = item.interaction?.workProductId;
+        if (!wpId) return evaluationProcedure?.workProductType ?? null;
+        const wp = (db.workProducts || []).find((w) => w?.id === wpId);
+        return wp?.type ?? evaluationProcedure?.workProductType ?? null;
+      })(),
+    },
+    evaluationProcedure
+  );
 }

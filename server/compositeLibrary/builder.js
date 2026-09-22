@@ -72,6 +72,8 @@ function resolveEvaluationProcedure(evidenceModel, observationId, db) {
     description: proc.description ?? null,
     artifactRef: proc.artifactRef ?? null,
     artifact,
+    // D123: multi-phase evaluation (PADI Fig. 7). Absent → single automated.
+    phases: Array.isArray(proc.phases) ? proc.phases : null,
   };
 }
 

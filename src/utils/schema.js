@@ -358,6 +358,9 @@ export const schema = {
       // Work-product contracts: see server/delivery/evaluationArtifacts.js (EM-R1).
       // When rubricId is set, builder bakes dimensions from the library rubric.
       artifact: 'object',
+      // D123: optional multi-phase evaluation (PADI Fig. 7).
+      // { order, kind: automated|human|hybrid, rubricId?, adjudicationRule? }
+      phases: 'array',
     }],
     fairnessNotes: 'string',
     difReviewChecklist: [{
@@ -1685,6 +1688,35 @@ export function validateEntity(collection, obj, db = null, options = {}) {
               errors.push(
                 `evaluationProcedure ${proc.id} has artifactRef but no inline artifact; confirm requires bakeable artifact payload.`
               );
+            }
+          }
+        }
+        // D123: multi-phase evaluation shape
+        if (proc?.phases !== undefined) {
+          if (!Array.isArray(proc.phases)) {
+            errors.push(`evaluationProcedure ${proc?.id || "(missing id)"} phases must be an array.`);
+          } else {
+            const PHASE_KINDS = ["automated", "human", "hybrid"];
+            const ADJUDICATION = ["human_wins", "automated_wins", "require_agreement"];
+            for (let pi = 0; pi < proc.phases.length; pi++) {
+              const phase = proc.phases[pi];
+              if (!phase || typeof phase !== "object") {
+                errors.push(`evaluationProcedure ${proc.id} phases[${pi}] must be an object.`);
+                continue;
+              }
+              if (phase.kind && !PHASE_KINDS.includes(phase.kind)) {
+                errors.push(
+                  `evaluationProcedure ${proc.id} phases[${pi}] kind '${phase.kind}' is invalid (use automated, human, or hybrid).`
+                );
+              }
+              if (
+                phase.adjudicationRule &&
+                !ADJUDICATION.includes(phase.adjudicationRule)
+              ) {
+                errors.push(
+                  `evaluationProcedure ${proc.id} phases[${pi}] adjudicationRule '${phase.adjudicationRule}' is invalid.`
+                );
+              }
             }
           }
         }
