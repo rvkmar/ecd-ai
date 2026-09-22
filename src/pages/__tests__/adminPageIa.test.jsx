@@ -66,6 +66,9 @@ vi.mock("@/components/workProducts/WorkProductBuilder", () => ({
 vi.mock("@/components/rubrics/RubricBuilder", () => ({
   default: () => <div>Rubrics library</div>,
 }));
+vi.mock("@/components/templates/TemplateBuilder", () => ({
+  default: () => <div>Templates library</div>,
+}));
 vi.mock("@/components/rating/HumanRatingQueue", () => ({
   default: () => <div>Human rating queue</div>,
 }));
@@ -168,6 +171,9 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     await user.click(screen.getByRole("tab", { name: "Models" }));
     await user.click(screen.getByRole("tab", { name: "Assembly Model" }));
     await waitFor(() => expect(screen.getByText("Assembly builder")).toBeInTheDocument());
+    expect(screen.getByRole("tab", { name: "Templates" })).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Templates" }));
+    await waitFor(() => expect(screen.getByText("Templates library")).toBeInTheDocument());
 
     await user.click(screen.getByRole("tab", { name: "Implementation" }));
     await waitFor(() => expect(screen.getByText("Item bank")).toBeInTheDocument());

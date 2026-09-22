@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D126** — Templates schema (four CAF bindings). Handoff: `claude/day126-templates-schema.md`. |
+| Last completed unit | **D127** — Template builder UI. Handoff: `claude/day127-template-builder-ui.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D127** — Template builder UI (W26). Alone after D126. Do not start D128/D129 casually. |
+| Next queued | **D128** — Joint SMV distribution schema (W26). Alone (Tier 2). Never with D129. |
 
 | Block | **W26 open** (D126–D130). Gate: Template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -201,6 +201,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D125 | product **`0f9c5db`** + session close tip ≡ `main/master` + `claude/day125-performance-wp-dispositions.md` + `claude/day125-w25-block-close.md` + `claude/day125-w25-session-close.md`. Suite **2047 passed / 9 skipped** (re-verified at session close); build green. Four performance WP dispositions; W25 gate met. Next: re-calibrate before D126. |
 
 | HEAD at D126 | product tip ≡ `main/master` + `claude/day126-templates-schema.md`. Suite **2067 passed / 9 skipped**; build green. templates seven-artefact; four-binding coherence; D48 guard green. Next: D127 alone. |
+
+| HEAD at D127 | product tip ≡ `main/master` + `claude/day127-template-builder-ui.md`. Suite **2073 passed / 9 skipped**; build green. Template builder; live family size from TM settings; server binding errors. Next: D128 alone. |
 
 
 
@@ -441,6 +443,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-22 | D126 | 2, alone | templates collection + four-binding coherence (PM↔TM); D48 guard; no UI/generation. Suite **2067 passed / 9 skipped**. No D127/D128/D129. Next: D127 alone. |
 
+| 2026-09-22 | D127 | 1, alone | Template builder UI; live family size from bound TM settings; server errors on confirm. Suite **2073 passed / 9 skipped**. No D128/D129. Next: D128 alone. |
+
 
 
 ## Compression debt
@@ -624,6 +628,8 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D125 | Invent support for four performance WP types after 3.4/3.5 | Types already in ecdVocabulary with empty interaction maps (deliberate); two-phase already D123; D124 still open for W25 gate | Disposition decisions only after D124; resolve §6 deferred list; W25 handoff. Tier 2 alone. Never with D126. |
 
 | D126 | Greenfield templates + invent per-template TMV settings | No `templates` in schema (true); D120 settings already on Task Models; PM↔TM coherence on compositeLibrary; D48 = `collectionSurfaceGuard` | Seven-artefact `templates`; consume TM settings; reuse PM/TM rule; routes same session. Tier 2 alone. |
+
+| D127 | Configure TMV settings stored on the template | Settings live on Task Model (D126); `projectTaskSpecFamilySize` already exists | Builder binds four models; live family size from TM settings (write-through if unlocked); server errors via apiErrorMessage. Tier 1 alone. |
 
 | D128 | No joint language anywhere | Per-SMV marginal priors only; DINA attribute-profile joint already exists | Continuous/covariance joint prior schema only; do not confuse with DINA. Alone after D126. |
 
