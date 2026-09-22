@@ -190,7 +190,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D119 | product **`99c4d85`** + close **`f2973b9`** ≡ `main/master` + `claude/day119-design-feature-registry-repoint.md`. Suite **1996 passed / 9 skipped** (re-verified at session close); build green. Design features via TMV valueSet path; D22 floor held. W24 calendar + block ✅ complete. |
 
-| HEAD at D121 | product + `claude/day121-work-product-as-object.md`. Suite **2016 passed / 9 skipped**; build green. workProducts library; one WP × two interactions identical score. Next: D122 alone. |
+| HEAD at D121 | product **`5ecb5bc`** + `claude/day121-work-product-as-object.md`. Suite **2016 passed / 9 skipped**; build green. workProducts library; one WP × two interactions identical score. Next: D122 alone. |
 
 
 

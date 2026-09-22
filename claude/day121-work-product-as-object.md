@@ -49,6 +49,8 @@ npm run build
 
 D119 close: **1996 passed / 9 skipped**. Delta: **+20 tests** / +4 files (approx).
 
+Product tip: **`5ecb5bc`**.
+
 ## Next
 
 **D122** alone (rubrics collection — never same session as D121).
