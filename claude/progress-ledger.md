@@ -186,7 +186,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D118 | product **`85f2582`** + `claude/day118-tmv-registry-residuals.md`. Suite **1987 passed / 9 skipped**; build green. Consumers before edit; valueSet read-only; Storybook. Next: D120 (re-calibrate); D119 alone later. |
 
-| HEAD at D120 | product + `claude/day120-tmv-family-settings.md` + worked example. Suite **1993 passed / 9 skipped**; build green. fixed/varying settings + ten-spec family. Next: D119 alone. |
+| HEAD at D120 | product **`f5b3d5c`** + `claude/day120-tmv-family-settings.md` + worked example. Suite **1993 passed / 9 skipped**; build green. fixed/varying settings + ten-spec family. Next: D119 alone. |
 
 
 

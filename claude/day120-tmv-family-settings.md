@@ -1,7 +1,8 @@
 # D120 — Per-template TMV settings + W24 handoff
 
 **Status: DONE.** Calendar unit **D120**, alone (Tier 2). Started from
-`7e59eb9` (post-D118). Did **not** start D119 (never-compress) or W25/W26.
+`7e59eb9` (post-D118). Product tip **`f5b3d5c`**. Did **not** start D119
+(never-compress) or W25/W26.
 
 ## Exit check
 
