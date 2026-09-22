@@ -48,7 +48,7 @@ npm run build
   green (2m 15s)
 ```
 
-D120 close: **1993 passed / 9 skipped**. Delta: **+3 tests** / +1 file.
+Product tip: **`99c4d85`**. D120 close: **1993 passed / 9 skipped**. Delta: **+3 tests** / +1 file.
 
 ## Next
 
