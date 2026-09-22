@@ -50,6 +50,8 @@ npm run build
 
 D121 close: **2016 passed / 9 skipped**. Delta: **+14 tests**.
 
+Product tip: **`e0a463a`**.
+
 ## Next
 
 **D123** never-compress (multi-phase evaluation) — alone when started.

@@ -192,7 +192,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D121 | product **`5ecb5bc`** + `claude/day121-work-product-as-object.md`. Suite **2016 passed / 9 skipped**; build green. workProducts library; one WP × two interactions identical score. Next: D122 alone. |
 
-| HEAD at D122 | product + `claude/day122-rubric-objects-exemplars.md`. Suite **2030 passed / 9 skipped**; build green. rubrics + exemplars; shared across EMs; .backup deleted. Next: D123 alone (never-compress). |
+| HEAD at D122 | product **`e0a463a`** + `claude/day122-rubric-objects-exemplars.md`. Suite **2030 passed / 9 skipped**; build green. rubrics + exemplars; shared across EMs; .backup deleted. Next: D123 alone (never-compress). |
 
 
 
