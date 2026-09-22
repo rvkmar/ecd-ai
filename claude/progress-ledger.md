@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D127** — Template builder UI. Handoff: `claude/day127-template-builder-ui.md`. |
+| Last completed unit | **D128** — Joint SMV prior schema (continuous). Handoff: `claude/day128-joint-smv-prior-schema.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D128** — Joint SMV distribution schema (W26). Alone (Tier 2). Never with D129. |
+| Next queued | **D129** — Correlated SMV accumulation (W26). **Never-compress.** Alone. Never with D130 casually. |
 
 | Block | **W26 open** (D126–D130). Gate: Template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -203,6 +203,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D126 | product tip ≡ `main/master` + `claude/day126-templates-schema.md`. Suite **2067 passed / 9 skipped**; build green. templates seven-artefact; four-binding coherence; D48 guard green. Next: D127 alone. |
 
 | HEAD at D127 | product tip ≡ `main/master` + `claude/day127-template-builder-ui.md`. Suite **2073 passed / 9 skipped**; build green. Template builder; live family size from TM settings; server binding errors. Next: D128 alone. |
+
+| HEAD at D128 | product tip ≡ `main/master` + `claude/day128-joint-smv-prior-schema.md`. Suite **2085 passed / 9 skipped**; build green. Continuous MVN jointPrior + PSD gate; DINA binary joint untouched. Next: D129 alone (never-compress). |
 
 
 
@@ -444,6 +446,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-22 | D126 | 2, alone | templates collection + four-binding coherence (PM↔TM); D48 guard; no UI/generation. Suite **2067 passed / 9 skipped**. No D127/D128/D129. Next: D127 alone. |
 
 | 2026-09-22 | D127 | 1, alone | Template builder UI; live family size from bound TM settings; server errors on confirm. Suite **2073 passed / 9 skipped**. No D128/D129. Next: D128 alone. |
+
+| 2026-09-22 | D128 | 2, alone | Continuous jointPrior (MVN covariance/correlation); PSD + dimension refusal; binary SMVs refused. Suite **2085 passed / 9 skipped**. No D129. Next: D129 alone (never-compress). |
 
 
 

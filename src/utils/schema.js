@@ -62,6 +62,7 @@ import {
   vocabularyValuesForDesignFeature,
 } from "./taskModelDesignFeatureRegistry.js";
 import { exemplarCount, levelValues } from "./rubricDelivery.js";
+import { jointPriorErrors } from "./jointPrior.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 
 // Canonical session status spellings -- see src/utils/sessionStatus.js for
@@ -224,6 +225,14 @@ export const schema = {
     // priorDistribution: { family, params } }. A DINA/G-DINA student model
     // is a vector of `binary`-type entries.
     smVariables: 'array',
+
+    // D128 / G14 (schema). Optional joint prior over ≥2 continuous SMVs:
+    // { family: "multivariate_normal", parameterization: "covariance"|
+    // "correlation", smvIds, matrix }. Absent ⇒ independent marginals
+    // (today's behaviour). Binary attribute-profile joints stay in DINA
+    // accumulation — see jointPrior.js. Using the joint at score time is
+    // D129 (never-compress); this field is validation + shape only.
+    jointPrior: 'object',
 
     // See ecdVocabulary.js §7. Optional single enum, validated if present.
     psychologicalPerspective: 'string',
@@ -5324,6 +5333,14 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           }
         }
       });
+    }
+
+    // D128: optional continuous joint prior. Validated whenever present so a
+    // malformed covariance cannot sit on a draft and become nonsense later.
+    if (obj.jointPrior !== undefined && obj.jointPrior !== null) {
+      for (const msg of jointPriorErrors(obj.jointPrior, obj.smVariables)) {
+        errors.push(msg);
+      }
     }
   }
 
