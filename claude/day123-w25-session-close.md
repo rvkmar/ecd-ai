@@ -32,8 +32,10 @@ npm run build
   green (~24s)
 
 git status
-  clean; tip 9b1c336 ≡ main/master
+  clean; tip after this close ≡ main/master
 ```
+
+Session-close commit lands on tip after this file is committed.
 
 ## Tip trail this session
 
