@@ -1,8 +1,9 @@
 # D117 — Task Model Variable authoring UI (W24 remainder)
 
 **Status: DONE.** Calendar unit **D117**, alone. Started from `main` tip
-`b73db48` (post-D116 + Instantiated-tasks copy). Did not start D118–D120,
-D119 enum re-point, W25, Presentation Model, or SessionPlayer work.
+`b73db48` (post-D116 + Instantiated-tasks copy). Product tip **`61018ee`**.
+Did not start D118–D120, D119 enum re-point, W25, Presentation Model, or
+SessionPlayer work.
 
 ## Exit check
 
@@ -55,6 +56,9 @@ npm test
 npm run build
   green (~74s); TaskModelVariableBuilder chunk present (~5.78 kB)
 ```
+
+Tip **`61018ee`**. Calendar MCP was unavailable this session — mark ✅ ECD D117
+when Drive/Calendar reconnect.
 
 D116 close was **1980 passed / 9 skipped** (176 files). Delta: **+3 tests /
 +2 files** (`stepVariables.test.jsx`, `taskModelVariableBuilder.test.jsx`) plus

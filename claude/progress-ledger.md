@@ -180,7 +180,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at 2026-09-21 D116 session close | this close. Suite re-verify **1980 passed / 9 skipped** (176 files, 30.69s); build green (7.01s). Tip **`c97b3f7`** ≡ `main`. No new screen. Next: D117. |
 
-| HEAD at D117 | product + `claude/day117-tmv-authoring-ui.md`. Suite **1983 passed / 9 skipped**; build green. Library + wizard Variables step; no D119. Next: D118. |
+| HEAD at D117 | product **`61018ee`** + `claude/day117-tmv-authoring-ui.md`. Suite **1983 passed / 9 skipped**; build green. Library + wizard Variables step; no D119. Next: D118. |
 
 
 
