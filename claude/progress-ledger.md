@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | Calendar **D118** (next W24 unit after D117). D119 enum re-point stays later, alone. Do not start W25. Re-calibrate before starting. |
+| Next queued | Calendar **D118** residuals (consumer graph before edit; Storybook both themes). Create/list/bind already under D117. D119 enum re-point stays later, alone. Do not start W25. Re-calibrate before starting. |
 
 | Block | **W23 closed** 2026-09-21 (D111–D115). Gate met at D115. **W22** closed 2026-09-20; gate met at D108. |
 
@@ -180,7 +180,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at 2026-09-21 D116 session close | this close. Suite re-verify **1980 passed / 9 skipped** (176 files, 30.69s); build green (7.01s). Tip **`c97b3f7`** ≡ `main`. No new screen. Next: D117. |
 
-| HEAD at D117 | product **`61018ee`** + `claude/day117-tmv-authoring-ui.md`. Suite **1983 passed / 9 skipped**; build green. Library + wizard Variables step; no D119. Next: D118. |
+| HEAD at D117 | product **`61018ee`** + pin **`64ae908`** + `claude/day117-tmv-authoring-ui.md`. Suite **1983 passed / 9 skipped**; build green. Library + wizard Variables step; no D119. Calendar ✅ (premise rewrite). Next: D118 residuals. |
+
+| HEAD at 2026-09-22 D117 session close | this close. Suite re-verify **1983 passed / 9 skipped** (178 files, 86.98s); build green (1m 20s). Tip after this commit ≡ `main/master`. Calendar D117 ✅; D118 annotated. |
 
 
 
@@ -393,7 +395,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-21 | close | 2, alone | D116 session close (Tier 2 alone). Suite re-verify **1980 passed / 9 skipped** (176 files, 30.69s); build green (7.01s); TasksManager chunk 5.27 kB. Tip **`c97b3f7`** ≡ `main`. No half-applied work; no new compression debt. Gate verified by schema + HTTP tests, not a live UI walk. Next: D117. |
 
-| 2026-09-22 | D117 | 2, alone | TMV authoring UI. Models → Task Model Variables library; Task Model Wizard Variables step binds ids + settings. Suite **1983 passed / 9 skipped**. No D119. Calendar MCP unavailable — mark ✅ when reachable. Next: D118. |
+| 2026-09-22 | D117 | 2, alone | TMV authoring UI. Models → Task Model Variables library; Task Model Wizard Variables step binds ids + settings. Suite **1983 passed / 9 skipped**. No D119. Calendar premise rewrite: original D117 routes/hooks already in D116; this slot = authoring UI. ✅ marked. Next: D118 residuals. |
+
+| 2026-09-22 | close | 2, alone | D117 session close. Suite re-verify **1983 passed / 9 skipped** (178 files, 86.98s); build green (1m 20s). Calendar D117 ✅ (premise rewrite); D118 residual note. No half-applied work; no new compression debt. Next: D118 residuals. |
 
 
 
@@ -564,6 +568,10 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D115 live | Live dual-PM walk “just exercise existing overlay” | Student tenancy hid tasks without districtId → no presentation + task 404 | `readRawDB` attach + rostered task GET + student chrome; debt closed |
 
 | D115b | (outline) Possible full CAF lifecycle on Instantiated tasks | Tasks are runtime instances, not CAF models; schema commented; UI cannot bind itemId | Schema + instantiable-TM + itemId authoring + tenancy stamp; **no** draft→operational machine. Closed D115b. |
+
+| D117 | Calendar: routes, lifecycle, query hooks (seven-artefact remainder after D116 schema) | D116 already shipped routes/hooks/readiness/permissions; **no** CAF lifecycle on TMVs by design; zero UI | Authoring UI (library + wizard Variables + settings bind) — calendar D118 create/list early. D118 residual: consumer graph + Storybook themes. |
+
+
 
 ## Carried-forward gaps
 
