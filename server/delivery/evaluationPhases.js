@@ -180,14 +180,36 @@ export function applyPhaseGate(identificationResult, evaluationProcedure) {
 }
 
 /**
- * Complete a pending_human response with a human rating + adjudication.
+ * Complete a pending_human (or pending_adjudication) response with a
+ * human rating + adjudication.
  */
 export function completeHumanEvaluation(pendingResponse, humanRating = {}) {
-  if (!pendingResponse || pendingResponse.evaluationStatus !== EVALUATION_STATUS.PENDING_HUMAN) {
-    throw new Error("completeHumanEvaluation requires a pending_human response.");
+  const status = pendingResponse?.evaluationStatus;
+  if (
+    status !== EVALUATION_STATUS.PENDING_HUMAN &&
+    status !== EVALUATION_STATUS.PENDING_ADJUDICATION
+  ) {
+    throw new Error(
+      "completeHumanEvaluation requires a pending_human or pending_adjudication response."
+    );
   }
   if (typeof humanRating.activated !== "boolean") {
     throw new Error("Human rating requires activated: true | false.");
+  }
+
+  // After require_agreement held, a second staff write is the adjudication.
+  if (status === EVALUATION_STATUS.PENDING_ADJUDICATION) {
+    return {
+      ...pendingResponse,
+      activated: humanRating.activated,
+      strength: humanRating.strength ?? pendingResponse.strength ?? null,
+      rationale: humanRating.rationale ?? pendingResponse.rationale ?? null,
+      evaluationStatus: EVALUATION_STATUS.COMPLETE,
+      adjudicationApplied: "manual_adjudication",
+      pendingPhase: null,
+      humanRatedAt: new Date().toISOString(),
+      humanRatedBy: humanRating.ratedBy ?? pendingResponse.humanRatedBy ?? null,
+    };
   }
 
   const rule =
@@ -243,9 +265,16 @@ export function pendingHumanRatingsFromSession(session) {
       itemId: r.itemId,
       observationId: r.observationId,
       evaluationStatus: r.evaluationStatus,
-      pendingPhase: r.pendingPhase || null,
-      provisionalActivated: r.provisionalActivated ?? null,
-      // Deliberately do NOT expose provisional as activated.
+      pendingPhase: r.pendingPhase
+        ? {
+            order: r.pendingPhase.order,
+            kind: r.pendingPhase.kind,
+            rubricId: r.pendingPhase.rubricId ?? null,
+            adjudicationRule: r.pendingPhase.adjudicationRule ?? null,
+          }
+        : null,
+      // D124: never surface provisional/automated result on pending rows —
+      // honesty is evaluationStatus + activated:null, not leaking the guess.
       activated: r.activated,
     }));
 }

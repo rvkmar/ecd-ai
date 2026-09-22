@@ -66,6 +66,9 @@ vi.mock("@/components/workProducts/WorkProductBuilder", () => ({
 vi.mock("@/components/rubrics/RubricBuilder", () => ({
   default: () => <div>Rubrics library</div>,
 }));
+vi.mock("@/components/rating/HumanRatingQueue", () => ({
+  default: () => <div>Human rating queue</div>,
+}));
 vi.mock("@/components/home/HomeAnnouncements", () => ({
   default: () => <div>Home announcements</div>,
 }));
@@ -172,6 +175,7 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
 
     await user.click(screen.getByRole("tab", { name: "Delivery" }));
     expect(screen.getByRole("tab", { name: "Sessions" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Human rating" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Evidence Accumulation (inspect)" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Presentation" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Psychometrics" })).toBeInTheDocument();

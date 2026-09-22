@@ -32,6 +32,9 @@ vi.mock("../../components/reports/AnalyticsReports", () => ({
 vi.mock("@/components/delivery/EvidenceAccumulationInspector", () => ({
   default: () => <div>Accumulation inspector</div>,
 }));
+vi.mock("@/components/rating/HumanRatingQueue", () => ({
+  default: () => <div>Human rating queue</div>,
+}));
 vi.mock("@/components/home/HomeAnnouncements", () => ({
   default: () => <div>Home announcements</div>,
 }));

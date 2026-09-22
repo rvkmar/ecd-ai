@@ -58,7 +58,7 @@ describe("completeHumanEvaluation + pendingHumanRatingsFromSession", () => {
     const queue = pendingHumanRatingsFromSession(session);
     expect(queue).toHaveLength(1);
     expect(queue[0].activated).toBeNull();
-    expect(queue[0].provisionalActivated).toBe(true);
+    expect(queue[0].provisionalActivated).toBeUndefined();
     expect(queue[0].evaluationStatus).toBe(EVALUATION_STATUS.PENDING_HUMAN);
 
     const done = completeHumanEvaluation(session.responses[0], {

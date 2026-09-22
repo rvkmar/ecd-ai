@@ -57,6 +57,9 @@ const WorkProductBuilder = lazyPanel(() =>
 const RubricBuilder = lazyPanel(() =>
   import("@/components/rubrics/RubricBuilder")
 );
+const HumanRatingQueue = lazyPanel(() =>
+  import("@/components/rating/HumanRatingQueue")
+);
 
 export default function AdminPage() {
   const { auth, logout } = useAuth();
@@ -119,6 +122,7 @@ export default function AdminPage() {
           label: "Delivery",
           tabs: [
             { id: "sessions", label: "Sessions", content: <SessionBuilder /> },
+            { id: "human-rating", label: "Human rating", content: <HumanRatingQueue /> },
             { id: "accumulation", label: "Evidence Accumulation (inspect)", content: <EvidenceAccumulationInspector /> },
             { id: "presentation", label: "Presentation", content: <PresentationModelBuilder /> },
             { id: "psychometrics", label: "Psychometrics", content: <PsychometricsDashboard /> },

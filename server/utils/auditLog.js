@@ -220,6 +220,45 @@ function collectSaveAudits(before, after) {
     }
   }
 
+  // D124: human ratings on session responses (saveDB chokepoint — routes
+  // must not import this module). Ids only; never rawAnswer / names.
+  {
+    const prevMap = indexById(before?.sessions);
+    for (const session of after.sessions || []) {
+      if (!session?.id) continue;
+      const prev = prevMap.get(String(session.id));
+      const prevResponses = prev?.responses || [];
+      const nextResponses = session.responses || [];
+      for (let i = 0; i < nextResponses.length; i++) {
+        const next = nextResponses[i];
+        const prior = prevResponses[i];
+        if (!next?.humanRatedAt) continue;
+        if (prior?.humanRatedAt === next.humanRatedAt) continue;
+        entries.push(
+          buildAuditEntry({
+            action: "human_rating.complete",
+            entity: {
+              collection: "sessions",
+              id: session.id,
+              version: null,
+            },
+            detail: {
+              responseIndex: i,
+              taskId: next.taskId ?? null,
+              itemId: next.itemId ?? null,
+              observationId: next.observationId ?? null,
+              evaluationStatus: next.evaluationStatus ?? null,
+              activated:
+                typeof next.activated === "boolean" ? next.activated : null,
+              ratedBy: next.humanRatedBy ?? null,
+              adjudicationApplied: next.adjudicationApplied ?? null,
+            },
+          })
+        );
+      }
+    }
+  }
+
   return entries;
 }
 

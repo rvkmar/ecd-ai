@@ -23,6 +23,9 @@ const AnalyticsReports = lazyPanel(() =>
 const EvidenceAccumulationInspector = lazyPanel(() =>
   import("@/components/delivery/EvidenceAccumulationInspector")
 );
+const HumanRatingQueue = lazyPanel(() =>
+  import("@/components/rating/HumanRatingQueue")
+);
 
 export default function DistrictDashboard() {
   const { auth, logout } = useAuth();
@@ -55,6 +58,7 @@ export default function DistrictDashboard() {
           label: "Delivery",
           tabs: [
             { id: "sessions", label: "Sessions", content: <SessionBuilder /> },
+            { id: "human-rating", label: "Human rating", content: <HumanRatingQueue /> },
             { id: "accumulation", label: "Evidence Accumulation (inspect)", content: <EvidenceAccumulationInspector /> },
             { id: "reports", label: "Reports", content: <AnalyticsReports /> },
           ],

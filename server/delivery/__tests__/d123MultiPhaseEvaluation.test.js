@@ -242,9 +242,9 @@ describe("D123 exit check — multi-phase evaluation", () => {
     expect(get.status).toBe(200);
     expect(get.body.responses[0].activated).toBeNull();
     expect(get.body.pendingHumanRatings[0].evaluationStatus).toBe("pending_human");
-    // Honest: provisional is separate; never masquerades as activated.
+    // Honest: activated stays null; provisional is not on the pending row (D124 blinding).
     expect(get.body.pendingHumanRatings[0].activated).toBeNull();
-    expect(get.body.pendingHumanRatings[0].provisionalActivated).toBe(true);
+    expect(get.body.pendingHumanRatings[0].provisionalActivated).toBeUndefined();
 
     const studentBlocked = await request(app)
       .post("/api/sessions/s1/human-rating")
@@ -260,8 +260,10 @@ describe("D123 exit check — multi-phase evaluation", () => {
         rationale: "Human disagrees with automated key.",
       });
     expect(rated.status).toBe(200);
-    expect(rated.body.responses[0].evaluationStatus).toBe("complete");
-    expect(rated.body.responses[0].activated).toBe(false);
+    expect(rated.body.evaluationStatus).toBe("complete");
+    expect(rated.body.activated).toBe(false);
     expect(rated.body.pendingHumanRatings).toEqual([]);
+    expect(db.sessions[0].responses[0].evaluationStatus).toBe("complete");
+    expect(db.sessions[0].responses[0].activated).toBe(false);
   });
 });

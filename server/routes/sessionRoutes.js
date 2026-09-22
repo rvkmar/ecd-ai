@@ -22,6 +22,11 @@ import {
   EVALUATION_STATUS,
 } from "../delivery/evaluationPhases.js";
 import {
+  blindedRatingQueueFromSessions,
+  blindedQueueRow,
+  rubricForPendingPhase,
+} from "../delivery/raterQueue.js";
+import {
   accumulateEvidence,
   applyPosteriorsToSession,
 } from "../delivery/evidenceAccumulation.js";
@@ -257,6 +262,18 @@ router.get("/mine", (req, res) => {
     console.error("GET /api/sessions/mine failed:", err);
     return res.json([]);
   }
+});
+
+// ------------------------------
+// GET /api/sessions/rating-queue
+// ------------------------------
+// D124: blinded pending-human / adjudication queue for staff raters.
+// Must be registered before /:id. Tenant scope comes from loadDB.
+const staffRater = authorizeRole(["admin", "district", "teacher"]);
+router.get("/rating-queue", staffRater, (req, res) => {
+  const db = loadDB();
+  const queue = blindedRatingQueueFromSessions(db.sessions || []);
+  return res.json({ items: queue });
 });
 
 // ------------------------------
@@ -701,11 +718,11 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
 // ------------------------------
 // POST /api/sessions/:id/human-rating
 // ------------------------------
-// D123: complete a pending_human Identification. Body:
+// D123/D124: complete a pending_human Identification. Body:
 //   { responseIndex?: number, taskId?: string, activated: boolean,
 //     strength?: number, rationale?: string, adjudicationRule?: string }
 // Staff only — students must not finalize their own OV.
-const staffRater = authorizeRole(["admin", "district", "teacher"]);
+// Tenant scope: loadDB hides other districts; missing session → 404.
 router.post("/:id/human-rating", staffRater, (req, res) => {
   const db = loadDB();
   const session = (db.sessions || []).find((s) => s.id === req.params.id);
@@ -719,12 +736,13 @@ router.post("/:id/human-rating", staffRater, (req, res) => {
     index = (session.responses || []).findIndex(
       (r) =>
         r?.taskId === taskId &&
-        r?.evaluationStatus === EVALUATION_STATUS.PENDING_HUMAN
+        (r?.evaluationStatus === EVALUATION_STATUS.PENDING_HUMAN ||
+          r?.evaluationStatus === EVALUATION_STATUS.PENDING_ADJUDICATION)
     );
   }
   if (index < 0 || !session.responses?.[index]) {
     return res.status(404).json({
-      error: "No pending_human response matched responseIndex or taskId.",
+      error: "No pending response matched responseIndex or taskId.",
     });
   }
 
@@ -760,13 +778,44 @@ router.post("/:id/human-rating", staffRater, (req, res) => {
     return res.status(400).json({ error: "Schema validation failed", details: errors });
   }
 
+  // saveDB → applySaveAudits records human_rating.complete (D124).
   saveDB(db);
   const pendingHumanRatings = pendingHumanRatingsFromSession(session);
   return res.json({
-    ...session,
+    sessionId: session.id,
+    responseIndex: index,
+    evaluationStatus: completed.evaluationStatus,
+    activated: completed.activated,
+    adjudicationApplied: completed.adjudicationApplied ?? null,
+    humanRatedBy: completed.humanRatedBy ?? null,
+    humanRatedAt: completed.humanRatedAt ?? null,
     assemblyProgress,
     accumulationWarnings,
     pendingHumanRatings,
+    ratingQueue: blindedRatingQueueFromSessions(db.sessions || []),
+  });
+});
+
+// ------------------------------
+// GET /api/sessions/:id/rating/:responseIndex
+// ------------------------------
+// Blinded single-item card for the rater UI (work product + rubric).
+router.get("/:id/rating/:responseIndex", staffRater, (req, res) => {
+  const db = loadDB();
+  const session = (db.sessions || []).find((s) => s.id === req.params.id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+  const index = Number(req.params.responseIndex);
+  if (!Number.isInteger(index) || index < 0) {
+    return res.status(400).json({ error: "responseIndex must be a non-negative integer." });
+  }
+  const response = session.responses?.[index];
+  const row = blindedQueueRow(session, response, index);
+  if (!row) {
+    return res.status(404).json({ error: "No pending rating at that index." });
+  }
+  return res.json({
+    ...row,
+    rubric: rubricForPendingPhase(db, row.pendingPhase),
   });
 });
 
