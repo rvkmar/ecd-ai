@@ -20,13 +20,14 @@
 // ------------------------------------------------------------
 
 import { AlertTriangle, Info, Wand2 } from "lucide-react";
+import { useMemo } from "react";
 import InfoTooltip from "../../../ui/InfoTooltip";
+import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
+import { designFeatureOptions } from "@/utils/taskModelDesignFeatureRegistry";
 import {
-    BLOOM_LEVELS,
     difficultyScaleFor,
     COOLDOWN_POLICIES,
     INTERACTION_TYPES,
-    REASONING_TYPES,
     SCORING_METHODS,
 } from "../../taskModelConstants";
 
@@ -43,6 +44,29 @@ export default function Step5Blueprint({
 }) {
     const blueprint = draft.blueprintConstraints || {};
     const difficulty = blueprint.difficultyRange || {};
+
+    // D119: Bloom / reasoning options via TMV valueSet registry path.
+    const { data: tmvLibrary = [] } = useTaskModelVariables();
+    const featureCtx = useMemo(
+        () => ({
+            taskModelVariableIds: draft.taskModelVariableIds,
+            taskModelVariableSettings: draft.taskModelVariableSettings,
+            variables: tmvLibrary,
+        }),
+        [
+            draft.taskModelVariableIds,
+            draft.taskModelVariableSettings,
+            tmvLibrary,
+        ]
+    );
+    const bloomOptions = useMemo(
+        () => designFeatureOptions("bloomLevel", featureCtx),
+        [featureCtx]
+    );
+    const reasoningOptions = useMemo(
+        () => designFeatureOptions("reasoningType", featureCtx),
+        [featureCtx]
+    );
 
     // Which scale this task's difficulty is actually expressed on, read
     // from the primary evidence model's active statistical model. Null
@@ -221,14 +245,14 @@ export default function Step5Blueprint({
                     <ChoiceField
                         label="Bloom Level"
                         value={blueprint.cognitiveDemand?.bloomLevel || ""}
-                        options={BLOOM_LEVELS}
+                        options={bloomOptions}
                         disabled={disabled}
                         onChange={(v) => updateNested("cognitiveDemand", "bloomLevel", v)}
                     />
                     <ChoiceField
                         label="Reasoning Type"
                         value={blueprint.cognitiveDemand?.reasoningType || ""}
-                        options={REASONING_TYPES}
+                        options={reasoningOptions}
                         disabled={disabled}
                         onChange={(v) => updateNested("cognitiveDemand", "reasoningType", v)}
                         tooltip="Should match the cognitive attribute named on the warrants of the bound Evidence Model."

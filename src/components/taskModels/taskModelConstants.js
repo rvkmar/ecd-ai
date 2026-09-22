@@ -21,9 +21,11 @@
  * defined here as of D116. Same move as BLOOM_LEVELS (Day 22): the
  * lists used to be copied into schema.js as bare string arrays, so a
  * `<select>` could offer a level the validator rejected (or the reverse).
- * They live in src/utils/ecdVocabulary.js. Re-exported below. Task
- * Models still store the chosen string on taskStructure; binding those
- * fields to Task Model Variable ids is a later unit. */
+ * They live in src/utils/ecdVocabulary.js. Re-exported below.
+ *
+ * D119: Task Model wizard structure/blueprint selects resolve options
+ * through taskModelDesignFeatureRegistry.js (TMV valueSet path). Stored
+ * field values remain these vocabulary strings. */
 
 export const COMPOSITION_TYPES = [
     { value: "atomic", label: "Atomic", hint: "A single indivisible unit of work." },

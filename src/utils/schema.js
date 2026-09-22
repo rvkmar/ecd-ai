@@ -51,13 +51,15 @@ import {
   PRESENTATION_NAVIGATION_VALUES,
   PRESENTATION_FEEDBACK_TIMING_VALUES,
   PRESENTATION_ACCESSIBILITY_PROFILE_VALUES,
-  PRESENTATION_MODE_VALUES,
-  RESPONSE_FORMAT_VALUES,
-  STIMULUS_POLICY_VALUES,
   TMV_TYPE_VALUES,
   TMV_VALUE_SET_KEYS,
   taskModelVariableValueIds,
 } from "./ecdVocabulary.js";
+import {
+  designFeatureContextFromTaskModel,
+  isDesignFeatureValueAllowed,
+  vocabularyValuesForDesignFeature,
+} from "./taskModelDesignFeatureRegistry.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 
 // Canonical session status spellings -- see src/utils/sessionStatus.js for
@@ -3997,23 +3999,42 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
       const ts = obj.taskStructure;
 
-      /* Design-feature levels are ecdVocabulary.js (D116). Task Models
-         still store the chosen string here; a Task Model Variable may
-         name the same list via valueSet without copying it. */
-      if (strict ? !PRESENTATION_MODE_VALUES.includes(ts.presentationMode)
-                 : Boolean(ts.presentationMode) && !PRESENTATION_MODE_VALUES.includes(ts.presentationMode)) {
-        errors.push("Invalid taskStructure.presentationMode.");
-      }
+      /* D119: design-feature strings are still stored, but allowed values
+         come through the TMV valueSet registry path (ecdVocabulary beneath).
+         Unbound Task Models keep the full vocabulary floor (D22). */
+      const featureCtx = designFeatureContextFromTaskModel(obj, db);
 
-      if (strict ? !RESPONSE_FORMAT_VALUES.includes(ts.responseFormat)
-                 : Boolean(ts.responseFormat) && !RESPONSE_FORMAT_VALUES.includes(ts.responseFormat)) {
-        errors.push("Invalid taskStructure.responseFormat.");
-      }
+      const checkDesignFeature = (valueSet, value, message) => {
+        if (strict) {
+          if (
+            !value ||
+            !isDesignFeatureValueAllowed(valueSet, value, featureCtx)
+          ) {
+            errors.push(message);
+          }
+        } else if (
+          value &&
+          !isDesignFeatureValueAllowed(valueSet, value, featureCtx)
+        ) {
+          errors.push(message);
+        }
+      };
 
-      if (strict ? !STIMULUS_POLICY_VALUES.includes(ts.stimulusPolicy)
-                 : Boolean(ts.stimulusPolicy) && !STIMULUS_POLICY_VALUES.includes(ts.stimulusPolicy)) {
-        errors.push("Invalid taskStructure.stimulusPolicy.");
-      }
+      checkDesignFeature(
+        "presentationMode",
+        ts.presentationMode,
+        "Invalid taskStructure.presentationMode."
+      );
+      checkDesignFeature(
+        "responseFormat",
+        ts.responseFormat,
+        "Invalid taskStructure.responseFormat."
+      );
+      checkDesignFeature(
+        "stimulusPolicy",
+        ts.stimulusPolicy,
+        "Invalid taskStructure.stimulusPolicy."
+      );
 
       if (ts.administration && typeof ts.administration !== "object") {
         errors.push("taskStructure.administration must be object.");
@@ -4080,20 +4101,32 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         errors.push("blueprintConstraints.allowedScoringMethods must be an array.");
       }
 
-      // Day 22 (vocabulary consolidation): same enum-validity gap as the
-      // item-level cognitiveDemand check below -- bloomLevel/reasoningType
-      // were bare 'string' with no allow-list check until now.
-      if (bc.cognitiveDemand?.bloomLevel &&
-          !BLOOM_LEVEL_VALUES.includes(bc.cognitiveDemand.bloomLevel)) {
+      // D119: blueprint cognitiveDemand enums via TMV valueSet registry path.
+      // Items (below) stay on BLOOM_LEVEL_VALUES directly — out of scope.
+      const featureCtx = designFeatureContextFromTaskModel(obj, db);
+      if (
+        bc.cognitiveDemand?.bloomLevel &&
+        !isDesignFeatureValueAllowed(
+          "bloomLevel",
+          bc.cognitiveDemand.bloomLevel,
+          featureCtx
+        )
+      ) {
         errors.push(
-          `Unknown blueprintConstraints.cognitiveDemand.bloomLevel '${bc.cognitiveDemand.bloomLevel}'. Known levels: ${BLOOM_LEVEL_VALUES.join(", ")}.`
+          `Unknown blueprintConstraints.cognitiveDemand.bloomLevel '${bc.cognitiveDemand.bloomLevel}'. Known levels: ${vocabularyValuesForDesignFeature("bloomLevel").join(", ")}.`
         );
       }
 
-      if (bc.cognitiveDemand?.reasoningType &&
-          !REASONING_TYPE_VALUES.includes(bc.cognitiveDemand.reasoningType)) {
+      if (
+        bc.cognitiveDemand?.reasoningType &&
+        !isDesignFeatureValueAllowed(
+          "reasoningType",
+          bc.cognitiveDemand.reasoningType,
+          featureCtx
+        )
+      ) {
         errors.push(
-          `Unknown blueprintConstraints.cognitiveDemand.reasoningType '${bc.cognitiveDemand.reasoningType}'. Known types: ${REASONING_TYPE_VALUES.join(", ")}.`
+          `Unknown blueprintConstraints.cognitiveDemand.reasoningType '${bc.cognitiveDemand.reasoningType}'. Known types: ${vocabularyValuesForDesignFeature("reasoningType").join(", ")}.`
         );
       }
     }

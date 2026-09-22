@@ -2,8 +2,8 @@
 // ------------------------------------------------------------
 // Task Model Wizard — bind shared Task Model Variables (D117 / W24).
 // D120: per-model variation (fixed | varying) so W26 templates / W31
-// generation can express a family. Does NOT re-point
-// taskStructure.presentationMode strings (that is D119).
+// generation can express a family. D119 re-points structure/blueprint
+// selects at the TMV valueSet registry; this step remains the bind UI.
 // ------------------------------------------------------------
 
 import { useMemo } from "react";

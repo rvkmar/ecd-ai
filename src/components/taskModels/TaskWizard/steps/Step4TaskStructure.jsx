@@ -29,6 +29,8 @@ import { AlertTriangle, Info } from "lucide-react";
 import InfoTooltip from "../../../ui/InfoTooltip";
 import SubTaskSelector from "./SubTaskSelector";
 import { toolsAllowedList } from "@/utils/schema";
+import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
+import { designFeatureOptions } from "@/utils/taskModelDesignFeatureRegistry";
 import {
     ACTION_OPTIONS,
     evidenceCompatibilityNotes,
@@ -36,9 +38,6 @@ import {
     COMPOSITION_TYPES,
     EXECUTION_ENVIRONMENTS,
     LOAD_LEVELS,
-    PRESENTATION_MODES,
-    RESPONSE_FORMATS,
-    STIMULUS_POLICIES,
     SUPPORT_LEVELS,
 } from "../../taskModelConstants";
 
@@ -58,6 +57,33 @@ export default function Step4TaskStructure({
     const administration = taskStructure.administration || {};
     const composition = draft.taskCompositionType || "";
     const isComposite = composition === "composite";
+
+    // D119: design-feature selects read through the TMV valueSet registry.
+    const { data: tmvLibrary = [] } = useTaskModelVariables();
+    const featureCtx = useMemo(
+        () => ({
+            taskModelVariableIds: draft.taskModelVariableIds,
+            taskModelVariableSettings: draft.taskModelVariableSettings,
+            variables: tmvLibrary,
+        }),
+        [
+            draft.taskModelVariableIds,
+            draft.taskModelVariableSettings,
+            tmvLibrary,
+        ]
+    );
+    const presentationModeOptions = useMemo(
+        () => designFeatureOptions("presentationMode", featureCtx),
+        [featureCtx]
+    );
+    const responseFormatOptions = useMemo(
+        () => designFeatureOptions("responseFormat", featureCtx),
+        [featureCtx]
+    );
+    const stimulusPolicyOptions = useMemo(
+        () => designFeatureOptions("stimulusPolicy", featureCtx),
+        [featureCtx]
+    );
 
     /* ---------------- Mutations ---------------- */
 
@@ -209,7 +235,7 @@ export default function Step4TaskStructure({
                         label="Presentation Mode"
                         required
                         value={taskStructure.presentationMode || ""}
-                        options={PRESENTATION_MODES}
+                        options={presentationModeOptions}
                         disabled={disabled}
                         onChange={(v) => updateStructure("presentationMode", v)}
                     />
@@ -217,7 +243,7 @@ export default function Step4TaskStructure({
                         label="Response Format"
                         required
                         value={taskStructure.responseFormat || ""}
-                        options={RESPONSE_FORMATS}
+                        options={responseFormatOptions}
                         disabled={disabled}
                         onChange={(v) => updateStructure("responseFormat", v)}
                     />
@@ -225,7 +251,7 @@ export default function Step4TaskStructure({
                         label="Stimulus Policy"
                         required
                         value={taskStructure.stimulusPolicy || ""}
-                        options={STIMULUS_POLICIES}
+                        options={stimulusPolicyOptions}
                         disabled={disabled}
                         onChange={(v) => updateStructure("stimulusPolicy", v)}
                     />
