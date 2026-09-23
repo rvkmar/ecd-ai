@@ -206,6 +206,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D128 | product tip ≡ `main/master` + `claude/day128-joint-smv-prior-schema.md`. Suite **2085 passed / 9 skipped**; build green. Continuous MVN jointPrior + PSD gate; DINA binary joint untouched. Next: D129 alone (never-compress). |
 
+| HEAD at D128 session close | tip **`12f4713`** ≡ `main/master` + `claude/day128-w26-session-close.md` (includes author AdminPage subtitle after D128 pin). Suite re-verify **2085 passed / 9 skipped**; build green. W26 mid-block; D129 not started. |
+
 
 
 ## Session log
@@ -448,6 +450,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-09-22 | D127 | 1, alone | Template builder UI; live family size from bound TM settings; server errors on confirm. Suite **2073 passed / 9 skipped**. No D128/D129. Next: D128 alone. |
 
 | 2026-09-22 | D128 | 2, alone | Continuous jointPrior (MVN covariance/correlation); PSD + dimension refusal; binary SMVs refused. Suite **2085 passed / 9 skipped**. No D129. Next: D129 alone (never-compress). |
+
+| 2026-09-23 | close | 1+2 session | W26 session close D127–D128. Suite re-verify **2085 passed / 9 skipped**; build green; tip `12f4713` ≡ `main/master`. No half-applied work; no new compression debt. D129 never-compress flagged. Next: D129 alone when budget fits. |
 
 
 
