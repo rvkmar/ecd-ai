@@ -47,7 +47,7 @@ git status
 | D127 | `216977e` | `940b08d` |
 | D128 | `e98aa82` | `b97c885` |
 | (author) AdminPage subtitle | `12f4713` | — |
-| This session close | docs | `c6a8f63` |
+| This session close | docs | `c6a8f63` (+ pin `02fe2ea`) |
 
 ## Calendar
 
