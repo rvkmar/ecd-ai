@@ -37,7 +37,7 @@ npm run build
   green (~21s)
 
 git status
-  clean; tip ≡ main/master
+  clean; tip ≡ main/master (`c6a8f63` after this close commit)
 ```
 
 ## Tip trail this session (D127–D128)
@@ -46,7 +46,8 @@ git status
 |---|---|---|
 | D127 | `216977e` | `940b08d` |
 | D128 | `e98aa82` | `b97c885` |
-| (author) AdminPage subtitle | `12f4713` | this close tip |
+| (author) AdminPage subtitle | `12f4713` | — |
+| This session close | docs | `c6a8f63` |
 
 ## Calendar
 
