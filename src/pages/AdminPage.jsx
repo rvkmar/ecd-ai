@@ -82,7 +82,7 @@ export default function AdminPage() {
   return (
     <RoleWorkbench
       title="Admin Control Center"
-      subtitle="Conceptual Assessment Framework, implementation, and delivery (PADI TR9). Settings stay under the profile menu."
+      subtitle="Conceptual Assessment Framework (CAF), implementation, and delivery."
       groups={[
         homeWorkbenchGroup(),
         {
