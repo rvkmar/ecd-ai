@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+/* Add this line right below your import */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -136,7 +139,7 @@
 .dark .border-slate-300 {
   border-color: hsl(var(--border));
 }
-/* D115 — Presentation Model accessibility profiles on SessionPlayer / ItemPresenter */
+/* D115 ï¿½ Presentation Model accessibility profiles on SessionPlayer / ItemPresenter */
 .presentation-large-text {
   font-size: 1.125rem;
   line-height: 1.6;
