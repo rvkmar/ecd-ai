@@ -10,9 +10,9 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: "npm"
@@ -33,7 +33,7 @@ jobs:
   # D94 — dependency + secret scanners must FAIL the job (not warn).
   security-scanners:
     runs-on: ubuntu-latest
-    # gitleaks-action@v2 on pull_request lists /pulls/{n}/commits. The
+    # gitleaks-action@v3 on pull_request lists /pulls/{n}/commits. The
     # default GITHUB_TOKEN cannot do that (403 "Resource not accessible
     # by integration"; x-accepted-github-permissions: pull_requests=read),
     # so the PR twin fails while the push twin (local git history only)
@@ -43,12 +43,12 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Full history: secret scan must cover commits, not only HEAD.
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: "npm"
@@ -60,7 +60,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Gitleaks (full history)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -75,9 +75,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: "npm"
