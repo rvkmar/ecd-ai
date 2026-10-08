@@ -17,6 +17,7 @@ import React, { useMemo, useState } from "react";
 import { useCompetencyModels, useCompetencies } from "@/api/queries/competencies";
 import { apiErrorMessage } from "@/api/apiClient";
 import LifecycleStatusBadge from "../ui/LifecycleStatusBadge";
+import ModelIngredientsCard from "../shared/ModelIngredientsCard";
 
 export default function CompetencyTable() {
     const { data: models = [], isLoading: loading, error: queryError } =
