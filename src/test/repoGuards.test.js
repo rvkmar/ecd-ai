@@ -297,6 +297,12 @@ const DEAD_EXPORT_BASELINE = new Map([
       "getting an invented fallback. Verified D49b — not a missing branch.",
   ],
   [
+    "server/delivery/jointContinuousAccumulation.js :: estimateBivariateJoint",
+    "Pinned-grid bivariate EAP. The D129 hand fixture calls it with an explicit " +
+      "3×3 node set. Production accumulation calls estimateJointContinuousPosterior, " +
+      "which widens that same function. D130.",
+  ],
+  [
     "server/migrations/runner.js :: runMigrations",
     "Plural batch helper. The CLI (server/migrations/run.js, wired to " +
       "npm run migrate / migrate:dry-run) iterates its own registry and calls " +

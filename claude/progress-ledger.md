@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D129** — Correlated continuous SMV accumulation. Handoff: `claude/day129-correlated-smv-accumulation.md`. |
+| Last completed unit | **D130** — Adversarial review of the joint update + W26 gate. Handoff: `claude/day130-adversarial-joint-w26.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D130** — Adversarial review of the joint update + W26 gate. Alone. |
+| Next queued | **D131** — Design Pattern entity (W27). Re-calibrate before starting. `designPatterns` is still absent. |
 
-| Block | **W26 open** (D126–D130). Gate: Template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
+| Block | **W26 closed** 2026-10-13 (D126–D130). Gate held: template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ ~~W23: Changing a Presentation Model changes what an examinee sees, without touching item content (D115).~~ |
 
@@ -211,6 +211,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D129 | product tip ≡ `main/master` + `claude/day129-correlated-smv-accumulation.md`. Suite **2093 passed / 9 skipped**; build green. Bivariate EAP from D128 jointPrior; zero correlation stays on the 1D path. Next: D130 alone. |
 
 | HEAD at D129 session close | tip ≡ `main/master` + `claude/day129-w26-session-close.md`. Suite re-verify **2093 passed / 9 skipped**; build green. Live container reproduced the hand grid. W26 still open. Next: D130 alone. |
+
+| HEAD at D130 / W26 close | product + `claude/day130-adversarial-joint-w26.md`. Suite **2098 passed / 9 skipped**; build green. Joint grid widens past ±5 SD; collision clears the stale posterior. W26 gate held. Next: re-calibrate D131. |
 
 
 
@@ -463,6 +465,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-13 | close | 3, alone | D129 session close. Suite re-verify **2093 passed / 9 skipped**; build green. Hand grid reproduced inside rebuilt `ecd-node`. No half-applied work; no new compression debt. Calendar D129 ✅. Next: D130 alone. |
 
+| 2026-10-13 | D130 | 3, alone | Never-compress adversarial. P0: truncated joint grid (50× b=3 reported 4.79±0.21 vs covering 5.22±0.43) now widens; collision clears the stale partner. W26 gate held. Suite **2098 passed / 9 skipped**; build green. D68 and CM-archive walks escalated as standing risks. Next: re-calibrate D131. |
+
 
 
 ## Compression debt
@@ -499,13 +503,13 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | D67 | Live TAM LSAT7 CTT not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `cttPipeline.test.js` | this PR's CI | **closed** — live job green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`; observed KR-20 0.4542 recorded, not pinned) |
 
-| D68 | Live mid-flight ingest + second submit on `:6060` | HTTP switchover tests; player regression only | D71 | **open** — no unstopped two-item session in the deployment this walk |
+| D68 | Live mid-flight ingest + second submit on `:6060` | HTTP switchover tests; player regression only | D71 | **open — standing risk** escalated at W26 close 2026-10-13 (carried past two block closes). Still no unstopped two-item live walk. |
 
 | D69 | Live difR planted-item flags not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `difPipeline.test.js` | this PR's CI | **closed** — live job green (`difR 6.1.0`, unique ETS C on Item.5; first two live runs failed the unique-item rule, recorded in the handoff) |
 
 | D70 | Live known-equating not executed against Hub `rvkmar/r-backend:latest` | Local `:4000` has equate 2.0.9 / plink 1.5.1; CI still pulls Hub | Docker Hub push of the rebuilt image | **closed D88** — Hub `latest` reports plink 1.5.1; CI package gate fails loudly if missing |
 
-| CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open** |
+| CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open — standing risk** escalated at W26 close 2026-10-13. Still not walked on `:6060`. |
 
 | D115 | Live `:6060` two-PM / one-item browser walk | Tests proved chrome flip; seeded dual-PM session not walked end-to-end | next live student/admin walk | **closed** — 2026-09-21 live walk on `s1789988990327` / `tm-d56` / `itemA`; student tenancy bugs fixed (presentation attach + task GET); chrome flipped `large_text` → `high_contrast` without item edits |
 

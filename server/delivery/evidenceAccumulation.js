@@ -43,7 +43,7 @@
 
 import { SM_VARIABLE_TYPE_VALUES } from "../../src/utils/ecdVocabulary.js";
 import { accumulateAttributeMastery } from "./attributeAccumulation.js";
-import { decideJointContinuousUpdate, estimateBivariateJoint } from "./jointContinuousAccumulation.js";
+import { decideJointContinuousUpdate, estimateJointContinuousPosterior } from "./jointContinuousAccumulation.js";
 import { activePackageFor, packageEntryFor } from "../compositeLibrary/activePackage.js";
 
 /* Families that update a CONTINUOUS latent variable via a posterior over
@@ -1111,7 +1111,7 @@ export function accumulateEvidence(session, db, options = {}) {
     }
 
     if (jointDecision.action === "joint") {
-      const joint = estimateBivariateJoint({
+      const joint = estimateJointContinuousPosterior({
         scoredObservations,
         itemProbability,
         mean: jointDecision.mean,
@@ -1141,8 +1141,8 @@ export function accumulateEvidence(session, db, options = {}) {
         supported: true,
         responsesUsed: scoredObservations.length,
         responsesExcluded: excluded,
-        boundaryLimited: false,
-        refined: false,
+        boundaryLimited: joint.boundaryLimited === true,
+        refined: joint.refined === true,
       };
 
       posteriors.push({
@@ -1258,6 +1258,7 @@ export function accumulateEvidence(session, db, options = {}) {
 
     for (const claimant of claimants) {
       claimant.supported = false;
+      claimant.invalidatePersisted = true;
       claimant.reason = reason;
       delete claimant.estimate;
       delete claimant.precision;
@@ -1302,6 +1303,14 @@ export function applyPosteriorsToSession(session, accumulationResult, options = 
   if (!session.studentModel.smvPosteriors) session.studentModel.smvPosteriors = {};
 
   for (const posterior of accumulationResult.posteriors || []) {
+    /* A collision refusal means the stored number was computed without
+       the other Evidence Model's responses. Leaving it in place reports
+       that partial posterior as current. Other refusals stay silent and
+       keep the earlier measurement. */
+    if (posterior.invalidatePersisted && posterior.smvId) {
+      delete session.studentModel.smvPosteriors[posterior.smvId];
+      continue;
+    }
     if (!posterior.supported) continue;
 
     session.studentModel.smvPosteriors[posterior.smvId] = {

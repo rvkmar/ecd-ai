@@ -15,6 +15,22 @@ import { jointPriorErrors } from "../../src/utils/jointPrior.js";
 const ZERO_COVARIANCE = 1e-12;
 const P_EPSILON = 1e-12;
 
+/* Same coverage rules as evidenceAccumulation's one-dimensional grid.
+   A fixed ±5 SD rectangle truncates a long run of hard items and reports
+   the cut edge as a precise EAP (boundaryLimited was hardcoded false).
+   Measured: 50 correct Rasch items at b = 3, ρ = 0.5, came back
+   4.79 ± 0.21 against a covering grid's 5.22 ± 0.43. */
+const PRIOR_SPREAD_FACTOR = 5;
+const MAX_ABSOLUTE_HALF_WIDTH = 100;
+const STEPS_PER_PRIOR_SD = 8;
+const MIN_GRID_POINTS = 41;
+const MAX_GRID_POINTS = 801;
+const EDGE_MASS_TOLERANCE = 1e-4;
+const MAX_WIDENING_ATTEMPTS = 10;
+const FLAT_LIKELIHOOD_EPSILON = 1e-9;
+const MIN_STEPS_PER_POSTERIOR_SD = 8;
+const POSTERIOR_REFINEMENT_SPREAD = 10;
+
 /**
  * Decide whether this measured SMV should take the joint path.
  * `independent` means "call the existing 1D estimator".
@@ -89,7 +105,9 @@ export function decideJointContinuousUpdate(competencyModel, measuredSmvId) {
  *
  * Weights are prior densities at the nodes, renormalised — the same
  * discrete convention as estimateContinuousPosterior's hand fixture, not
- * a step-scaled integral.
+ * a step-scaled integral. Pass `nodes` to pin the grid (the hand fixture).
+ * Production calls estimateJointContinuousPosterior, which widens this
+ * grid when the posterior sits on the edge.
  */
 export function estimateBivariateJoint({
   scoredObservations,
@@ -119,6 +137,8 @@ export function estimateBivariateJoint({
   const logLik = axis.measured.map((theta) => logLikelihood(theta, scoredObservations, itemProbability));
 
   let maxLogJoint = -Infinity;
+  let modeI = 0;
+  let modeJ = 0;
   const logJoint = [];
   for (let i = 0; i < axis.measured.length; i += 1) {
     const row = [];
@@ -131,7 +151,11 @@ export function estimateBivariateJoint({
       const lp = -0.5 * quad - 0.5 * Math.log(det) - Math.log(2 * Math.PI);
       const lj = logLik[i] + lp;
       row.push(lj);
-      if (lj > maxLogJoint) maxLogJoint = lj;
+      if (lj > maxLogJoint) {
+        maxLogJoint = lj;
+        modeI = i;
+        modeJ = j;
+      }
     }
     logJoint.push(row);
   }
@@ -158,11 +182,17 @@ export function estimateBivariateJoint({
   }
   let vx = 0;
   let vy = 0;
+  let measuredEdgeMass = 0;
+  let partnerEdgeMass = 0;
+  const lastI = axis.measured.length - 1;
+  const lastJ = axis.partner.length - 1;
   for (let i = 0; i < axis.measured.length; i += 1) {
     for (let j = 0; j < axis.partner.length; j += 1) {
       const p = weight[i][j] / total;
       vx += (axis.measured[i] - ex) ** 2 * p;
       vy += (axis.partner[j] - ey) ** 2 * p;
+      if (i === 0 || i === lastI) measuredEdgeMass += p;
+      if (j === 0 || j === lastJ) partnerEdgeMass += p;
     }
   }
 
@@ -170,10 +200,158 @@ export function estimateBivariateJoint({
   const partnerSd = Math.sqrt(Math.max(vy, 0));
   if (![ex, ey, measuredSd, partnerSd].every((n) => Number.isFinite(n))) return null;
 
+  let likMin = Infinity;
+  let likMax = -Infinity;
+  for (const ll of logLik) {
+    if (ll < likMin) likMin = ll;
+    if (ll > likMax) likMax = ll;
+  }
+
   return {
     measured: { estimate: ex, sd: measuredSd },
     partner: { estimate: ey, sd: partnerSd },
+    measuredEdgeMass,
+    partnerEdgeMass,
+    modeOnMeasuredBoundary: modeI === 0 || modeI === lastI,
+    modeOnPartnerBoundary: modeJ === 0 || modeJ === lastJ,
+    logLikelihoodRange: Number.isFinite(likMax - likMin) ? likMax - likMin : 0,
+    measuredStep: uniformStep(axis.measured),
+    partnerStep: uniformStep(axis.partner),
   };
+}
+
+/**
+ * Production bivariate EAP. Widens each axis while posterior mass or the
+ * mode sits on that edge, and refuses a flat likelihood instead of
+ * returning the prior as a measurement. `boundaryLimited` stays false
+ * only when a covering grid was found.
+ */
+export function estimateJointContinuousPosterior({
+  scoredObservations,
+  itemProbability,
+  mean,
+  covariance,
+}) {
+  const sd1 = Math.sqrt(covariance[0][0]);
+  const sd2 = Math.sqrt(covariance[1][1]);
+  if (!(sd1 > 0) || !(sd2 > 0)) return null;
+
+  let spreadM = PRIOR_SPREAD_FACTOR;
+  let spreadP = PRIOR_SPREAD_FACTOR;
+  let last = null;
+
+  for (let attempt = 0; attempt < MAX_WIDENING_ATTEMPTS; attempt += 1) {
+    const nodes = {
+      measured: axisFromMarginal(mean[0], sd1, spreadM),
+      partner: axisFromMarginal(mean[1], sd2, spreadP),
+    };
+    const result = estimateBivariateJoint({
+      scoredObservations,
+      itemProbability,
+      mean,
+      covariance,
+      nodes,
+    });
+    if (!result) return null;
+    last = result;
+
+    const flat =
+      scoredObservations.length > 0 &&
+      result.logLikelihoodRange < FLAT_LIKELIHOOD_EPSILON;
+    const measuredTight =
+      result.measuredEdgeMass > EDGE_MASS_TOLERANCE || result.modeOnMeasuredBoundary || flat;
+    const partnerTight =
+      result.partnerEdgeMass > EDGE_MASS_TOLERANCE || result.modeOnPartnerBoundary;
+
+    if (!measuredTight && !partnerTight) {
+      return refineJointPosterior({
+        scoredObservations,
+        itemProbability,
+        mean,
+        covariance,
+        result,
+      });
+    }
+
+    const nextM = measuredTight ? growSpread(spreadM, sd1) : spreadM;
+    const nextP = partnerTight ? growSpread(spreadP, sd2) : spreadP;
+    const stuck = nextM === spreadM && nextP === spreadP;
+    spreadM = nextM;
+    spreadP = nextP;
+
+    if (stuck) {
+      if (flat) return null;
+      return { ...result, boundaryLimited: true, refined: false };
+    }
+  }
+
+  if (
+    last &&
+    scoredObservations.length > 0 &&
+    last.logLikelihoodRange < FLAT_LIKELIHOOD_EPSILON
+  ) {
+    return null;
+  }
+  return last ? { ...last, boundaryLimited: true, refined: false } : null;
+}
+
+function refineJointPosterior({
+  scoredObservations,
+  itemProbability,
+  mean,
+  covariance,
+  result,
+}) {
+  const needMeasured =
+    result.measured.sd > 0 &&
+    result.measuredStep > 0 &&
+    result.measured.sd / result.measuredStep < MIN_STEPS_PER_POSTERIOR_SD;
+  const needPartner =
+    result.partner.sd > 0 &&
+    result.partnerStep > 0 &&
+    result.partner.sd / result.partnerStep < MIN_STEPS_PER_POSTERIOR_SD;
+
+  if (!needMeasured && !needPartner) {
+    return { ...result, boundaryLimited: false, refined: false };
+  }
+
+  const nodes = {
+    measured: needMeasured
+      ? axisAround(
+          result.measured.estimate,
+          Math.max(result.measured.sd * POSTERIOR_REFINEMENT_SPREAD, result.measuredStep),
+          result.measured.sd / STEPS_PER_PRIOR_SD
+        )
+      : axisFromMarginal(mean[0], Math.sqrt(covariance[0][0])),
+    partner: needPartner
+      ? axisAround(
+          result.partner.estimate,
+          Math.max(result.partner.sd * POSTERIOR_REFINEMENT_SPREAD, result.partnerStep),
+          result.partner.sd / STEPS_PER_PRIOR_SD
+        )
+      : axisFromMarginal(mean[1], Math.sqrt(covariance[1][1])),
+  };
+
+  const remeasured = estimateBivariateJoint({
+    scoredObservations,
+    itemProbability,
+    mean,
+    covariance,
+    nodes,
+  });
+  if (!remeasured) return { ...result, boundaryLimited: false, refined: false };
+  return { ...remeasured, boundaryLimited: false, refined: true };
+}
+
+function growSpread(spread, sd) {
+  const maxSpread = MAX_ABSOLUTE_HALF_WIDTH / sd;
+  if (spread >= maxSpread - 1e-12) return spread;
+  return Math.min(spread * 2, maxSpread);
+}
+
+function uniformStep(nodes) {
+  if (!nodes || nodes.length < 2) return 0;
+  return (nodes[nodes.length - 1] - nodes[0]) / (nodes.length - 1);
 }
 
 function covarianceForJoint(joint, smVariables) {
@@ -231,16 +409,25 @@ function logLikelihood(theta, scoredObservations, itemProbability) {
   }, 0);
 }
 
-function axisFromMarginal(mean, sd) {
-  if (!(sd > 0)) return null;
-  const half = 5 * sd;
-  const step = sd / 8;
-  let points = Math.ceil((2 * half) / step) + 1;
-  points = Math.min(81, Math.max(41, points));
-  if (points % 2 === 0) points += 1;
-  const min = mean - half;
-  const max = mean + half;
+function axisFromMarginal(mean, sd, spreadFactor = PRIOR_SPREAD_FACTOR) {
+  if (!(sd > 0) || !Number.isFinite(mean)) return null;
+  const half = Math.min(spreadFactor * sd, MAX_ABSOLUTE_HALF_WIDTH);
+  return axisBetween(mean - half, mean + half, sd / STEPS_PER_PRIOR_SD);
+}
+
+function axisAround(center, halfWidth, targetStep) {
+  if (!Number.isFinite(center) || !(halfWidth > 0) || !(targetStep > 0)) return null;
+  const half = Math.min(halfWidth, MAX_ABSOLUTE_HALF_WIDTH);
+  return axisBetween(center - half, center + half, targetStep);
+}
+
+function axisBetween(min, max, targetStep) {
   const span = max - min;
+  if (!(span > 0) || !(targetStep > 0) || !Number.isFinite(span)) return null;
+  let points = Math.ceil(span / targetStep) + 1;
+  points = Math.min(MAX_GRID_POINTS, Math.max(MIN_GRID_POINTS, points));
+  if (points % 2 === 0) points += 1;
+  if (points > MAX_GRID_POINTS) points = MAX_GRID_POINTS;
   const nodes = [];
   for (let i = 0; i < points; i += 1) {
     nodes.push(i === points - 1 ? max : min + (i * span) / (points - 1));
