@@ -7,6 +7,8 @@
 
 @layer base {
   :root {
+    /* Native controls follow the app theme, not the OS theme. */
+    color-scheme: light;
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -34,6 +36,7 @@
     --radius: 0.5rem
   }
   .dark {
+    color-scheme: dark;
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
     --card: 0 0% 3.9%;
@@ -129,7 +132,14 @@
 .dark .text-gray-800,
 .dark .text-gray-900,
 .dark .text-slate-700,
-.dark .text-slate-800 {
+.dark .text-slate-800,
+/* Authoring fields use text-slate-900 for the typed value. Leaving it
+   unmapped painted near-black (slate-900) on the near-black surface the
+   bg-white / bg-slate-50 rules above substitute in .dark — contrast ~1.1:1.
+   Tailwind v4 preflight also sets input/textarea/select to
+   `color: inherit; background-color: transparent`, so a control without
+   its own text color inherits this same missing step. */
+.dark .text-slate-900 {
   color: hsl(var(--foreground));
 }
 
@@ -138,6 +148,43 @@
 .dark .border-slate-200,
 .dark .border-slate-300 {
   border-color: hsl(var(--border));
+}
+
+/* Placeholder utilities (`placeholder:text-slate-400`) and the v4 default
+   (`color-mix` of currentcolor) are separate selectors from `.text-slate-*`,
+   so the remap above does not reach them. Pin field chrome that the UA
+   paints itself: placeholders, disabled values, the native <option> popup,
+   and Chrome autofill (which sets -webkit-text-fill-color, often dark). */
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+  opacity: 1;
+}
+
+.dark input:disabled,
+.dark textarea:disabled,
+.dark select:disabled {
+  color: hsl(var(--muted-foreground));
+  -webkit-text-fill-color: hsl(var(--muted-foreground));
+}
+
+.dark option,
+.dark optgroup {
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--popover));
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill,
+.dark select:-webkit-autofill,
+.dark input:autofill,
+.dark textarea:autofill,
+.dark select:autofill {
+  -webkit-text-fill-color: hsl(var(--foreground)) !important;
+  caret-color: hsl(var(--foreground));
+  box-shadow: 0 0 0 1000px hsl(var(--card)) inset !important;
 }
 /* D115 � Presentation Model accessibility profiles on SessionPlayer / ItemPresenter */
 .presentation-large-text {
