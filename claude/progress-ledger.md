@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D128** — Joint SMV prior schema (continuous). Handoff: `claude/day128-joint-smv-prior-schema.md`. |
+| Last completed unit | **D129** — Correlated continuous SMV accumulation. Handoff: `claude/day129-correlated-smv-accumulation.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D129** — Correlated SMV accumulation (W26). **Never-compress.** Alone. Never with D130 casually. |
+| Next queued | **D130** — Adversarial review of the joint update + W26 gate. Alone. |
 
 | Block | **W26 open** (D126–D130). Gate: Template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -207,6 +207,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D128 | product tip ≡ `main/master` + `claude/day128-joint-smv-prior-schema.md`. Suite **2085 passed / 9 skipped**; build green. Continuous MVN jointPrior + PSD gate; DINA binary joint untouched. Next: D129 alone (never-compress). |
 
 | HEAD at D128 session close | tip **`02fe2ea`** ≡ `main/master` + `claude/day128-w26-session-close.md` (includes author AdminPage subtitle `12f4713` after D128 pin). Suite re-verify **2085 passed / 9 skipped**; build green. W26 mid-block; D129 not started. |
+
+| HEAD at D129 | product tip ≡ `main/master` + `claude/day129-correlated-smv-accumulation.md`. Suite **2093 passed / 9 skipped**; build green. Bivariate EAP from D128 jointPrior; zero correlation stays on the 1D path. Next: D130 alone. |
 
 
 
@@ -453,6 +455,10 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-09-23 | close | 1+2 session | W26 session close D127–D128. Suite re-verify **2085 passed / 9 skipped**; build green; tip `02fe2ea` ≡ `main/master`. No half-applied work; no new compression debt. D129 never-compress flagged. Next: D129 alone when budget fits. |
 
+| 2026-10-13 | calibrate | — | Cold start. Tip `de9b964` (UI/tooling after the D128 close). Suite **2085 passed / 9 skipped**. D129 premise held. Work order: do not start D129 on the calibration pass. |
+
+| 2026-10-13 | D129 | 3, alone | Never-compress. Bivariate continuous EAP; hand 3×3 fixture; zero-correlation byte-identical to 1D; reproducibility after active parameter-set change. Suite **2093 passed / 9 skipped**. Live `:6060` login only (no joint-prior screen). No D130. Next: D130 alone. |
+
 
 
 ## Compression debt
@@ -640,6 +646,8 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D127 | Configure TMV settings stored on the template | Settings live on Task Model (D126); `projectTaskSpecFamilySize` already exists | Builder binds four models; live family size from TM settings (write-through if unlocked); server errors via apiErrorMessage. Tier 1 alone. |
 
 | D128 | No joint language anywhere | Per-SMV marginal priors only; DINA attribute-profile joint already exists | Continuous/covariance joint prior schema only; do not confuse with DINA. Alone after D126. |
+
+| D129 | Joint update is a new estimator with no existing continuous path | 1D EAP still the continuous path; `jointPrior` unread; Day 39 still refuses two Evidence Models on one SMV; DINA joint is separate | Consume D128 `jointPrior` for one correlated partner. Zero off-diagonal stays on the 1D EAP. Do not pool the Day 39 collision. **Never-compress.** Alone. |
 
 
 

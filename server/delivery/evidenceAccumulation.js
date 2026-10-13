@@ -43,6 +43,7 @@
 
 import { SM_VARIABLE_TYPE_VALUES } from "../../src/utils/ecdVocabulary.js";
 import { accumulateAttributeMastery } from "./attributeAccumulation.js";
+import { decideJointContinuousUpdate, estimateBivariateJoint } from "./jointContinuousAccumulation.js";
 import { activePackageFor, packageEntryFor } from "../compositeLibrary/activePackage.js";
 
 /* Families that update a CONTINUOUS latent variable via a posterior over
@@ -1085,6 +1086,82 @@ export function accumulateEvidence(session, db, options = {}) {
         competencyModelId,
         supported: false,
         reason: `No response for evidence model '${evidenceModelId}' carried usable directional evidence; the prior is unchanged, so no posterior is reported.`,
+      });
+      continue;
+    }
+
+    /* D129: a non-zero continuous joint prior updates the measured SMV and
+       its one correlated partner together. A zero off-diagonal (or no
+       jointPrior) falls through to the 1D EAP below, which is the
+       byte-identical independent-marginal path. */
+    const competencyModel = (db.competencyModels || []).find((m) => m.id === competencyModelId);
+    const jointDecision = decideJointContinuousUpdate(competencyModel, smVariable.id);
+
+    if (jointDecision.action === "refuse") {
+      posteriors.push({
+        evidenceModelId,
+        parameterSetId,
+        modelFamily: family,
+        smvId: smVariable.id,
+        competencyModelId,
+        supported: false,
+        reason: jointDecision.reason,
+      });
+      continue;
+    }
+
+    if (jointDecision.action === "joint") {
+      const joint = estimateBivariateJoint({
+        scoredObservations,
+        itemProbability,
+        mean: jointDecision.mean,
+        covariance: jointDecision.covariance,
+      });
+
+      if (!joint) {
+        posteriors.push({
+          evidenceModelId,
+          parameterSetId,
+          modelFamily: family,
+          smvId: smVariable.id,
+          competencyModelId,
+          supported: false,
+          reason: "The joint posterior could not be normalised, so neither correlated Student Model Variable is reported.",
+        });
+        continue;
+      }
+
+      const shared = {
+        evidenceModelId,
+        parameterSetId,
+        parameterSource: parameterSource || "calibrated",
+        modelFamily: family,
+        competencyModelId,
+        method: "eap-joint",
+        supported: true,
+        responsesUsed: scoredObservations.length,
+        responsesExcluded: excluded,
+        boundaryLimited: false,
+        refined: false,
+      };
+
+      posteriors.push({
+        ...shared,
+        smvId: smVariable.id,
+        smvType: smVariable.type,
+        estimate: joint.measured.estimate,
+        precision: joint.measured.sd,
+        sem: joint.measured.sd,
+        jointRole: "measured",
+      });
+      posteriors.push({
+        ...shared,
+        smvId: jointDecision.partner.id,
+        smvType: jointDecision.partner.type,
+        estimate: joint.partner.estimate,
+        precision: joint.partner.sd,
+        sem: joint.partner.sd,
+        jointRole: "correlated",
       });
       continue;
     }
