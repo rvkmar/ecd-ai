@@ -212,7 +212,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D129 session close | tip ≡ `main/master` + `claude/day129-w26-session-close.md`. Suite re-verify **2093 passed / 9 skipped**; build green. Live container reproduced the hand grid. W26 still open. Next: D130 alone. |
 
-| HEAD at D130 / W26 close | product + `claude/day130-adversarial-joint-w26.md`. Suite **2098 passed / 9 skipped**; build green. Joint grid widens past ±5 SD; collision clears the stale posterior. W26 gate held. Next: re-calibrate D131. |
+| HEAD at D130 / W26 close | product **`8009741`** ≡ `main/master` + `claude/day130-adversarial-joint-w26.md` + `claude/day130-w26-session-close.md`. Suite re-verify **2098 passed / 9 skipped**; build green. Joint grid widens past ±5 SD; collision clears the stale posterior. W26 gate held. Next: re-calibrate D131. |
 
 
 
@@ -466,6 +466,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-13 | close | 3, alone | D129 session close. Suite re-verify **2093 passed / 9 skipped**; build green. Hand grid reproduced inside rebuilt `ecd-node`. No half-applied work; no new compression debt. Calendar D129 ✅. Next: D130 alone. |
 
 | 2026-10-13 | D130 | 3, alone | Never-compress adversarial. P0: truncated joint grid (50× b=3 reported 4.79±0.21 vs covering 5.22±0.43) now widens; collision clears the stale partner. W26 gate held. Suite **2098 passed / 9 skipped**; build green. D68 and CM-archive walks escalated as standing risks. Next: re-calibrate D131. |
+
+| 2026-10-13 | close | 3, alone | D130 / W26 session close. Suite re-verify **2098 passed / 9 skipped**; build green; tip `8009741` ≡ `main/master`. No half-applied work; no new compression debt. Calendar D130 and W26 already ✅. Next: re-calibrate D131. |
 
 
 
@@ -726,6 +728,8 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 - ~~D47 F6 / TasksManager item bind (`schema.tasks` commented; POST `{ taskModelId }` only)~~ closed D115b (`claude/day115b-instantiated-tasks.md`)
 
 - D115b live Implementation → Instantiated tasks click-through on `:6060` — **open** (schema/API/UI tests this close)
+
+- ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
 - Design Patterns (W27 / G7) — absent; Additional KSAs still notes-only on EMs
 
