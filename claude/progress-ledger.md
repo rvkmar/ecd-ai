@@ -210,6 +210,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | HEAD at D129 | product tip ≡ `main/master` + `claude/day129-correlated-smv-accumulation.md`. Suite **2093 passed / 9 skipped**; build green. Bivariate EAP from D128 jointPrior; zero correlation stays on the 1D path. Next: D130 alone. |
 
+| HEAD at D129 session close | tip ≡ `main/master` + `claude/day129-w26-session-close.md`. Suite re-verify **2093 passed / 9 skipped**; build green. Live container reproduced the hand grid. W26 still open. Next: D130 alone. |
+
 
 
 ## Session log
@@ -458,6 +460,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-13 | calibrate | — | Cold start. Tip `de9b964` (UI/tooling after the D128 close). Suite **2085 passed / 9 skipped**. D129 premise held. Work order: do not start D129 on the calibration pass. |
 
 | 2026-10-13 | D129 | 3, alone | Never-compress. Bivariate continuous EAP; hand 3×3 fixture; zero-correlation byte-identical to 1D; reproducibility after active parameter-set change. Suite **2093 passed / 9 skipped**. Live `:6060` login only (no joint-prior screen). No D130. Next: D130 alone. |
+
+| 2026-10-13 | close | 3, alone | D129 session close. Suite re-verify **2093 passed / 9 skipped**; build green. Hand grid reproduced inside rebuilt `ecd-node`. No half-applied work; no new compression debt. Calendar D129 ✅. Next: D130 alone. |
 
 
 
