@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **W28** (`seedFromDesignPattern`). Do not treat confirmed as delivery. Do not rebuild D132 routes. |
+| Next queued | **D136** (W28). Bidirectional pattern ↔ template link. The seeder is D137. Do not treat confirmed as delivery. Do not rebuild D132 routes. |
 
 | Block | **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -690,6 +690,10 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D134 | Every menu is a real object collection | WP/rubric/TMV libraries exist. Potential Observations and Characteristic Features have no collection. Confirm already allowed empty `{label}` menus | Library menus cite ids (`workProductId`, not a type string). Observations and characteristic features stay labelled possibilities. Copy: possibilities, not commitments. No new collections. No W28. |
 
 | D135 | Invent a second pattern importer; remap menu ids by name; bulk WP/rubrics/TMVs first | Unified bulk already exists; pattern refs are by id; those libraries have POST `/` not `/bulk` | Add `/api/designPatterns/bulk` + Settings cards. Missing ids fail the row. Force draft. W27 gate = live author+confirm. |
+
+| D136 | W28 opens by writing `seedFromDesignPattern.js` | No `designPatternId` / `templateIds` anywhere. `templates` (D126) confirm on CM/EM/TM/PM bindings with no pattern. Calendar D136 is the link; the seeder is D137 | Add an optional link, navigable both ways. A pattern offers templates; it does not block confirm. Unpatterned templates stay valid. No seeding, no graph, no inheritance. |
+
+| D137 | Seed by copying every menu into a new model, including inherited observations | Menus are possibilities (D134). Observations and characteristic features are labels. Rubrics and variable features cite ids. No pattern inheritance exists (that is D139, and it is scheduled after this unit) | Seed **draft** Evidence and Task Models from **one confirmed** pattern's own menus. Record offers that were declined. Refuse confirm until the designer adds substance the copy did not supply. Do not inherit from a parent pattern. Do not back-fill models that already exist. |
 
 
 
