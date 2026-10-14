@@ -179,6 +179,14 @@ router.delete("/:id", canDelete, (req, res) => {
   const existing = rows.find((v) => v.id === req.params.id);
   if (!existing) return res.status(404).json({ error: "Design pattern not found" });
 
+  const citedBy = (db.templates || []).filter((row) => row.designPatternId === existing.id);
+  if (citedBy.length > 0) {
+    return res.status(409).json({
+      error: "Templates still cite this design pattern. Unlink them before deleting.",
+      templateIds: citedBy.map((row) => row.id),
+    });
+  }
+
   db.designPatterns = rows.filter((v) => v.id !== existing.id);
   saveDB(db);
   res.json({ success: true });

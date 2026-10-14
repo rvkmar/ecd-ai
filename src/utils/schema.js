@@ -913,6 +913,8 @@ export const schema = {
     evidenceModelId: 'string',
     taskModelId: 'string',
     presentationModelId: 'string',
+    // D136: optional. A pattern offers structure; it does not constrain confirm.
+    designPatternId: 'string',
     status: 'string',
     districtId: 'string',
     schoolId: 'string',
@@ -1365,6 +1367,16 @@ export function templateBindingErrors(obj, db = null, options = {}) {
       errors.push(
         `presentationModelId '${pmId}' is bound to taskModelId '${pm.taskModelId}', not this template's '${tmId}'.`
       );
+    }
+  }
+
+  // D136: the pattern link is optional at draft and at confirm.
+  const patternId = obj?.designPatternId;
+  if (patternId != null && patternId !== "") {
+    if (typeof patternId !== "string") {
+      errors.push("designPatternId must be a string.");
+    } else if (db && !(db.designPatterns || []).some((row) => row.id === patternId)) {
+      errors.push(`Invalid designPatternId: ${patternId}`);
     }
   }
 

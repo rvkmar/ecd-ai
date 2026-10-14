@@ -30,6 +30,7 @@ const WRITE_KEYS = [
   "evidenceModelId",
   "taskModelId",
   "presentationModelId",
+  "designPatternId",
 ];
 
 let idCounter = 0;

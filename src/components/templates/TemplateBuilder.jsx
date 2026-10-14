@@ -6,7 +6,8 @@
 // to an unlocked TM; it does not store a second settings copy on the
 // template). Binding coherence errors come from the server (apiErrorMessage).
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { useTaskModels, useUpdateTaskModel } from "@/api/queries/taskModels";
 import { usePresentationModels } from "@/api/queries/presentationModels";
 import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
+import { useDesignPatterns } from "@/api/queries/designPatterns";
 import {
   projectTaskSpecFamilySize,
   resolveSettingVariation,
@@ -100,6 +102,7 @@ const emptyForm = () => ({
   evidenceModelId: "",
   taskModelId: "",
   presentationModelId: "",
+  designPatternId: "",
   tmvSettings: [],
 });
 
@@ -112,6 +115,7 @@ function formFromRow(row, taskModels) {
     evidenceModelId: row.evidenceModelId || "",
     taskModelId: row.taskModelId || "",
     presentationModelId: row.presentationModelId || "",
+    designPatternId: row.designPatternId || "",
     tmvSettings: settingsFromTaskModel(tm),
   };
 }
@@ -124,7 +128,12 @@ function templatePayload(form) {
     evidenceModelId: form.evidenceModelId || undefined,
     taskModelId: form.taskModelId || undefined,
     presentationModelId: form.presentationModelId || undefined,
+    designPatternId: form.designPatternId || null,
   };
+}
+
+export function templatePatternHref(patternId) {
+  return `/admin?tab=designpatterns&focus=${encodeURIComponent(patternId)}`;
 }
 
 /** Presentational — Storybook / tests drive without API hooks. */
@@ -136,6 +145,8 @@ export function TemplateLibraryView({
   taskModels = [],
   presentationModels = [],
   taskModelVariables = [],
+  designPatterns = [],
+  focusId = null,
   onCreate,
   onUpdate,
   onConfirm,
@@ -149,6 +160,17 @@ export function TemplateLibraryView({
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [serverError, setServerError] = useState("");
+  const appliedFocus = useRef(null);
+
+  useEffect(() => {
+    if (!focusId || appliedFocus.current === focusId) return;
+    const row = templates.find((item) => item.id === focusId);
+    if (!row) return;
+    appliedFocus.current = focusId;
+    setEditingId(row.id);
+    setForm(formFromRow(row, taskModels));
+    setServerError("");
+  }, [focusId, templates, taskModels]);
 
   const editing = useMemo(
     () => (editingId ? templates.find((t) => t.id === editingId) : null),
@@ -363,6 +385,38 @@ export function TemplateLibraryView({
                 onChange={(e) => patchForm({ description: e.target.value })}
               />
             </label>
+
+            <p id="tpl-pattern-guidance" className="text-xs leading-5 text-slate-500">
+              A pattern offers structure to this template. It does not own it.
+              Leaving this blank is valid, and Confirm does not require a pattern.
+            </p>
+            <label className="block text-sm" htmlFor="tpl-design-pattern">
+              <span className="mb-1 block text-slate-700">Design pattern</span>
+              <select
+                id="tpl-design-pattern"
+                className={selectClass}
+                aria-describedby="tpl-pattern-guidance"
+                value={form.designPatternId}
+                onChange={(e) => patchForm({ designPatternId: e.target.value })}
+              >
+                <option value="">None</option>
+                {designPatterns.map((pattern) => (
+                  <option key={pattern.id} value={pattern.id}>
+                    {pattern.name || pattern.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {form.designPatternId ? (
+              <a
+                className="text-sm text-slate-800 underline"
+                href={templatePatternHref(form.designPatternId)}
+              >
+                Open{" "}
+                {designPatterns.find((pattern) => pattern.id === form.designPatternId)
+                  ?.name || "design pattern"}
+              </a>
+            ) : null}
 
             <label className="block text-sm">
               <span className="mb-1 block text-slate-700">Student Model</span>
@@ -620,7 +674,10 @@ export function TemplateLibraryView({
 }
 
 export default function TemplateBuilder() {
+  const [searchParams] = useSearchParams();
+  const focusId = searchParams.get("focus");
   const { data: templates = [], isLoading, error } = useTemplates();
+  const { data: designPatterns = [] } = useDesignPatterns();
   const { data: competencyModels = [] } = useCompetencyModels();
   const { data: competencies = [] } = useCompetencies();
   const { data: evidenceModels = [] } = useEvidenceModels();
@@ -654,6 +711,8 @@ export default function TemplateBuilder() {
       taskModels={taskModels}
       presentationModels={presentationModels}
       taskModelVariables={taskModelVariables}
+      designPatterns={designPatterns}
+      focusId={focusId}
       createPending={createMut.isPending}
       updatePending={updateMut.isPending}
       confirmPending={confirmMut.isPending}

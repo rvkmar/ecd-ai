@@ -72,5 +72,6 @@ arrays may be empty. A present library row must cite a real object (D134).
 ## Consequences
 
 - W28 can point at a confirmed pattern. It must not treat `confirmed` as permission to deliver a session.
+- D136: a template may cite `designPatternId`. The link is optional. Confirming a template does not require a pattern, and a pattern does not own the template. Many templates may cite one pattern. Deleting a pattern that is still cited is refused.
 - D134: present work-product / rubric / TMV rows cite collection ids. Observations and characteristic features stay labelled possibilities. Empty menus remain allowed.
 - Additional KSAs on the pattern are not the Task Model `fairnessRisks` cards. Those remain the task-form record until W30.

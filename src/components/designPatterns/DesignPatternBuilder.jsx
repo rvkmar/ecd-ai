@@ -3,7 +3,8 @@
 // D133–D134 / W27: narrative plus menus of possibilities.
 // Confirming still authorises no student delivery (ADR 0009).
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { useWorkProducts } from "@/api/queries/workProducts";
 import { useRubrics } from "@/api/queries/rubrics";
 import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
+import { useTemplates, useUpdateTemplate } from "@/api/queries/templates";
 import { designPatternReadiness } from "@/utils/designPatternReadiness";
 
 const inputClass =
@@ -342,8 +344,18 @@ function ObservationList({ values, onChange, options }) {
 }
 
 /** Presentational — tests drive this without API hooks. */
+export function patternTemplateHref(templateId) {
+  return `/admin?tab=templates&focus=${encodeURIComponent(templateId)}`;
+}
+
+export function templatesForPattern(templates = [], patternId) {
+  if (!patternId) return [];
+  return templates.filter((row) => row.designPatternId === patternId);
+}
+
 export function DesignPatternLibraryView({
   patterns = [],
+  templates = [],
   workProducts = [],
   rubrics = [],
   taskModelVariables = [],
@@ -352,6 +364,8 @@ export function DesignPatternLibraryView({
   onUpdate,
   onConfirm,
   onDelete,
+  onLinkTemplate,
+  focusId = null,
   createPending = false,
   updatePending = false,
   confirmPending = false,
@@ -360,6 +374,18 @@ export function DesignPatternLibraryView({
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [serverError, setServerError] = useState("");
+  const [linkTemplateId, setLinkTemplateId] = useState("");
+  const appliedFocus = useRef(null);
+
+  useEffect(() => {
+    if (!focusId || appliedFocus.current === focusId) return;
+    const row = patterns.find((item) => item.id === focusId);
+    if (!row) return;
+    appliedFocus.current = focusId;
+    setEditingId(row.id);
+    setForm(formFromRow(row));
+    setServerError("");
+  }, [focusId, patterns]);
 
   const editing = useMemo(
     () => (editingId ? patterns.find((row) => row.id === editingId) : null),
@@ -563,6 +589,15 @@ export function DesignPatternLibraryView({
               idKey="taskModelVariableId"
               emptyOption="Choose a task model variable"
             />
+            {editingId ? (
+              <PatternTemplateLinks
+                patternId={editingId}
+                templates={templates}
+                linkTemplateId={linkTemplateId}
+                onLinkTemplateId={setLinkTemplateId}
+                onLinkTemplate={onLinkTemplate}
+              />
+            ) : null}
             {serverError ? (
               <p className="text-sm text-red-600" role="alert">
                 {serverError}
@@ -610,6 +645,7 @@ export function DesignPatternLibraryView({
                   <div>
                     <p className="text-sm font-medium text-slate-900">{row.name}</p>
                     <p className="text-xs text-slate-500">{row.status}</p>
+                    <PatternTemplateList patternId={row.id} templates={templates} />
                   </div>
                   <div className="flex gap-2">
                     <Button type="button" variant="outline" onClick={() => startEdit(row)}>
@@ -641,8 +677,103 @@ export function DesignPatternLibraryView({
   );
 }
 
+function PatternTemplateList({ patternId, templates }) {
+  const linked = templatesForPattern(templates, patternId);
+  if (linked.length === 0) return null;
+  return (
+    <ul className="mt-1 space-y-1">
+      {linked.map((row) => (
+        <li key={row.id}>
+          <a className="text-xs text-slate-800 underline" href={patternTemplateHref(row.id)}>
+            {row.name || row.id}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PatternTemplateLinks({
+  patternId,
+  templates,
+  linkTemplateId,
+  onLinkTemplateId,
+  onLinkTemplate,
+}) {
+  const linked = templatesForPattern(templates, patternId);
+  const available = (templates || []).filter(
+    (row) => !row.designPatternId || row.designPatternId === patternId
+  );
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <h4 className="text-sm font-medium text-slate-800">Templates</h4>
+      <p className="mt-1 text-xs leading-5 text-slate-500">
+        This pattern offers structure to these templates. Linking does not
+        confirm them, and a template with no pattern stays valid.
+      </p>
+      {linked.length === 0 ? (
+        <p className="mt-2 text-xs text-slate-500">No templates linked yet.</p>
+      ) : (
+        <ul className="mt-2 space-y-1">
+          {linked.map((row) => (
+            <li key={row.id} className="flex items-center justify-between gap-2">
+              <a className="text-sm text-slate-800 underline" href={patternTemplateHref(row.id)}>
+                {row.name || row.id}
+              </a>
+              {onLinkTemplate ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onLinkTemplate({ id: row.id, designPatternId: null })}
+                >
+                  Unlink
+                </Button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+      {onLinkTemplate ? (
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <label className="block min-w-48 flex-1 text-sm" htmlFor="dp-link-template">
+            <span className="mb-1 block text-slate-700">Link a template</span>
+            <select
+              id="dp-link-template"
+              className={inputClass}
+              value={linkTemplateId}
+              onChange={(event) => onLinkTemplateId(event.target.value)}
+            >
+              <option value="">Select a template</option>
+              {available.map((row) => (
+                <option key={row.id} value={row.id}>
+                  {row.name || row.id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!linkTemplateId}
+            onClick={() => {
+              onLinkTemplate({ id: linkTemplateId, designPatternId: patternId });
+              onLinkTemplateId("");
+            }}
+          >
+            Link template
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function DesignPatternBuilder() {
+  const [searchParams] = useSearchParams();
+  const focusId = searchParams.get("focus");
   const { data: patterns = [], isLoading, error } = useDesignPatterns();
+  const { data: templates = [] } = useTemplates();
+  const updateTemplate = useUpdateTemplate();
   const { data: workProducts = [] } = useWorkProducts();
   const { data: rubrics = [] } = useRubrics();
   const { data: taskModelVariables = [] } = useTaskModelVariables();
@@ -670,6 +801,8 @@ export default function DesignPatternBuilder() {
   return (
     <DesignPatternLibraryView
       patterns={patterns}
+      templates={templates}
+      focusId={focusId}
       workProducts={workProducts}
       rubrics={rubrics}
       taskModelVariables={taskModelVariables}
@@ -712,6 +845,15 @@ export default function DesignPatternBuilder() {
           toast.success("Design pattern deleted");
         } catch (err) {
           toast.error(apiErrorMessage(err, "Delete failed"));
+          throw err;
+        }
+      }}
+      onLinkTemplate={async ({ id, designPatternId }) => {
+        try {
+          await updateTemplate.mutateAsync({ id, payload: { designPatternId } });
+          toast.success(designPatternId ? "Template linked" : "Template unlinked");
+        } catch (err) {
+          toast.error(apiErrorMessage(err, "Link failed"));
           throw err;
         }
       }}

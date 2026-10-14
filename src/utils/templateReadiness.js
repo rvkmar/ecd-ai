@@ -36,6 +36,14 @@ export function templateReadiness(record = {}, options = {}) {
     );
   }
 
+  if (
+    record.designPatternId != null &&
+    record.designPatternId !== "" &&
+    typeof record.designPatternId !== "string"
+  ) {
+    errors.push("designPatternId must be a string.");
+  }
+
   const requireAll = strict || record.status === "confirmed";
   for (const key of TEMPLATE_BINDING_KEYS) {
     const value = record[key];
