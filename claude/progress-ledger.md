@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D139** (W28). A child pattern cites its parent as kind-of or part-of and does not copy menus. A cycle, including a self-link, is refused. Live: **Explain a labelled diagram** cites draft **D139 parent**. Seed stayed disabled: no competency and no seeded models. Handoff: `claude/day139-pattern-relations.md`. |
+| Last completed unit | **D140** (W28). One pattern shows its immediate kind-of or part-of citations and the models from the existing descendants query. Divergence is the word “diverged” plus a dashed border. Live: **Explain a labelled diagram** ↔ **D139 parent**; no seeded models, so the diverged node is the component test. Settings upload created draft **D140 bulk check**. Handoff: `claude/day140-pattern-neighbourhood.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D140** (W28), alone. A bounded neighbourhood of one pattern. Mark diverged descendants without colour alone. Discharge the D135 Settings bulk click-through at that close. |
+| Next queued | **D141**, alone. `domainAnalyses` schema. It does not exist yet. Do not pair it with another schema unit. |
 
-| Block | **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
+| Block | **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ ~~W23: Changing a Presentation Model changes what an examinee sees, without touching item content (D115).~~ |
 
@@ -495,6 +495,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-14 | calibrate | — | D140 premise rewritten. React Flow already draws competency graphs. `GET /descendants` is the trace query. Work order: D140 alone, including the D135 Settings bulk click-through. No D141. |
 
+| 2026-10-14 | D140 / W28 | 2, alone | Depth-1 neighbourhood on the existing descendants query. Diverged is a word and a dashed border. Suite close re-run **2143 passed / 9 skipped**. Live kind-of neighbourhood; seeded node was the component test. Settings upload created **D140 bulk check**. No D141. |
+
 
 
 ## Compression debt
@@ -507,7 +509,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | D133 | Per-attribute PADI guidance, and the `:6060` walk | Narrative fields persist in tests. The exit check's guidance clause was not written. | W27 close (D135) | **closed** — guidance `249963a`; walk 2026-10-14 on `:6060` (`claude/day133-design-pattern-walk.md`). |
 
-| D135 | Live Settings bulk-upload of a pattern file | W27 gate was the wizard confirm; bulk is a 207 test | W28 close (D140) | open — D139 walked the relation form, not Settings |
+| D135 | Live Settings bulk-upload of a pattern file | W27 gate was the wizard confirm; bulk is a 207 test | W28 close (D140) | **closed** — 2026-10-14 Settings → Data upload of `d140-bulk-check.json` created 1 draft on `:6060` (`claude/day140-pattern-neighbourhood.md`). |
 
 | D50 | District/teacher browser pass skipped | Human logins | D71 | **closed** — district Operate + teacher Sessions walked 2026-09-14 |
 
@@ -783,7 +785,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). ~~D138 seed-snapshot divergence~~ closed (`claude/day138-seed-snapshot-divergence.md`). ~~D139 pattern relations~~ closed (`claude/day139-pattern-relations.md`). W28 neighbourhood graph (D140) still open.
+- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). ~~D138 seed-snapshot divergence~~ closed (`claude/day138-seed-snapshot-divergence.md`). ~~D139 pattern relations~~ closed (`claude/day139-pattern-relations.md`). ~~W28 neighbourhood graph (D140)~~ closed (`claude/day140-pattern-neighbourhood.md`). W29 domain analysis (D141) still open.
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 
