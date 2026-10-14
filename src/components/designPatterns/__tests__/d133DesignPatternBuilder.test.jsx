@@ -43,6 +43,11 @@ describe("D133 design pattern narrative", () => {
       rationale: "",
       focalKsas: [{ label: "Model-based explanation" }],
       additionalKsas: [],
+      potentialObservations: [],
+      potentialWorkProducts: [],
+      potentialRubrics: [],
+      characteristicFeatures: [],
+      variableFeatures: [],
     });
   });
 
@@ -80,6 +85,11 @@ describe("D133 design pattern narrative", () => {
       rationale: "",
       focalKsas: [],
       additionalKsas: [],
+      potentialObservations: [],
+      potentialWorkProducts: [],
+      potentialRubrics: [],
+      characteristicFeatures: [],
+      variableFeatures: [],
     });
     expect(onConfirm).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
@@ -134,6 +144,11 @@ describe("D133 design pattern narrative", () => {
         rationale: "The pattern separates explanation from recognition.",
         focalKsas: [{ label: "Model-based explanation" }],
         additionalKsas: [{ label: "Diagram conventions" }],
+        potentialObservations: [],
+        potentialWorkProducts: [],
+        potentialRubrics: [],
+        characteristicFeatures: [],
+        variableFeatures: [],
       },
     });
     expect(onConfirm).toHaveBeenCalledWith("dp1");

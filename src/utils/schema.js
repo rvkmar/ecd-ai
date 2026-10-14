@@ -879,9 +879,11 @@ export const schema = {
   // pattern. Not a field on the Competency Model: one pattern spans
   // Student, Evidence, and Task and can seed many models (W28).
   // status: draft | confirmed. No operational — a pattern authorises
-  // no delivery. Menu entries are { label }; reference ids are optional
-  // until D134. Named `designPatterns` so the singularizer yields
-  // `designPattern`.
+  // no delivery.
+  // D134: library menus store object ids (workProductId, rubricId,
+  // taskModelVariableId). Observations and characteristic features stay
+  // labelled possibilities — no new collections. Named `designPatterns`
+  // so the singularizer yields `designPattern`.
   // ------------------------------------------------------------------
   designPatterns: {
     id: 'string',
@@ -1158,13 +1160,46 @@ const DESIGN_PATTERN_MENU_KEYS = DESIGN_PATTERN_PADI_ATTRIBUTES
   .map((row) => row.field)
   .filter((field) => field !== "name" && field !== "summary" && field !== "rationale");
 
+const DESIGN_PATTERN_LABEL_ONLY_MENUS = Object.freeze([
+  "focalKsas",
+  "additionalKsas",
+  "characteristicFeatures",
+]);
+
+function idsInCollection(rows, id) {
+  if (!id) return false;
+  return (rows || []).some((row) => row && row.id === id);
+}
+
+function knownObservationIds(db) {
+  const ids = new Set();
+  for (const em of db?.evidenceModels || []) {
+    for (const observable of em.observables || []) {
+      if (observable?.id) ids.add(observable.id);
+    }
+    for (const proc of em.evaluationProcedures || []) {
+      if (proc?.observableId) ids.add(proc.observableId);
+    }
+  }
+  for (const tm of db?.taskModels || []) {
+    for (const observation of tm.expectedObservations || []) {
+      if (observation?.observationId) ids.add(observation.observationId);
+    }
+  }
+  return ids;
+}
+
 /**
- * Menu entries are { label } until D134 requires real object references.
- * A non-array is already caught by the generic shape check; this refuses
- * entries that are not labelled objects.
+ * Menu entries are labelled objects. Library menus (work products, rubrics,
+ * TMVs) must cite a real collection id when a row is present. Observations
+ * may copy an existing observable id; characteristic features stay labels.
+ * Empty menus are allowed. A non-array is already caught by the generic
+ * shape check.
  */
-export function designPatternMenuErrors(obj = {}) {
+export function designPatternMenuErrors(obj = {}, db = null) {
   const errors = [];
+  const observationIds = db ? knownObservationIds(db) : null;
+
   for (const key of DESIGN_PATTERN_MENU_KEYS) {
     const menu = obj[key];
     if (menu == null) continue;
@@ -1176,6 +1211,72 @@ export function designPatternMenuErrors(obj = {}) {
       }
       if (entry.label == null || String(entry.label).trim() === "") {
         errors.push(`${key}[${i}].label is required.`);
+      }
+
+      if (DESIGN_PATTERN_LABEL_ONLY_MENUS.includes(key)) return;
+
+      if (key === "potentialObservations") {
+        const observationId = entry.observationId && String(entry.observationId).trim();
+        if (observationId && observationIds && !observationIds.has(observationId)) {
+          errors.push(
+            `${key}[${i}].observationId '${observationId}' is not a known observable.`
+          );
+        }
+        return;
+      }
+
+      if (key === "potentialWorkProducts") {
+        const workProductId = entry.workProductId && String(entry.workProductId).trim();
+        if (!workProductId) {
+          errors.push(
+            `${key}[${i}].workProductId is required. A work-product type string is not a reference.`
+          );
+          return;
+        }
+        if (db) {
+          const wp = (db.workProducts || []).find((row) => row && row.id === workProductId);
+          if (!wp) {
+            errors.push(`${key}[${i}].workProductId '${workProductId}' was not found.`);
+            return;
+          }
+          if (
+            entry.workProductType != null &&
+            String(entry.workProductType).trim() !== "" &&
+            wp.type &&
+            String(entry.workProductType) !== String(wp.type)
+          ) {
+            errors.push(
+              `${key}[${i}].workProductType must match work product '${workProductId}'.`
+            );
+          }
+        }
+        return;
+      }
+
+      if (key === "potentialRubrics") {
+        const rubricId = entry.rubricId && String(entry.rubricId).trim();
+        if (!rubricId) {
+          errors.push(`${key}[${i}].rubricId is required.`);
+          return;
+        }
+        if (db && !idsInCollection(db.rubrics, rubricId)) {
+          errors.push(`${key}[${i}].rubricId '${rubricId}' was not found.`);
+        }
+        return;
+      }
+
+      if (key === "variableFeatures") {
+        const taskModelVariableId =
+          entry.taskModelVariableId && String(entry.taskModelVariableId).trim();
+        if (!taskModelVariableId) {
+          errors.push(`${key}[${i}].taskModelVariableId is required.`);
+          return;
+        }
+        if (db && !idsInCollection(db.taskModelVariables, taskModelVariableId)) {
+          errors.push(
+            `${key}[${i}].taskModelVariableId '${taskModelVariableId}' was not found.`
+          );
+        }
       }
     });
   }
@@ -6042,7 +6143,7 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       }
     }
 
-    errors.push(...designPatternMenuErrors(obj));
+    errors.push(...designPatternMenuErrors(obj, db));
   }
 
   /* =====================================================

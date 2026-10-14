@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D133** (narrative + PADI guidance + `:6060` walk). Five PADI sentences visible on Admin → Models → Design Patterns as `admin1`. Walk: `claude/day133-design-pattern-walk.md`. Product still `249963a` / close `59e250f`. |
+| Last completed unit | **D134** menus of possibilities on Design Patterns. Library rows cite `workProductId` / `rubricId` / `taskModelVariableId`. Observations and characteristic features stay labelled. Suite **2123 passed / 9 skipped**. Handoff: `claude/day134-design-pattern-menus.md`. Live `:6060` still the D133 bundle until nginx rebuild. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D134**. Do not start D135 until a pattern can be confirmed with real menu references. Do not rebuild D132 routes. |
+| Next queued | **D135** (JSON import/export + W27 gate). Rebuild nginx before the D134 `:6060` walk. Do not start W28. Do not rebuild D132 routes. |
 
 | Block | **W26 closed** 2026-10-13 (D126–D130). Gate held: template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -481,6 +481,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-14 | D133 walk | 1 | Admin Models Design Patterns on `:6060` as `admin1`. All five PADI sentences present. Empty form: Create draft and Confirm disabled. Tab click intercepted by Student Model panel; opened via `?tab=designpatterns`. Empty-root login state did not recur. No D134. |
 
+| 2026-10-14 | D134 | 2, alone | Menus of possibilities. WP/rubric/TMV rows require collection ids; observations optional existing observable; characteristic features labels. Empty menus still confirm. Suite **2123 passed / 9 skipped**; build green. No D135. No W28. |
+
 
 
 ## Compression debt
@@ -681,6 +683,8 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 | D133 remainder | Rebuild the wizard so each attribute explains itself | The form already saves those five fields. What was missing was the PADI role of each one | Add that guidance on the existing screen. Do not rebuild the form. Do not open the D134 menus. The `:6060` walk waits until nginx is serving this screen. |
 
+| D134 | Every menu is a real object collection | WP/rubric/TMV libraries exist. Potential Observations and Characteristic Features have no collection. Confirm already allowed empty `{label}` menus | Library menus cite ids (`workProductId`, not a type string). Observations and characteristic features stay labelled possibilities. Copy: possibilities, not commitments. No new collections. No W28. |
+
 
 
 ## Carried-forward gaps
@@ -753,7 +757,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- Design Patterns (W27 / G9) — collection and reduced lifecycle shipped D131/D132. Narrative + PADI guidance + `:6060` walk closed D133 (`249963a`; walk `claude/day133-design-pattern-walk.md`). Real menu references and import still open (D134–D135).
+- Design Patterns (W27 / G9) — collection D131/D132; narrative D133; menus of possibilities D134. Import/export and W27 gate still open (D135). Live nginx still serves the D133 chunk until rebuild.
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 

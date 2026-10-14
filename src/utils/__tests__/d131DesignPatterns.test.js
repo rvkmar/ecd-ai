@@ -90,4 +90,75 @@ describe("D131 designPatterns schema", () => {
     expect(result.errors.some((e) => /focalKsas\[0\]/.test(e))).toBe(true);
     expect(result.errors.some((e) => /potentialWorkProducts\[0\].label/.test(e))).toBe(true);
   });
+
+  it("refuses a work-product type string in place of a workProductId", () => {
+    const result = validateEntity(
+      "designPatterns",
+      {
+        name: "Typed",
+        status: "draft",
+        potentialWorkProducts: [{ label: "Essay", workProductType: "essay" }],
+      },
+      { workProducts: [{ id: "wp1", name: "Essay", type: "essay" }] }
+    );
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => /workProductId is required/.test(e))).toBe(true);
+  });
+
+  it("lets confirm keep empty menus and accepts library ids when present", () => {
+    const empty = validateEntity(
+      "designPatterns",
+      {
+        name: "Bare",
+        summary: "Family of explanation tasks.",
+        rationale: "Explanation is worth separating from recognition.",
+        status: "confirmed",
+      },
+      { workProducts: [], rubrics: [], taskModelVariables: [] },
+      { strict: true }
+    );
+    expect(empty.valid).toBe(true);
+
+    const db = {
+      workProducts: [{ id: "wp1", name: "Written explanation", type: "essay" }],
+      rubrics: [{ id: "rb1", name: "Explanation rubric" }],
+      taskModelVariables: [{ id: "tmv1", name: "Diagram complexity" }],
+      evidenceModels: [
+        { id: "em1", name: "Explain", observables: [{ id: "obs-explain", statement: "Names the claim" }] },
+      ],
+    };
+    const filled = validateEntity(
+      "designPatterns",
+      {
+        name: "Filled",
+        summary: "Family of explanation tasks.",
+        rationale: "Explanation is worth separating from recognition.",
+        status: "confirmed",
+        potentialObservations: [
+          { label: "Names the claim", observationId: "obs-explain" },
+        ],
+        potentialWorkProducts: [
+          { label: "Written explanation", workProductId: "wp1", workProductType: "essay" },
+        ],
+        potentialRubrics: [{ label: "Explanation rubric", rubricId: "rb1" }],
+        characteristicFeatures: [{ label: "Uses a labelled diagram" }],
+        variableFeatures: [{ label: "Diagram complexity", taskModelVariableId: "tmv1" }],
+      },
+      db,
+      { strict: true }
+    );
+    expect(filled.valid).toBe(true);
+
+    const unknown = validateEntity(
+      "designPatterns",
+      {
+        name: "Unknown",
+        status: "draft",
+        potentialWorkProducts: [{ label: "Missing", workProductId: "wp-missing" }],
+      },
+      db
+    );
+    expect(unknown.valid).toBe(false);
+    expect(unknown.errors.some((e) => /wp-missing/.test(e))).toBe(true);
+  });
 });

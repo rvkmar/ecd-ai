@@ -10,6 +10,11 @@
 //
 // A confirmed pattern may be referenced by later seeding. It authorises
 // no student delivery (ADR 0009).
+//
+// Menu id shape is the same function validateEntity uses, without a db
+// snapshot — missing ids fail here; unknown ids fail on the server.
+
+import { designPatternMenuErrors } from "./schema.js";
 
 export const DESIGN_PATTERN_STATUS_MIRROR = ["draft", "confirmed"];
 
@@ -58,6 +63,8 @@ export function designPatternReadiness(record = {}, options = {}) {
       errors.push(`${key} must be an array.`);
     }
   }
+
+  errors.push(...designPatternMenuErrors(record, null));
 
   return { ready: errors.length === 0, errors };
 }

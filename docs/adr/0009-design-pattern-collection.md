@@ -43,10 +43,12 @@ on a Competency Model.
 | Characteristic Features | `characteristicFeatures[]` |
 | Variable Features | `variableFeatures[]` |
 
-Each menu entry is `{ label }`. Optional reference ids (`workProductType`,
-`rubricId`, `taskModelVariableId`) may be stored. Requiring those references,
-and showing them as possibilities rather than commitments, is D134. This ADR
-does not seed models (W28).
+Each menu entry is `{ label }`. D134 requires a present library row to cite
+a real object: `workProductId` (not a free `workProductType` string),
+`rubricId`, `taskModelVariableId`. Potential Observations may copy an
+existing observable id; Characteristic Features stay labelled possibilities.
+Empty menus remain allowed. Rows are possibilities, not commitments. This
+ADR does not seed models (W28).
 
 **Rationale.** An empty Rationale is refused when the pattern is confirmed
 or validated strictly. A draft may omit it so a later wizard step can
@@ -63,12 +65,12 @@ on the same confirm/strict path. Title (`name`) is required on every write.
 | `confirmed` | The argument may be referenced by later seeding (W28). It still authorises no student delivery. `confirmed` is not `operational`. |
 
 `operational` is an invalid status. Summary is required to confirm. Menu
-arrays may be empty until the wizard (D133–D134).
+arrays may be empty. A present library row must cite a real object (D134).
 
 **Access.** Admin authors. District may read. No wizard in D131.
 
 ## Consequences
 
 - W28 can point at a confirmed pattern. It must not treat `confirmed` as permission to deliver a session.
-- D134 tightens menu entries from labels to references. The array-of-objects shape is already in place.
+- D134: present work-product / rubric / TMV rows cite collection ids. Observations and characteristic features stay labelled possibilities. Empty menus remain allowed.
 - Additional KSAs on the pattern are not the Task Model `fairnessRisks` cards. Those remain the task-form record until W30.

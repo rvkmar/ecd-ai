@@ -1,9 +1,7 @@
 // src/components/designPatterns/DesignPatternBuilder.jsx
 //
-// D133 / W27: narrative half of the design-pattern wizard.
-// Title, Summary, Rationale, Focal KSAs, Additional KSAs.
-// Potential observations, work products, rubrics, and feature menus
-// are D134. Confirming still authorises no student delivery (ADR 0009).
+// D133–D134 / W27: narrative plus menus of possibilities.
+// Confirming still authorises no student delivery (ADR 0009).
 
 import React, { useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -17,6 +15,10 @@ import {
   useConfirmDesignPattern,
   useDeleteDesignPattern,
 } from "@/api/queries/designPatterns";
+import { useWorkProducts } from "@/api/queries/workProducts";
+import { useRubrics } from "@/api/queries/rubrics";
+import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
+import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { designPatternReadiness } from "@/utils/designPatternReadiness";
 
 const inputClass =
@@ -40,6 +42,36 @@ export const DESIGN_PATTERN_NARRATIVE_GUIDANCE = Object.freeze({
     "Other knowledge, skills, or abilities a task from this pattern may also demand, which are not the target. They are construct-irrelevant demands the designer is choosing to notice. They are not the Task Model fairness notes.",
 });
 
+export const DESIGN_PATTERN_MENU_GUIDANCE = Object.freeze({
+  framing:
+    "These lists are possibilities a later designer chooses from. Listing several does not commit a seeded Evidence Model or Task Model to using all of them.",
+  potentialObservations:
+    "Kinds of evidence this pattern could produce. They are options, not a promise that every seeded model will use every one.",
+  potentialWorkProducts:
+    "Work products from the library that a task from this pattern might produce. Choose the object, not a type name.",
+  potentialRubrics:
+    "Rubrics from the library that could score those work products. Choosing them here does not attach them to an Evidence Model.",
+  characteristicFeatures:
+    "Features that stay the same across tasks from this pattern. They describe the family; they are not a Task Model yet.",
+  variableFeatures:
+    "Task Model Variables that can change from one task to another in this family. They are variation, not a single spec.",
+});
+
+export function observationChoicesFromModels(evidenceModels = []) {
+  const choices = [];
+  for (const model of evidenceModels) {
+    for (const observable of model.observables || []) {
+      if (!observable?.id) continue;
+      choices.push({
+        id: observable.id,
+        name: observable.statement || observable.id,
+        source: model.name || model.id,
+      });
+    }
+  }
+  return choices;
+}
+
 const hintClass = "text-xs leading-5 text-slate-500";
 
 function labelledEntries(entries) {
@@ -48,12 +80,42 @@ function labelledEntries(entries) {
     .filter((entry) => entry.label);
 }
 
+function observationEntries(entries) {
+  return (entries || [])
+    .map((entry) => {
+      const label = String(entry?.label || "").trim();
+      const observationId = String(entry?.observationId || "").trim();
+      if (!label) return null;
+      return observationId ? { label, observationId } : { label };
+    })
+    .filter(Boolean);
+}
+
+function libraryEntries(entries, idKey) {
+  return (entries || [])
+    .map((entry) => {
+      const id = String(entry?.[idKey] || "").trim();
+      if (!id) return null;
+      const row = { label: String(entry?.label || "").trim() || id, [idKey]: id };
+      if (idKey === "workProductId" && entry?.workProductType) {
+        row.workProductType = entry.workProductType;
+      }
+      return row;
+    })
+    .filter(Boolean);
+}
+
 const emptyForm = () => ({
   name: "",
   summary: "",
   rationale: "",
   focalKsas: [],
   additionalKsas: [],
+  potentialObservations: [],
+  potentialWorkProducts: [],
+  potentialRubrics: [],
+  characteristicFeatures: [],
+  variableFeatures: [],
 });
 
 function formFromRow(row) {
@@ -65,6 +127,26 @@ function formFromRow(row) {
     additionalKsas: (row.additionalKsas || []).map((entry) => ({
       label: entry.label || "",
     })),
+    potentialObservations: (row.potentialObservations || []).map((entry) => ({
+      label: entry.label || "",
+      observationId: entry.observationId || "",
+    })),
+    potentialWorkProducts: (row.potentialWorkProducts || []).map((entry) => ({
+      label: entry.label || "",
+      workProductId: entry.workProductId || "",
+      workProductType: entry.workProductType || "",
+    })),
+    potentialRubrics: (row.potentialRubrics || []).map((entry) => ({
+      label: entry.label || "",
+      rubricId: entry.rubricId || "",
+    })),
+    characteristicFeatures: (row.characteristicFeatures || []).map((entry) => ({
+      label: entry.label || "",
+    })),
+    variableFeatures: (row.variableFeatures || []).map((entry) => ({
+      label: entry.label || "",
+      taskModelVariableId: entry.taskModelVariableId || "",
+    })),
   };
 }
 
@@ -75,6 +157,11 @@ export function designPatternPayload(form) {
     rationale: form.rationale.trim(),
     focalKsas: labelledEntries(form.focalKsas),
     additionalKsas: labelledEntries(form.additionalKsas),
+    potentialObservations: observationEntries(form.potentialObservations),
+    potentialWorkProducts: libraryEntries(form.potentialWorkProducts, "workProductId"),
+    potentialRubrics: libraryEntries(form.potentialRubrics, "rubricId"),
+    characteristicFeatures: labelledEntries(form.characteristicFeatures),
+    variableFeatures: libraryEntries(form.variableFeatures, "taskModelVariableId"),
   };
 }
 
@@ -118,9 +205,149 @@ function LabelList({ legend, hint, hintId, values, onChange }) {
   );
 }
 
+function optionLabel(option) {
+  return option.source ? `${option.name} (${option.source})` : option.name;
+}
+
+function RefList({
+  legend,
+  hint,
+  hintId,
+  values,
+  onChange,
+  options,
+  idKey,
+  emptyOption,
+}) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm text-slate-700">{legend}</legend>
+      <p id={hintId} className={hintClass}>
+        {hint}
+      </p>
+      {values.map((entry, index) => (
+        <div key={`${legend}-${index}`} className="flex gap-2">
+          <select
+            className={inputClass}
+            aria-label={`${legend} ${index + 1}`}
+            aria-describedby={hintId}
+            value={entry[idKey] || ""}
+            onChange={(event) => {
+              const id = event.target.value;
+              const option = options.find((row) => row.id === id);
+              const next = values.slice();
+              next[index] = {
+                ...entry,
+                [idKey]: id,
+                label: option ? option.name : entry.label,
+                ...(idKey === "workProductId"
+                  ? { workProductType: option?.type || "" }
+                  : {}),
+              };
+              onChange(next);
+            }}
+          >
+            <option value="">{emptyOption}</option>
+            {options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {optionLabel(option)}
+              </option>
+            ))}
+          </select>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onChange(values.filter((_, i) => i !== index))}
+          >
+            Remove
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => onChange([...values, { label: "", [idKey]: "" }])}
+      >
+        Add {legend}
+      </Button>
+    </fieldset>
+  );
+}
+
+function ObservationList({ values, onChange, options }) {
+  const hintId = "dp-observation-guidance";
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm text-slate-700">Potential Observations</legend>
+      <p id={hintId} className={hintClass}>
+        {DESIGN_PATTERN_MENU_GUIDANCE.potentialObservations}
+      </p>
+      {values.map((entry, index) => (
+        <div key={`obs-${index}`} className="grid gap-2 sm:grid-cols-2">
+          <input
+            className={inputClass}
+            aria-label={`Potential Observations label ${index + 1}`}
+            aria-describedby={hintId}
+            placeholder="Label"
+            value={entry.label}
+            onChange={(event) => {
+              const next = values.slice();
+              next[index] = { ...entry, label: event.target.value };
+              onChange(next);
+            }}
+          />
+          <div className="flex gap-2">
+            <select
+              className={inputClass}
+              aria-label={`Potential Observations ${index + 1}`}
+              value={entry.observationId || ""}
+              onChange={(event) => {
+                const observationId = event.target.value;
+                const option = options.find((row) => row.id === observationId);
+                const next = values.slice();
+                next[index] = {
+                  ...entry,
+                  observationId,
+                  label: entry.label || option?.name || "",
+                };
+                onChange(next);
+              }}
+            >
+              <option value="">Optional existing observable</option>
+              {options.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {optionLabel(option)}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onChange(values.filter((_, i) => i !== index))}
+            >
+              Remove
+            </Button>
+          </div>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => onChange([...values, { label: "", observationId: "" }])}
+      >
+        Add Potential Observations
+      </Button>
+    </fieldset>
+  );
+}
+
 /** Presentational — tests drive this without API hooks. */
 export function DesignPatternLibraryView({
   patterns = [],
+  workProducts = [],
+  rubrics = [],
+  taskModelVariables = [],
+  observationChoices = [],
   onCreate,
   onUpdate,
   onConfirm,
@@ -209,8 +436,10 @@ export function DesignPatternLibraryView({
         <p className="mt-1 text-sm text-slate-600">
           Write the argument: title, summary, rationale, and the KSAs it
           centres. A confirmed pattern may be referenced by later seeding.
-          It does not authorise a student session. Observation, work-product,
-          rubric, and feature menus come next.
+          It does not authorise a student session.
+        </p>
+        <p className="mt-2 text-sm text-slate-600">
+          {DESIGN_PATTERN_MENU_GUIDANCE.framing}
         </p>
       </header>
 
@@ -275,6 +504,64 @@ export function DesignPatternLibraryView({
               hintId="dp-additional-guidance"
               values={form.additionalKsas}
               onChange={(additionalKsas) => patchForm({ additionalKsas })}
+            />
+            <ObservationList
+              values={form.potentialObservations}
+              onChange={(potentialObservations) =>
+                patchForm({ potentialObservations })
+              }
+              options={observationChoices}
+            />
+            <RefList
+              legend="Potential Work Products"
+              hint={DESIGN_PATTERN_MENU_GUIDANCE.potentialWorkProducts}
+              hintId="dp-wp-guidance"
+              values={form.potentialWorkProducts}
+              onChange={(potentialWorkProducts) =>
+                patchForm({ potentialWorkProducts })
+              }
+              options={workProducts.map((row) => ({
+                id: row.id,
+                name: row.name || row.id,
+                type: row.type,
+              }))}
+              idKey="workProductId"
+              emptyOption="Choose a work product"
+            />
+            <RefList
+              legend="Potential Rubrics"
+              hint={DESIGN_PATTERN_MENU_GUIDANCE.potentialRubrics}
+              hintId="dp-rubric-guidance"
+              values={form.potentialRubrics}
+              onChange={(potentialRubrics) => patchForm({ potentialRubrics })}
+              options={rubrics.map((row) => ({
+                id: row.id,
+                name: row.name || row.id,
+              }))}
+              idKey="rubricId"
+              emptyOption="Choose a rubric"
+            />
+            <LabelList
+              legend="Characteristic Features"
+              hint={DESIGN_PATTERN_MENU_GUIDANCE.characteristicFeatures}
+              hintId="dp-cf-guidance"
+              values={form.characteristicFeatures}
+              onChange={(characteristicFeatures) =>
+                patchForm({ characteristicFeatures })
+              }
+            />
+            <RefList
+              legend="Variable Features"
+              hint={DESIGN_PATTERN_MENU_GUIDANCE.variableFeatures}
+              hintId="dp-vf-guidance"
+              values={form.variableFeatures}
+              onChange={(variableFeatures) => patchForm({ variableFeatures })}
+              options={taskModelVariables.map((row) => ({
+                id: row.id,
+                name: row.name || row.id,
+              }))}
+              idKey="taskModelVariableId"
+              emptyOption="Choose a task model variable"
             />
             {serverError ? (
               <p className="text-sm text-red-600" role="alert">
@@ -356,6 +643,14 @@ export function DesignPatternLibraryView({
 
 export default function DesignPatternBuilder() {
   const { data: patterns = [], isLoading, error } = useDesignPatterns();
+  const { data: workProducts = [] } = useWorkProducts();
+  const { data: rubrics = [] } = useRubrics();
+  const { data: taskModelVariables = [] } = useTaskModelVariables();
+  const { data: evidenceModels = [] } = useEvidenceModels();
+  const observationChoices = useMemo(
+    () => observationChoicesFromModels(evidenceModels),
+    [evidenceModels]
+  );
   const createMut = useCreateDesignPattern();
   const updateMut = useUpdateDesignPattern();
   const confirmMut = useConfirmDesignPattern();
@@ -375,6 +670,10 @@ export default function DesignPatternBuilder() {
   return (
     <DesignPatternLibraryView
       patterns={patterns}
+      workProducts={workProducts}
+      rubrics={rubrics}
+      taskModelVariables={taskModelVariables}
+      observationChoices={observationChoices}
       createPending={createMut.isPending}
       updatePending={updateMut.isPending}
       confirmPending={confirmMut.isPending}

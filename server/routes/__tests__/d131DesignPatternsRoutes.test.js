@@ -33,7 +33,6 @@ const complete = {
   summary: "Students explain a labelled scientific diagram.",
   rationale: "The pattern exists to separate explanation from recognition.",
   focalKsas: [{ label: "Model-based explanation" }],
-  potentialWorkProducts: [{ label: "Written explanation", workProductType: "essay" }],
 };
 
 describe("D131 /api/designPatterns", () => {
@@ -88,5 +87,35 @@ describe("D131 /api/designPatterns", () => {
       .set("Authorization", `Bearer ${tokenFor("district")}`)
       .send({ name: "Nope", rationale: "District does not author patterns." });
     expect(write.status).toBe(403);
+  });
+
+  it("confirms a pattern whose menus cite library objects", async () => {
+    const expressApp = await app();
+    dbState.current = {
+      designPatterns: [],
+      workProducts: [{ id: "wp1", name: "Written explanation", type: "essay" }],
+      rubrics: [{ id: "rb1", name: "Explanation rubric" }],
+      taskModelVariables: [{ id: "tmv1", name: "Diagram complexity" }],
+    };
+    const created = await request(expressApp)
+      .post("/api/designPatterns/")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send({
+        ...complete,
+        potentialWorkProducts: [
+          { label: "Written explanation", workProductId: "wp1", workProductType: "essay" },
+        ],
+        potentialRubrics: [{ label: "Explanation rubric", rubricId: "rb1" }],
+        characteristicFeatures: [{ label: "Uses a labelled diagram" }],
+        variableFeatures: [{ label: "Diagram complexity", taskModelVariableId: "tmv1" }],
+      });
+    expect(created.status).toBe(201);
+
+    const confirmed = await request(expressApp)
+      .post(`/api/designPatterns/${created.body.id}/confirm`)
+      .set("Authorization", `Bearer ${tokenFor("admin")}`);
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.body.potentialWorkProducts[0].workProductId).toBe("wp1");
+    expect(confirmed.body.status).toBe("confirmed");
   });
 });
