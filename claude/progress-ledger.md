@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D135 / W27**. Pattern bulk import/export + live confirm of **Explain a labelled diagram** on `:6060`. Handoff: `claude/day135-pattern-import-w27.md`. |
+| Last completed unit | **D136** (W28). Optional pattern ↔ template link. Live draft **D136 link check** cites **Explain a labelled diagram**. Handoff: `claude/day136-pattern-template-link.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D136** (W28). Bidirectional pattern ↔ template link. The seeder is D137. Do not treat confirmed as delivery. Do not rebuild D132 routes. |
+| Next queued | **D137** (W28), alone. Seed draft Evidence and Task Models from one confirmed pattern's own menus. Do not inherit. Do not treat confirmed as delivery. |
 
 | Block | **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -485,6 +485,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-14 | D135 / W27 | 2, alone | Bulk on existing route; download/upload cards; sample placeholders. Suite **2124 passed / 9 skipped**. nginx+node rebuilt. Live confirm of Explain a labelled diagram (empty library menus). No W28. |
 
+| 2026-10-14 | D136 | 2, alone | Optional `designPatternId` on templates. Pattern lists citers. Unpatterned confirm is a route result; live mongo has no Student Model, so a four-binding confirm was not clicked. Suite close re-run **2131 passed / 9 skipped**. No D137. |
+
 
 
 ## Compression debt
@@ -497,7 +499,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | D133 | Per-attribute PADI guidance, and the `:6060` walk | Narrative fields persist in tests. The exit check's guidance clause was not written. | W27 close (D135) | **closed** — guidance `249963a`; walk 2026-10-14 on `:6060` (`claude/day133-design-pattern-walk.md`). |
 
-| D135 | Live Settings bulk-upload of a pattern file | W27 gate was the wizard confirm; bulk is a 207 test | W28 start | open — card exists, not click-through on `:6060` |
+| D135 | Live Settings bulk-upload of a pattern file | W27 gate was the wizard confirm; bulk is a 207 test | W28 close (D140) | open — missed the W28-start date; D136 walked the link, not Settings |
 
 | D50 | District/teacher browser pass skipped | Human logins | D71 | **closed** — district Operate + teacher Sessions walked 2026-09-14 |
 
@@ -767,7 +769,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). W28 seeding still open.
+- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). W28 seeding (D137) still open.
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 
