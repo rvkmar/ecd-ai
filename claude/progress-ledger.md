@@ -493,6 +493,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-14 | D139 | 2, alone | Child cites parent. Menus are not copied. Cycle including a self-link is refused. Suite **2141 passed / 9 skipped**. Live kind-of link plus a label. Seed still disabled: no competency. No D140. |
 
+| 2026-10-14 | calibrate | — | D140 premise rewritten. React Flow already draws competency graphs. `GET /descendants` is the trace query. Work order: D140 alone, including the D135 Settings bulk click-through. No D141. |
+
 
 
 ## Compression debt
@@ -707,7 +709,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 | D139 | A child pattern inherits its parent's Potential Observations, and editing the parent changes the child; that choice must precede D137 | D137 already seeds from the pattern's own menus. `designPatterns` has no relation fields. Competency `relationships` already store `{ type, targetCompetencyId }` and refuse a part-of cycle. Rubric exemplars and `curricularPolicies` are other collections | Add `relationships: [{ type: "kind-of" \| "part-of", targetPatternId }]`. A child references its parent. It does not copy menus, and a parent edit does not change the child or any model D137 already seeded. Refuse a cycle, including a self-link, at write time. Optional `references: [{ label, url }]` are labels, not curricular policies and not rubric exemplars. Seeding still reads only the pattern's own menus. No graph. |
 
-| D140 | The first graph-shaped surface in the app, showing every pattern | React Flow already draws competency relationships (`RelationshipGraphEditor`, `CompetencyGraphVisualizer`). Descendants and divergence do not exist until D138; relations do not exist until D139 | After D138 and D139, anchor on one pattern and show a bounded neighbourhood. Mark diverged descendants without relying on colour alone. Discharge the D135 Settings bulk click-through at this close. |
+| D140 | The first graph-shaped surface in the app, showing every pattern | React Flow already draws competency relationships (`RelationshipGraphEditor`, `CompetencyGraphVisualizer`). Design patterns have no graph. `GET /:id/descendants` already lists seeded models and names snapshot drift. `relationships` are kind-of or part-of citations and do not copy menus. This mongo has two patterns, no competency, and no seeded models | Anchor on one pattern. Show its relations and its seeded models to a bounded depth, reading the existing descendants query. A diverged descendant is identifiable without colour. Do not draw every pattern. The Settings → Data design-pattern card already exists; walk that click-through at this close. |
 
 
 
