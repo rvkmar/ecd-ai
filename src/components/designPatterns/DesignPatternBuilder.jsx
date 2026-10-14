@@ -27,6 +27,7 @@ import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { useTemplates, useUpdateTemplate } from "@/api/queries/templates";
 import { designPatternReadiness } from "@/utils/designPatternReadiness";
 import { DESIGN_PATTERN_PADI_ATTRIBUTES } from "@/utils/schema";
+import PatternNeighbourhood from "./PatternNeighbourhood.jsx";
 
 const SEED_FIELDS = [
   "potentialObservations",
@@ -958,6 +959,19 @@ export function DesignPatternLibraryView({
 
         <section className="rounded-lg border border-slate-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-medium text-slate-800">Library</h3>
+          {editingId ? (
+            <PatternNeighbourhood
+              patternId={editingId}
+              patterns={patterns}
+              report={descendantReport}
+              onLoad={onLoadDescendants}
+              refreshKey={descendantTick}
+              onOpen={(id) => {
+                const row = patterns.find((item) => item.id === id);
+                if (row) startEdit(row);
+              }}
+            />
+          ) : null}
           {patterns.length === 0 ? (
             <p className="text-sm text-slate-500">No design patterns yet.</p>
           ) : (
