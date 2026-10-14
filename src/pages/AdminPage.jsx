@@ -60,6 +60,9 @@ const RubricBuilder = lazyPanel(() =>
 const TemplateBuilder = lazyPanel(() =>
   import("@/components/templates/TemplateBuilder")
 );
+const DesignPatternBuilder = lazyPanel(() =>
+  import("@/components/designPatterns/DesignPatternBuilder")
+);
 const HumanRatingQueue = lazyPanel(() =>
   import("@/components/rating/HumanRatingQueue")
 );
@@ -111,6 +114,11 @@ export default function AdminPage() {
               id: "templates",
               label: "Templates",
               content: <TemplateBuilder />,
+            },
+            {
+              id: "designpatterns",
+              label: "Design Patterns",
+              content: <DesignPatternBuilder />,
             },
             { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
             { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },
