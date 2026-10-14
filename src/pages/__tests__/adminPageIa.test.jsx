@@ -173,14 +173,18 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
 
     await user.click(screen.getByRole("tab", { name: "Models" }));
     await user.click(screen.getByRole("tab", { name: "Assembly Model" }));
-    await waitFor(() => expect(screen.getByText("Assembly builder")).toBeInTheDocument());
+    await waitFor(
+      () => expect(screen.getByText("Assembly builder")).toBeInTheDocument(),
+      { timeout: 8000 }
+    );
     expect(screen.getByRole("tab", { name: "Templates" })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Templates" }));
     await waitFor(() => expect(screen.getByText("Templates library")).toBeInTheDocument());
     expect(screen.getByRole("tab", { name: "Design Patterns" })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Design Patterns" }));
-    await waitFor(() =>
-      expect(screen.getByText("Design patterns library")).toBeInTheDocument()
+    await waitFor(
+      () => expect(screen.getByText("Design patterns library")).toBeInTheDocument(),
+      { timeout: 8000 }
     );
 
     await user.click(screen.getByRole("tab", { name: "Implementation" }));

@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D133** — Design Pattern narrative wizard (title, summary, rationale, focal and additional KSAs). Handoff: `claude/day133-design-pattern-narrative.md`. |
+| Last completed unit | **D132** absorbed into **D131** (`a7ff472`). **D133 is partial**: narrative screen shipped (`f23be77`); PADI per-field guidance and the `:6060` walk remain. Handoff: `claude/day133-session-close.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D134** — design-pattern menus must reference real work products, rubrics, and task-model variables. Do not start D135 until that path can confirm a pattern. |
+| Next queued | **D133 remainder** — per-attribute PADI guidance, then a `:6060` walk. Then **D134** (menus reference real objects). Do not start D135 until that path can confirm a pattern. |
 
 | Block | **W26 closed** 2026-10-13 (D126–D130). Gate held: template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -473,6 +473,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-14 | D133 | 1, alone | Narrative wizard on Admin → Models. Draft from a title; confirm needs summary and rationale; focal and additional KSAs are labelled rows. Suite **2116 passed / 9 skipped**; build green. No browser (dev server down). No D134. Next: D134. |
 
+| 2026-10-14 | close | 2 + 1 | D131/D132 done (routes absorbed; reduced lifecycle). D133 **partial**: screen persists in tests; PADI guidance and `:6060` walk open. Close re-run **2116 passed / 9 skipped** after two load timeouts were widened; build green. Debt discharged by W27 close. Next: D133 guidance, then D134. |
+
 
 
 ## Compression debt
@@ -482,6 +484,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Unit | What was compressed | Why | Discharge by | Status |
 
 |---|---|---|---|---|
+
+| D133 | Per-attribute PADI guidance, and the `:6060` walk | Narrative fields persist in tests. The exit check's guidance clause was not written. | W27 close (D135) | **open** |
 
 | D50 | District/teacher browser pass skipped | Human logins | D71 | **closed** — district Operate + teacher Sessions walked 2026-09-14 |
 
@@ -741,7 +745,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- Design Patterns (W27 / G9) — collection shipped D131; narrative wizard shipped D133 (`claude/day133-design-pattern-narrative.md`). Real menu references and import still open (D134–D135).
+- Design Patterns (W27 / G9) — collection and reduced lifecycle shipped D131/D132. Narrative screen shipped D133; PADI per-field guidance and the `:6060` walk are still open (`claude/day133-session-close.md`). Real menu references and import still open (D134–D135).
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 

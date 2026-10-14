@@ -26,7 +26,7 @@ describe("D133 design pattern narrative", () => {
   });
 
   it("creates a draft without a rationale and refuses confirm until the argument is complete", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onCreate = vi.fn().mockResolvedValue({
       id: "dp1",
       name: "Explain a diagram",
@@ -66,7 +66,7 @@ describe("D133 design pattern narrative", () => {
   });
 
   it("confirms once summary, rationale, and a focal KSA are saved", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onUpdate = vi.fn().mockResolvedValue({});
     const onConfirm = vi.fn().mockResolvedValue({});
 
@@ -119,7 +119,7 @@ describe("D133 design pattern narrative", () => {
   });
 
   it("shows the server refusal when confirm fails", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const err = new Error("Confirm failed");
     err.body = {
       error: "Design pattern validation failed",
