@@ -56,6 +56,7 @@ function defaultDB() {
     workProducts: [],
     rubrics: [],
     templates: [],
+    designPatterns: [],
     students: [],
     questions: [],      // ✅ added
     calibrationJobs: [],

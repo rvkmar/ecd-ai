@@ -21,6 +21,9 @@ export const rolePermissions = {
       "workProducts",
       "rubrics",
       "templates",
+      // D131: system-level PADI pattern. Admin authors. District may
+      // see it. Confirmed is a seeding source, not operational delivery.
+      "designPatterns",
       "tasks",
       "sessions",
       "policies",
@@ -65,6 +68,7 @@ export const rolePermissions = {
       "workProducts",
       "rubrics",
       "templates",
+      "designPatterns",
       "items",
       "tasks",
       "policies",
@@ -91,6 +95,7 @@ export const rolePermissions = {
       "workProducts",
       "rubrics",
       "templates",
+      "designPatterns",
       "items",
       "tasks",
       "policies",
@@ -123,6 +128,7 @@ export const rolePermissions = {
       "workProducts",
       "rubrics",
       "templates",
+      "designPatterns",
       "tasks",
       "sessions",
       "reports",

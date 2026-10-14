@@ -16,7 +16,7 @@
 
 import { describe, it, expect } from "vitest";
 
-import { validateEntity, TEMPLATE_STATUS_VALUES } from "../utils/schema.js";
+import { validateEntity, TEMPLATE_STATUS_VALUES, DESIGN_PATTERN_STATUS_VALUES } from "../utils/schema.js";
 import { itemCompatibilityNotes, operationalReadiness } from "../components/itemBank/itemConstants.js";
 import { evidenceCompatibilityNotes } from "../components/taskModels/taskModelConstants.js";
 import { resolveCalibrationWindow } from "../components/evidences/calibration/engines/effectiveModel.js";
@@ -37,6 +37,7 @@ import {
 import { WORK_PRODUCT_TYPE_MIRROR } from "../utils/workProductReadiness.js";
 import { RUBRIC_STATUS_MIRROR } from "../utils/rubricReadiness.js";
 import { TEMPLATE_STATUS_MIRROR } from "../utils/templateReadiness.js";
+import { DESIGN_PATTERN_STATUS_MIRROR } from "../utils/designPatternReadiness.js";
 
 /* =====================================================
    Shared fixtures -- one valid baseline per entity, mutated per test.
@@ -536,6 +537,12 @@ describe("mirror: Rubric status list (D122)", () => {
 describe("mirror: Template status list (D126)", () => {
   it("readiness statuses agree with TEMPLATE_STATUS_VALUES", () => {
     expect(TEMPLATE_STATUS_MIRROR).toEqual([...TEMPLATE_STATUS_VALUES]);
+  });
+});
+
+describe("mirror: Design Pattern status list (D131)", () => {
+  it("readiness statuses agree with DESIGN_PATTERN_STATUS_VALUES", () => {
+    expect(DESIGN_PATTERN_STATUS_MIRROR).toEqual([...DESIGN_PATTERN_STATUS_VALUES]);
   });
 });
 

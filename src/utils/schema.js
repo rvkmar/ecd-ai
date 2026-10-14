@@ -874,6 +874,35 @@ export const schema = {
   // Named `templates` so dbAdapter's trailing-"s" singularizer yields
   // `template`. Distinct from shelved AIG ITEM_MODEL_REGISTRY templateId.
   // ------------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // designPatterns — D131 (W27 G9), ADR 0009. Top-level PADI design
+  // pattern. Not a field on the Competency Model: one pattern spans
+  // Student, Evidence, and Task and can seed many models (W28).
+  // status: draft | confirmed. No operational — a pattern authorises
+  // no delivery. Menu entries are { label }; reference ids are optional
+  // until D134. Named `designPatterns` so the singularizer yields
+  // `designPattern`.
+  // ------------------------------------------------------------------
+  designPatterns: {
+    id: 'string',
+    name: 'string',
+    summary: 'string',
+    rationale: 'string',
+    focalKsas: 'array',
+    additionalKsas: 'array',
+    potentialObservations: 'array',
+    potentialWorkProducts: 'array',
+    potentialRubrics: 'array',
+    characteristicFeatures: 'array',
+    variableFeatures: 'array',
+    status: 'string',
+    districtId: 'string',
+    schoolId: 'string',
+    createdBy: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
   templates: {
     id: 'string',
     name: 'string',
@@ -1097,6 +1126,61 @@ export const INSTANTIABLE_TASK_MODEL_STATUSES = [
 
 /** D126: templates use draft|confirmed (confirm = four bindings coherent). */
 export const TEMPLATE_STATUS_VALUES = Object.freeze(["draft", "confirmed"]);
+
+/**
+ * D131 / ADR 0009. A design pattern delivers nothing. `operational` is
+ * not a status here: that word means "may be delivered to a student."
+ */
+export const DESIGN_PATTERN_STATUS_VALUES = Object.freeze(["draft", "confirmed"]);
+
+export const DESIGN_PATTERN_STATUS_MEANINGS = Object.freeze({
+  draft:
+    "The argument is being written. It delivers nothing, authorises nothing, and must not be offered for seeding.",
+  confirmed:
+    "The argument may be referenced by later seeding. It still authorises no student delivery. Confirmed is not operational.",
+});
+
+/** PADI Tables 2–3, mapped onto record fields. Title is `name`, matching other entities. */
+export const DESIGN_PATTERN_PADI_ATTRIBUTES = Object.freeze([
+  { padi: "Title", field: "name" },
+  { padi: "Summary", field: "summary" },
+  { padi: "Rationale", field: "rationale" },
+  { padi: "Focal KSAs", field: "focalKsas" },
+  { padi: "Additional KSAs", field: "additionalKsas" },
+  { padi: "Potential Observations", field: "potentialObservations" },
+  { padi: "Potential Work Products", field: "potentialWorkProducts" },
+  { padi: "Potential Rubrics", field: "potentialRubrics" },
+  { padi: "Characteristic Features", field: "characteristicFeatures" },
+  { padi: "Variable Features", field: "variableFeatures" },
+]);
+
+const DESIGN_PATTERN_MENU_KEYS = DESIGN_PATTERN_PADI_ATTRIBUTES
+  .map((row) => row.field)
+  .filter((field) => field !== "name" && field !== "summary" && field !== "rationale");
+
+/**
+ * Menu entries are { label } until D134 requires real object references.
+ * A non-array is already caught by the generic shape check; this refuses
+ * entries that are not labelled objects.
+ */
+export function designPatternMenuErrors(obj = {}) {
+  const errors = [];
+  for (const key of DESIGN_PATTERN_MENU_KEYS) {
+    const menu = obj[key];
+    if (menu == null) continue;
+    if (!Array.isArray(menu)) continue;
+    menu.forEach((entry, i) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        errors.push(`${key}[${i}] must be an object with a label.`);
+        return;
+      }
+      if (entry.label == null || String(entry.label).trim() === "") {
+        errors.push(`${key}[${i}].label is required.`);
+      }
+    });
+  }
+  return errors;
+}
 
 /**
  * Collect binding / coherence errors for a template. Used by validateEntity
@@ -5927,6 +6011,38 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         }
       }
     }
+  }
+
+  /* =====================================================
+     DESIGN PATTERNS — D131, W27 G9, ADR 0009
+     PADI attribute set. draft | confirmed. Confirmed authorises
+     later seeding, not student delivery. Empty rationale is refused
+     on confirm and on strict validation.
+  ===================================================== */
+
+  if (collection === "designPatterns") {
+    if (!obj.name || String(obj.name).trim() === "") {
+      errors.push("Design pattern name is required.");
+    }
+    if (!obj.status) {
+      errors.push("status is required.");
+    } else if (!DESIGN_PATTERN_STATUS_VALUES.includes(obj.status)) {
+      errors.push(
+        `Invalid design pattern status '${obj.status}'. Must be draft or confirmed. A design pattern authorises no student delivery, so operational is not a status.`
+      );
+    }
+
+    const claimComplete = strict || obj.status === "confirmed";
+    if (claimComplete) {
+      if (!obj.summary || String(obj.summary).trim() === "") {
+        errors.push("Design pattern summary is required to confirm.");
+      }
+      if (!obj.rationale || String(obj.rationale).trim() === "") {
+        errors.push("Design pattern rationale is required. An empty rationale is not a pattern.");
+      }
+    }
+
+    errors.push(...designPatternMenuErrors(obj));
   }
 
   /* =====================================================

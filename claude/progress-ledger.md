@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D130** — Adversarial review of the joint update + W26 gate. Handoff: `claude/day130-adversarial-joint-w26.md`. |
+| Last completed unit | **D131** — `designPatterns` collection, reduced lifecycle, routes, and PADI attributes. Handoff: `claude/day131-design-patterns-schema.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D131** — Design Pattern entity (W27). Re-calibrate before starting. `designPatterns` is still absent. |
+| Next queued | **D132** — leftover after the route/lifecycle absorb. Re-calibrate before starting. Wizard narrative is D133; real menu references are D134. Do not start D135 until a pattern can be confirmed from the wizard. |
 
 | Block | **W26 closed** 2026-10-13 (D126–D130). Gate held: template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -469,6 +469,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-13 | close | 3, alone | D130 / W26 session close. Suite re-verify **2098 passed / 9 skipped**; build green; tip `8009741` ≡ `main/master`. No half-applied work; no new compression debt. Calendar D130 and W26 already ✅. Next: re-calibrate D131. |
 
+| 2026-10-14 | D131 | 2, alone | designPatterns collection (ADR 0009). PADI attributes; draft may omit rationale; confirm refuses empty rationale and operational. Routes + permissions + hooks + readiness. No wizard. Suite **2109 passed / 9 skipped**; build green. D132 routes absorbed. Next: re-calibrate D132. |
+
 
 
 ## Compression debt
@@ -659,6 +661,10 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 | D129 | Joint update is a new estimator with no existing continuous path | 1D EAP still the continuous path; `jointPrior` unread; Day 39 still refuses two Evidence Models on one SMV; DINA joint is separate | Consume D128 `jointPrior` for one correlated partner. Zero off-diagonal stays on the 1D EAP. Do not pool the Day 39 collision. **Never-compress.** Alone. |
 
+| D131 | Schema-only PADI attributes; routes and lifecycle on D132; D48 green from schema alone | Adding `schema.designPatterns` with no mounted route fails `collectionSurfaceGuard`. `operational` would mean student delivery. Templates (D126) are the reduced `draft|confirmed` precedent | One session: ADR 0009, then schema + meanings + `/api/designPatterns` + rolePermissions + query hooks + readiness mirror. Empty rationale refused on confirm/strict. No wizard. |
+
+| D132 | Routes, auth, and a reduced lifecycle for design patterns | Those artefacts shipped inside D131 because the collection guard will not pass schema-only | Do not re-implement routes. Next calibration decides the leftover (wizard remainder is D133–D134). |
+
 
 
 ## Carried-forward gaps
@@ -731,7 +737,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- Design Patterns (W27 / G7) — absent; Additional KSAs still notes-only on EMs
+- Design Patterns (W27 / G9) — collection, confirm, and PADI fields shipped D131 (`claude/day131-design-patterns-schema.md`). Wizard, real menu references, and import still open (D133–D135). Ledger previously said G7; the conformance id is G9.
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 
