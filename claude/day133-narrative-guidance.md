@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-14
 **Tier:** 1, alone
-**Status: PARTIAL** — guidance is on the screen; the `:6060` walk is blocked.
+**Status: DONE** — guidance is on the screen; the `:6060` walk is `claude/day133-design-pattern-walk.md`.
 
 ## What changed
 
@@ -12,8 +12,8 @@ The form was not rebuilt. A draft still saves from a title. Confirm still stays 
 
 ## Walk
 
-`http://localhost:6060` is nginx serving a built bundle, `index-CQCUHCB8.js`. That is the D133 screen from before this guidance. The node image does not mount the source, so the running app cannot show the new text until nginx is rebuilt. The walk was not claimed.
+Closed 2026-10-14. Live Admin Design Patterns on `:6060` shows all five PADI sentences. See `claude/day133-design-pattern-walk.md`.
 
 ## Next
 
-Rebuild nginx, then walk Admin → Models → Design Patterns on `:6060`. After that, D134.
+D134.

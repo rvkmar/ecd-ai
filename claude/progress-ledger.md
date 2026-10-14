@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D133 guidance** is on the form (`249963a`) and in the live nginx chunk `DesignPatternBuilder-I3Xp7B1W.js`. Click-through on `:6060` still failed (empty React root). Handoff: `claude/day133-guidance-session-close.md`. |
+| Last completed unit | **D133** (narrative + PADI guidance + `:6060` walk). Five PADI sentences visible on Admin → Models → Design Patterns as `admin1`. Walk: `claude/day133-design-pattern-walk.md`. Product still `249963a` / close `59e250f`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D133 walk** of Admin → Models → Design Patterns on `:6060` (the five PADI sentences). Then **D134**. Do not start D135 until a pattern can be confirmed with real menu references. |
+| Next queued | **D134**. Do not start D135 until a pattern can be confirmed with real menu references. Do not rebuild D132 routes. |
 
 | Block | **W26 closed** 2026-10-13 (D126–D130). Gate held: template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -479,6 +479,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-14 | close | 1 | D133 guidance in source and in live `DesignPatternBuilder-I3Xp7B1W.js`. Suite re-verify **2117 passed / 9 skipped**; build green. Login reached `/admin?tab=home` with an empty React root. Click-through still open. Next: that walk, then D134. |
 
+| 2026-10-14 | D133 walk | 1 | Admin Models Design Patterns on `:6060` as `admin1`. All five PADI sentences present. Empty form: Create draft and Confirm disabled. Tab click intercepted by Student Model panel; opened via `?tab=designpatterns`. Empty-root login state did not recur. No D134. |
+
 
 
 ## Compression debt
@@ -489,7 +491,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|---|---|---|
 
-| D133 | Per-attribute PADI guidance, and the `:6060` walk | Narrative fields persist in tests. The exit check's guidance clause was not written. | W27 close (D135) | Guidance is in `249963a` and in live `DesignPatternBuilder-I3Xp7B1W.js`. The click-through is still **open**: login reached `/admin?tab=home` with an empty React root. |
+| D133 | Per-attribute PADI guidance, and the `:6060` walk | Narrative fields persist in tests. The exit check's guidance clause was not written. | W27 close (D135) | **closed** — guidance `249963a`; walk 2026-10-14 on `:6060` (`claude/day133-design-pattern-walk.md`). |
 
 | D50 | District/teacher browser pass skipped | Human logins | D71 | **closed** — district Operate + teacher Sessions walked 2026-09-14 |
 
@@ -751,7 +753,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- Design Patterns (W27 / G9) — collection and reduced lifecycle shipped D131/D132. Narrative fields and PADI guidance shipped D133 (`249963a`; live chunk `DesignPatternBuilder-I3Xp7B1W.js`). Click-through of that screen on `:6060` is still open. Real menu references and import still open (D134–D135).
+- Design Patterns (W27 / G9) — collection and reduced lifecycle shipped D131/D132. Narrative + PADI guidance + `:6060` walk closed D133 (`249963a`; walk `claude/day133-design-pattern-walk.md`). Real menu references and import still open (D134–D135).
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 
