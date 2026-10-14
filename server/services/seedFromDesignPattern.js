@@ -149,3 +149,85 @@ export function seedFromDesignPattern({
     taskModel: task.record,
   };
 }
+
+function rowLabel(row) {
+  return String(row?.label || "").trim();
+}
+
+/**
+ * D138. Compare a model to the snapshot stored at seed time.
+ * Focal KSAs and the pattern's current menus are not inputs.
+ * Designer-added observables are not divergence. Declined rows are not missing.
+ */
+function evidenceModelDivergence(model = {}) {
+  const accepted = model.seededFrom?.accepted?.potentialObservations || [];
+  const observables = Array.isArray(model.observables) ? model.observables : [];
+  const flags = [];
+
+  for (const row of accepted) {
+    const label = rowLabel(row);
+    const found = observables.find((observable) => observable && observable.id === row.seededObservableId);
+    if (!found) {
+      flags.push({
+        menu: "potentialObservations",
+        label,
+        reason: "removed",
+        detail: `Accepted observation "${label}" is no longer on the model.`,
+      });
+      continue;
+    }
+    const statement = String(found.statement || "").trim();
+    if (statement !== label) {
+      flags.push({
+        menu: "potentialObservations",
+        label,
+        reason: "edited",
+        detail: `Accepted observation "${label}" now reads "${statement}".`,
+      });
+    }
+  }
+
+  return flags;
+}
+
+function taskModelDivergence(model = {}) {
+  const accepted = model.seededFrom?.accepted?.variableFeatures || [];
+  const cited = new Set(model.taskModelVariableIds || []);
+  const flags = [];
+
+  for (const row of accepted) {
+    const id = row.taskModelVariableId && String(row.taskModelVariableId).trim();
+    if (!id || cited.has(id)) continue;
+    const label = rowLabel(row);
+    flags.push({
+      menu: "variableFeatures",
+      label,
+      reason: "removed",
+      detail: `Accepted variable feature "${label}" is no longer cited.`,
+    });
+  }
+
+  return flags;
+}
+
+export function patternDescendants(patternId, db = {}) {
+  const matches = (rows, kind, diverge) =>
+    (rows || [])
+      .filter((row) => row?.seededFrom?.designPatternId === patternId)
+      .map((row) => ({
+        kind,
+        id: row.id,
+        name: row.name || row.id,
+        status: row.status || null,
+        divergences: diverge(row),
+      }));
+
+  return {
+    designPatternId: patternId,
+    advisory: true,
+    descendants: [
+      ...matches(db.evidenceModels, "evidenceModel", evidenceModelDivergence),
+      ...matches(db.taskModels, "taskModel", taskModelDivergence),
+    ],
+  };
+}

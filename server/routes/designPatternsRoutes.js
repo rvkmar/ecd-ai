@@ -7,13 +7,14 @@
 // Admin-authored. District may view. Wizard is D133–D134.
 // D135: POST /bulk on this same file; import always lands as draft.
 // D137: POST /:id/seed writes one draft Evidence Model and one draft Task Model.
+// D138: GET /:id/descendants lists those models and names snapshot drift. Advisory.
 // ------------------------------------------------------------------
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
-import { seedFromDesignPattern } from "../services/seedFromDesignPattern.js";
+import { patternDescendants, seedFromDesignPattern } from "../services/seedFromDesignPattern.js";
 import { createEvidenceModelRecord } from "./evidenceModels.js";
 import { createTaskModelRecord } from "./taskModelsRoutes.js";
 
@@ -92,6 +93,13 @@ function createDesignPatternRecord(body, db, req, { forceDraft = false } = {}) {
 router.get("/", (req, res) => {
   const db = loadDB();
   res.json(db.designPatterns || []);
+});
+
+router.get("/:id/descendants", (req, res) => {
+  const db = loadDB();
+  const pattern = (db.designPatterns || []).find((row) => row.id === req.params.id);
+  if (!pattern) return res.status(404).json({ error: "Design pattern not found" });
+  res.json(patternDescendants(pattern.id, db));
 });
 
 router.get("/:id", (req, res) => {

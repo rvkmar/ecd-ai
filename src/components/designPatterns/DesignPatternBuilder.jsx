@@ -9,7 +9,8 @@ import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
-import { apiErrorMessage } from "@/api/apiClient";
+import { apiErrorMessage, apiFetch } from "@/api/apiClient";
+import { useAuth } from "@/auth/AuthProvider";
 import {
   useDesignPatterns,
   useCreateDesignPattern,
@@ -463,6 +464,66 @@ function SeedFromPattern({ pattern, competencies = [], onSeed, pending = false }
   );
 }
 
+function PatternDescendantReport({ patternId, report, onLoad, refreshKey = 0 }) {
+  const [data, setData] = useState(report);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    if (report) {
+      setData(report);
+      return undefined;
+    }
+    if (!onLoad || !patternId) return undefined;
+    let cancelled = false;
+    onLoad(patternId)
+      .then((next) => {
+        if (!cancelled) setData(next);
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(apiErrorMessage(err, "Could not list seeded models"));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [patternId, report, onLoad, refreshKey]);
+
+  const descendants = data?.descendants || [];
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <h4 className="text-sm font-medium text-slate-800">Seeded models</h4>
+      <p className={hintClass}>
+        Drift from the rows accepted at seed time is advisory. It does not
+        block confirm. A Focal KSA is not an observable.
+      </p>
+      {loadError ? (
+        <p className="mt-2 text-sm text-red-600" role="alert">{loadError}</p>
+      ) : null}
+      {descendants.length === 0 ? (
+        <p className="mt-2 text-xs text-slate-500">No seeded models yet.</p>
+      ) : (
+        <ul className="mt-2 space-y-2">
+          {descendants.map((row) => (
+            <li key={`${row.kind}-${row.id}`}>
+              <p className="text-sm text-slate-800">
+                {row.name} <span className="text-xs text-slate-500">{row.kind}</span>
+              </p>
+              {(row.divergences || []).length === 0 ? (
+                <p className="text-xs text-slate-500">Matches the seed snapshot.</p>
+              ) : (
+                <ul className="list-disc pl-5 text-xs text-slate-700">
+                  {row.divergences.map((flag) => (
+                    <li key={`${flag.menu}-${flag.label}-${flag.reason}`}>{flag.detail}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function DesignPatternLibraryView({
   patterns = [],
   templates = [],
@@ -478,6 +539,8 @@ export function DesignPatternLibraryView({
   competencies = [],
   onSeed,
   seedPending = false,
+  descendantReport = null,
+  onLoadDescendants,
   focusId = null,
   createPending = false,
   updatePending = false,
@@ -488,6 +551,7 @@ export function DesignPatternLibraryView({
   const [editingId, setEditingId] = useState(null);
   const [serverError, setServerError] = useState("");
   const [linkTemplateId, setLinkTemplateId] = useState("");
+  const [descendantTick, setDescendantTick] = useState(0);
   const appliedFocus = useRef(null);
 
   useEffect(() => {
@@ -715,8 +779,20 @@ export function DesignPatternLibraryView({
               <SeedFromPattern
                 pattern={editing}
                 competencies={competencies}
-                onSeed={onSeed}
+                onSeed={async (payload) => {
+                  const seeded = await onSeed(payload);
+                  setDescendantTick((tick) => tick + 1);
+                  return seeded;
+                }}
                 pending={seedPending}
+              />
+            ) : null}
+            {editingId ? (
+              <PatternDescendantReport
+                patternId={editingId}
+                report={descendantReport}
+                onLoad={onLoadDescendants}
+                refreshKey={descendantTick}
               />
             ) : null}
             {serverError ? (
@@ -890,6 +966,7 @@ function PatternTemplateLinks({
 }
 
 export default function DesignPatternBuilder() {
+  const { auth } = useAuth() || {};
   const [searchParams] = useSearchParams();
   const focusId = searchParams.get("focus");
   const { data: patterns = [], isLoading, error } = useDesignPatterns();
@@ -927,6 +1004,9 @@ export default function DesignPatternBuilder() {
       templates={templates}
       competencies={competencies}
       seedPending={seedMut.isPending}
+      onLoadDescendants={(id) =>
+        apiFetch(`/api/designPatterns/${id}/descendants`, {}, auth)
+      }
       focusId={focusId}
       workProducts={workProducts}
       rubrics={rubrics}

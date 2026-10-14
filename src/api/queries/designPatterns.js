@@ -81,9 +81,10 @@ export function useSeedDesignPattern() {
         { method: "POST", body: JSON.stringify({ competencyId, selections }) },
         auth
       ),
-    onSuccess: () => {
+    onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: evidenceModelsKey });
       queryClient.invalidateQueries({ queryKey: taskModelsKey });
+      queryClient.invalidateQueries({ queryKey: ["designPatterns", id, "descendants"] });
     },
   });
 }
