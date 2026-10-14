@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D138** (W28). A pattern lists seeded models and names drift from the seed snapshot. Confirm is unchanged. Live list was empty: this mongo has no seeded models. Handoff: `claude/day138-seed-snapshot-divergence.md`. |
+| Last completed unit | **D139** (W28). A child pattern cites its parent as kind-of or part-of and does not copy menus. A cycle, including a self-link, is refused. Live: **Explain a labelled diagram** cites draft **D139 parent**. Seed stayed disabled: no competency and no seeded models. Handoff: `claude/day139-pattern-relations.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D139** (W28), alone. One inheritance rule, tested. A child references its parent and does not rewrite models D137 already seeded. Refuse a cycle at write time. |
+| Next queued | **D140** (W28), alone. A bounded neighbourhood of one pattern. Mark diverged descendants without colour alone. Discharge the D135 Settings bulk click-through at that close. |
 
 | Block | **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -491,6 +491,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-14 | D138 | 2, alone | Descendants listed from `seededFrom`. Drift is the snapshot, not Focal KSAs. Advisory. Suite **2138 passed / 9 skipped**. Live list empty: no seeded models. No D139. |
 
+| 2026-10-14 | D139 | 2, alone | Child cites parent. Menus are not copied. Cycle including a self-link is refused. Suite **2141 passed / 9 skipped**. Live kind-of link plus a label. Seed still disabled: no competency. No D140. |
+
 
 
 ## Compression debt
@@ -503,7 +505,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | D133 | Per-attribute PADI guidance, and the `:6060` walk | Narrative fields persist in tests. The exit check's guidance clause was not written. | W27 close (D135) | **closed** — guidance `249963a`; walk 2026-10-14 on `:6060` (`claude/day133-design-pattern-walk.md`). |
 
-| D135 | Live Settings bulk-upload of a pattern file | W27 gate was the wizard confirm; bulk is a 207 test | W28 close (D140) | open — missed the W28-start date; D136 walked the link, not Settings |
+| D135 | Live Settings bulk-upload of a pattern file | W27 gate was the wizard confirm; bulk is a 207 test | W28 close (D140) | open — D139 walked the relation form, not Settings |
 
 | D50 | District/teacher browser pass skipped | Human logins | D71 | **closed** — district Operate + teacher Sessions walked 2026-09-14 |
 
@@ -779,7 +781,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). ~~D138 seed-snapshot divergence~~ closed (`claude/day138-seed-snapshot-divergence.md`). W28 inheritance (D139) still open.
+- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). ~~D138 seed-snapshot divergence~~ closed (`claude/day138-seed-snapshot-divergence.md`). ~~D139 pattern relations~~ closed (`claude/day139-pattern-relations.md`). W28 neighbourhood graph (D140) still open.
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 
