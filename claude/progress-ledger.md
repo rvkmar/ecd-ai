@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D136** (W28). Optional pattern ↔ template link. Live draft **D136 link check** cites **Explain a labelled diagram**. Handoff: `claude/day136-pattern-template-link.md`. |
+| Last completed unit | **D137** (W28). A confirmed pattern seeds draft Evidence and Task Models. Declined menu rows stay on `seededFrom`. Live seed stayed disabled: this mongo has no competency. Handoff: `claude/day137-seed-from-design-pattern.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D137** (W28), alone. Seed draft Evidence and Task Models from one confirmed pattern's own menus. Do not inherit. Do not treat confirmed as delivery. |
+| Next queued | **D138** (W28), alone. Compare the stored accepted and declined seed rows to the current model. Advisory. A Focal KSA label is not an observable id. |
 
 | Block | **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -487,6 +487,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-14 | D136 | 2, alone | Optional `designPatternId` on templates. Pattern lists citers. Unpatterned confirm is a route result; live mongo has no Student Model, so a four-binding confirm was not clicked. Suite close re-run **2131 passed / 9 skipped**. No D137. |
 
+| 2026-10-14 | D137 | 2, alone | Seed drafts from one confirmed pattern. Declined rows on `seededFrom`. Existing confirm rules are the substance gate. Suite **2135 passed / 9 skipped**. Live seed button disabled: no competency. No D138. |
+
 
 
 ## Compression debt
@@ -771,7 +773,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). W28 seeding (D137) still open.
+- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). W28 comparison (D138) still open.
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 
