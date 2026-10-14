@@ -131,6 +131,8 @@ const emptyForm = () => ({
   potentialRubrics: [],
   characteristicFeatures: [],
   variableFeatures: [],
+  relationships: [],
+  references: [],
 });
 
 function formFromRow(row) {
@@ -162,6 +164,14 @@ function formFromRow(row) {
       label: entry.label || "",
       taskModelVariableId: entry.taskModelVariableId || "",
     })),
+    relationships: (row.relationships || []).map((entry) => ({
+      type: entry.type || "kind-of",
+      targetPatternId: entry.targetPatternId || "",
+    })),
+    references: (row.references || []).map((entry) => ({
+      label: entry.label || "",
+      url: entry.url || "",
+    })),
   };
 }
 
@@ -177,7 +187,118 @@ export function designPatternPayload(form) {
     potentialRubrics: libraryEntries(form.potentialRubrics, "rubricId"),
     characteristicFeatures: labelledEntries(form.characteristicFeatures),
     variableFeatures: libraryEntries(form.variableFeatures, "taskModelVariableId"),
+    relationships: (form.relationships || [])
+      .map((entry) => ({
+        type: entry.type,
+        targetPatternId: String(entry.targetPatternId || "").trim(),
+      }))
+      .filter((entry) => entry.targetPatternId),
+    references: (form.references || [])
+      .map((entry) => ({
+        label: String(entry.label || "").trim(),
+        url: String(entry.url || "").trim(),
+      }))
+      .filter((entry) => entry.label),
   };
+}
+
+function PatternRelations({ patternId, patterns, relationships, references, onChange }) {
+  const others = (patterns || []).filter((row) => row.id !== patternId);
+  return (
+    <div className="space-y-3">
+      <fieldset className="space-y-2">
+        <legend className="text-sm text-slate-700">Relations</legend>
+        <p className={hintClass}>
+          A kind-of or part-of link cites another pattern. It does not copy
+          that pattern&apos;s menus, and editing the parent does not change
+          this one.
+        </p>
+        {relationships.map((entry, index) => (
+          <div key={`rel-${index}`} className="flex gap-2">
+            <select
+              className={inputClass}
+              aria-label={`Relation type ${index + 1}`}
+              value={entry.type}
+              onChange={(event) => {
+                const next = relationships.slice();
+                next[index] = { ...entry, type: event.target.value };
+                onChange({ relationships: next });
+              }}
+            >
+              <option value="kind-of">kind-of</option>
+              <option value="part-of">part-of</option>
+            </select>
+            <select
+              className={inputClass}
+              aria-label={`Related pattern ${index + 1}`}
+              value={entry.targetPatternId}
+              onChange={(event) => {
+                const next = relationships.slice();
+                next[index] = { ...entry, targetPatternId: event.target.value };
+                onChange({ relationships: next });
+              }}
+            >
+              <option value="">Choose a pattern</option>
+              {others.map((row) => (
+                <option key={row.id} value={row.id}>
+                  {row.name || row.id}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            onChange({
+              relationships: [...relationships, { type: "kind-of", targetPatternId: "" }],
+            })
+          }
+        >
+          Add relation
+        </Button>
+      </fieldset>
+      <fieldset className="space-y-2">
+        <legend className="text-sm text-slate-700">References</legend>
+        <p className={hintClass}>
+          A label and an address. This is not a curricular policy and not a
+          rubric exemplar.
+        </p>
+        {references.map((entry, index) => (
+          <div key={`ref-${index}`} className="flex gap-2">
+            <input
+              className={inputClass}
+              aria-label={`Reference label ${index + 1}`}
+              value={entry.label}
+              onChange={(event) => {
+                const next = references.slice();
+                next[index] = { ...entry, label: event.target.value };
+                onChange({ references: next });
+              }}
+            />
+            <input
+              className={inputClass}
+              aria-label={`Reference address ${index + 1}`}
+              value={entry.url}
+              onChange={(event) => {
+                const next = references.slice();
+                next[index] = { ...entry, url: event.target.value };
+                onChange({ references: next });
+              }}
+            />
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onChange({ references: [...references, { label: "", url: "" }] })}
+        >
+          Add reference
+        </Button>
+      </fieldset>
+    </div>
+  );
 }
 
 function LabelList({ legend, hint, hintId, values, onChange }) {
@@ -765,6 +886,13 @@ export function DesignPatternLibraryView({
               }))}
               idKey="taskModelVariableId"
               emptyOption="Choose a task model variable"
+            />
+            <PatternRelations
+              patternId={editingId}
+              patterns={patterns}
+              relationships={form.relationships}
+              references={form.references}
+              onChange={patchForm}
             />
             {editingId ? (
               <PatternTemplateLinks

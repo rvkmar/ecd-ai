@@ -14,7 +14,7 @@
 // Menu id shape is the same function validateEntity uses, without a db
 // snapshot — missing ids fail here; unknown ids fail on the server.
 
-import { designPatternMenuErrors } from "./schema.js";
+import { designPatternMenuErrors, designPatternRelationErrors } from "./schema.js";
 
 export const DESIGN_PATTERN_STATUS_MIRROR = ["draft", "confirmed"];
 
@@ -65,6 +65,7 @@ export function designPatternReadiness(record = {}, options = {}) {
   }
 
   errors.push(...designPatternMenuErrors(record, null));
+  errors.push(...designPatternRelationErrors(record, null));
 
   return { ready: errors.length === 0, errors };
 }

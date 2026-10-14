@@ -72,6 +72,8 @@ describe("D134 design pattern menus", () => {
       variableFeatures: [
         { label: "Diagram complexity", taskModelVariableId: "tmv1" },
       ],
+      relationships: [],
+      references: [],
     });
   });
 
@@ -149,6 +151,8 @@ describe("D134 design pattern menus", () => {
         variableFeatures: [
           { label: "Diagram complexity", taskModelVariableId: "tmv1" },
         ],
+        relationships: [],
+        references: [],
       },
     });
     expect(onConfirm).toHaveBeenCalledWith("dp1");

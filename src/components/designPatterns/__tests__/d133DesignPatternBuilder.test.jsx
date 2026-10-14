@@ -48,6 +48,8 @@ describe("D133 design pattern narrative", () => {
       potentialRubrics: [],
       characteristicFeatures: [],
       variableFeatures: [],
+      relationships: [],
+      references: [],
     });
   });
 
@@ -90,6 +92,8 @@ describe("D133 design pattern narrative", () => {
       potentialRubrics: [],
       characteristicFeatures: [],
       variableFeatures: [],
+      relationships: [],
+      references: [],
     });
     expect(onConfirm).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
@@ -149,6 +153,8 @@ describe("D133 design pattern narrative", () => {
         potentialRubrics: [],
         characteristicFeatures: [],
         variableFeatures: [],
+        relationships: [],
+        references: [],
       },
     });
     expect(onConfirm).toHaveBeenCalledWith("dp1");

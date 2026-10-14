@@ -903,6 +903,16 @@ export const schema = {
     potentialRubrics: 'array',
     characteristicFeatures: 'array',
     variableFeatures: 'array',
+    // D139. A child cites a parent. It does not copy that parent's menus.
+    relationships: [{
+      type: 'string',          // kind-of | part-of
+      targetPatternId: 'string',
+    }],
+    // Labels only. Not curricularPolicies and not rubric exemplars.
+    references: [{
+      label: 'string',
+      url: 'string',
+    }],
     status: 'string',
     districtId: 'string',
     schoolId: 'string',
@@ -1288,6 +1298,90 @@ export function designPatternMenuErrors(obj = {}, db = null) {
       }
     });
   }
+  return errors;
+}
+
+const DESIGN_PATTERN_RELATION_TYPES = Object.freeze(["kind-of", "part-of"]);
+
+function patternPointsAtItself(node, graph, stack = new Set()) {
+  if (stack.has(node)) return true;
+  stack.add(node);
+  for (const next of graph.get(node) || []) {
+    if (patternPointsAtItself(next, graph, stack)) return true;
+  }
+  stack.delete(node);
+  return false;
+}
+
+/**
+ * D139. Relationships cite another pattern. They do not copy its menus.
+ * A cycle, including a self-link, is refused. References are labels.
+ */
+export function designPatternRelationErrors(obj = {}, db = null) {
+  const errors = [];
+  if (obj.relationships != null && !Array.isArray(obj.relationships)) {
+    errors.push("relationships must be an array.");
+    return errors;
+  }
+  if (obj.references != null && !Array.isArray(obj.references)) {
+    errors.push("references must be an array.");
+  }
+
+  const relationships = Array.isArray(obj.relationships) ? obj.relationships : [];
+  const seen = new Set();
+  relationships.forEach((rel, i) => {
+    if (!rel || typeof rel !== "object" || Array.isArray(rel)) {
+      errors.push(`relationships[${i}] must be an object.`);
+      return;
+    }
+    if (!DESIGN_PATTERN_RELATION_TYPES.includes(rel.type)) {
+      errors.push(`relationships[${i}].type must be kind-of or part-of.`);
+    }
+    const target = rel.targetPatternId && String(rel.targetPatternId).trim();
+    if (!target) {
+      errors.push(`relationships[${i}].targetPatternId is required.`);
+      return;
+    }
+    if (obj.id && target === obj.id) {
+      errors.push("A design pattern cannot relate to itself.");
+    }
+    const key = `${rel.type}:${target}`;
+    if (seen.has(key)) errors.push(`Duplicate relationship ${rel.type} to '${target}'.`);
+    seen.add(key);
+    if (db && !(db.designPatterns || []).some((row) => row && row.id === target)) {
+      errors.push(`relationships[${i}].targetPatternId '${target}' was not found.`);
+    }
+  });
+
+  (Array.isArray(obj.references) ? obj.references : []).forEach((ref, i) => {
+    if (!ref || typeof ref !== "object" || Array.isArray(ref)) {
+      errors.push(`references[${i}] must be an object.`);
+      return;
+    }
+    if (!String(ref.label || "").trim()) errors.push(`references[${i}].label is required.`);
+    if (ref.url != null && typeof ref.url !== "string") {
+      errors.push(`references[${i}].url must be a string.`);
+    }
+  });
+
+  if (db && obj.id) {
+    const graph = new Map();
+    for (const row of db.designPatterns || []) {
+      if (!row || row.id === obj.id) continue;
+      graph.set(
+        row.id,
+        (row.relationships || []).map((rel) => rel && rel.targetPatternId).filter(Boolean)
+      );
+    }
+    graph.set(
+      obj.id,
+      relationships.map((rel) => rel && rel.targetPatternId).filter(Boolean)
+    );
+    if (patternPointsAtItself(obj.id, graph)) {
+      errors.push("Design pattern relationships cannot form a cycle.");
+    }
+  }
+
   return errors;
 }
 
@@ -6162,6 +6256,7 @@ export function validateEntity(collection, obj, db = null, options = {}) {
     }
 
     errors.push(...designPatternMenuErrors(obj, db));
+    errors.push(...designPatternRelationErrors(obj, db));
   }
 
   /* =====================================================

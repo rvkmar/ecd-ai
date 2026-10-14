@@ -8,6 +8,7 @@
 // D135: POST /bulk on this same file; import always lands as draft.
 // D137: POST /:id/seed writes one draft Evidence Model and one draft Task Model.
 // D138: GET /:id/descendants lists those models and names snapshot drift. Advisory.
+// D139: relationships cite another pattern. They do not copy its menus.
 // ------------------------------------------------------------------
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
@@ -37,6 +38,8 @@ const WRITE_KEYS = [
   "potentialRubrics",
   "characteristicFeatures",
   "variableFeatures",
+  "relationships",
+  "references",
   "status",
 ];
 
