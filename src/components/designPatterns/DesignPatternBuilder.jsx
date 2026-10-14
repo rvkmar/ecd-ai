@@ -22,6 +22,26 @@ import { designPatternReadiness } from "@/utils/designPatternReadiness";
 const inputClass =
   "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
 
+/**
+ * What each narrative attribute is for. Roles follow the PADI design-pattern
+ * attributes (the argument a designer selects), including this project's
+ * reading of Rationale and Additional KSAs. Not a second schema.
+ */
+export const DESIGN_PATTERN_NARRATIVE_GUIDANCE = Object.freeze({
+  title:
+    "A short name for the pattern a designer selects. It names the argument, not one task or one item.",
+  summary:
+    "An overview of the family of assessment situations this pattern is about, so a designer can see whether it fits before reading the rest.",
+  rationale:
+    "Why these KSAs are worth assessing, and what else could give evidence about them. A later copy of the pattern keeps this reasoning. Without it, the pattern is only a prior choice.",
+  focalKsas:
+    "The knowledge, skills, and abilities this pattern is meant to produce evidence about. They are the construct, not every skill a task happens to use.",
+  additionalKsas:
+    "Other knowledge, skills, or abilities a task from this pattern may also demand, which are not the target. They are construct-irrelevant demands the designer is choosing to notice. They are not the Task Model fairness notes.",
+});
+
+const hintClass = "text-xs leading-5 text-slate-500";
+
 function labelledEntries(entries) {
   return (entries || [])
     .map((entry) => ({ label: String(entry?.label || "").trim() }))
@@ -58,15 +78,19 @@ export function designPatternPayload(form) {
   };
 }
 
-function LabelList({ legend, values, onChange }) {
+function LabelList({ legend, hint, hintId, values, onChange }) {
   return (
     <fieldset className="space-y-2">
       <legend className="text-sm text-slate-700">{legend}</legend>
+      <p id={hintId} className={hintClass}>
+        {hint}
+      </p>
       {values.map((entry, index) => (
         <div key={`${legend}-${index}`} className="flex gap-2">
           <input
             className={inputClass}
             aria-label={`${legend} ${index + 1}`}
+            aria-describedby={hintId}
             value={entry.label}
             onChange={(event) => {
               const next = values.slice();
@@ -196,40 +220,59 @@ export function DesignPatternLibraryView({
             {editingId ? `Edit ${editing?.name || editingId}` : "New design pattern"}
           </h3>
           <form className="space-y-3" onSubmit={handleSubmit}>
-            <label className="block text-sm">
+            <label className="block text-sm" htmlFor="dp-title">
               <span className="mb-1 block text-slate-700">Title</span>
-              <input
-                className={inputClass}
-                value={form.name}
-                onChange={(event) => patchForm({ name: event.target.value })}
-                required
-              />
             </label>
-            <label className="block text-sm">
+            <p id="dp-title-guidance" className={hintClass}>
+              {DESIGN_PATTERN_NARRATIVE_GUIDANCE.title}
+            </p>
+            <input
+              id="dp-title"
+              className={inputClass}
+              aria-describedby="dp-title-guidance"
+              value={form.name}
+              onChange={(event) => patchForm({ name: event.target.value })}
+              required
+            />
+            <label className="block text-sm" htmlFor="dp-summary">
               <span className="mb-1 block text-slate-700">Summary</span>
-              <textarea
-                className={inputClass}
-                rows={3}
-                value={form.summary}
-                onChange={(event) => patchForm({ summary: event.target.value })}
-              />
             </label>
-            <label className="block text-sm">
+            <p id="dp-summary-guidance" className={hintClass}>
+              {DESIGN_PATTERN_NARRATIVE_GUIDANCE.summary}
+            </p>
+            <textarea
+              id="dp-summary"
+              className={inputClass}
+              rows={3}
+              aria-describedby="dp-summary-guidance"
+              value={form.summary}
+              onChange={(event) => patchForm({ summary: event.target.value })}
+            />
+            <label className="block text-sm" htmlFor="dp-rationale">
               <span className="mb-1 block text-slate-700">Rationale</span>
-              <textarea
-                className={inputClass}
-                rows={4}
-                value={form.rationale}
-                onChange={(event) => patchForm({ rationale: event.target.value })}
-              />
             </label>
+            <p id="dp-rationale-guidance" className={hintClass}>
+              {DESIGN_PATTERN_NARRATIVE_GUIDANCE.rationale}
+            </p>
+            <textarea
+              id="dp-rationale"
+              className={inputClass}
+              rows={4}
+              aria-describedby="dp-rationale-guidance"
+              value={form.rationale}
+              onChange={(event) => patchForm({ rationale: event.target.value })}
+            />
             <LabelList
               legend="Focal KSAs"
+              hint={DESIGN_PATTERN_NARRATIVE_GUIDANCE.focalKsas}
+              hintId="dp-focal-guidance"
               values={form.focalKsas}
               onChange={(focalKsas) => patchForm({ focalKsas })}
             />
             <LabelList
               legend="Additional KSAs"
+              hint={DESIGN_PATTERN_NARRATIVE_GUIDANCE.additionalKsas}
+              hintId="dp-additional-guidance"
               values={form.additionalKsas}
               onChange={(additionalKsas) => patchForm({ additionalKsas })}
             />

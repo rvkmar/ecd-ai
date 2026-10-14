@@ -5,9 +5,30 @@ import userEvent from "@testing-library/user-event";
 import {
   DesignPatternLibraryView,
   designPatternPayload,
+  DESIGN_PATTERN_NARRATIVE_GUIDANCE,
 } from "../DesignPatternBuilder.jsx";
 
 describe("D133 design pattern narrative", () => {
+  it("explains what each narrative attribute is for", () => {
+    render(
+      <DesignPatternLibraryView
+        patterns={[]}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+        onConfirm={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    for (const text of Object.values(DESIGN_PATTERN_NARRATIVE_GUIDANCE)) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByLabelText("Title")).toHaveAccessibleDescription(
+      DESIGN_PATTERN_NARRATIVE_GUIDANCE.title
+    );
+    expect(screen.getByLabelText("Rationale")).toHaveAccessibleDescription(
+      DESIGN_PATTERN_NARRATIVE_GUIDANCE.rationale
+    );
+  });
   it("saves a draft from the title and keeps blank KSA rows off the payload", () => {
     const form = {
       name: "  Explain a diagram  ",

@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D132** absorbed into **D131** (`a7ff472`). **D133 is partial**: narrative screen shipped (`f23be77`); PADI per-field guidance and the `:6060` walk remain. Handoff: `claude/day133-session-close.md`. |
+| Last completed unit | **D133 guidance** is on the Design Patterns screen in the working tree. The `:6060` walk is still open (nginx serves `index-CQCUHCB8.js`). Handoff: `claude/day133-narrative-guidance.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D133 remainder** — per-attribute PADI guidance, then a `:6060` walk. Then **D134** (menus reference real objects). Do not start D135 until that path can confirm a pattern. |
+| Next queued | **D133 walk** on `:6060` after nginx is rebuilt, then **D134**. Do not start D135 until a pattern can be confirmed with real menu references. |
 
 | Block | **W26 closed** 2026-10-13 (D126–D130). Gate held: template validates four bindings; session updates two correlated SMVs and reproduces from responses. **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -475,6 +475,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-14 | close | 2 + 1 | D131/D132 done (routes absorbed; reduced lifecycle). D133 **partial**: screen persists in tests; PADI guidance and `:6060` walk open. Close re-run **2116 passed / 9 skipped** after two load timeouts were widened; build green. Debt discharged by W27 close. Next: D133 guidance, then D134. |
 
+| 2026-10-14 | D133 guidance | 1 | Each narrative attribute explains its PADI role on the existing screen. Suite **2117 passed / 9 skipped**. `:6060` still serves `index-CQCUHCB8.js`, so the walk stays open. No D134. |
+
 
 
 ## Compression debt
@@ -485,7 +487,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|---|---|---|
 
-| D133 | Per-attribute PADI guidance, and the `:6060` walk | Narrative fields persist in tests. The exit check's guidance clause was not written. | W27 close (D135) | **open** |
+| D133 | Per-attribute PADI guidance, and the `:6060` walk | Narrative fields persist in tests. The exit check's guidance clause was not written. | W27 close (D135) | Guidance is on the screen in the working tree (2026-10-14). The `:6060` walk is still **open**: nginx is serving `index-CQCUHCB8.js`, the bundle from before that guidance. |
 
 | D50 | District/teacher browser pass skipped | Human logins | D71 | **closed** — district Operate + teacher Sessions walked 2026-09-14 |
 
@@ -672,6 +674,8 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D132 | Routes, auth, and a reduced lifecycle for design patterns | Those artefacts shipped inside D131 because the collection guard will not pass schema-only | Do not re-implement routes. Closed as a routes unit on 2026-10-14. Wizard narrative is D133; real menu references are D134. |
 
 | D133 | Narrative wizard over a pattern that does not exist yet, with Additional KSAs copied from Task Model fairness notes | `designPatterns` exists (D131). `fairnessRisks` stay on the Task Model. No pattern screen | Admin library: title, summary, rationale, focal KSAs, additional KSAs. Draft may omit rationale; confirm cannot. Tier 1, alone. |
+
+| D133 remainder | Rebuild the wizard so each attribute explains itself | The form already saves those five fields. What was missing was the PADI role of each one | Add that guidance on the existing screen. Do not rebuild the form. Do not open the D134 menus. The `:6060` walk waits until nginx is serving this screen. |
 
 
 
