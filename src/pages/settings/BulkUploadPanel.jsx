@@ -20,6 +20,7 @@ import { taskModelsKey } from "@/api/queries/taskModels";
 import { itemsKey } from "@/api/queries/items";
 import { qMatrixModelsKey } from "@/api/queries/qMatrixModels";
 import { assemblyModelsKey } from "@/api/queries/assemblyModels";
+import { designPatternsKey } from "@/api/queries/designPatterns";
 
 export default function BulkUploadPanel() {
   return (
@@ -28,7 +29,7 @@ export default function BulkUploadPanel() {
         <h2 className="text-xl font-semibold">Bulk Upload</h2>
         <p className="text-sm text-muted-foreground">
           Import users, selection policies, curricular policies, Student Models, evidence
-          models, task models, or items from a JSON file. Every row is created as a{" "}
+          models, task models, items, or design patterns from a JSON file. Every row is created as a{" "}
           <span className="font-medium text-foreground">draft</span> and validated with the same
           rules as creating it one at a time, with one relaxation specific to importing: a parent
           referenced here may itself still be a draft, so a whole authored chain can land in one
@@ -120,6 +121,14 @@ export default function BulkUploadPanel() {
           endpoint="/api/assemblyModels/bulk"
           invalidateKey={assemblyModelsKey}
           sampleHint="See samples/newtonian_mechanics_assembly.json"
+        />
+
+        <BulkUploadCard
+          title="Design Patterns"
+          description="Array of PADI design patterns. Rows with workProductId, rubricId, or taskModelVariableId fail unless those library records already exist. Import always lands as draft; confirm in Admin → Models → Design Patterns."
+          endpoint="/api/designPatterns/bulk"
+          invalidateKey={designPatternsKey}
+          sampleHint="See samples/sample-design-patterns.json — replace the library id placeholders first."
         />
       </div>
     </div>

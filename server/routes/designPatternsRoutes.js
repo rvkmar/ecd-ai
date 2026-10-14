@@ -5,6 +5,7 @@
 // authorises no student delivery, so there is no operational status.
 //
 // Admin-authored. District may view. Wizard is D133–D134.
+// D135: POST /bulk on this same file; import always lands as draft.
 // ------------------------------------------------------------------
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
@@ -63,6 +64,27 @@ function rejectIfInvalid(res, record, db) {
   });
 }
 
+function createDesignPatternRecord(body, db, req, { forceDraft = false } = {}) {
+  const now = new Date().toISOString();
+  const writes = pickWrites(body);
+  const record = {
+    ...writes,
+    status: forceDraft ? "draft" : writes.status || "draft",
+    id: genId(),
+    ...authorTenancy(req),
+    createdAt: now,
+    updatedAt: now,
+  };
+  const strict = record.status === "confirmed";
+  const { valid, errors } = validateEntity("designPatterns", record, db, { strict });
+  if (!valid) {
+    return { ok: false, error: errors[0] || "Design pattern validation failed", details: errors };
+  }
+  db.designPatterns = db.designPatterns || [];
+  db.designPatterns.push(record);
+  return { ok: true, record };
+}
+
 router.get("/", (req, res) => {
   const db = loadDB();
   res.json(db.designPatterns || []);
@@ -77,23 +99,33 @@ router.get("/:id", (req, res) => {
 
 router.post("/", canAuthor, (req, res) => {
   const db = loadDB();
-  const now = new Date().toISOString();
-  const writes = pickWrites(req.body);
-  const record = {
-    ...writes,
-    status: writes.status || "draft",
-    id: genId(),
-    ...authorTenancy(req),
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  if (rejectIfInvalid(res, record, db)) return;
-
-  db.designPatterns = db.designPatterns || [];
-  db.designPatterns.push(record);
+  const result = createDesignPatternRecord(req.body, db, req);
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error, details: result.details });
+  }
   saveDB(db);
-  res.status(201).json(record);
+  res.status(201).json(result.record);
+});
+
+router.post("/bulk", canAuthor, (req, res) => {
+  const rows = req.body;
+  if (!Array.isArray(rows)) {
+    return res
+      .status(400)
+      .json({ error: "Request body must be a JSON array of design patterns." });
+  }
+
+  const db = loadDB();
+  const results = rows.map((row, i) => {
+    const result = createDesignPatternRecord(row, db, req, { forceDraft: true });
+    return result.ok
+      ? { index: i, ok: true, id: result.record.id, name: result.record.name }
+      : { index: i, ok: false, error: result.error, details: result.details };
+  });
+  saveDB(db);
+
+  const created = results.filter((r) => r.ok).length;
+  res.status(207).json({ created, failed: results.length - created, results });
 });
 
 router.put("/:id", canAuthor, (req, res) => {

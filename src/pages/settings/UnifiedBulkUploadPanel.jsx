@@ -49,6 +49,7 @@ import { itemsKey } from "@/api/queries/items";
 import { policiesKey } from "@/api/queries/policies";
 import { qMatrixModelsKey } from "@/api/queries/qMatrixModels";
 import { assemblyModelsKey } from "@/api/queries/assemblyModels";
+import { designPatternsKey } from "@/api/queries/designPatterns";
 import { normalizeStudentModelBulkRows } from "@/utils/studentModelBulkNormalize";
 
 // Fixed dependency order. Index in this array IS the upload order.
@@ -101,6 +102,13 @@ const STAGES = [
     endpoint: "/api/assemblyModels/bulk",
     gate: "",
   },
+  {
+    key: "designPatterns",
+    title: "Design Patterns",
+    endpoint: "/api/designPatterns/bulk",
+    gate:
+      "workProductId, rubricId, and taskModelVariableId must already exist. Missing ids fail that row. Import is always a draft.",
+  },
 ];
 
 const STAGE_BY_KEY = Object.fromEntries(STAGES.map((s) => [s.key, s]));
@@ -144,6 +152,13 @@ function detectKind(rows, fileName, wrapperKey) {
       return "policies";
     if (has("measurementIntent") || has("competencies") || has("constructFramework") || has("smVariables") || has("psychologicalPerspective"))
       return "competencyModels";
+    if (
+      has("focalKsas") ||
+      has("potentialWorkProducts") ||
+      has("potentialRubrics") ||
+      has("variableFeatures")
+    )
+      return "designPatterns";
   }
 
   const wrapper = String(wrapperKey || "").toLowerCase();
@@ -156,6 +171,8 @@ function detectKind(rows, fileName, wrapperKey) {
     if (wrapper.includes("assembly")) return "assemblyModels";
     if (wrapper.includes("polic")) return "policies";
     if (wrapper.includes("competenc") || wrapper.includes("studentmodel")) return "competencyModels";
+    if (wrapper.includes("designpattern") || wrapper.includes("design-pattern"))
+      return "designPatterns";
   }
 
   const name = String(fileName || "").toLowerCase();
@@ -168,6 +185,8 @@ function detectKind(rows, fileName, wrapperKey) {
   if (name.includes("evidence")) return "evidenceModels";
   if (name.includes("competenc") || name.includes("student") || name.includes("specification"))
     return "competencyModels";
+  if (name.includes("designpattern") || name.includes("design-pattern") || name.includes("design_pattern"))
+    return "designPatterns";
 
   return "";
 }
@@ -228,6 +247,7 @@ export default function UnifiedBulkUploadPanel() {
     items: useBulkUpload("/api/items/bulk", itemsKey),
     qMatrixModels: useBulkUpload("/api/qMatrixModels/bulk", qMatrixModelsKey),
     assemblyModels: useBulkUpload("/api/assemblyModels/bulk", assemblyModelsKey),
+    designPatterns: useBulkUpload("/api/designPatterns/bulk", designPatternsKey),
   };
 
   // Assigned files, deduplicated by kind, sorted into dependency order.

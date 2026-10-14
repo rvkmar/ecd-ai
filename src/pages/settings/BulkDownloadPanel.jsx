@@ -16,9 +16,9 @@ export default function BulkDownloadPanel() {
         <h2 className="text-xl font-semibold">Bulk Download</h2>
         <p className="text-sm text-muted-foreground">
           Export users, selection policies, curricular policies, Student Models, evidence
-          models, task models, or items as a JSON file. Each file is a JSON array shaped like
-          the one the matching Upload card accepts, so an export can be edited and imported
-          again -- here or on another deployment.
+          models, task models, items, or design patterns as a JSON file. Each file is a JSON
+          array shaped like the one the matching Upload card accepts, so an export can be
+          edited and imported again -- here or on another deployment.
         </p>
       </div>
 
@@ -68,6 +68,13 @@ export default function BulkDownloadPanel() {
           description="Array of full item objects, including their taskModelId and observation binding."
           kind="items"
           note="Re-importing needs the referenced task models to exist and be confirmed+locked."
+        />
+
+        <BulkDownloadCard
+          title="Design Patterns"
+          description="Array of PADI design patterns, including narrative fields and menu object ids."
+          kind="designPatterns"
+          note="Re-importing creates new pattern ids. workProductId, rubricId, and taskModelVariableId must already exist or that row fails."
         />
       </div>
     </div>

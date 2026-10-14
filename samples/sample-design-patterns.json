@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Explain a labelled diagram",
+    "summary": "A family of situations in which the examinee explains a labelled scientific diagram rather than only naming its parts.",
+    "rationale": "Explanation of a diagram is worth assessing separately from recognition. A later copy of this pattern should keep that distinction.",
+    "focalKsas": [{ "label": "Model-based explanation" }],
+    "additionalKsas": [{ "label": "Diagram conventions" }],
+    "potentialObservations": [{ "label": "Names the claim shown in the diagram" }],
+    "potentialWorkProducts": [
+      {
+        "label": "Written explanation",
+        "workProductId": "<REPLACE_WITH_REAL_WORK_PRODUCT_ID>"
+      }
+    ],
+    "potentialRubrics": [
+      {
+        "label": "Explanation rubric",
+        "rubricId": "<REPLACE_WITH_REAL_RUBRIC_ID>"
+      }
+    ],
+    "characteristicFeatures": [{ "label": "Uses a labelled diagram" }],
+    "variableFeatures": [
+      {
+        "label": "Diagram complexity",
+        "taskModelVariableId": "<REPLACE_WITH_REAL_TMV_ID>"
+      }
+    ]
+  }
+]

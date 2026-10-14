@@ -118,4 +118,46 @@ describe("D131 /api/designPatterns", () => {
     expect(confirmed.body.potentialWorkProducts[0].workProductId).toBe("wp1");
     expect(confirmed.body.status).toBe("confirmed");
   });
+
+  it("bulk-imports drafts and reports unresolvable library ids", async () => {
+    const expressApp = await app();
+    dbState.current = {
+      designPatterns: [],
+      workProducts: [{ id: "wp1", name: "Written explanation", type: "essay" }],
+      rubrics: [{ id: "rb1", name: "Explanation rubric" }],
+      taskModelVariables: [{ id: "tmv1", name: "Diagram complexity" }],
+    };
+
+    const res = await request(expressApp)
+      .post("/api/designPatterns/bulk")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send([
+        {
+          ...complete,
+          status: "confirmed",
+          potentialWorkProducts: [
+            { label: "Written explanation", workProductId: "wp1" },
+          ],
+          potentialRubrics: [{ label: "Explanation rubric", rubricId: "rb1" }],
+          variableFeatures: [
+            { label: "Diagram complexity", taskModelVariableId: "tmv1" },
+          ],
+        },
+        {
+          ...complete,
+          name: "Missing library",
+          potentialWorkProducts: [
+            { label: "Missing", workProductId: "wp-missing" },
+          ],
+        },
+      ]);
+
+    expect(res.status).toBe(207);
+    expect(res.body.created).toBe(1);
+    expect(res.body.failed).toBe(1);
+    expect(res.body.results[0].ok).toBe(true);
+    expect(dbState.current.designPatterns[0].status).toBe("draft");
+    expect(res.body.results[1].ok).toBe(false);
+    expect(res.body.results[1].details.some((e) => /wp-missing/.test(e))).toBe(true);
+  });
 });

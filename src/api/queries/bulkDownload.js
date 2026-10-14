@@ -43,6 +43,9 @@ const fetchers = {
   taskModels: async (auth) => (await apiFetch("/api/taskModels", {}, auth)) || [],
 
   items: async (auth) => (await apiFetch("/api/items", {}, auth)) || [],
+
+  designPatterns: async (auth) =>
+    (await apiFetch("/api/designPatterns", {}, auth)) || [],
 };
 
 // Trigger a browser download of `rows` as pretty-printed JSON. Uses an

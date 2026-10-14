@@ -16,6 +16,11 @@ that doesn't exist yet just fails that row.
 | `sample-task-models.json` | Settings > Bulk Upload > Task Models | No — needs a real, confirmed `evidenceModelId` (and a two-pass upload for the composite row) |
 | `sample-items.json` | Settings > Bulk Upload > Items | No — needs a real, confirmed `taskModelId` |
 | `sample-presentation-models.json` | D113 fixture (Admin Delivery > Presentation wizard; no Bulk Upload card yet) | No — needs a real, confirmed `taskModelId` |
+| `sample-design-patterns.json` | Settings > Data > Upload > Design Patterns | No — needs real `workProductId`, `rubricId`, and `taskModelVariableId` |
+
+## Design Patterns
+
+`sample-design-patterns.json` is a single PADI argument (title, summary, rationale, KSAs, and the five menus). Work products, rubrics, and task-model variables are cited by id. Those collections are not bulk stages, so create the library rows first (Admin → Models), copy their ids into the placeholders, then upload. A missing id fails that row with the same validator as the wizard. Import always creates a **draft**; confirm on Admin → Models → Design Patterns. Re-importing generates new pattern ids; the menu ids are not remapped by name.
 
 ## Users, Policies, Curricular Policies, Competency Models
 
