@@ -6,12 +6,16 @@
 //
 // Admin-authored. District may view. Wizard is D133–D134.
 // D135: POST /bulk on this same file; import always lands as draft.
+// D137: POST /:id/seed writes one draft Evidence Model and one draft Task Model.
 // ------------------------------------------------------------------
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
+import { seedFromDesignPattern } from "../services/seedFromDesignPattern.js";
+import { createEvidenceModelRecord } from "./evidenceModels.js";
+import { createTaskModelRecord } from "./taskModelsRoutes.js";
 
 const router = express.Router();
 
@@ -151,6 +155,31 @@ router.put("/:id", canAuthor, (req, res) => {
   db.designPatterns[idx] = updated;
   saveDB(db);
   res.json(updated);
+});
+
+router.post("/:id/seed", canAuthor, (req, res) => {
+  const db = loadDB();
+  const pattern = (db.designPatterns || []).find((row) => row.id === req.params.id);
+  if (!pattern) return res.status(404).json({ error: "Design pattern not found" });
+
+  const result = seedFromDesignPattern({
+    pattern,
+    body: req.body || {},
+    db,
+    createEvidenceModelRecord,
+    createTaskModelRecord,
+  });
+  if (!result.ok) {
+    return res.status(result.status || 400).json({
+      error: result.error || "Seed failed",
+      details: result.details,
+    });
+  }
+  saveDB(db);
+  res.status(201).json({
+    evidenceModel: result.evidenceModel,
+    taskModel: result.taskModel,
+  });
 });
 
 router.post("/:id/confirm", canAuthor, (req, res) => {

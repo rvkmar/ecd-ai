@@ -383,6 +383,9 @@ export const schema = {
     calibrationPlan: 'object',
     authoringNotes: 'string',
     studentModelCoherenceNotes: 'string',
+    // D137. Rows accepted and declined from one confirmed design pattern.
+    // Confirm does not read this. A rubric id here is not an evaluation procedure.
+    seededFrom: 'object',
     status: 'string',
     locked: 'boolean',
     createdAt: 'date',
@@ -517,6 +520,9 @@ export const schema = {
     --------------------------------------------- */
     taskModelVariableIds: 'array',
     taskModelVariableSettings: 'array',
+    // D137. Same seed record as the Evidence Model drafted with it.
+    // Characteristic-feature labels stay here. They are not blueprintConstraints.
+    seededFrom: 'object',
 
     /* ---------------------------------------------
       8️⃣ GOVERNANCE

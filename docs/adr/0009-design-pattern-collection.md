@@ -47,8 +47,9 @@ Each menu entry is `{ label }`. D134 requires a present library row to cite
 a real object: `workProductId` (not a free `workProductType` string),
 `rubricId`, `taskModelVariableId`. Potential Observations may copy an
 existing observable id; Characteristic Features stay labelled possibilities.
-Empty menus remain allowed. Rows are possibilities, not commitments. This
-ADR does not seed models (W28).
+Empty menus remain allowed. Rows are possibilities, not commitments.
+Seeding those rows into draft models is D137, and it does not make a
+confirmed pattern operational.
 
 **Rationale.** An empty Rationale is refused when the pattern is confirmed
 or validated strictly. A draft may omit it so a later wizard step can
@@ -73,5 +74,6 @@ arrays may be empty. A present library row must cite a real object (D134).
 
 - W28 can point at a confirmed pattern. It must not treat `confirmed` as permission to deliver a session.
 - D136: a template may cite `designPatternId`. The link is optional. Confirming a template does not require a pattern, and a pattern does not own the template. Many templates may cite one pattern. Deleting a pattern that is still cited is refused.
+- D137: a confirmed pattern may seed one draft Evidence Model and one draft Task Model. The designer picks menu rows; declined rows stay on `seededFrom`. Chosen observation labels become new draft statements. Chosen variable features may cite `taskModelVariableIds`. Characteristic-feature labels are not written into `blueprintConstraints`. Rubric ids are not evaluation procedures. Existing confirm rules remain the substance gate. A draft pattern is not offered for seeding.
 - D134: present work-product / rubric / TMV rows cite collection ids. Observations and characteristic features stay labelled possibilities. Empty menus remain allowed.
 - Additional KSAs on the pattern are not the Task Model `fairnessRisks` cards. Those remain the task-form record until W30.

@@ -1,6 +1,7 @@
 // src/components/designPatterns/DesignPatternBuilder.jsx
 //
 // D133–D134 / W27: narrative plus menus of possibilities.
+// D137: a confirmed pattern can seed draft Evidence and Task Models.
 // Confirming still authorises no student delivery (ADR 0009).
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -15,13 +16,24 @@ import {
   useUpdateDesignPattern,
   useConfirmDesignPattern,
   useDeleteDesignPattern,
+  useSeedDesignPattern,
 } from "@/api/queries/designPatterns";
+import { useCompetencies } from "@/api/queries/competencies";
 import { useWorkProducts } from "@/api/queries/workProducts";
 import { useRubrics } from "@/api/queries/rubrics";
 import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { useTemplates, useUpdateTemplate } from "@/api/queries/templates";
 import { designPatternReadiness } from "@/utils/designPatternReadiness";
+import { DESIGN_PATTERN_PADI_ATTRIBUTES } from "@/utils/schema";
+
+const SEED_FIELDS = [
+  "potentialObservations",
+  "potentialWorkProducts",
+  "potentialRubrics",
+  "characteristicFeatures",
+  "variableFeatures",
+];
 
 const inputClass =
   "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
@@ -353,6 +365,104 @@ export function templatesForPattern(templates = [], patternId) {
   return templates.filter((row) => row.designPatternId === patternId);
 }
 
+function SeedFromPattern({ pattern, competencies = [], onSeed, pending = false }) {
+  const [competencyId, setCompetencyId] = useState("");
+  const [picked, setPicked] = useState({});
+  const [seedError, setSeedError] = useState("");
+
+  function toggle(field, index) {
+    setPicked((current) => {
+      const next = new Set(current[field] || []);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return { ...current, [field]: [...next] };
+    });
+  }
+
+  async function handleSeed() {
+    setSeedError("");
+    const selections = {};
+    for (const field of SEED_FIELDS) selections[field] = picked[field] || [];
+    try {
+      await onSeed({ id: pattern.id, competencyId, selections });
+      setPicked({});
+    } catch (err) {
+      setSeedError(apiErrorMessage(err, "Seed failed"));
+    }
+  }
+
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <h4 className="text-sm font-medium text-slate-800">Seed draft models</h4>
+      <p className={hintClass}>
+        Pick the menu rows to copy. Unchecked rows stay on the back-link.
+        This writes a draft Evidence Model and a draft Task Model. Confirm
+        still requires the claim, warrants, and evidence rules this pattern
+        does not supply.
+      </p>
+      <label className="mt-3 block text-sm" htmlFor="dp-seed-competency">
+        <span className="mb-1 block text-slate-700">Competency</span>
+        <select
+          id="dp-seed-competency"
+          className={inputClass}
+          value={competencyId}
+          onChange={(event) => setCompetencyId(event.target.value)}
+        >
+          <option value="">Select a competency</option>
+          {competencies.map((row) => (
+            <option key={row.id} value={row.id}>
+              {row.name || row.id}
+            </option>
+          ))}
+        </select>
+      </label>
+      {competencies.length === 0 ? (
+        <p className="mt-2 text-xs text-slate-500">
+          A competency is required before seeding. This library has none.
+        </p>
+      ) : null}
+      {SEED_FIELDS.map((field) => {
+        const rows = Array.isArray(pattern[field]) ? pattern[field] : [];
+        const label =
+          DESIGN_PATTERN_PADI_ATTRIBUTES.find((row) => row.field === field)?.padi || field;
+        if (rows.length === 0) return null;
+        return (
+          <fieldset key={field} className="mt-3">
+            <legend className="text-xs font-medium text-slate-700">{label}</legend>
+            <ul className="mt-1 space-y-1">
+              {rows.map((row, index) => (
+                <li key={`${field}-${index}`}>
+                  <label className="flex items-start gap-2 text-sm text-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={(picked[field] || []).includes(index)}
+                      onChange={() => toggle(field, index)}
+                    />
+                    <span>{row.label}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </fieldset>
+        );
+      })}
+      {seedError ? (
+        <p className="mt-2 text-sm text-red-600" role="alert">
+          {seedError}
+        </p>
+      ) : null}
+      <Button
+        type="button"
+        className="mt-3"
+        disabled={!competencyId || pending || !onSeed}
+        onClick={handleSeed}
+      >
+        Seed draft models
+      </Button>
+    </div>
+  );
+}
+
 export function DesignPatternLibraryView({
   patterns = [],
   templates = [],
@@ -365,6 +475,9 @@ export function DesignPatternLibraryView({
   onConfirm,
   onDelete,
   onLinkTemplate,
+  competencies = [],
+  onSeed,
+  seedPending = false,
   focusId = null,
   createPending = false,
   updatePending = false,
@@ -598,6 +711,14 @@ export function DesignPatternLibraryView({
                 onLinkTemplate={onLinkTemplate}
               />
             ) : null}
+            {editing?.status === "confirmed" && onSeed ? (
+              <SeedFromPattern
+                pattern={editing}
+                competencies={competencies}
+                onSeed={onSeed}
+                pending={seedPending}
+              />
+            ) : null}
             {serverError ? (
               <p className="text-sm text-red-600" role="alert">
                 {serverError}
@@ -773,6 +894,8 @@ export default function DesignPatternBuilder() {
   const focusId = searchParams.get("focus");
   const { data: patterns = [], isLoading, error } = useDesignPatterns();
   const { data: templates = [] } = useTemplates();
+  const { data: competencies = [] } = useCompetencies();
+  const seedMut = useSeedDesignPattern();
   const updateTemplate = useUpdateTemplate();
   const { data: workProducts = [] } = useWorkProducts();
   const { data: rubrics = [] } = useRubrics();
@@ -802,6 +925,8 @@ export default function DesignPatternBuilder() {
     <DesignPatternLibraryView
       patterns={patterns}
       templates={templates}
+      competencies={competencies}
+      seedPending={seedMut.isPending}
       focusId={focusId}
       workProducts={workProducts}
       rubrics={rubrics}
@@ -845,6 +970,18 @@ export default function DesignPatternBuilder() {
           toast.success("Design pattern deleted");
         } catch (err) {
           toast.error(apiErrorMessage(err, "Delete failed"));
+          throw err;
+        }
+      }}
+      onSeed={async (payload) => {
+        try {
+          const seeded = await seedMut.mutateAsync(payload);
+          toast.success(
+            `Drafts created: ${seeded.evidenceModel?.name || "evidence model"} and ${seeded.taskModel?.name || "task model"}`
+          );
+          return seeded;
+        } catch (err) {
+          toast.error(apiErrorMessage(err, "Seed failed"));
           throw err;
         }
       }}

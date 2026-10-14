@@ -6,6 +6,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../apiClient";
 import { useAuth } from "../../auth/AuthProvider";
+import { evidenceModelsKey } from "./evidenceModels";
+import { taskModelsKey } from "./taskModels";
 
 export const designPatternsKey = ["designPatterns"];
 export const designPatternKey = (id) => ["designPatterns", id];
@@ -65,6 +67,23 @@ export function useConfirmDesignPattern() {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: designPatternsKey });
       queryClient.invalidateQueries({ queryKey: designPatternKey(id) });
+    },
+  });
+}
+
+export function useSeedDesignPattern() {
+  const { auth } = useAuth() || {};
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, competencyId, selections }) =>
+      apiFetch(
+        `/api/designPatterns/${id}/seed`,
+        { method: "POST", body: JSON.stringify({ competencyId, selections }) },
+        auth
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: evidenceModelsKey });
+      queryClient.invalidateQueries({ queryKey: taskModelsKey });
     },
   });
 }

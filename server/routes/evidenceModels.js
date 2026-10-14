@@ -202,7 +202,7 @@ router.get("/:id", (req, res) => {
    persists once, so bulk import writes the file once per batch instead
    of once per row.
 ===================================================== */
-function createEvidenceModelRecord(payload = {}, db, idSuffix = "", options = {}) {
+export function createEvidenceModelRecord(payload = {}, db, idSuffix = "", options = {}) {
   // Cross-layer existence check. `competencyId` is the preferred, unambiguous
   // reference. A bulk-upload row that doesn't know the internal id yet (it's
   // server-generated, e.g. "c1787128144166_1_4" from a positional bulk
@@ -363,6 +363,10 @@ function createEvidenceModelRecord(payload = {}, db, idSuffix = "", options = {}
     evaluationProcedures: Array.isArray(payload.evaluationProcedures)
       ? payload.evaluationProcedures
       : [],
+    // D137: the seed record. Absent on models authored by hand.
+    seededFrom: payload.seededFrom && typeof payload.seededFrom === "object"
+      ? payload.seededFrom
+      : null,
     fairnessNotes: payload.fairnessNotes || "",
     difReviewChecklist: Array.isArray(payload.difReviewChecklist)
       ? payload.difReviewChecklist

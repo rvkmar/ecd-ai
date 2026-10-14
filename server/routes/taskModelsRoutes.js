@@ -173,7 +173,7 @@ function validateSubTasks(taskModel, db) {
    caller persists once, so bulk import writes the file once per batch
    instead of once per row.
 ===================================================== */
-function createTaskModelRecord(payload = {}, db, idSuffix = "", options = {}) {
+export function createTaskModelRecord(payload = {}, db, idSuffix = "", options = {}) {
   const allowDraftParents = options.allowDraftParents === true;
 
   let evidenceModelIds = Array.isArray(payload.evidenceModelIds)
