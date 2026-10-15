@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D144**, alone (Tier 3, never-compress). Re-home Q-matrices under a Domain Analysis. Dry-run first. `QMatrixGrid` is presentational; `QMatrixEditor` is bound to competency models and `/api/qMatrixModels`. `knowledgeTaskRelationships` stay `{ label }` and refuse `qMatrixId`. Do not inherit perspective (D146). Do not walk W29 (D145). |
+| Next queued | **D144**, alone (Tier 3, never-compress). Keep `/api/qMatrixModels` and `structureConfig.qMatrixId`. Do not write `qMatrixId` onto `knowledgeTaskRelationships`. Optional `domainAnalysisId` on the Q-matrix only when an analysis exists. Do not invent one Domain Analysis per competency model. Dry-run first. The Admin screen may move; the API must not 404. No D145 walk. No D146 inheritance. |
 
 | Block | **W29 open** (D141–D143 done; D144–D145 remain). Gate not held: an author cannot yet start at a Domain Analysis and reach a Competency Model. **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -513,6 +513,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-15 | D143 | 3, alone | Content standards on a Domain Analysis. Goal tree kept. Collection kept. Close re-run **2170 passed / 9 skipped**. Live dry-run found 0 policies; migration `006` recorded and did not change `da1792032778751000`. Settings still reads the route. No D144. |
 
+| 2026-10-15 | calibrate | — | D144 premise checked. Q-matrices stay the DINA store. Knowledge–task rows stay labels. No Domain Analysis parent on competency models, so do not mint one analysis per model. Live `/data/db.json` at 14:28Z is an empty default (0 Q-matrices, 0 analyses, no migration log). Work order: D144 alone. No D145. |
+
 
 
 ## Compression debt
@@ -735,7 +737,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 | D143 | Fold `curricularPolicies` into the Domain Analysis `valuedKnowledge` labels, then delete the Settings tab | A policy is `curricularGoals` → competencies → learning outcomes (`schema.js`). Step 3 stores `constructFramework.policyId` plus a snapshot (`policyName`, `curricularGoalCodes`, `curricularGoals`). `valuedKnowledge` is `{ label }` and a `curricularPolicyId` on that row is refused (ADR 0010). `CurricularPolicyManager` is Settings → Policies, and the bulk card also posts `/api/curricularPolicies/bulk`. The dry-run runner is `server/migrations/runner.js`. This calibration did not count live policy rows | Keep the policy shape as content standards on a Domain Analysis. Do not flatten it into labels. Dry-run and record the version before any write. Step 3 still resolves `policyId`; a confirmed model's snapshot still renders. Retire the Settings surface only when nothing reads `/api/curricularPolicies`. Leave Q-matrices and perspective inheritance alone. |
 
-| D144 | Add `domainAnalysisId` and re-parent the route; the grid was built to make this small | `QMatrixGrid` is presentational. `QMatrixEditor` is bound to competency models and `/api/qMatrixModels`. `knowledgeTaskRelationships` are `{ label }` and refuse `qMatrixId` | Not this session. Re-homing is a migration of the grid's home, not a rewrite of the grid, and it is not a relabeling of knowledge–task statements. Dry-run. Every existing Q-matrix must still drive its DINA models. |
+| D144 | Add `domainAnalysisId` and re-parent the route; the grid was built to make this small | `QMatrixGrid` is presentational. The editor is Admin → Diagnostic design (`QMatrixModelBuilder`), bound to `competencyModelId` and `/api/qMatrixModels`. DINA resolves `structureConfig.qMatrixId` on that collection. `knowledgeTaskRelationships` are `{ label }` and refuse `qMatrixId`. Competency models have no `domainAnalysisId`. At 2026-10-15 14:28Z the live JSON file is a 382-byte default: 0 Q-matrices, 0 domain analyses, no backups, no migration log | Keep the collection and the id DINA already stores. Do not flatten entries into knowledge–task labels. Do not mint a Domain Analysis per competency model. An optional `domainAnalysisId` may be set when an analysis already exists. Dry-run before any write. Move the Admin screen if that is the re-home; `/api/qMatrixModels` must still resolve. The empty live file is not evidence the earlier draft `da1792032778751000` never existed. |
 
 
 
@@ -809,7 +811,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). ~~D138 seed-snapshot divergence~~ closed (`claude/day138-seed-snapshot-divergence.md`). ~~D139 pattern relations~~ closed (`claude/day139-pattern-relations.md`). ~~W28 neighbourhood graph (D140)~~ closed (`claude/day140-pattern-neighbourhood.md`). ~~D141 domainAnalyses schema~~ closed (`claude/day141-domain-analysis-schema.md`). ~~D142 upload and correction form~~ closed (`claude/day142-domain-analysis-upload.md`). ~~D143 content standards~~ closed (`claude/day143-content-standards.md`). W29 domain analysis still open at D144.
+- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). ~~D138 seed-snapshot divergence~~ closed (`claude/day138-seed-snapshot-divergence.md`). ~~D139 pattern relations~~ closed (`claude/day139-pattern-relations.md`). ~~W28 neighbourhood graph (D140)~~ closed (`claude/day140-pattern-neighbourhood.md`). ~~D141 domainAnalyses schema~~ closed (`claude/day141-domain-analysis-schema.md`). ~~D142 upload and correction form~~ closed (`claude/day142-domain-analysis-upload.md`). ~~D143 content standards~~ closed (`claude/day143-content-standards.md`). W29 domain analysis still open at D144. The live `/data/db.json` read at calibration on 2026-10-15 14:28Z is an empty default; draft `da1792032778751000` is not in that file.
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 
