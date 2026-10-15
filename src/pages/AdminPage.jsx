@@ -95,14 +95,20 @@ export default function AdminPage() {
           id: "models",
           label: "Models",
           tabs: [
+            // Authoring order: domain, pattern, the models they inform,
+            // the libraries a task cites, then assembly and estimation.
+            {
+              id: "domainanalyses",
+              label: "Domain Analysis",
+              content: <DomainAnalysisEditor />,
+            },
+            {
+              id: "designpatterns",
+              label: "Design Patterns",
+              content: <DesignPatternBuilder />,
+            },
             { id: "student", label: "Student Model", content: <CompetencyModelBuilder /> },
             { id: "evidence", label: "Evidence Model", content: <EvidenceModelBuilder /> },
-            { id: "taskmodels", label: "Task Model", content: <TaskModelBuilder /> },
-            {
-              id: "taskmodelvariables",
-              label: "Task Model Variables",
-              content: <TaskModelVariableBuilder />,
-            },
             {
               id: "workproducts",
               label: "Work Products",
@@ -114,19 +120,15 @@ export default function AdminPage() {
               content: <RubricBuilder />,
             },
             {
+              id: "taskmodelvariables",
+              label: "Task Model Variables",
+              content: <TaskModelVariableBuilder />,
+            },
+            { id: "taskmodels", label: "Task Model", content: <TaskModelBuilder /> },
+            {
               id: "templates",
               label: "Templates",
               content: <TemplateBuilder />,
-            },
-            {
-              id: "domainanalyses",
-              label: "Domain Analysis",
-              content: <DomainAnalysisEditor />,
-            },
-            {
-              id: "designpatterns",
-              label: "Design Patterns",
-              content: <DesignPatternBuilder />,
             },
             { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
             { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },

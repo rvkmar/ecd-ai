@@ -2,7 +2,7 @@
 // District tabs stay peers. No new CAF entity named Delivery Model.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import fs from "fs";
@@ -139,7 +139,7 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(student).not.toMatch(/id: "analytics"/);
   });
 
-  it("shows Home first, then Student Model after opening Models", async () => {
+  it("shows Home first, then Domain Analysis after opening Models", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -154,14 +154,27 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(screen.getByRole("tab", { name: "Announcements" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Models" }));
-    expect(screen.getByRole("tab", { name: "Student Model" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Task Model" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Task Model Variables" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Assembly Model" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Diagnostic design" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Parameter estimation" })).toBeInTheDocument();
+    const modelList = screen.getAllByRole("tablist").find((list) =>
+      list.textContent?.includes("Domain Analysis")
+    );
+    expect(within(modelList).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Domain Analysis",
+      "Design Patterns",
+      "Student Model",
+      "Evidence Model",
+      "Work Products",
+      "Rubrics",
+      "Task Model Variables",
+      "Task Model",
+      "Templates",
+      "Assembly Model",
+      "Diagnostic design",
+      "Parameter estimation",
+    ]);
     expect(screen.queryByRole("tab", { name: "Competency Model" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Analytics" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Domain analysis form")).toBeInTheDocument());
+    await user.click(screen.getByRole("tab", { name: "Student Model" }));
     await waitFor(() => expect(screen.getByText("Student builder")).toBeInTheDocument());
   });
 
