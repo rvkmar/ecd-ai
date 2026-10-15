@@ -921,6 +921,30 @@ export const schema = {
     updatedAt: 'date',
   },
 
+  // domainAnalyses — D141 (W29 G10), ADR 0010. One record for PADI
+  // Layer 1. The seven entities are labelled statements, not foreign
+  // keys. curricularPolicies and qMatrixModels stay where they are.
+  // Named `domainAnalyses` so the collection matches the calendar;
+  // dbAdapter's trailing-s strip stores it as the model DomainAnalyse.
+  domainAnalyses: {
+    id: 'string',
+    name: 'string',
+    valuedWork: 'array',
+    taskFeatures: 'array',
+    representationalForms: 'array',
+    performanceOutcomes: 'array',
+    valuedKnowledge: 'array',
+    knowledgeStructure: 'array',
+    knowledgeTaskRelationships: 'array',
+    psychologicalPerspective: 'string',
+    status: 'string',
+    districtId: 'string',
+    schoolId: 'string',
+    createdBy: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
   templates: {
     id: 'string',
     name: 'string',
@@ -1161,6 +1185,86 @@ export const DESIGN_PATTERN_STATUS_MEANINGS = Object.freeze({
 });
 
 /** PADI Tables 2–3, mapped onto record fields. Title is `name`, matching other entities. */
+/**
+ * D141 / ADR 0010. A Domain Analysis delivers nothing. `operational`
+ * is not a status here.
+ */
+export const DOMAIN_ANALYSIS_STATUS_VALUES = Object.freeze(["draft", "confirmed"]);
+
+export const DOMAIN_ANALYSIS_STATUS_MEANINGS = Object.freeze({
+  draft:
+    "The analysis is being recorded. Sections may be empty. It delivers nothing and authorises no student session.",
+  confirmed:
+    "All seven Layer-1 sections name at least one statement, and a perspective is declared. It still authorises no student delivery. Confirmed is not operational.",
+});
+
+/** PADI Layer 1, one field each. Labels, not curricular policies or Q-matrix cells. */
+export const DOMAIN_ANALYSIS_ENTITIES = Object.freeze([
+  { padi: "Valued work", field: "valuedWork" },
+  { padi: "Task features", field: "taskFeatures" },
+  { padi: "Representational forms", field: "representationalForms" },
+  { padi: "Performance outcomes", field: "performanceOutcomes" },
+  { padi: "Valued knowledge", field: "valuedKnowledge" },
+  { padi: "Knowledge structure", field: "knowledgeStructure" },
+  { padi: "Knowledge-task relationships", field: "knowledgeTaskRelationships" },
+]);
+
+const DOMAIN_ANALYSIS_FORBIDDEN_ROW_KEYS = Object.freeze([
+  ["curricularPolicyId", "a statement, not a curricular policy"],
+  ["qMatrixId", "a statement, not a Q-matrix"],
+  ["competencyModelId", "not a Competency Model link"],
+]);
+
+export function domainAnalysisSectionErrors(obj = {}, { claimComplete = false } = {}) {
+  const errors = [];
+  for (const { field } of DOMAIN_ANALYSIS_ENTITIES) {
+    const rows = obj[field];
+    if (rows == null) {
+      if (claimComplete) {
+        errors.push(`${field} must name at least one statement to confirm.`);
+      }
+      continue;
+    }
+    if (!Array.isArray(rows)) {
+      errors.push(`${field} must be an array.`);
+      continue;
+    }
+    rows.forEach((row, i) => {
+      const where = `${field}[${i}]`;
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        errors.push(`${where}.label is required.`);
+        return;
+      }
+      if (!row.label || String(row.label).trim() === "") {
+        errors.push(`${where}.label is required.`);
+      }
+      for (const [key, why] of DOMAIN_ANALYSIS_FORBIDDEN_ROW_KEYS) {
+        if (row[key] != null && row[key] !== "") {
+          errors.push(`${where} is ${why}.`);
+        }
+      }
+    });
+    const named = rows.some(
+      (row) => row && typeof row === "object" && String(row.label || "").trim() !== ""
+    );
+    if (claimComplete && !named) {
+      errors.push(`${field} must name at least one statement to confirm.`);
+    }
+  }
+
+  const perspective = obj.psychologicalPerspective;
+  if (perspective != null && perspective !== "") {
+    if (!PSYCHOLOGICAL_PERSPECTIVE_VALUES.includes(perspective)) {
+      errors.push(
+        `Invalid psychologicalPerspective '${perspective}'. Must be one of: ${PSYCHOLOGICAL_PERSPECTIVE_VALUES.join(", ")}.`
+      );
+    }
+  } else if (claimComplete) {
+    errors.push("psychologicalPerspective is required to confirm a Domain Analysis.");
+  }
+  return errors;
+}
+
 export const DESIGN_PATTERN_PADI_ATTRIBUTES = Object.freeze([
   { padi: "Title", field: "name" },
   { padi: "Summary", field: "summary" },
@@ -6257,6 +6361,29 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
     errors.push(...designPatternMenuErrors(obj, db));
     errors.push(...designPatternRelationErrors(obj, db));
+  }
+
+  /* =====================================================
+     DOMAIN ANALYSES — D141, W29 G10, ADR 0010
+     Seven Layer-1 sections as labels. draft | confirmed.
+     Confirmed authorises no student delivery. The perspective
+     is declared here and is not copied onto a Competency Model.
+  ===================================================== */
+
+  if (collection === "domainAnalyses") {
+    if (!obj.name || String(obj.name).trim() === "") {
+      errors.push("Domain Analysis name is required.");
+    }
+    if (!obj.status) {
+      errors.push("status is required.");
+    } else if (!DOMAIN_ANALYSIS_STATUS_VALUES.includes(obj.status)) {
+      errors.push(
+        `Invalid Domain Analysis status '${obj.status}'. Must be draft or confirmed. A Domain Analysis authorises no student delivery, so operational is not a status.`
+      );
+    }
+
+    const claimComplete = strict || obj.status === "confirmed";
+    errors.push(...domainAnalysisSectionErrors(obj, { claimComplete }));
   }
 
   /* =====================================================

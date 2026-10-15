@@ -137,6 +137,25 @@ describe("designPatterns (D131 authoring RBAC)", () => {
   });
 });
 
+describe("domainAnalyses (D141 authoring RBAC)", () => {
+  it("admin can view, edit, and delete a Domain Analysis", () => {
+    expect(can("admin", "view", "domainAnalyses")).toBe(true);
+    expect(can("admin", "edit", "domainAnalyses")).toBe(true);
+    expect(can("admin", "delete", "domainAnalyses")).toBe(true);
+  });
+
+  it("district can view and cannot write one", () => {
+    expect(can("district", "view", "domainAnalyses")).toBe(true);
+    expect(can("district", "edit", "domainAnalyses")).toBeFalsy();
+    expect(can("district", "delete", "domainAnalyses")).toBeFalsy();
+  });
+
+  it("teacher and student cannot see the entity", () => {
+    expect(can("teacher", "view", "domainAnalyses")).toBe(false);
+    expect(can("student", "view", "domainAnalyses")).toBe(false);
+  });
+});
+
 describe("taskModelVariables (D116 library RBAC)", () => {
   it("admin can view, edit, and delete Task Model Variables", () => {
     expect(can("admin", "view", "taskModelVariables")).toBe(true);
