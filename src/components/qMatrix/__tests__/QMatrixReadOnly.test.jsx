@@ -18,6 +18,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 
 import QMatrixList from "../QMatrixList";
 import QMatrixGrid from "../QMatrixGrid";
@@ -179,7 +180,11 @@ describe("the surface threads readOnly end to end", () => {
   // so this is where it gets checked.
   it("opens the editor read-only after View is clicked", async () => {
     const user = userEvent.setup();
-    render(<QMatrixModelBuilder readOnly />);
+    render(
+      <MemoryRouter>
+        <QMatrixModelBuilder readOnly />
+      </MemoryRouter>
+    );
 
     await user.click(screen.getAllByRole("button", { name: /^view$/i })[0]);
 
@@ -188,7 +193,11 @@ describe("the surface threads readOnly end to end", () => {
   });
 
   it("opens the editor editable after Edit is clicked, for an author", () => {
-    render(<QMatrixModelBuilder />);
+    render(
+      <MemoryRouter>
+        <QMatrixModelBuilder />
+      </MemoryRouter>
+    );
     expect(screen.getByRole("button", { name: /new diagnostic design/i })).toBeInTheDocument();
   });
 });

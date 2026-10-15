@@ -823,6 +823,9 @@ export const schema = {
     competencyModelVersion: 'number',
     attributeIds: 'array',
     entries: 'array',
+    // D144. Optional. Set only when a Domain Analysis already exists.
+    // Not a knowledge–task label, and not a replacement for competencyModelId.
+    domainAnalysisId: 'string',
     status: 'string',
     // Day 21 (Week 5): lifecycle wiring -- see the identical comment on
     // assemblyModels above.
@@ -5900,6 +5903,14 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
     if (db && obj.competencyModelId && !competencyModel) {
       errors.push(`Invalid competencyModelId: ${obj.competencyModelId}`);
+    }
+
+    if (obj.domainAnalysisId != null && obj.domainAnalysisId !== "") {
+      if (typeof obj.domainAnalysisId !== "string") {
+        errors.push("domainAnalysisId should be string");
+      } else if (db && !(db.domainAnalyses || []).some((row) => row.id === obj.domainAnalysisId)) {
+        errors.push(`Invalid domainAnalysisId: ${obj.domainAnalysisId}`);
+      }
     }
 
     const knownSmVariables = new Map(

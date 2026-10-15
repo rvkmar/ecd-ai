@@ -55,11 +55,12 @@ const emptyDraft = () => ({
   competencyModelVersion: undefined,
   attributeIds: [],
   entries: [],
+  domainAnalysisId: "",
   status: "draft",
   locked: false,
 });
 
-export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly = false }) {
+export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly = false, domainAnalysisId }) {
   const isEditing = Boolean(qMatrixId);
   const { data: existing, isLoading: loadingExisting } = useQMatrixModel(qMatrixId, {
     enabled: isEditing,
@@ -93,6 +94,16 @@ export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly =
       setIsDirty(false);
     }
   }, [isEditing, existing]);
+
+  useEffect(() => {
+    if (!isEditing && domainAnalysisId) {
+      setDraft((current) =>
+        current.domainAnalysisId === domainAnalysisId
+          ? current
+          : { ...current, domainAnalysisId }
+      );
+    }
+  }, [isEditing, domainAnalysisId]);
 
   const createMutation = useCreateQMatrixModel();
   const updateMutation = useUpdateQMatrixModel();
@@ -271,6 +282,7 @@ export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly =
       competencyModelVersion: competencyModel?.versionNumber,
       attributeIds: draft.attributeIds,
       entries: draft.entries,
+      ...(draft.domainAnalysisId ? { domainAnalysisId: draft.domainAnalysisId } : {}),
     };
 
     try {

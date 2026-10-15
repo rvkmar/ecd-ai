@@ -6,11 +6,14 @@
 // ------------------------------------------------------------
 
 import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import QMatrixList from "./QMatrixList";
 import QMatrixEditor from "./QMatrixEditor";
 
-export default function QMatrixModelBuilder({ readOnly = false }) {
+export default function QMatrixModelBuilder({ readOnly = false, domainAnalysisId }) {
+  const [params] = useSearchParams();
+  const linkedId = domainAnalysisId || params.get("domainAnalysisId") || "";
   const [view, setView] = useState({ mode: "list" }); // { mode: "list" } | { mode: "editor", id?: string }
 
   if (view.mode === "editor") {
@@ -18,6 +21,7 @@ export default function QMatrixModelBuilder({ readOnly = false }) {
       <QMatrixEditor
         qMatrixId={view.id}
         readOnly={readOnly}
+        domainAnalysisId={linkedId || undefined}
         onCancel={() => setView({ mode: "list" })}
         onSaved={() => setView({ mode: "list" })}
       />
@@ -27,6 +31,7 @@ export default function QMatrixModelBuilder({ readOnly = false }) {
   return (
     <QMatrixList
       readOnly={readOnly}
+      domainAnalysisId={linkedId || undefined}
       onCreate={readOnly ? undefined : () => setView({ mode: "editor" })}
       onEdit={(id) => setView({ mode: "editor", id })}
     />

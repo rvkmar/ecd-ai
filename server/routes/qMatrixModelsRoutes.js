@@ -49,9 +49,12 @@ const genId = () => `qm${Date.now()}${(idCounter++ % 1000).toString().padStart(3
 router.get("/", (req, res) => {
   const db = loadDB();
   let rows = db.qMatrixModels || [];
-  const { competencyModelId } = req.query;
+  const { competencyModelId, domainAnalysisId } = req.query;
   if (competencyModelId) {
     rows = rows.filter((q) => q.competencyModelId === competencyModelId);
+  }
+  if (domainAnalysisId) {
+    rows = rows.filter((q) => q.domainAnalysisId === domainAnalysisId);
   }
   res.json(rows);
 });

@@ -14,8 +14,11 @@ import { apiErrorMessage } from "@/api/apiClient";
 import { useCompetencyModels } from "@/api/queries/competencies";
 import { useQMatrixModels, useDeleteQMatrixModel } from "@/api/queries/qMatrixModels";
 
-export default function QMatrixList({ onCreate, onEdit, readOnly = false }) {
+export default function QMatrixList({ onCreate, onEdit, readOnly = false, domainAnalysisId }) {
   const { data: qMatrices = [], isLoading } = useQMatrixModels();
+  const shown = domainAnalysisId
+    ? qMatrices.filter((row) => row.domainAnalysisId === domainAnalysisId)
+    : qMatrices;
   const { data: competencyModels = [] } = useCompetencyModels();
   const deleteMutation = useDeleteQMatrixModel();
 
@@ -48,7 +51,13 @@ export default function QMatrixList({ onCreate, onEdit, readOnly = false }) {
         </div>
       )}
 
-      {qMatrices.length === 0 ? (
+      {domainAnalysisId ? (
+        <p className="text-sm text-slate-600">
+          These Q-matrices name this Domain Analysis. Their cells stay on the Q-matrix. Knowledge–task statements are not those cells.
+        </p>
+      ) : null}
+
+      {shown.length === 0 ? (
         <p className="text-sm text-slate-500">No Q-matrices yet.</p>
       ) : (
         <div className="overflow-x-auto rounded-md border border-slate-200">
@@ -64,7 +73,7 @@ export default function QMatrixList({ onCreate, onEdit, readOnly = false }) {
               </tr>
             </thead>
             <tbody>
-              {qMatrices.map((qm) => (
+              {shown.map((qm) => (
                 <tr key={qm.id} className="border-t border-slate-100">
                   <td className="px-4 py-2 font-medium text-slate-700">{qm.name}</td>
                   <td className="px-4 py-2">{modelName(qm.competencyModelId)}</td>

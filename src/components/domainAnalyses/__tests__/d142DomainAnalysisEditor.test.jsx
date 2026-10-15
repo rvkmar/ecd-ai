@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 
 import DomainAnalysisEditor from "../DomainAnalysisEditor.jsx";
 
 const update = vi.fn();
 const confirm = vi.fn();
 
+vi.mock("@/api/queries/qMatrixModels", () => ({
+  useQMatrixModels: () => ({ data: [], isLoading: false }),
+}));
 vi.mock("@/api/queries/domainAnalyses", () => ({
   useDomainAnalyses: vi.fn(),
   useCreateDomainAnalysis: vi.fn(),
@@ -49,7 +53,11 @@ beforeEach(() => {
 describe("D142 Domain Analysis correction form", () => {
   it("loads an uploaded analysis and saves a corrected statement", async () => {
     const user = userEvent.setup();
-    render(<DomainAnalysisEditor />);
+    render(
+      <MemoryRouter>
+        <DomainAnalysisEditor />
+      </MemoryRouter>
+    );
 
     await user.click(screen.getByRole("button", { name: /Explaining a labelled scientific diagram/ }));
     const knowledge = screen.getByRole("textbox", { name: "Valued knowledge" });
@@ -71,7 +79,11 @@ describe("D142 Domain Analysis correction form", () => {
 
   it("confirms once every section has a statement", async () => {
     const user = userEvent.setup();
-    render(<DomainAnalysisEditor />);
+    render(
+      <MemoryRouter>
+        <DomainAnalysisEditor />
+      </MemoryRouter>
+    );
     await user.click(screen.getByRole("button", { name: /Explaining a labelled scientific diagram/ }));
     await user.click(screen.getByRole("button", { name: "Confirm" }));
     expect(confirm).toHaveBeenCalledWith("da-uploaded");

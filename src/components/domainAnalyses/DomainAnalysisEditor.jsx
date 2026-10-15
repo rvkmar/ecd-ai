@@ -4,6 +4,7 @@
 // JSON. Not a wizard. Confirm still authorises no student delivery.
 
 import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import {
 import { domainAnalysisReadiness } from "@/utils/domainAnalysisReadiness";
 import { DOMAIN_ANALYSIS_ENTITIES } from "@/utils/schema";
 import { PSYCHOLOGICAL_PERSPECTIVES } from "@/utils/ecdVocabulary";
+import { useQMatrixModels } from "@/api/queries/qMatrixModels";
 
 const inputClass =
   "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
@@ -77,6 +79,8 @@ function payloadFromForm(form) {
 
 export default function DomainAnalysisEditor() {
   const { data: rows = [], isLoading } = useDomainAnalyses();
+  const { data: qMatrices = [] } = useQMatrixModels();
+  const [searchParams, setSearchParams] = useSearchParams();
   const createAnalysis = useCreateDomainAnalysis();
   const updateAnalysis = useUpdateDomainAnalysis();
   const confirmAnalysis = useConfirmDomainAnalysis();
@@ -169,9 +173,34 @@ export default function DomainAnalysisEditor() {
         }}
       >
         <p className="text-sm text-slate-600">
-          One statement per line. This form corrects an uploaded analysis. It does not absorb
-          curricular policies or Q-matrices.
+          One statement per line. Valued knowledge is not a curricular policy. Knowledge–task lines are not Q-matrix cells.
         </p>
+        {editingId ? (
+          <section aria-label="Q-matrices for this analysis" className="rounded-md border border-slate-200 p-3">
+            <h3 className="text-sm font-medium text-slate-900">Q-matrices</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              A Q-matrix keeps its own id and its competency model. It can name this analysis. It is not copied into the statements above.
+            </p>
+            <ul className="mt-2 space-y-1 text-sm text-slate-800">
+              {qMatrices.filter((row) => row.domainAnalysisId === editingId).map((row) => (
+                <li key={row.id}>{row.name}</li>
+              ))}
+            </ul>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.set("tab", "qmatrix");
+                next.set("domainAnalysisId", editingId);
+                setSearchParams(next);
+              }}
+            >
+              Author a Q-matrix for this analysis
+            </Button>
+          </section>
+        ) : null}
         <label className="block text-sm font-medium text-slate-900">
           Name
           <input
