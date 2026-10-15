@@ -52,7 +52,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D141**, alone. `domainAnalyses` schema. It does not exist yet. Do not pair it with another schema unit. |
+| Next queued | **D141**, alone (Tier 2). `domainAnalyses` still does not exist. Schema, validation, reduced lifecycle, readiness mirror, and the minimum gated route land together so the D48 guard passes. No bulk intake, no `curricularPolicies` migration, no Q-matrix re-home, no perspective inheritance. |
 
 | Block | **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
@@ -497,6 +497,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | 2026-10-14 | D140 / W28 | 2, alone | Depth-1 neighbourhood on the existing descendants query. Diverged is a word and a dashed border. Suite close re-run **2143 passed / 9 skipped**. Live kind-of neighbourhood; seeded node was the component test. Settings upload created **D140 bulk check**. No D141. |
 
+| 2026-10-15 | calibrate | — | D141 premise checked. Collection still absent. The D48 guard cannot wait for D142. Work order: D141 alone, schema plus the minimum gated surface. No D142. D143, D144, D145, D150 stay never-compress. |
+
 
 
 ## Compression debt
@@ -712,6 +714,8 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | D139 | A child pattern inherits its parent's Potential Observations, and editing the parent changes the child; that choice must precede D137 | D137 already seeds from the pattern's own menus. `designPatterns` has no relation fields. Competency `relationships` already store `{ type, targetCompetencyId }` and refuse a part-of cycle. Rubric exemplars and `curricularPolicies` are other collections | Add `relationships: [{ type: "kind-of" \| "part-of", targetPatternId }]`. A child references its parent. It does not copy menus, and a parent edit does not change the child or any model D137 already seeded. Refuse a cycle, including a self-link, at write time. Optional `references: [{ label, url }]` are labels, not curricular policies and not rubric exemplars. Seeding still reads only the pattern's own menus. No graph. |
 
 | D140 | The first graph-shaped surface in the app, showing every pattern | React Flow already draws competency relationships (`RelationshipGraphEditor`, `CompetencyGraphVisualizer`). Design patterns have no graph. `GET /:id/descendants` already lists seeded models and names snapshot drift. `relationships` are kind-of or part-of citations and do not copy menus. This mongo has two patterns, no competency, and no seeded models | Anchor on one pattern. Show its relations and its seeded models to a bounded depth, reading the existing descendants query. A diverged descendant is identifiable without colour. Do not draw every pattern. The Settings → Data design-pattern card already exists; walk that click-through at this close. |
+
+| D141 | Schema only, with the HTTP surface waiting for D142; the seven Layer-1 entities are still undesigned; psychological perspective is added here and inherited in W30 | `domainAnalyses` is absent from `schema.js`, routes, and roles. `collectionSurfaceGuard` fails a schema key that has no mounted route and no role entry (D131 put those in the schema unit). `capitalize()` strips a trailing `s`, so the collection `domainAnalyses` becomes the model `DomainAnalyse`. `psychologicalPerspective` is already required on competency models (`PSYCHOLOGICAL_PERSPECTIVES`). `curricularPolicies` are a live collection cited from Competency Wizard Step 3. `QMatrixGrid` is its own component; `QMatrixEditor` is bound to competency models and `/api/qMatrixModels`. Design-pattern menus are Layer 2, not these seven entities | One collection, seven entities as fields on that record. ADR first. Include validation, a lifecycle that does not mean student delivery, the readiness mirror, and the minimum gated route so the D48 guard passes. Store the perspective enum on the Domain Analysis only as a declared value; do not copy it onto competency models and do not inherit it (D146). Leave `curricularPolicies` and Q-matrices where they are. Bulk upload and the correction form stay D142. |
 
 
 
