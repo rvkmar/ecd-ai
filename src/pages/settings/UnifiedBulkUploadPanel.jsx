@@ -50,10 +50,17 @@ import { policiesKey } from "@/api/queries/policies";
 import { qMatrixModelsKey } from "@/api/queries/qMatrixModels";
 import { assemblyModelsKey } from "@/api/queries/assemblyModels";
 import { designPatternsKey } from "@/api/queries/designPatterns";
+import { domainAnalysesKey } from "@/api/queries/domainAnalyses";
 import { normalizeStudentModelBulkRows } from "@/utils/studentModelBulkNormalize";
 
 // Fixed dependency order. Index in this array IS the upload order.
 const STAGES = [
+  {
+    key: "domainAnalyses",
+    title: "Domain Analyses",
+    endpoint: "/api/domainAnalyses/bulk",
+    gate: "Import is always a draft. Correct it under Admin → Models → Domain Analysis, then confirm there.",
+  },
   {
     key: "competencyModels",
     title: "Student Models",
@@ -135,7 +142,7 @@ function unwrapToArray(parsed) {
 // Best-effort "what is this file?" -- shape first (reliable), wrapper key
 // next, filename last. Always overridable in the UI, and an unrecognised
 // file is simply left unassigned rather than guessed into a wrong stage.
-function detectKind(rows, fileName, wrapperKey) {
+export function detectKind(rows, fileName, wrapperKey) {
   const sample = rows.find((r) => r && typeof r === "object" && !Array.isArray(r));
   if (sample) {
     const has = (k) => Object.prototype.hasOwnProperty.call(sample, k);
@@ -150,6 +157,13 @@ function detectKind(rows, fileName, wrapperKey) {
       return "assemblyModels";
     if (has("type") && (sample.type === "fixed" || sample.type === "IRT" || sample.type === "BayesianNetwork" || sample.type === "MarkovChain"))
       return "policies";
+    if (
+      has("valuedWork") ||
+      has("knowledgeTaskRelationships") ||
+      has("representationalForms") ||
+      has("performanceOutcomes")
+    )
+      return "domainAnalyses";
     if (has("measurementIntent") || has("competencies") || has("constructFramework") || has("smVariables") || has("psychologicalPerspective"))
       return "competencyModels";
     if (
@@ -169,6 +183,7 @@ function detectKind(rows, fileName, wrapperKey) {
     if (wrapper.includes("qmatrix") || wrapper.includes("q-matrix") || wrapper.includes("q_matrix"))
       return "qMatrixModels";
     if (wrapper.includes("assembly")) return "assemblyModels";
+    if (wrapper.includes("domainanalys") || wrapper.includes("domain-analys")) return "domainAnalyses";
     if (wrapper.includes("polic")) return "policies";
     if (wrapper.includes("competenc") || wrapper.includes("studentmodel")) return "competencyModels";
     if (wrapper.includes("designpattern") || wrapper.includes("design-pattern"))
@@ -179,6 +194,8 @@ function detectKind(rows, fileName, wrapperKey) {
   if (name.includes("qmatrix") || name.includes("q-matrix") || name.includes("q_matrix"))
     return "qMatrixModels";
   if (name.includes("assembly")) return "assemblyModels";
+  if (name.includes("domain-analys") || name.includes("domainanalys") || name.includes("domain_analys"))
+    return "domainAnalyses";
   if (name.includes("polic")) return "policies";
   if (name.includes("item")) return "items";
   if (name.includes("task")) return "taskModels";
@@ -248,6 +265,7 @@ export default function UnifiedBulkUploadPanel() {
     qMatrixModels: useBulkUpload("/api/qMatrixModels/bulk", qMatrixModelsKey),
     assemblyModels: useBulkUpload("/api/assemblyModels/bulk", assemblyModelsKey),
     designPatterns: useBulkUpload("/api/designPatterns/bulk", designPatternsKey),
+    domainAnalyses: useBulkUpload("/api/domainAnalyses/bulk", domainAnalysesKey),
   };
 
   // Assigned files, deduplicated by kind, sorted into dependency order.

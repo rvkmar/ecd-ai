@@ -69,6 +69,9 @@ vi.mock("@/components/rubrics/RubricBuilder", () => ({
 vi.mock("@/components/templates/TemplateBuilder", () => ({
   default: () => <div>Templates library</div>,
 }));
+vi.mock("@/components/domainAnalyses/DomainAnalysisEditor", () => ({
+  default: () => <div>Domain analysis form</div>,
+}));
 vi.mock("@/components/designPatterns/DesignPatternBuilder", () => ({
   default: () => <div>Design patterns library</div>,
 }));

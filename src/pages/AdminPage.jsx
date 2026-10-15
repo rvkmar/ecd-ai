@@ -60,6 +60,9 @@ const RubricBuilder = lazyPanel(() =>
 const TemplateBuilder = lazyPanel(() =>
   import("@/components/templates/TemplateBuilder")
 );
+const DomainAnalysisEditor = lazyPanel(() =>
+  import("@/components/domainAnalyses/DomainAnalysisEditor")
+);
 const DesignPatternBuilder = lazyPanel(() =>
   import("@/components/designPatterns/DesignPatternBuilder")
 );
@@ -114,6 +117,11 @@ export default function AdminPage() {
               id: "templates",
               label: "Templates",
               content: <TemplateBuilder />,
+            },
+            {
+              id: "domainanalyses",
+              label: "Domain Analysis",
+              content: <DomainAnalysisEditor />,
             },
             {
               id: "designpatterns",

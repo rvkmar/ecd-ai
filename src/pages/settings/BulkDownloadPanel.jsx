@@ -15,7 +15,7 @@ export default function BulkDownloadPanel() {
       <div>
         <h2 className="text-xl font-semibold">Bulk Download</h2>
         <p className="text-sm text-muted-foreground">
-          Export users, selection policies, curricular policies, Student Models, evidence
+          Export users, selection policies, curricular policies, domain analyses, Student Models, evidence
           models, task models, items, or design patterns as a JSON file. Each file is a JSON
           array shaped like the one the matching Upload card accepts, so an export can be
           edited and imported again -- here or on another deployment.
@@ -68,6 +68,13 @@ export default function BulkDownloadPanel() {
           description="Array of full item objects, including their taskModelId and observation binding."
           kind="items"
           note="Re-importing needs the referenced task models to exist and be confirmed+locked."
+        />
+
+        <BulkDownloadCard
+          title="Domain Analyses"
+          description="Array of domain analyses, each with its seven labelled sections and declared perspective."
+          kind="domainAnalyses"
+          note="Re-importing creates new ids and always lands as draft."
         />
 
         <BulkDownloadCard

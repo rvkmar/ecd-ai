@@ -21,6 +21,7 @@ import { itemsKey } from "@/api/queries/items";
 import { qMatrixModelsKey } from "@/api/queries/qMatrixModels";
 import { assemblyModelsKey } from "@/api/queries/assemblyModels";
 import { designPatternsKey } from "@/api/queries/designPatterns";
+import { domainAnalysesKey } from "@/api/queries/domainAnalyses";
 
 export default function BulkUploadPanel() {
   return (
@@ -28,7 +29,7 @@ export default function BulkUploadPanel() {
       <div>
         <h2 className="text-xl font-semibold">Bulk Upload</h2>
         <p className="text-sm text-muted-foreground">
-          Import users, selection policies, curricular policies, Student Models, evidence
+          Import users, selection policies, curricular policies, domain analyses, Student Models, evidence
           models, task models, items, or design patterns from a JSON file. Every row is created as a{" "}
           <span className="font-medium text-foreground">draft</span> and validated with the same
           rules as creating it one at a time, with one relaxation specific to importing: a parent
@@ -121,6 +122,14 @@ export default function BulkUploadPanel() {
           endpoint="/api/assemblyModels/bulk"
           invalidateKey={assemblyModelsKey}
           sampleHint="See samples/newtonian_mechanics_assembly.json"
+        />
+
+        <BulkUploadCard
+          title="Domain Analyses"
+          description="Array of Layer-1 domain analyses. Each section is a list of { label }. Import always lands as draft. Correct and confirm under Admin → Models → Domain Analysis. A curricularPolicyId or qMatrixId fails that row."
+          endpoint="/api/domainAnalyses/bulk"
+          invalidateKey={domainAnalysesKey}
+          sampleHint="See samples/sample-domain-analyses.json — it uploads as-is."
         />
 
         <BulkUploadCard

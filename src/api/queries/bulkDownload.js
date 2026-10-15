@@ -46,6 +46,9 @@ const fetchers = {
 
   designPatterns: async (auth) =>
     (await apiFetch("/api/designPatterns", {}, auth)) || [],
+
+  domainAnalyses: async (auth) =>
+    (await apiFetch("/api/domainAnalyses", {}, auth)) || [],
 };
 
 // Trigger a browser download of `rows` as pretty-printed JSON. Uses an

@@ -1,0 +1,13 @@
+[
+  {
+    "name": "Explaining a labelled scientific diagram",
+    "psychologicalPerspective": "information_processing",
+    "valuedWork": [{ "label": "Explain how the named parts of a system produce what the diagram shows" }],
+    "taskFeatures": [{ "label": "A figure whose parts are already labelled" }],
+    "representationalForms": [{ "label": "Diagram plus a written explanation" }],
+    "performanceOutcomes": [{ "label": "A causal account, not a list of the labels" }],
+    "valuedKnowledge": [{ "label": "How parts, relations, and the whole fit together" }],
+    "knowledgeStructure": [{ "label": "Parts and the relations among them" }],
+    "knowledgeTaskRelationships": [{ "label": "The task asks for the relation the diagram is drawn to show" }]
+  }
+]

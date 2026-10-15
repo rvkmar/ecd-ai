@@ -4,8 +4,9 @@
 // labelled sections. Confirmed means the analysis is complete. It
 // authorises no student delivery, so there is no operational status.
 //
-// Admin-authored. District may view. Bulk intake and the correction
-// form are D142. This route does not write competency models.
+// Admin-authored. District may view. D142: POST /bulk always lands
+// a draft. The correction form is the Admin Domain Analysis screen.
+// This route does not write competency models.
 // ------------------------------------------------------------------
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
@@ -63,6 +64,27 @@ function rejectIfInvalid(res, record, db) {
   });
 }
 
+function createDomainAnalysisRecord(body, db, req, { forceDraft = false } = {}) {
+  const now = new Date().toISOString();
+  const writes = pickWrites(body);
+  const record = {
+    ...writes,
+    status: forceDraft ? "draft" : writes.status || "draft",
+    id: genId(),
+    ...authorTenancy(req),
+    createdAt: now,
+    updatedAt: now,
+  };
+  const strict = record.status === "confirmed";
+  const { valid, errors } = validateEntity("domainAnalyses", record, db, { strict });
+  if (!valid) {
+    return { ok: false, error: errors[0] || "Domain Analysis validation failed", details: errors };
+  }
+  db.domainAnalyses = db.domainAnalyses || [];
+  db.domainAnalyses.push(record);
+  return { ok: true, record };
+}
+
 router.get("/", canRead, (req, res) => {
   const db = loadDB();
   res.json(db.domainAnalyses || []);
@@ -77,21 +99,33 @@ router.get("/:id", canRead, (req, res) => {
 
 router.post("/", canAuthor, (req, res) => {
   const db = loadDB();
-  const now = new Date().toISOString();
-  const writes = pickWrites(req.body);
-  const record = {
-    ...writes,
-    status: writes.status || "draft",
-    id: genId(),
-    ...authorTenancy(req),
-    createdAt: now,
-    updatedAt: now,
-  };
-  if (rejectIfInvalid(res, record, db)) return;
-  db.domainAnalyses = db.domainAnalyses || [];
-  db.domainAnalyses.push(record);
+  const result = createDomainAnalysisRecord(req.body, db, req);
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error, details: result.details });
+  }
   saveDB(db);
-  res.status(201).json(record);
+  res.status(201).json(result.record);
+});
+
+router.post("/bulk", canAuthor, (req, res) => {
+  const rows = req.body;
+  if (!Array.isArray(rows)) {
+    return res
+      .status(400)
+      .json({ error: "Request body must be a JSON array of domain analyses." });
+  }
+
+  const db = loadDB();
+  const results = rows.map((row, i) => {
+    const result = createDomainAnalysisRecord(row, db, req, { forceDraft: true });
+    return result.ok
+      ? { index: i, ok: true, id: result.record.id, name: result.record.name }
+      : { index: i, ok: false, error: result.error, details: result.details };
+  });
+  saveDB(db);
+
+  const created = results.filter((r) => r.ok).length;
+  res.status(207).json({ created, failed: results.length - created, results });
 });
 
 router.put("/:id", canAuthor, (req, res) => {

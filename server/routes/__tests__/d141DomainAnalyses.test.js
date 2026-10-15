@@ -131,4 +131,23 @@ describe("D141 /api/domainAnalyses", () => {
     expect(created.body.details?.some((e) => /Q-matrix/.test(e))).toBe(true);
     expect(dbState.current.domainAnalyses).toEqual([]);
   });
+
+  it("bulk-imports a complete file as a draft even when the file says confirmed", async () => {
+    const expressApp = await app();
+    const res = await request(expressApp)
+      .post("/api/domainAnalyses/bulk")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send([
+        { name: "From a document", status: "confirmed", ...sections },
+        { name: "Bad link", valuedKnowledge: [{ label: "Goals", curricularPolicyId: "cp1" }] },
+      ]);
+
+    expect(res.status).toBe(207);
+    expect(res.body.created).toBe(1);
+    expect(res.body.failed).toBe(1);
+    expect(dbState.current.domainAnalyses).toHaveLength(1);
+    expect(dbState.current.domainAnalyses[0].status).toBe("draft");
+    expect(dbState.current.domainAnalyses[0].name).toBe("From a document");
+    expect(dbState.current.competencyModels[0].psychologicalPerspective).toBe("trait");
+  });
 });

@@ -16,7 +16,12 @@ that doesn't exist yet just fails that row.
 | `sample-task-models.json` | Settings > Bulk Upload > Task Models | No — needs a real, confirmed `evidenceModelId` (and a two-pass upload for the composite row) |
 | `sample-items.json` | Settings > Bulk Upload > Items | No — needs a real, confirmed `taskModelId` |
 | `sample-presentation-models.json` | D113 fixture (Admin Delivery > Presentation wizard; no Bulk Upload card yet) | No — needs a real, confirmed `taskModelId` |
+| `sample-domain-analyses.json` | Settings > Data > Upload > Domain Analyses | Yes |
 | `sample-design-patterns.json` | Settings > Data > Upload > Design Patterns | No — needs real `workProductId`, `rubricId`, and `taskModelVariableId` |
+
+## Domain Analyses
+
+`sample-domain-analyses.json` is one Layer-1 analysis: a name, a psychological perspective, and one labelled statement in each of the seven sections. It has no foreign keys, so it uploads unmodified. Import always creates a **draft**. Correct the statements under Admin → Models → Domain Analysis, then confirm there. A `curricularPolicyId` or `qMatrixId` on a row fails that row. Re-importing generates new ids.
 
 ## Design Patterns
 
