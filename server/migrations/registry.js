@@ -6,6 +6,7 @@ import normalizeToolsAllowed from "./migrations/002-normalize-tools-allowed.js";
 import backfillLifecycleAudit from "./migrations/003-backfill-lifecycle-audit.js";
 import previewRemoveLifecycleMeta from "./migrations/004-preview-remove-lifecycle-meta.js";
 import removeLifecycleMeta from "./migrations/005-remove-lifecycle-meta.js";
+import domainAnalysisContentStandards from "./migrations/006-domain-analysis-content-standards.js";
 
 export const MIGRATION_REGISTRY = [
   normalizeSessionStatus,
@@ -13,6 +14,7 @@ export const MIGRATION_REGISTRY = [
   backfillLifecycleAudit,
   previewRemoveLifecycleMeta,
   removeLifecycleMeta,
+  domainAnalysisContentStandards,
 ];
 
 export function migrationRegistryIds() {

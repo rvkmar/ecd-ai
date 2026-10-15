@@ -19,6 +19,11 @@ import { authenticateToken } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
+import {
+  detachContentStandards,
+  listCurricularPolicies,
+  upsertContentStandards,
+} from "../migrations/contentStandards.js";
 
 const router = express.Router();
 
@@ -42,7 +47,7 @@ function requireAdmin(req, res, next) {
 // ------------------------------
 router.get("/", (req, res) => {
   const db = loadDB();
-  res.json(db.curricularPolicies || []);
+  res.json(listCurricularPolicies(db));
 });
 
 // ------------------------------
@@ -50,7 +55,7 @@ router.get("/", (req, res) => {
 // ------------------------------
 router.get("/:id", (req, res) => {
   const db = loadDB();
-  const policy = (db.curricularPolicies || []).find((p) => p.id === req.params.id);
+  const policy = listCurricularPolicies(db).find((p) => p.id === req.params.id);
   if (!policy) return res.status(404).json({ error: "Curricular policy not found" });
   res.json(policy);
 });
@@ -97,6 +102,7 @@ function createCurricularPolicyRecord(payload = {}, db, idSuffix = "") {
 
   db.curricularPolicies = db.curricularPolicies || [];
   db.curricularPolicies.push(newPolicy);
+  upsertContentStandards(db, newPolicy);
 
   return { ok: true, status: 201, record: newPolicy };
 }
@@ -207,6 +213,7 @@ router.put("/:id", requireAdmin, (req, res) => {
   }
 
   db.curricularPolicies[idx] = updated;
+  upsertContentStandards(db, updated);
   saveDB(db);
   res.json(updated);
 });
@@ -224,7 +231,7 @@ router.put("/:id", requireAdmin, (req, res) => {
 // CONFIRMED or LOCKED model references it, allowed otherwise.
 router.delete("/:id", requireAdmin, (req, res) => {
   const db = loadDB();
-  const policy = (db.curricularPolicies || []).find((p) => p.id === req.params.id);
+  const policy = listCurricularPolicies(db).find((p) => p.id === req.params.id);
   if (!policy) return res.status(404).json({ error: "Curricular policy not found" });
 
   const blockingModels = (db.competencyModels || []).filter(
@@ -243,6 +250,7 @@ router.delete("/:id", requireAdmin, (req, res) => {
   db.curricularPolicies = (db.curricularPolicies || []).filter(
     (p) => p.id !== req.params.id
   );
+  detachContentStandards(db, req.params.id);
   saveDB(db);
   res.json({ success: true });
 });

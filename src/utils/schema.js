@@ -923,7 +923,9 @@ export const schema = {
 
   // domainAnalyses — D141 (W29 G10), ADR 0010. One record for PADI
   // Layer 1. The seven entities are labelled statements, not foreign
-  // keys. curricularPolicies and qMatrixModels stay where they are.
+  // keys. D143 (ADR 0011) nests a curricular policy as contentStandards.
+  // That object keeps goals → competencies → learning outcomes. It is
+  // not copied into valuedKnowledge. qMatrixModels stay where they are.
   // Named `domainAnalyses` so the collection matches the calendar;
   // dbAdapter's trailing-s strip stores it as the model DomainAnalyse.
   domainAnalyses: {
@@ -936,6 +938,7 @@ export const schema = {
     valuedKnowledge: 'array',
     knowledgeStructure: 'array',
     knowledgeTaskRelationships: 'array',
+    contentStandards: 'object',
     psychologicalPerspective: 'string',
     status: 'string',
     districtId: 'string',
@@ -1214,6 +1217,71 @@ const DOMAIN_ANALYSIS_FORBIDDEN_ROW_KEYS = Object.freeze([
   ["qMatrixId", "a statement, not a Q-matrix"],
   ["competencyModelId", "not a Competency Model link"],
 ]);
+
+/**
+ * Goal tree shared by a curricularPolicies row and by
+ * domainAnalyses.contentStandards. Goals, competencies, and learning
+ * outcomes stay nested. They are not valuedKnowledge labels.
+ */
+export function curricularDocumentErrors(obj = {}, prefix = "") {
+  const errors = [];
+  const name = obj?.name;
+  if (!name || String(name).trim().length < 3) {
+    errors.push(`${prefix}Curricular policy name is required (min 3 characters).`);
+  }
+
+  if (!Array.isArray(obj?.curricularGoals) || obj.curricularGoals.length === 0) {
+    errors.push(`${prefix}At least one curricular goal is required.`);
+  } else {
+    const seenGoalCodes = new Set();
+    obj.curricularGoals.forEach((goal, gi) => {
+      const where = `${prefix}curricularGoals[${gi}]`;
+      if (!goal || typeof goal !== "object" || Array.isArray(goal)) {
+        errors.push(`${where} must be an object.`);
+        return;
+      }
+      if (!goal.code || typeof goal.code !== "string" || !goal.code.trim()) {
+        errors.push(`${where} is missing a code (e.g. "CG-1").`);
+      } else if (seenGoalCodes.has(goal.code.trim())) {
+        errors.push(`${where} duplicates curricular goal code "${goal.code}".`);
+      } else {
+        seenGoalCodes.add(goal.code.trim());
+      }
+      if (!goal.statement || typeof goal.statement !== "string" || goal.statement.trim().length < 5) {
+        errors.push(`${where} is missing a statement (min 5 characters).`);
+      }
+      if (goal.competencies !== undefined && !Array.isArray(goal.competencies)) {
+        errors.push(`${where}.competencies must be an array when present.`);
+      }
+      const seenCompetencyCodes = new Set();
+      (Array.isArray(goal.competencies) ? goal.competencies : []).forEach((comp, ci) => {
+        const cWhere = `${where}.competencies[${ci}]`;
+        if (!comp || typeof comp !== "object" || Array.isArray(comp)) {
+          errors.push(`${cWhere} must be an object.`);
+          return;
+        }
+        if (!comp.code || typeof comp.code !== "string" || !comp.code.trim()) {
+          errors.push(`${cWhere} is missing a code (e.g. "C-1.1").`);
+        } else if (seenCompetencyCodes.has(comp.code.trim())) {
+          errors.push(`${cWhere} duplicates competency code "${comp.code}".`);
+        } else {
+          seenCompetencyCodes.add(comp.code.trim());
+        }
+        if (!comp.statement || typeof comp.statement !== "string" || comp.statement.trim().length < 5) {
+          errors.push(`${cWhere} is missing a statement (min 5 characters).`);
+        }
+        if (comp.learningOutcomes !== undefined) {
+          if (!Array.isArray(comp.learningOutcomes)) {
+            errors.push(`${cWhere}.learningOutcomes must be an array of strings.`);
+          } else if (comp.learningOutcomes.some((lo) => typeof lo !== "string")) {
+            errors.push(`${cWhere}.learningOutcomes must contain only strings.`);
+          }
+        }
+      });
+    });
+  }
+  return errors;
+}
 
 export function domainAnalysisSectionErrors(obj = {}, { claimComplete = false } = {}) {
   const errors = [];
@@ -1962,74 +2030,7 @@ export function validateEntity(collection, obj, db = null, options = {}) {
   ===================================================== */
 
   if (collection === "curricularPolicies") {
-
-    if (!obj.name || obj.name.trim().length < 3) {
-      errors.push("Curricular policy name is required (min 3 characters).");
-    }
-
-    if (!Array.isArray(obj.curricularGoals) || obj.curricularGoals.length === 0) {
-      errors.push("At least one curricular goal is required.");
-    } else {
-      const seenGoalCodes = new Set();
-
-      obj.curricularGoals.forEach((goal, gi) => {
-        const where = `curricularGoals[${gi}]`;
-
-        if (!goal || typeof goal !== "object" || Array.isArray(goal)) {
-          errors.push(`${where} must be an object.`);
-          return;
-        }
-
-        if (!goal.code || typeof goal.code !== "string" || !goal.code.trim()) {
-          errors.push(`${where} is missing a code (e.g. "CG-1").`);
-        } else if (seenGoalCodes.has(goal.code.trim())) {
-          // Step 3 keys its multi-select by goal code, so duplicates would
-          // make two options indistinguishable and collide on selection.
-          errors.push(`${where} duplicates curricular goal code "${goal.code}".`);
-        } else {
-          seenGoalCodes.add(goal.code.trim());
-        }
-
-        if (!goal.statement || typeof goal.statement !== "string" || goal.statement.trim().length < 5) {
-          errors.push(`${where} is missing a statement (min 5 characters).`);
-        }
-
-        if (goal.competencies !== undefined && !Array.isArray(goal.competencies)) {
-          errors.push(`${where}.competencies must be an array when present.`);
-        }
-
-        const seenCompetencyCodes = new Set();
-
-        (Array.isArray(goal.competencies) ? goal.competencies : []).forEach((comp, ci) => {
-          const cWhere = `${where}.competencies[${ci}]`;
-
-          if (!comp || typeof comp !== "object" || Array.isArray(comp)) {
-            errors.push(`${cWhere} must be an object.`);
-            return;
-          }
-
-          if (!comp.code || typeof comp.code !== "string" || !comp.code.trim()) {
-            errors.push(`${cWhere} is missing a code (e.g. "C-1.1").`);
-          } else if (seenCompetencyCodes.has(comp.code.trim())) {
-            errors.push(`${cWhere} duplicates competency code "${comp.code}".`);
-          } else {
-            seenCompetencyCodes.add(comp.code.trim());
-          }
-
-          if (!comp.statement || typeof comp.statement !== "string" || comp.statement.trim().length < 5) {
-            errors.push(`${cWhere} is missing a statement (min 5 characters).`);
-          }
-
-          if (comp.learningOutcomes !== undefined) {
-            if (!Array.isArray(comp.learningOutcomes)) {
-              errors.push(`${cWhere}.learningOutcomes must be an array of strings.`);
-            } else if (comp.learningOutcomes.some((lo) => typeof lo !== "string")) {
-              errors.push(`${cWhere}.learningOutcomes must contain only strings.`);
-            }
-          }
-        });
-      });
-    }
+    errors.push(...curricularDocumentErrors(obj));
   }
 
   /* =====================================================
@@ -6384,6 +6385,24 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
     const claimComplete = strict || obj.status === "confirmed";
     errors.push(...domainAnalysisSectionErrors(obj, { claimComplete }));
+
+    for (const key of ["curricularPolicyId", "qMatrixId", "competencyModelId"]) {
+      if (obj[key] != null && obj[key] !== "") {
+        errors.push(`${key} is not a field on a Domain Analysis.`);
+      }
+    }
+
+    if (obj.contentStandards != null) {
+      const standards = obj.contentStandards;
+      if (typeof standards !== "object" || Array.isArray(standards)) {
+        errors.push("contentStandards should be object");
+      } else {
+        if (!standards.id || String(standards.id).trim() === "") {
+          errors.push("contentStandards.id is required so Step 3 can resolve policyId.");
+        }
+        errors.push(...curricularDocumentErrors(standards, "contentStandards."));
+      }
+    }
   }
 
   /* =====================================================
