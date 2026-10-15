@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D142** (W29 in progress). Domain Analysis is one `domainAnalyses` record with seven labelled sections, lifecycle `draft` \| `confirmed`, and a gated route (D141, `686f328`). Bulk upload forces draft; the correction form is Admin → Models → Domain Analysis (D142, `97e9a45`). Live draft **`da1792032778751000`** stored as draft even though the body said confirmed; valued knowledge saved as “How the parts of a system relate”. Handoffs: `claude/day141-domain-analysis-schema.md`, `claude/day142-domain-analysis-upload.md`. |
+| Last completed unit | **D143** (W29 in progress). Curricular policies stay a goal tree on a Domain Analysis as `contentStandards` (ADR 0011, `2d64b38`). They are not valued-knowledge labels. Live dry-run found **0** policies; migration `006` was recorded at `2026-10-15T03:57:26Z` and did not alter draft `da1792032778751000`. Settings → Policies still reads the route. Handoff: `claude/day143-content-standards.md`. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,9 +52,9 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D143**, alone (Tier 3, never-compress). Migrate each `curricularPolicies` document onto a Domain Analysis as content standards, keeping goals → competencies → learning outcomes. Dry-run through `server/migrations/runner.js` and record it before any write. Step 3 keeps resolving `constructFramework.policyId`; the snapshot still renders. Do not flatten policies into `valuedKnowledge` labels. No Q-matrix re-home (D144), no perspective inheritance (D146), no W29 walk (D145). |
+| Next queued | **D144**, alone (Tier 3, never-compress). Re-home Q-matrices under a Domain Analysis. Dry-run first. `QMatrixGrid` is presentational; `QMatrixEditor` is bound to competency models and `/api/qMatrixModels`. `knowledgeTaskRelationships` stay `{ label }` and refuse `qMatrixId`. Do not inherit perspective (D146). Do not walk W29 (D145). |
 
-| Block | **W29 open** (D141–D142 done; D143–D145 remain). Gate not held: an author cannot yet start at a Domain Analysis and reach a Competency Model. **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
+| Block | **W29 open** (D141–D143 done; D144–D145 remain). Gate not held: an author cannot yet start at a Domain Analysis and reach a Competency Model. **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ ~~W23: Changing a Presentation Model changes what an examinee sees, without touching item content (D115).~~ |
 
@@ -217,6 +217,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D141 | product **`686f328`** + calibration **`9addd9e`** + `claude/day141-domain-analysis-schema.md`. Suite at product **2159 passed / 9 skipped**. Seven Layer-1 fields on one record; model name DomainAnalyse; minimum gated route. Next: D142. |
 
 | HEAD at D142 | product **`97e9a45`** ≡ `main/master` before this close + `claude/day142-domain-analysis-upload.md`. Suite close re-run **2164 passed / 9 skipped** (216 files, 160.51s); build green (45.66s). Live draft `da1792032778751000` stored as draft. W29 still open. Next: D143 alone. |
+
+| HEAD at D143 | product **`2d64b38`** ≡ `main/master` before this close + `claude/day143-content-standards.md`. Suite close re-run **2170 passed / 9 skipped** (219 files, 244.02s); build green (1m 16s). Live dry-run found 0 policies; migration log `006` at `2026-10-15T03:57:26Z`. W29 still open. Next: D144 alone. |
 
 
 
@@ -508,6 +510,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-15 | D142 | 1–2, alone | Bulk force-draft plus the correction form. Routes and lifecycle were already D141. Close re-run **2164 passed / 9 skipped**. Live POST 207 stored `da1792032778751000` as draft; form saved the valued-knowledge label. File input on the Settings card was not clicked. No D143. |
 
 | 2026-10-15 | calibrate | — | D143 premise checked against Step 3, the policy schema, and ADR 0010. Work order: D143 alone. Do not flatten a policy into valued-knowledge labels. Dry-run first. No D144. |
+
+| 2026-10-15 | D143 | 3, alone | Content standards on a Domain Analysis. Goal tree kept. Collection kept. Close re-run **2170 passed / 9 skipped**. Live dry-run found 0 policies; migration `006` recorded and did not change `da1792032778751000`. Settings still reads the route. No D144. |
 
 
 
@@ -805,7 +809,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). ~~D138 seed-snapshot divergence~~ closed (`claude/day138-seed-snapshot-divergence.md`). ~~D139 pattern relations~~ closed (`claude/day139-pattern-relations.md`). ~~W28 neighbourhood graph (D140)~~ closed (`claude/day140-pattern-neighbourhood.md`). ~~D141 domainAnalyses schema~~ closed (`claude/day141-domain-analysis-schema.md`). ~~D142 upload and correction form~~ closed (`claude/day142-domain-analysis-upload.md`). W29 domain analysis still open at D143.
+- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). ~~D138 seed-snapshot divergence~~ closed (`claude/day138-seed-snapshot-divergence.md`). ~~D139 pattern relations~~ closed (`claude/day139-pattern-relations.md`). ~~W28 neighbourhood graph (D140)~~ closed (`claude/day140-pattern-neighbourhood.md`). ~~D141 domainAnalyses schema~~ closed (`claude/day141-domain-analysis-schema.md`). ~~D142 upload and correction form~~ closed (`claude/day142-domain-analysis-upload.md`). ~~D143 content standards~~ closed (`claude/day143-content-standards.md`). W29 domain analysis still open at D144.
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 
