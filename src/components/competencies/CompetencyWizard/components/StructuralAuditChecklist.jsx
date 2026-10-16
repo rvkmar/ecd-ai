@@ -2,14 +2,19 @@
 import React, { useMemo } from "react";
 import { Check, X, ShieldCheck, AlertTriangle } from "lucide-react";
 import { computeStructuralAudit } from "../structuralAudit";
+import { useCurricularPolicies } from "@/api/queries/curricularPolicies";
 
 export default function StructuralAuditChecklist({
     model,
     competencies = [],
 }) {
+    const policiesQuery = useCurricularPolicies();
+    const curricularPolicies = policiesQuery.isSuccess
+        ? policiesQuery.data || []
+        : undefined;
     const { checks: audit, advisories = [], allPassed } = useMemo(
-        () => computeStructuralAudit({ model, competencies }),
-        [model, competencies]
+        () => computeStructuralAudit({ model, competencies, policies: curricularPolicies }),
+        [model, competencies, curricularPolicies]
     );
 
     return (

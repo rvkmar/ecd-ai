@@ -10,6 +10,10 @@
 // same boundary; vite bundles it for the client, node loads it directly
 // on the server.)
 import { STATUS, TRANSITIONS, canTransition } from "../../server/utils/lifecycleMatrix.js";
+import {
+  constructFrameworkGrounded,
+  constructGroundingMessage,
+} from "./constructGrounding.js";
 
 // D53b: the same "defined once, imported by both sides" boundary as the
 // lifecycle matrix above. `dinaParametersAreUsable` is the ONE place that
@@ -5680,17 +5684,9 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         );
       }
       const fw = obj.constructFramework || {};
-      const grounded =
-        (fw.ungroundedWaiver === true &&
-          typeof fw.ungroundedReason === "string" &&
-          fw.ungroundedReason.trim().length >= 10) ||
-        (fw.policyId &&
-          Array.isArray(fw.curricularGoalCodes) &&
-          fw.curricularGoalCodes.length > 0);
-      if (!grounded) {
-        errors.push(
-          "Construct framework must cite a curricular policy with ≥1 goal, or set ungroundedWaiver with ungroundedReason (≥10 chars)."
-        );
+      const policies = db?.curricularPolicies || [];
+      if (!constructFrameworkGrounded(fw, policies)) {
+        errors.push(constructGroundingMessage(policies));
       }
     }
 

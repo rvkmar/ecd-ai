@@ -31,6 +31,8 @@ import {
 } from "@/utils/sameAuthorConfirm";
 import { syncSmVariablesFromCompetencies } from "./smVariableSync";
 import { PSYCHOLOGICAL_PERSPECTIVE_VALUES } from "@/utils/ecdVocabulary";
+import { constructFrameworkGrounded } from "@/utils/constructGrounding";
+import { useCurricularPolicies } from "@/api/queries/curricularPolicies";
 
 const CompetencyWizardContext = createContext(null);
 
@@ -72,6 +74,10 @@ export function CompetencyWizardProvider({
   // models list already uses (CompetencyModelBuilderPanel, CompetencyTable,
   // CompetencyDashboard), so this doesn't add a redundant fetch.
   const { data: allModels = [] } = useCompetencyModels();
+  const policiesQuery = useCurricularPolicies();
+  const curricularPolicies = policiesQuery.isSuccess
+    ? policiesQuery.data || []
+    : undefined;
 
   /* =====================================================
      🔹 LOAD MODEL
@@ -291,18 +297,10 @@ export function CompetencyWizardProvider({
     validity[2] = ["unidimensional", "multidimensional"].includes(
       model?.measurementIntent
     );
-    {
-      const fw = model?.constructFramework || {};
-      validity[3] =
-        (fw.ungroundedWaiver === true &&
-          typeof fw.ungroundedReason === "string" &&
-          fw.ungroundedReason.trim().length >= 10) ||
-        Boolean(
-          fw.policyId &&
-            Array.isArray(fw.curricularGoalCodes) &&
-            fw.curricularGoalCodes.length > 0
-        );
-    }
+    validity[3] = constructFrameworkGrounded(
+      model?.constructFramework,
+      curricularPolicies
+    );
     // The backend unconditionally rejects a competency without a
     // variableType (even on draft saves -- see schema.js's competencies
     // validation), but this used to only check count > 0. Adding a
@@ -313,7 +311,7 @@ export function CompetencyWizardProvider({
     validity[4] =
       competencies.length > 0 && competencies.every((c) => c.variableType);
     {
-      const audit = computeStructuralAudit({ model, competencies });
+      const audit = computeStructuralAudit({ model, competencies, policies: curricularPolicies });
       const scaleOk = competencies.every((c) => {
         if (!c.variableType) return false;
         if (c.variableType === "binary") return c.states?.length === 2;
@@ -358,7 +356,11 @@ export function CompetencyWizardProvider({
     // cycles) could be red and Next/Lock & Confirm still proceeded. Now
     // shares the exact same computeStructuralAudit() the checklist
     // renders, so the gate and the display can never disagree.
-    validity[8] = computeStructuralAudit({ model, competencies }).allPassed;
+    validity[8] = computeStructuralAudit({
+      model,
+      competencies,
+      policies: curricularPolicies,
+    }).allPassed;
 
     // Step 9. Save for Review stays available on a draft (the audit on
     // step 8 is what blocks an incomplete model). Lock & Confirm, which
@@ -370,7 +372,7 @@ export function CompetencyWizardProvider({
       !sameAuthor || sameAuthorAcknowledgementReady(confirmAck);
 
     return validity;
-  }, [model, competencies, confirmAck, auth?.username]);
+  }, [model, competencies, confirmAck, auth?.username, curricularPolicies]);
 
   function canProceed(step) {
     return stepValidity[step] ?? true;

@@ -88,6 +88,8 @@ export default function Step3ConstructFramework() {
       // commit — goal codes are only meaningful inside their own policy.
       curricularGoalCodes: [],
       curricularGoals: [],
+      ungroundedWaiver: false,
+      ungroundedReason: "",
     };
 
     if (referenceIsOurs) {
@@ -132,10 +134,10 @@ export default function Step3ConstructFramework() {
           Step 3 — Construct Framework
         </h2>
         <p className="mt-1 text-sm text-slate-500 max-w-3xl">
-          Ground this Student Model in a curriculum document. Select the policy and the
-          curricular goal(s) it addresses, then add any citation or theoretical rationale.
-          While optional, an explicit reference strengthens interpretive validity and
-          transparency.
+          Ground this Student Model in a curricular policy from Home → Curricular
+          policies. Choose the policy and at least one goal. Content standards stay
+          on the Domain Analysis. An ungrounded waiver is available only when no
+          curricular policy exists.
         </p>
       </div>
 
@@ -157,7 +159,11 @@ export default function Step3ConstructFramework() {
             className="w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             <option value="">
-              {isLoading ? "Loading policies…" : "— No curricular policy —"}
+              {isLoading
+                ? "Loading policies…"
+                : policies.length > 0
+                ? "Choose a curricular policy"
+                : "— No curricular policy —"}
             </option>
             {policies.map((p) => (
               <option key={p.id} value={p.id}>
@@ -286,8 +292,8 @@ export default function Step3ConstructFramework() {
             className="w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
           />
           <p className="mt-1.5 text-xs text-slate-500">
-            Auto-filled from the selected policy; edit freely, or use it on its own for a
-            framework that hasn't been uploaded as a policy.
+            Auto-filled from the selected policy; edit freely, or use it on its own when
+            no curricular policy exists yet.
           </p>
         </div>
 
@@ -342,42 +348,50 @@ export default function Step3ConstructFramework() {
         </div>
       )}
 
-      {/* Explicit ungrounded waiver (enterprise) */}
-      <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 space-y-3">
-        <label className="flex items-start gap-3 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            className="mt-1"
-            disabled={isLocked}
-            checked={framework.ungroundedWaiver === true}
-            onChange={(e) => {
-              patchConstructFramework({
-                ungroundedWaiver: e.target.checked,
-                ungroundedReason: e.target.checked
-                  ? framework.ungroundedReason || ""
-                  : "",
-              });
-            }}
-          />
-          <span>
-            <strong className="font-semibold">Ungrounded waiver</strong> — no
-            curricular policy is available yet. Required for confirmation when
-            Policy Name / goals are empty (document why).
-          </span>
-        </label>
-        {framework.ungroundedWaiver === true && (
-          <textarea
-            value={framework.ungroundedReason || ""}
-            disabled={isLocked}
-            onChange={(e) =>
-              updateConstructFramework("ungroundedReason", e.target.value)
-            }
-            rows={3}
-            placeholder="Explain why this Student Model is authored without a curricular policy (≥10 characters)."
-            className="w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm"
-          />
-        )}
-      </div>
+      {!isLoading && policies.length > 0 && (
+        <p className="text-sm text-slate-600">
+          Cite a policy above. The ungrounded waiver is available only when no
+          curricular policy exists.
+        </p>
+      )}
+
+      {!isLoading && !isError && policies.length === 0 && (
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 space-y-3">
+          <label className="flex items-start gap-3 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="mt-1"
+              disabled={isLocked}
+              checked={framework.ungroundedWaiver === true}
+              onChange={(e) => {
+                patchConstructFramework({
+                  ungroundedWaiver: e.target.checked,
+                  ungroundedReason: e.target.checked
+                    ? framework.ungroundedReason || ""
+                    : "",
+                });
+              }}
+            />
+            <span>
+              <strong className="font-semibold">Ungrounded waiver</strong> — no
+              curricular policy exists under Home → Curricular policies. Document
+              why this Student Model is confirmed without one.
+            </span>
+          </label>
+          {framework.ungroundedWaiver === true && (
+            <textarea
+              value={framework.ungroundedReason || ""}
+              disabled={isLocked}
+              onChange={(e) =>
+                updateConstructFramework("ungroundedReason", e.target.value)
+              }
+              rows={3}
+              placeholder="Explain why this Student Model is authored without a curricular policy (≥10 characters)."
+              className="w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm"
+            />
+          )}
+        </div>
+      )}
 
       {/* Informational Panel */}
       <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm text-blue-800">

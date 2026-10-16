@@ -9,6 +9,7 @@ import {
   isSmVariablePriorComplete,
 } from "./ecdVocabulary.js";
 import { typeCoherenceAdvisories } from "./smVariableSync.js";
+import { constructFrameworkGrounded } from "./constructGrounding.js";
 
 function buildPrerequisiteGraph(competencies) {
   const graph = {};
@@ -90,16 +91,18 @@ function smvParityOk(model, competencies) {
   });
 }
 
-function constructGroundingOk(model) {
-  const fw = model?.constructFramework || {};
-  if (fw.ungroundedWaiver === true) {
-    return Boolean(fw.ungroundedReason && String(fw.ungroundedReason).trim().length >= 10);
+function constructGroundingOk(model, policies) {
+  return constructFrameworkGrounded(model?.constructFramework, policies);
+}
+
+function constructGroundingLabel(policies) {
+  if (Array.isArray(policies) && policies.length > 0) {
+    return "Construct grounded in a curricular policy from the Policies menu";
   }
-  return Boolean(
-    fw.policyId &&
-      Array.isArray(fw.curricularGoalCodes) &&
-      fw.curricularGoalCodes.length > 0
-  );
+  if (Array.isArray(policies)) {
+    return "Construct grounded by an ungrounded waiver (no curricular policy exists)";
+  }
+  return "Construct grounded in curricular policy (or documented waiver)";
 }
 
 /**
@@ -139,7 +142,7 @@ export function relationshipAdvisories(competencies = []) {
  * Computes the full Step 8 structural audit checklist.
  * Returns { checks, advisories, allPassed }.
  */
-export function computeStructuralAudit({ model, competencies = [] }) {
+export function computeStructuralAudit({ model, competencies = [], policies } = {}) {
   const checks = [];
 
   checks.push({
@@ -167,8 +170,8 @@ export function computeStructuralAudit({ model, competencies = [] }) {
   });
 
   checks.push({
-    label: "Construct grounded in curricular policy (or documented waiver)",
-    passed: constructGroundingOk(model),
+    label: constructGroundingLabel(policies),
+    passed: constructGroundingOk(model, policies),
   });
 
   checks.push({

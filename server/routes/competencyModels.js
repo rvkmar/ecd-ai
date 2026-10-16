@@ -539,6 +539,7 @@ router.post("/models/:id/confirm", authorizeRole(["admin", "district"]), (req, r
   const audit = computeStructuralAudit({
     model,
     competencies: relatedCompetencies,
+    policies: db.curricularPolicies || [],
   });
   if (!audit.allPassed) {
     return res.status(400).json({
@@ -692,6 +693,7 @@ router.patch("/models/:id/lifecycle", canAuthor, (req, res) => {
     const audit = computeStructuralAudit({
       model: { ...model, smVariables, status: "reviewed" },
       competencies: related,
+      policies: db.curricularPolicies || [],
     });
     if (!audit.allPassed) {
       return res.status(400).json({
