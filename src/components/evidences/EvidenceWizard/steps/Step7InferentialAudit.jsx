@@ -6,18 +6,14 @@
 import { useMemo, useEffect } from "react";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { useEvidenceWizardContext } from "../EvidenceWizardContext";
-import { validateEntity } from "../../../../utils/schema";
 import { evaluateAssemblySufficiency } from "../../../../utils/assemblySufficiency";
 import InferentialTraceGraph from "../components/InferentialTraceGraph";
-
-const EVAL_METHODS = ["key", "rubric", "auto", "process_log"];
-const DIF_STATUSES = ["pending", "pass", "fail", "na"];
-
-const DEFAULT_DIF = [
-  { id: "dif_gender", prompt: "Gender DIF review planned or completed for bound items?", status: "pending" },
-  { id: "dif_language", prompt: "Language-load / translation review completed?", status: "pending" },
-  { id: "dif_access", prompt: "Accessibility / sensory-motor demands reviewed?", status: "pending" },
-];
+import {
+  computeEvidenceInferentialAudit,
+  DEFAULT_DIF,
+  DIF_STATUSES,
+  EVAL_METHODS,
+} from "../evidenceInferentialAudit";
 
 export default function Step7InferentialAudit({ db, onValidityChange }) {
 
@@ -29,7 +25,6 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
   } = useEvidenceWizardContext();
 
   const observables = draftModel?.observables || [];
-  const warrants = draftModel?.warrants || [];
   const evidenceRules = draftModel?.evidenceRules || [];
   const models = draftModel?.statisticalModels || [];
   const evaluationProcedures = draftModel?.evaluationProcedures || [];
@@ -37,104 +32,17 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
     ? draftModel.difReviewChecklist
     : DEFAULT_DIF;
 
-  const schemaAudit = useMemo(() => {
-    if (!draftModel) return null;
-    return validateEntity("evidenceModels", draftModel, db);
-  }, [draftModel, db]);
-
-  const inferentialAudit = useMemo(() => {
-    const issues = [];
-    observables.forEach((obs) => {
-      const warrant = warrants.find((w) => w.id === obs.warrantId);
-      const rule = evidenceRules.find((r) => r.observableId === obs.id);
-      if (!warrant) issues.push(`Observable ${obs.id} not linked to valid warrant`);
-      if (!rule) {
-        issues.push(`Observable ${obs.id} missing EvidenceRule`);
-        return;
-      }
-      if (!rule.justification?.includes("warrant") && !warrant) {
-        issues.push(`Observable ${obs.id} has weak inferential justification`);
-      }
-      if (rule.direction === "neutral") {
-        issues.push(`Observable ${obs.id} contributes no directional evidence`);
-      }
-    });
-    return { valid: issues.length === 0, issues };
-  }, [observables, warrants, evidenceRules]);
-
-  const modelAudit = useMemo(() => {
-    const issues = [];
-    evidenceRules.forEach((rule) => {
-      if (rule.direction === "weakens" && models.some((m) => m.type === "irt")) {
-        issues.push(`IRT does not support 'weakens' directly (observable ${rule.observableId})`);
-      }
-      if (rule.direction === "neutral" && models.some((m) => m.type === "irt")) {
-        issues.push(`Neutral evidence ignored in IRT (observable ${rule.observableId})`);
-      }
-    });
-    return { valid: issues.length === 0, issues };
-  }, [evidenceRules, models]);
-
-  const enterpriseAudit = useMemo(() => {
-    const issues = [];
-    const byObs = new Map();
-    evaluationProcedures.forEach((p) => {
-      if (!p?.observableId) return;
-      byObs.set(p.observableId, (byObs.get(p.observableId) || 0) + 1);
-    });
-    observables.forEach((obs) => {
-      const n = byObs.get(obs.id) || 0;
-      if (n === 0) issues.push(`Observable ${obs.id} needs an evaluationProcedure (TR9 evaluation component).`);
-    });
-    evaluationProcedures.forEach((p) => {
-      if (p.observableId && !observables.some((o) => o.id === p.observableId)) {
-        issues.push(`evaluationProcedure ${p.id || "?"} cites unknown observable ${p.observableId}.`);
-      }
-      if (!p.method || !EVAL_METHODS.includes(p.method)) {
-        issues.push(`evaluationProcedure ${p.id || "?"} needs method: key|rubric|auto|process_log.`);
-      }
-      if (!p.workProductType) {
-        issues.push(`evaluationProcedure ${p.id || "?"} needs workProductType.`);
-      }
-      if (!p.description || String(p.description).trim().length < 10) {
-        issues.push(`evaluationProcedure ${p.id || "?"} needs a meaningful description.`);
-      }
-      if (["key", "rubric", "auto"].includes(p.method)) {
-        const hasRef = p.artifactRef && String(p.artifactRef).trim().length > 0;
-        const art = p.artifact;
-        const artifactOk =
-          art &&
-          typeof art === "object" &&
-          ((art.kind === "key" && Array.isArray(art.correctPatterns) && art.correctPatterns.length > 0) ||
-            (art.kind === "rubric" && Array.isArray(art.dimensions) && art.dimensions.length > 0) ||
-            (art.kind === "auto" && (art.scorerId || art.config)));
-        if (!hasRef && !artifactOk) {
-          issues.push(`evaluationProcedure ${p.id || "?"} needs artifactRef or inline artifact for method '${p.method}'.`);
-        }
-      }
-    });
-
-    // G6 pipeline: procedure → evidenceRule → active model observableIds
-    const activeSm = models.find((m) => m.active);
-    const modelObs = new Set(activeSm?.structureConfig?.observableIds || []);
-    observables.forEach((obs) => {
-      const hasRule =
-        evidenceRules.some((r) => r.observableId === obs.id) ||
-        !!obs.evidenceRule;
-      if (!hasRule) issues.push(`Observable ${obs.id}: pipeline missing evidenceRule.`);
-      if (activeSm && modelObs.size > 0 && !modelObs.has(obs.id)) {
-        issues.push(`Observable ${obs.id}: not in active statistical model observableIds.`);
-      }
-    });
-
-    if (!draftModel?.fairnessNotes || String(draftModel.fairnessNotes).trim().length < 20) {
-      issues.push("fairnessNotes must be at least 20 characters before leaving this step.");
-    }
-    if (difReviewChecklist.length < 3) {
-      issues.push("difReviewChecklist needs at least 3 entries.");
-    }
-    return { valid: issues.length === 0, issues };
-  }, [observables, evaluationProcedures, draftModel?.fairnessNotes, difReviewChecklist, evidenceRules, models]);
+  const {
+    schemaAudit,
+    inferentialAudit,
+    modelAudit,
+    enterpriseAudit,
+    errors: allErrors,
+    isValid,
+  } = useMemo(
+    () => computeEvidenceInferentialAudit({ draftModel, db }),
+    [draftModel, db]
+  );
 
   const assemblySufficiency = useMemo(() => {
     const em = {
@@ -144,19 +52,6 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
     };
     return evaluateAssemblySufficiency(em, db).warnings;
   }, [db, selectedCompetency, draftModel]);
-
-  const allErrors = [
-    ...(schemaAudit?.errors || []),
-    ...inferentialAudit.issues,
-    ...modelAudit.issues,
-    ...enterpriseAudit.issues,
-  ];
-
-  const isValid =
-    schemaAudit?.valid &&
-    inferentialAudit.valid &&
-    modelAudit.valid &&
-    enterpriseAudit.valid;
 
   useEffect(() => {
     if (onValidityChange) onValidityChange(isValid);

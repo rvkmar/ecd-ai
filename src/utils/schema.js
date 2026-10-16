@@ -2291,6 +2291,20 @@ export function validateEntity(collection, obj, db = null, options = {}) {
             }
           }
         }
+        // CTT reliability is undefined from a single component. Count the
+        // observables the active model scores; when it names none, every
+        // declared observable is in the score.
+        if (activeSm?.type === "ctt") {
+          const scored =
+            modelObs.size > 0
+              ? modelObs.size
+              : (obj.observables || []).filter((o) => o?.id).length;
+          if (scored < 2) {
+            errors.push(
+              "Classical Test Theory evidence requires at least two scored observables; reliability cannot be estimated from one."
+            );
+          }
+        }
         // Shared workProductId: when present on >1 procedure, types should agree.
         const byWp = new Map();
         for (const proc of obj.evaluationProcedures) {

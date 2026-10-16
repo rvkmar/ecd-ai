@@ -740,6 +740,31 @@ describe("POST /api/evidenceModels/:id/confirm — review gate", () => {
     expect(db.evidenceModels[0].locked).toBe(true);
   });
 
+  it("refuses to confirm Classical Test Theory with one scored observable", async () => {
+    const model = strictValidModel({
+      statisticalModels: [
+        {
+          id: "sm1",
+          type: "ctt",
+          subtype: "raw_total",
+          active: true,
+          structureConfig: { observableIds: ["o1"] },
+          parameterSets: [],
+          activeParameterSetId: null,
+        },
+      ],
+    });
+    const { app, db, saveDB } = await buildApp(model);
+
+    const res = await request(app).post("/api/evidenceModels/em1/confirm");
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors.join(" ")).toMatch(/at least two scored observables/);
+    expect(db.evidenceModels[0].status).toBe("reviewed");
+    expect(db.evidenceModels[0].locked).toBe(false);
+    expect(saveDB).not.toHaveBeenCalled();
+  });
+
   it("still refuses a model that is already confirmed", async () => {
     const { app } = await buildApp(makeModel());
 

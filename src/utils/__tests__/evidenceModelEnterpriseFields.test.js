@@ -287,4 +287,78 @@ describe("evidence model enterprise fields", () => {
     expect(errors.filter((e) => /fairnessNotes|evaluationProcedure|difReview/i.test(e))).toEqual([]);
     expect(valid).toBe(true);
   });
+
+  it("strict mode refuses Classical Test Theory with one scored observable", () => {
+    const em = baseEm({
+      statisticalModels: [
+        {
+          id: "sm1",
+          type: "ctt",
+          subtype: "raw_total",
+          active: true,
+          structureConfig: { observableIds: ["obs1"] },
+          parameterSets: [],
+          activeParameterSetId: null,
+        },
+      ],
+    });
+    const { errors } = validateEntity("evidenceModels", em, db(), { strict: true });
+    expect(errors.some((e) => /at least two scored observables/i.test(e))).toBe(true);
+  });
+
+  it("strict mode accepts Classical Test Theory with two scored observables", () => {
+    const second = {
+      id: "obs2",
+      statement: "The learner selects the reaction member of the pair.",
+      type: "selected_response",
+      warrantId: "w1",
+      boundaryNote: "Qualitative equality only.",
+      evidenceRule: {
+        direction: "supports",
+        strengthLevel: 4,
+        activationCondition: "Reaction member named.",
+        justification: "Supports the third-law warrant.",
+      },
+    };
+    const em = baseEm({
+      observables: [...baseEm().observables, second],
+      evidenceRules: [
+        ...baseEm().evidenceRules,
+        {
+          id: "er2",
+          observableId: "obs2",
+          direction: "supports",
+          strengthLevel: 4,
+          activationCondition: "Reaction member named.",
+          justification: "Supports the third-law warrant.",
+        },
+      ],
+      evaluationProcedures: [
+        ...baseEm().evaluationProcedures,
+        {
+          id: "ep2",
+          observableId: "obs2",
+          workProductType: "mcq_selection",
+          workProductId: "wp_force_mcq_2",
+          method: "key",
+          description: "Answer key maps the second selected option to a dichotomous value.",
+          artifactRef: "inline:key/obs2",
+          artifact: { kind: "key", correctPatterns: [{ selected: "opt_b" }] },
+        },
+      ],
+      statisticalModels: [
+        {
+          id: "sm1",
+          type: "ctt",
+          subtype: "raw_total",
+          active: true,
+          structureConfig: { observableIds: ["obs1", "obs2"] },
+          parameterSets: [],
+          activeParameterSetId: null,
+        },
+      ],
+    });
+    const { errors } = validateEntity("evidenceModels", em, db(), { strict: true });
+    expect(errors.filter((e) => /scored observables/i.test(e))).toEqual([]);
+  });
 });

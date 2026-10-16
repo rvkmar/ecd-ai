@@ -18,6 +18,7 @@ import Step7InferentialAudit from "./steps/Step7InferentialAudit";
 import Step8Confirmation from "./steps/Step8Confirmation";
 
 import { useEvidenceWizardContext } from "./EvidenceWizardContext";
+import { computeEvidenceInferentialAudit } from "./evidenceInferentialAudit";
 
 /* ==========================================================
    STEP DEFINITIONS
@@ -234,30 +235,31 @@ export default function EvidenceWizard({ onCancel, onSaved, readOnly = false }) 
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  // On the confirmation step, "can proceed" means ready to confirm:
-  // the Inferential Audit step's own validity + the acknowledgment
-  // checkbox. stepValidity is only ever set by a step's onValidityChange
-  // firing while that step is *mounted* -- but the sidebar's goToStep
-  // lets you jump directly to any step, so an earlier, already-complete
-  // step you skip past in this session (e.g. resuming a draft and
-  // jumping straight to "Warrants") never mounts and never sets its
-  // flag, leaving it stuck at the initial `false` forever. Requiring
-  // *every* stepValidity flag (via stepValidity.every(...)) therefore
-  // could permanently disable Lock & Confirm with no visible error even
-  // once the model was genuinely complete. Step 7 (Inferential Audit)
-  // already re-validates the *entire* current draftModel from scratch --
-  // schema + inferential-chain + model-compatibility -- independent of
-  // per-step visit history, so it's the authoritative full-model gate.
+  // Confirmation does not read stepValidity for the audit step. That
+  // flag is set only while Inferential Audit is mounted, so jumping
+  // here (or reopening a reviewed model on this step) left Lock
+  // disabled on a model the audit would already pass. The audit below
+  // is the same function Step 7 renders, run on the current draft.
   //
-  // The acknowledgment checkbox gates *locking*, not saving: a draft's
-  // Save on this step is still a draft save, so it asks only for a
-  // structurally complete model. Lock & Confirm (review mode) keeps the
-  // acknowledgment requirement.
-  const auditStepIndex = STEPS.length - 2; // "audit" (Step7InferentialAudit)
+  // The acknowledgment checkbox gates locking, not saving: a draft's
+  // Save on this step asks only for a structurally complete model.
+  // Lock & Confirm (review mode) keeps the acknowledgment requirement.
+  const confirmationAudit = useMemo(
+    () =>
+      isConfirmationStep
+        ? computeEvidenceInferentialAudit({ draftModel })
+        : null,
+    [isConfirmationStep, draftModel]
+  );
   const isReviewMode = draftModel.status === "reviewed" && !isLocked;
   const canProceed = isConfirmationStep
-    ? stepValidity[auditStepIndex] && (!isReviewMode || confirmationChecked)
+    ? confirmationAudit.isValid && (!isReviewMode || confirmationChecked)
     : stepValidity[currentStepIndex];
+  const blockingReason = !isConfirmationStep || canProceed
+    ? undefined
+    : !confirmationAudit.isValid
+      ? confirmationAudit.errors[0] || "Inferential audit has not passed."
+      : "Acknowledge the confirmation notice before locking.";
 
   /* ==========================================================
      RENDER
@@ -290,6 +292,7 @@ export default function EvidenceWizard({ onCancel, onSaved, readOnly = false }) 
         onSaveAndReview={handleSaveAndReview}
         onConfirm={handleConfirm}
         onReturnToDraft={handleReturnToDraft}
+        blockingReason={blockingReason}
         modelLabel="Evidence Model"
         adaptiveCancelLabel
       >
