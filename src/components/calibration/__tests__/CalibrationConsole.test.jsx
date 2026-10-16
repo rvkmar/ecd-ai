@@ -37,6 +37,7 @@ const fx = vi.hoisted(() => {
       },
     ],
     enqueuePayloads: [],
+    sessionPreview: null,
     processIds: [],
     ingestIds: [],
     ingestRefuse: false,
@@ -62,6 +63,7 @@ const fx = vi.hoisted(() => {
     reset() {
       jobs = [];
       this.enqueuePayloads = [];
+      this.sessionPreview = null;
       this.processIds = [];
       this.ingestIds = [];
       this.ingestRefuse = false;
@@ -128,6 +130,10 @@ vi.mock("@/api/queries/calibrationJobs", () => ({
     const jobs = useSyncExternalStore(fx.subscribe, fx.getJobs);
     return { data: jobs.find((j) => j.id === id) || null, isLoading: false };
   },
+  useSessionItemAnalysisPreview: () => ({
+    data: fx.sessionPreview,
+    isLoading: false,
+  }),
   useEnqueueCalibrationJob: () => ({
     isPending: false,
     mutateAsync: async (payload) => {
@@ -464,6 +470,35 @@ describe("admin start → process → watch → ingest", () => {
     ]);
     expect(screen.getByRole("heading", { name: /inspect job-lsat7-item-analysis/i })).toBeInTheDocument();
     expect(screen.getByText(/5 × 8/)).toBeInTheDocument();
+  });
+
+  it("enqueues item analysis from completed sessions and lists those students", async () => {
+    fx.sessionPreview = {
+      ok: true,
+      sampleSize: 10,
+      studentIds: Array.from({ length: 10 }, (_, i) => `stud-${i}`),
+      message: null,
+    };
+    const user = userEvent.setup();
+    render(<CalibrationConsole />);
+
+    await user.selectOptions(screen.getByLabelText(/response source/i), "sessions");
+    expect(screen.queryByLabelText(/^published fixture$/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/LSAT7 stays a published fixture/)).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/evidence model/i), "em-ctt");
+    expect(screen.getByText(/Sample size:/)).toHaveTextContent("10");
+    expect(screen.getByText(/stud-0, stud-1/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /enqueue session item analysis/i }));
+    expect(fx.enqueuePayloads).toEqual([
+      {
+        source: "sessions",
+        kind: "item-analysis",
+        evidenceModelId: "em-ctt",
+        statisticalModelId: "sm-ctt",
+      },
+    ]);
   });
 
   it("enqueues known 2PL test info bound to an IRT statistical model", async () => {

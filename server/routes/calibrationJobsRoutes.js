@@ -22,6 +22,7 @@ import {
   applyNamedCalibrationFixture,
   CALIBRATION_NAMED_FIXTURES,
 } from "../r/calibrationFixtures.js";
+import { assessSessionItemAnalysis } from "../r/sessionItemAnalysis.js";
 import {
   MIN_CELL_SIZE,
   namedAggregateScope,
@@ -74,6 +75,23 @@ router.get("/queue-metrics", canView, (_req, res) => {
   res.json(getCalibrationQueueMetrics());
 });
 
+// Completed-session item analysis for one evidence model. Does not enqueue.
+router.get("/session-item-analysis", canView, (req, res) => {
+  const db = loadDB();
+  const assessed = assessSessionItemAnalysis(db, req.query.evidenceModelId);
+  const isAdmin = req.user?.role === "admin";
+  res.json({
+    ok: assessed.ok,
+    code: assessed.code,
+    message: assessed.message,
+    sampleSize: assessed.sampleSize,
+    itemIds: assessed.itemIds,
+    studentIds: isAdmin ? assessed.studentIds : undefined,
+    studentCount: assessed.studentIds.length,
+    studentIdsRedacted: !isAdmin,
+  });
+});
+
 // ------------------------------
 // GET /api/calibrationJobs/:id
 // ------------------------------
@@ -103,7 +121,25 @@ router.post("/", canAuthor, (req, res) => {
 
   let incoming;
   try {
-    incoming = applyNamedCalibrationFixture(req.body, db);
+    if (req.body?.source === "sessions") {
+      const assessed = assessSessionItemAnalysis(db, req.body.evidenceModelId);
+      if (!assessed.ok) {
+        return res.status(400).json({
+          error: assessed.message,
+          code: assessed.code,
+          sampleSize: assessed.sampleSize,
+          studentIds: assessed.studentIds,
+        });
+      }
+      incoming = {
+        kind: "item-analysis",
+        evidenceModelId: req.body.evidenceModelId,
+        statisticalModelId: req.body.statisticalModelId,
+        request: assessed.request,
+      };
+    } else {
+      incoming = applyNamedCalibrationFixture(req.body, db);
+    }
   } catch (err) {
     if (err?.code === "UNKNOWN_CALIBRATION_FIXTURE") {
       return res.status(400).json({

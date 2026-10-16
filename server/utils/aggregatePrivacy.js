@@ -169,6 +169,25 @@ export function redactCalibrationJobForViewer(job, isAdmin) {
     request.responses = undefined;
     request.responsesRedacted = true;
   }
+  if (request?.provenance?.source === "completed-sessions") {
+    const n = Array.isArray(request.responseMatrix?.personIds)
+      ? request.responseMatrix.personIds.length
+      : request.provenance.sampleSize ?? null;
+    request.provenance = {
+      source: "completed-sessions",
+      evidenceModelId: request.provenance.evidenceModelId,
+      sampleSize: n,
+      studentIdsRedacted: true,
+    };
+    if (request.responseMatrix) {
+      request.responseMatrix = {
+        itemIds: request.responseMatrix.itemIds,
+        personCount: n,
+        personIdsRedacted: true,
+        dataRedacted: true,
+      };
+    }
+  }
   const response = job.response ? { ...job.response } : undefined;
   // Keep high-level metrics; drop raw matrices if present.
   if (response?.responseMatrix) {

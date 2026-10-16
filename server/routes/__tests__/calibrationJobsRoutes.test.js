@@ -337,3 +337,60 @@ describe("ingestCalibrationJob helper", () => {
     expect(typeof ingestCalibrationJob).toBe("function");
   });
 });
+
+function completedSessions(activated) {
+  return Array.from({ length: 10 }, (_, i) => ({
+    id: `s${i}`,
+    studentId: `stud-${i}`,
+    status: "completed",
+    isCompleted: true,
+    responses: [
+      { itemId: "item-a", evidenceModelId: "em1", activated, timestamp: "2026-10-16T00:00:00.000Z" },
+      { itemId: "item-b", evidenceModelId: "em1", activated, timestamp: "2026-10-16T00:00:00.000Z" },
+    ],
+  }));
+}
+
+describe("session item analysis enqueue", () => {
+  it("refuses when every response has activated null and lists the student ids", async () => {
+    dbState.current.sessions = completedSessions(null);
+    const app = await jobsApp();
+    const res = await request(app)
+      .post("/api/calibrationJobs/")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send({ source: "sessions", evidenceModelId: "em1", statisticalModelId: "sm1" });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("UNSCORED");
+    expect(res.body.sampleSize).toBe(10);
+    expect(res.body.studentIds).toHaveLength(10);
+    expect(dbState.current.calibrationJobs).toHaveLength(0);
+  });
+
+  it("enqueues item analysis with the real student ids and leaves LSAT7 as a fixture", async () => {
+    dbState.current.sessions = completedSessions(true);
+    const app = await jobsApp();
+    const res = await request(app)
+      .post("/api/calibrationJobs/")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send({ source: "sessions", evidenceModelId: "em1", statisticalModelId: "sm1" });
+    expect(res.status).toBe(201);
+    expect(res.body.kind).toBe("item-analysis");
+    expect(res.body.request.fixture).toBeUndefined();
+    expect(res.body.request.provenance.sampleSize).toBe(10);
+    expect(res.body.request.responseMatrix.personIds).toEqual(
+      Array.from({ length: 10 }, (_, i) => `stud-${i}`)
+    );
+    const fixture = await request(app)
+      .post("/api/calibrationJobs/")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send({
+        fixture: "lsat7",
+        kind: "irt-parameters",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+      });
+    expect(fixture.status).toBe(201);
+    expect(fixture.body.kind).toBe("irt-parameters");
+    expect(fixture.body.request.responseMatrix.personIds).toHaveLength(1000);
+  });
+});

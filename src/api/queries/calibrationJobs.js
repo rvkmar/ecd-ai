@@ -36,6 +36,18 @@ export function useCalibrationJob(id, options = {}) {
   });
 }
 
+export function useSessionItemAnalysisPreview(evidenceModelId, options = {}) {
+  const { auth } = useAuth() || {};
+  const qs = evidenceModelId
+    ? `?evidenceModelId=${encodeURIComponent(evidenceModelId)}`
+    : "";
+  return useQuery({
+    queryKey: ["calibrationJobs", "session-item-analysis", evidenceModelId || ""],
+    queryFn: () => apiFetch(`/api/calibrationJobs/session-item-analysis${qs}`, {}, auth),
+    enabled: Boolean(evidenceModelId) && options.enabled !== false,
+  });
+}
+
 export function useEnqueueCalibrationJob() {
   const { auth } = useAuth() || {};
   const queryClient = useQueryClient();

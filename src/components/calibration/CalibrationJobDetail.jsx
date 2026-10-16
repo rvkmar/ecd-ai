@@ -217,6 +217,17 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
               <dt className="text-muted-foreground">Item ids</dt>
               <dd>{summary.itemIds.join(", ") || "—"}</dd>
             </div>
+            {summary.source === "completed-sessions" && (
+              <div className="md:col-span-2">
+                <dt className="text-muted-foreground">Provenance</dt>
+                <dd>
+                  Completed sessions. Sample size {summary.personCount}.
+                  {summary.studentIds.length > 0
+                    ? ` Students: ${summary.studentIds.join(", ")}.`
+                    : ""}
+                </dd>
+              </div>
+            )}
             {summary.attributeIds.length > 0 && (
               <div className="md:col-span-2">
                 <dt className="text-muted-foreground">Q-matrix attributes</dt>

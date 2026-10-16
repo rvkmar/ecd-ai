@@ -87,7 +87,7 @@ export const NAMED_CALIBRATION_FIXTURES = [
   },
   {
     id: "lsat7-item-analysis",
-    label: "LSAT7 item analysis",
+    label: "LSAT7 item analysis (fixture)",
     kind: LSAT7_ITEM_ANALYSIS_JOB_KIND,
     statisticalModelTypes: LSAT7_ITEM_ANALYSIS_STATISTICAL_MODEL_TYPES,
     buttonLabel: "Enqueue LSAT7 item analysis",
@@ -202,9 +202,15 @@ export function requestSummary(job) {
     family: request.model?.family || "—",
     subtype: request.model?.subtype || "—",
     itemIds: Array.isArray(request.model?.itemIds) ? request.model.itemIds : [],
-    personCount: Array.isArray(request.responseMatrix?.personIds)
-      ? request.responseMatrix.personIds.length
-      : 0,
+    personCount:
+      request.provenance?.sampleSize ??
+      (Array.isArray(request.responseMatrix?.personIds)
+        ? request.responseMatrix.personIds.length
+        : request.responseMatrix?.personCount || 0),
+    source: request.provenance?.source || null,
+    studentIds: Array.isArray(request.provenance?.studentIds)
+      ? request.provenance.studentIds
+      : [],
     seed: request.options?.seed,
     contractVersion: request.contractVersion || "—",
     attributeIds: Array.isArray(request.qMatrix?.attributeIds)
