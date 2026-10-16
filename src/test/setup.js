@@ -1,7 +1,9 @@
 // src/test/setup.js
 // Global Vitest setup — runs once before each test file.
 
-import "@testing-library/jest-dom";
+// jest-dom 7 registers matchers on Vitest's expect only through this entry.
+// The package root still extends the global Jest expect.
+import "@testing-library/jest-dom/vitest";
 
 // server/config/jwt.js reads process.env.JWT_SECRET at *import* time and
 // throws if it's missing/too short (that's the whole point of the Phase 1
