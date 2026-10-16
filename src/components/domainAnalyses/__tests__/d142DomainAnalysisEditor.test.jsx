@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -87,5 +87,43 @@ describe("D142 Domain Analysis correction form", () => {
     await user.click(screen.getByRole("button", { name: /Explaining a labelled scientific diagram/ }));
     await user.click(screen.getByRole("button", { name: "Confirm" }));
     expect(confirm).toHaveBeenCalledWith("da-uploaded");
+  });
+
+  it("shows the copied curricular policy and leaves it out of the save", async () => {
+    useDomainAnalyses.mockReturnValue({
+      data: [{
+        ...uploaded,
+        contentStandards: {
+          id: "cp1",
+          name: "Plant diagram curriculum",
+          curricularGoals: [{
+            code: "CG-1",
+            statement: "Name the parts of a plant",
+            competencies: [{
+              code: "C-1.1",
+              statement: "Point to the indicated part",
+              learningOutcomes: ["Selects the printed name"],
+            }],
+          }],
+        },
+      }],
+      isLoading: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <DomainAnalysisEditor />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole("button", { name: /Explaining a labelled scientific diagram/ }));
+    const copied = screen.getByRole("region", { name: "Copied curricular policy" });
+    expect(copied).toHaveTextContent("Plant diagram curriculum");
+    expect(copied).toHaveTextContent("Name the parts of a plant");
+    expect(copied).toHaveTextContent("Selects the printed name");
+    expect(within(copied).queryByRole("textbox")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    expect(update.mock.calls[0][0].payload).not.toHaveProperty("contentStandards");
   });
 });

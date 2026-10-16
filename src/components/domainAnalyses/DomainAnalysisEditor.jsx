@@ -66,6 +66,47 @@ function formFromRow(row) {
   };
 }
 
+function ContentStandardsView({ standards }) {
+  if (!standards) return null;
+  const goals = Array.isArray(standards.curricularGoals) ? standards.curricularGoals : [];
+  return (
+    <section aria-label="Copied curricular policy" className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <h3 className="text-sm font-medium text-slate-900">Curricular policy</h3>
+      <p className="mt-1 text-sm text-slate-600">
+        Copied from the curricular policy. These lines are not edited here.
+      </p>
+      {standards.name ? (
+        <p className="mt-2 text-sm font-medium text-slate-900">{standards.name}</p>
+      ) : null}
+      {goals.length > 0 ? (
+        <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-800">
+          {goals.map((goal, goalIndex) => (
+            <li key={goal.code || goalIndex}>
+              <span className="font-mono text-xs text-slate-600">{goal.code}</span> {goal.statement}
+              {Array.isArray(goal.competencies) && goal.competencies.length > 0 ? (
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  {goal.competencies.map((comp, compIndex) => (
+                    <li key={comp.code || compIndex}>
+                      <span className="font-mono text-xs text-slate-600">{comp.code}</span> {comp.statement}
+                      {Array.isArray(comp.learningOutcomes) && comp.learningOutcomes.length > 0 ? (
+                        <ul className="mt-1 list-disc pl-4 text-slate-700">
+                          {comp.learningOutcomes.map((outcome, outcomeIndex) => (
+                            <li key={`${comp.code || compIndex}-${outcomeIndex}`}>{outcome}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </section>
+  );
+}
+
 function payloadFromForm(form) {
   const payload = {
     name: form.name.trim(),
@@ -85,6 +126,7 @@ export default function DomainAnalysisEditor() {
   const updateAnalysis = useUpdateDomainAnalysis();
   const confirmAnalysis = useConfirmDomainAnalysis();
   const [editingId, setEditingId] = useState(null);
+  const [standards, setStandards] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
   const payload = payloadFromForm(form);
@@ -100,11 +142,13 @@ export default function DomainAnalysisEditor() {
 
   function startNew() {
     setEditingId(null);
+    setStandards(null);
     setForm(emptyForm());
   }
 
   function startEdit(row) {
     setEditingId(row.id);
+    setStandards(row.contentStandards || null);
     setForm(formFromRow(row));
   }
 
@@ -175,6 +219,7 @@ export default function DomainAnalysisEditor() {
         <p className="text-sm text-slate-600">
           One statement per line. Valued knowledge is not a curricular policy. Knowledge–task lines are not Q-matrix cells.
         </p>
+        {editingId ? <ContentStandardsView standards={standards} /> : null}
         {editingId ? (
           <section aria-label="Q-matrices for this analysis" className="rounded-md border border-slate-200 p-3">
             <h3 className="text-sm font-medium text-slate-900">Q-matrices</h3>

@@ -15,7 +15,7 @@
 // server/routes/curricularPoliciesRoutes.js for why.
 // ------------------------------------------------------------------
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, BookOpen } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -83,6 +83,13 @@ export function CurricularPolicyManager() {
   const [pendingDelete, setPendingDelete] = useState(null);
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [hidEmptyForm, setHidEmptyForm] = useState(false);
+  const libraryEmpty = !isLoading && policies.length === 0;
+  const formVisible = isAdmin && (showForm || (libraryEmpty && !hidEmptyForm));
+
+  useEffect(() => {
+    if (policies.length > 0) setHidEmptyForm(false);
+  }, [policies.length]);
 
   async function handleConfirmDelete() {
     const target = pendingDelete;
@@ -114,10 +121,11 @@ export function CurricularPolicyManager() {
         </p>
       </div>
 
-      {isAdmin && !showForm && (
+      {isAdmin && !formVisible && (
         <Button
           onClick={() => {
             setEditing(null);
+            setHidEmptyForm(false);
             setShowForm(true);
           }}
         >
@@ -125,12 +133,13 @@ export function CurricularPolicyManager() {
         </Button>
       )}
 
-      {isAdmin && showForm && (
+      {formVisible && (
         <CurricularPolicyForm
           policy={editing}
           onCancel={() => {
             setShowForm(false);
             setEditing(null);
+            if (policies.length === 0) setHidEmptyForm(true);
           }}
           onSaved={() => {
             setShowForm(false);
