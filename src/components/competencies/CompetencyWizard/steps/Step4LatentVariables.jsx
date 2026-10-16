@@ -161,7 +161,11 @@ const SortableCard = memo(function SortableCard({
                                     value={localName}
                                     disabled={isLocked}
                                     onChange={(e) => setLocalName(e.target.value)}
-                                    onBlur={() => handleCommit(comp.id, "name", localName)}
+                                    onBlur={(e) => {
+                                        const value = e.target.value;
+                                        setLocalName(value);
+                                        handleCommit(comp.id, "name", value);
+                                    }}
                                     className={`w-full rounded-md border bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed ${errors.name
                                             ? "border-red-400 focus:ring-red-500/10 focus:border-red-500"
                                             : "border-slate-300 focus:ring-slate-900/10 focus:border-slate-400"
@@ -181,9 +185,11 @@ const SortableCard = memo(function SortableCard({
                                     value={localDescription}
                                     disabled={isLocked}
                                     onChange={(e) => setLocalDescription(e.target.value)}
-                                    onBlur={() =>
-                                        handleCommit(comp.id, "description", localDescription)
-                                    }
+                                    onBlur={(e) => {
+                                        const value = e.target.value;
+                                        setLocalDescription(value);
+                                        handleCommit(comp.id, "description", value);
+                                    }}
                                     className={`w-full rounded-md border bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition resize-y placeholder:text-slate-400 focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed ${errors.description
                                             ? "border-red-400 focus:ring-red-500/10 focus:border-red-500"
                                             : "border-slate-300 focus:ring-slate-900/10 focus:border-slate-400"

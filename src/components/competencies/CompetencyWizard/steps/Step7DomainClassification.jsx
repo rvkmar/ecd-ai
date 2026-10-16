@@ -98,7 +98,10 @@ const DomainCard = memo(function DomainCard({ comp, isLocked, updateCompetency }
                             value={localDomain}
                             disabled={isLocked}
                             onChange={(e) => setLocalDomain(e.target.value)}
-                            onBlur={() => commit("domain", localDomain)}
+                            onBlur={(e) => {
+                                setLocalDomain(e.target.value);
+                                commit("domain", e.target.value);
+                            }}
                             placeholder="Domain (e.g., Mathematics)"
                             className="w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                         />
@@ -109,7 +112,10 @@ const DomainCard = memo(function DomainCard({ comp, isLocked, updateCompetency }
                             value={localStrand}
                             disabled={isLocked}
                             onChange={(e) => setLocalStrand(e.target.value)}
-                            onBlur={() => commit("strand", localStrand)}
+                            onBlur={(e) => {
+                                setLocalStrand(e.target.value);
+                                commit("strand", e.target.value);
+                            }}
                             placeholder="Strand (e.g., Algebra)"
                             className="w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                         />
@@ -120,7 +126,10 @@ const DomainCard = memo(function DomainCard({ comp, isLocked, updateCompetency }
                             value={localFacet}
                             disabled={isLocked}
                             onChange={(e) => setLocalFacet(e.target.value)}
-                            onBlur={() => commit("facet", localFacet)}
+                            onBlur={(e) => {
+                                setLocalFacet(e.target.value);
+                                commit("facet", e.target.value);
+                            }}
                             placeholder="Facet (e.g., Linear Equations)"
                             className="w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                         />
@@ -131,8 +140,14 @@ const DomainCard = memo(function DomainCard({ comp, isLocked, updateCompetency }
     );
 });
 
-function sectionLines(value) {
-    if (Array.isArray(value)) return value.map((row) => String(row ?? "").trim()).filter(Boolean);
+function statementText(row) {
+    if (typeof row === "string") return row.trim();
+    if (row && typeof row === "object") return String(row.label ?? "").trim();
+    return "";
+}
+
+export function sectionLines(value) {
+    if (Array.isArray(value)) return value.map(statementText).filter(Boolean);
     if (typeof value === "string" && value.trim()) return [value.trim()];
     return [];
 }

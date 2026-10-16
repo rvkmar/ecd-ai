@@ -15,7 +15,7 @@ import {
 } from "@/utils/perspectiveInheritance";
 
 export default function Step1ModelIdentity() {
-    const { model, updateModelField } = useCompetencyWizard();
+    const { model, updateModelField, patchModel } = useCompetencyWizard();
     const { data: domainAnalyses = [], isLoading: analysesLoading } = useDomainAnalyses();
     const baselinePerspective = useRef(undefined);
 
@@ -24,7 +24,6 @@ export default function Step1ModelIdentity() {
         baselinePerspective.current = model.psychologicalPerspective || "";
     }, [model]);
 
-    const [localErrors, setLocalErrors] = useState({});
     const [touched, setTouched] = useState({
         name: false,
         description: false,
@@ -35,29 +34,21 @@ export default function Step1ModelIdentity() {
         setTouched((prev) => ({ ...prev, [field]: true }));
     }
 
-    useEffect(() => {
-        validate();
-    }, [model?.name, model?.description, model?.psychologicalPerspective, model?.domainAnalysisId]);
-
-    function validate() {
-        const errors = {};
-
-        if (!model?.name || model.name.trim().length < 5) {
-            errors.name = "Model name must be at least 5 characters.";
-        }
-
-        if (!model?.description || model.description.trim().length < 10) {
-            errors.description =
-                "Description should clearly describe the construct (min 10 characters).";
-        }
-
-        if (!PSYCHOLOGICAL_PERSPECTIVE_VALUES.includes(model?.psychologicalPerspective)) {
-            errors.domainAnalysisId =
-                "Choose a Domain Analysis to inherit its psychological perspective.";
-        }
-
-        setLocalErrors(errors);
-    }
+    const nameError =
+        !model?.name || model.name.trim().length < 5
+            ? "Model name must be at least 5 characters."
+            : "";
+    const descriptionError =
+        !model?.description || model.description.trim().length < 10
+            ? "Description should clearly describe the construct (min 10 characters)."
+            : "";
+    const perspectiveReady = PSYCHOLOGICAL_PERSPECTIVE_VALUES.includes(
+        model?.psychologicalPerspective
+    );
+    const domainAnalysisError =
+        perspectiveReady || model?.domainAnalysisId
+            ? ""
+            : "Choose a Domain Analysis to inherit its psychological perspective.";
 
     const isLocked = model?.locked;
 
@@ -87,14 +78,14 @@ export default function Step1ModelIdentity() {
                         placeholder="e.g., Grade 8 Mathematics Competency Framework"
                         disabled={isLocked}
                         className={`w-full rounded-md border bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed ${
-                            touched.name && localErrors.name
+                            touched.name && nameError
                                 ? "border-red-400 focus:ring-red-500/10 focus:border-red-500"
                                 : "border-slate-300 focus:ring-slate-900/10 focus:border-slate-400"
                         }`}
                     />
-                    {touched.name && localErrors.name && (
+                    {touched.name && nameError && (
                         <p className="mt-1.5 text-xs font-medium text-red-600">
-                            {localErrors.name}
+                            {nameError}
                         </p>
                     )}
                 </div>
@@ -111,14 +102,14 @@ export default function Step1ModelIdentity() {
                         rows={5}
                         disabled={isLocked}
                         className={`w-full rounded-md border bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition resize-y placeholder:text-slate-400 focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed ${
-                            touched.description && localErrors.description
+                            touched.description && descriptionError
                                 ? "border-red-400 focus:ring-red-500/10 focus:border-red-500"
                                 : "border-slate-300 focus:ring-slate-900/10 focus:border-slate-400"
                         }`}
                     />
-                    {touched.description && localErrors.description && (
+                    {touched.description && descriptionError && (
                         <p className="mt-1.5 text-xs font-medium text-red-600">
-                            {localErrors.description}
+                            {descriptionError}
                         </p>
                     )}
                 </div>
@@ -129,13 +120,14 @@ export default function Step1ModelIdentity() {
                     analysesLoading={analysesLoading}
                     baselinePerspective={baselinePerspective.current || ""}
                     isLocked={isLocked}
-                    error={touched.domainAnalysisId ? localErrors.domainAnalysisId : ""}
+                    error={touched.domainAnalysisId ? domainAnalysisError : ""}
                     onTouched={() => markTouched("domainAnalysisId")}
                     onChange={(next) => {
-                        updateModelField("domainAnalysisId", next.domainAnalysisId);
+                        const patch = { domainAnalysisId: next.domainAnalysisId };
                         if (next.psychologicalPerspective !== model?.psychologicalPerspective) {
-                            updateModelField("psychologicalPerspective", next.psychologicalPerspective);
+                            patch.psychologicalPerspective = next.psychologicalPerspective;
                         }
+                        patchModel(patch);
                     }}
                 />
             </div>

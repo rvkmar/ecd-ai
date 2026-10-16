@@ -12,6 +12,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import toast from "react-hot-toast";
@@ -140,6 +141,18 @@ export function CompetencyWizardProvider({
     markDirty();
   }
 
+  function patchModel(patch) {
+    if (model?.locked) return;
+    setModel((prev) => ({ ...prev, ...patch }));
+    markDirty();
+  }
+
+  // updateCompetency can run twice before a re-render (name blur, then
+  // description blur). Reading `competencies` from the render would let
+  // the second write drop the first.
+  const competenciesRef = useRef(competencies);
+  competenciesRef.current = competencies;
+
   function setCompetenciesAndSync(nextCompetencies) {
     setCompetencies(nextCompetencies);
     setModel((prev) => {
@@ -232,9 +245,11 @@ export function CompetencyWizardProvider({
 
   function updateCompetency(id, updates) {
     if (model?.locked) return;
-    setCompetenciesAndSync(
-      competencies.map((c) => (c.id === id ? { ...c, ...updates } : c))
+    const next = competenciesRef.current.map((c) =>
+      c.id === id ? { ...c, ...updates } : c
     );
+    competenciesRef.current = next;
+    setCompetenciesAndSync(next);
   }
 
   function removeCompetency(id) {
@@ -695,6 +710,7 @@ export function CompetencyWizardProvider({
     setConfirmAck,
 
     updateModelField,
+    patchModel,
     updateConstructFramework,
     patchConstructFramework,
     updateSmVariablePrior,

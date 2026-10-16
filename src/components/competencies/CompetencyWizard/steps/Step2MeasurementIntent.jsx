@@ -1,50 +1,35 @@
 // CompetencyWizard/steps/Step2MeasurementIntent.jsx
 // Step 2 — Measurement Intent (accessible button cards)
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { AlertTriangle, Info } from "lucide-react";
 import { useCompetencyWizard } from "../CompetencyWizardContext";
 
 export default function Step2MeasurementIntent() {
     const { model, competencies, updateModelField } = useCompetencyWizard();
 
-    const [localError, setLocalError] = useState("");
+    const [switchError, setSwitchError] = useState("");
 
     const isLocked = model?.locked;
 
-    useEffect(() => {
-        validate();
-    }, [model?.measurementIntent, competencies.length]);
-
-    function validate() {
-        if (!model?.measurementIntent) {
-            setLocalError("Measurement intent must be selected.");
-            return;
-        }
-
-        if (
-            model.measurementIntent === "unidimensional" &&
-            competencies.length > 1
-        ) {
-            setLocalError(
-                "Unidimensional models cannot contain multiple independent competencies."
-            );
-            return;
-        }
-
-        setLocalError("");
-    }
+    const structuralError = !model?.measurementIntent
+        ? "Measurement intent must be selected."
+        : model.measurementIntent === "unidimensional" && competencies.length > 1
+            ? "Unidimensional models cannot contain multiple independent competencies."
+            : "";
+    const localError = switchError || structuralError;
 
     function handleSelect(intent) {
         if (isLocked) return;
 
         if (intent === "unidimensional" && competencies.length > 1) {
-            setLocalError(
+            setSwitchError(
                 "Cannot switch to unidimensional while multiple competencies exist."
             );
             return;
         }
 
+        setSwitchError("");
         updateModelField("measurementIntent", intent);
     }
 

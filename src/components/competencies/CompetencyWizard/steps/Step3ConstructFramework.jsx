@@ -222,7 +222,7 @@ export default function Step3ConstructFramework() {
               This policy has no curricular goals.
             </p>
           ) : (
-            <ul className="max-h-72 overflow-y-auto rounded-md border border-slate-300 divide-y divide-slate-200">
+            <ul className="w-full min-w-0 max-h-72 overflow-y-auto rounded-md border border-slate-300 divide-y divide-slate-200">
               {availableGoals.map((goal) => {
                 const checked = selectedCodes.includes(goal.code);
                 const competencyCount = Array.isArray(goal.competencies)
@@ -230,9 +230,9 @@ export default function Step3ConstructFramework() {
                   : 0;
 
                 return (
-                  <li key={goal.code}>
+                  <li key={goal.code} className="w-full">
                     <label
-                      className={`flex items-start gap-3 px-3.5 py-3 text-sm transition ${
+                      className={`flex w-full min-w-0 items-start gap-3 px-3.5 py-3 text-sm transition ${
                         isLocked
                           ? "cursor-not-allowed opacity-70"
                           : "cursor-pointer hover:bg-slate-50"
