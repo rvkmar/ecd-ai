@@ -1,6 +1,6 @@
 // src/components/policies/CurricularPolicyManager.jsx
 // ------------------------------------------------------------------
-// Settings > Policies > Curricular Policies.
+// Admin → Policies → Curricular policies.
 //
 // A curricular policy is a published curriculum document (e.g. NCF-SE
 // 2023) uploaded as JSON, shaped as:

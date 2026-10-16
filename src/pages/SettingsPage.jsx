@@ -8,10 +8,9 @@
 //
 // Tabs:
 //   Users        -> src/pages/settings/UsersSettings.jsx (new, unified)
-//   Policies     -> two sub-tabs: PolicyManager (adaptive item-selection
-//                   policies) and CurricularPolicyManager (uploaded
-//                   curriculum documents feeding CompetencyWizard Step 3)
 //   Appearance   -> theme mode switch (light/dark/system)
+// Policy authoring lives on the Admin Policies group (Curricular policies,
+// Selection policies). This page keeps the Data bulk cards.
 //   Data         -> two sub-tabs: Upload (independent JSON bulk-import
 //                   cards, one per entity type) and Download (the matching
 //                   JSON exporters, same entity list, round-trip shaped)
@@ -30,8 +29,6 @@ import UsersSettings from "./settings/UsersSettings";
 import TenancySettings from "./settings/TenancySettings";
 import AuditLogViewer from "./settings/AuditLogViewer";
 import SystemHealthPanel from "./settings/SystemHealthPanel";
-import { PolicyManager } from "@/components/policies/PolicyManager";
-import { CurricularPolicyManager } from "@/components/policies/CurricularPolicyManager";
 import BulkUploadPanel from "./settings/BulkUploadPanel";
 import BulkDownloadPanel from "./settings/BulkDownloadPanel";
 import ThemeToggle from "@/theme/ThemeToggle";
@@ -110,7 +107,7 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
             <p className="text-sm text-muted-foreground">
-              Users, policies, appearance, bulk import/export, and system-wide operations.
+              Users, appearance, bulk import/export, and system-wide operations.
             </p>
           </div>
           <Link
@@ -127,7 +124,6 @@ export default function SettingsPage() {
           <TabsList className="flex flex-wrap gap-2 bg-muted p-2 rounded-2xl h-auto">
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="tenancy">Tenancy</TabsTrigger>
-            <TabsTrigger value="policies">Policies</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="data">Data</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
@@ -139,29 +135,6 @@ export default function SettingsPage() {
 
           <TabsContent value="tenancy" className="bg-card text-card-foreground rounded-2xl border border-border p-6">
             <TenancySettings />
-          </TabsContent>
-
-          {/* Two unrelated things share the word "policy" in this domain, so
-              the tab splits them explicitly rather than mixing them in one
-              list: SELECTION policies drive adaptive item delivery in
-              sessions (fixed/IRT/Bayesian/Markov), CURRICULAR policies are
-              uploaded curriculum documents (curricular goals -> competencies
-              -> learning outcomes) consumed by CompetencyWizard Step 3. */}
-          <TabsContent value="policies" className="bg-card text-card-foreground rounded-2xl border border-border p-6">
-            <Tabs defaultValue="selection" className="space-y-6">
-              <TabsList className="flex flex-wrap gap-2 bg-muted p-1.5 rounded-xl h-auto">
-                <TabsTrigger value="selection">Selection Policies</TabsTrigger>
-                <TabsTrigger value="curricular">Curricular Policies</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="selection">
-                <PolicyManager />
-              </TabsContent>
-
-              <TabsContent value="curricular">
-                <CurricularPolicyManager />
-              </TabsContent>
-            </Tabs>
           </TabsContent>
 
           <TabsContent value="appearance" className="bg-card text-card-foreground rounded-2xl border border-border p-6">

@@ -201,8 +201,7 @@ export const schema = {
       citation: 'string',
       notes: 'string',
       // Curricular grounding, selected in CompetencyWizard Step 3 from the
-      // curricularPolicies uploaded under Settings > Policies > Curricular
-      // Policies. `policyId` is the live reference; `policyName` and
+      // curricularPolicies authored under Policies → Curricular policies. `policyId` is the live reference; `policyName` and
       // `curricularGoals` are a denormalised snapshot taken at selection
       // time so a confirmed model still renders its provenance verbatim
       // even if the source policy is later edited or deleted (the same
@@ -725,8 +724,7 @@ export const schema = {
   // `policies` are adaptive item-SELECTION policies consumed by sessions
   // (fixed/IRT/BayesianNetwork/MarkovChain), and mixing curriculum
   // documents into that enum would leak them into every session/report
-  // policy picker. Uploaded as JSON under Settings > Policies >
-  // Curricular Policies, consumed by CompetencyWizard Step 3.
+  // policy picker. Authored under Policies → Curricular policies, consumed by CompetencyWizard Step 3.
   // Declared in the plain-shape style (not the JSON-schema style used by
   // `policies`) so validateEntity falls through to the generic field loop
   // and then reaches the deep `collection === "curricularPolicies"` block
@@ -2025,8 +2023,7 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
   /* =====================================================
      CURRICULAR POLICIES — CURRICULUM DOCUMENT STRUCTURE
-     Uploaded as JSON under Settings > Policies > Curricular
-     Policies, consumed by CompetencyWizard Step 3. Validated
+     Authored under Policies → Curricular policies, consumed by CompetencyWizard Step 3. Validated
      deeply here because the whole point of the upload is that
      Step 3's dropdowns can trust the goal codes/statements —
      a policy whose goals lack codes renders as blank options.

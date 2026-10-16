@@ -84,6 +84,12 @@ vi.mock("@/components/home/HomeAnnouncements", () => ({
 vi.mock("@/components/tasks/TasksManager", () => ({
   default: () => <div>Activities surface</div>,
 }));
+vi.mock("@/components/policies/CurricularPolicyManager", () => ({
+  default: () => <div>Curricular policies editor</div>,
+}));
+vi.mock("@/components/policies/PolicyManager", () => ({
+  PolicyManager: () => <div>Selection policies editor</div>,
+}));
 
 const ROOT = path.resolve(__dirname, "../../..");
 
@@ -225,5 +231,44 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
 
     await user.click(screen.getByRole("tab", { name: "Reports" }));
     await waitFor(() => expect(screen.getByText("Reports dashboard")).toBeInTheDocument());
+  });
+
+  it("opens Policies as its own group, with curricular policies first", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => screen.getByRole("tab", { name: "Home" }));
+
+    await user.click(screen.getByRole("tab", { name: "Policies" }));
+    const policyList = screen.getAllByRole("tablist").find((list) =>
+      list.textContent?.includes("Curricular policies")
+    );
+    expect(within(policyList).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Curricular policies",
+      "Selection policies",
+    ]);
+    await waitFor(() =>
+      expect(screen.getByText("Curricular policies editor")).toBeInTheDocument()
+    );
+    await user.click(screen.getByRole("tab", { name: "Selection policies" }));
+    await waitFor(() =>
+      expect(screen.getByText("Selection policies editor")).toBeInTheDocument()
+    );
+
+    const admin = read("src/pages/AdminPage.jsx");
+    const models = admin.slice(admin.indexOf('id: "models"'), admin.indexOf('id: "policies"'));
+    expect(models).not.toMatch(/CurricularPolicyManager|PolicyManager/);
+    expect(read("src/pages/SettingsPage.jsx")).not.toMatch(/value="policies"/);
+    expect(read("src/pages/SettingsPage.jsx")).toMatch(/BulkUploadPanel/);
+    expect(read("src/pages/DistrictDashboard.jsx")).not.toMatch(/CurricularPolicyManager|PolicyManager/);
+    expect(read("src/components/competencies/CompetencyWizard/steps/Step3ConstructFramework.jsx")).toMatch(
+      /Policies → Curricular policies/
+    );
+    expect(read("src/components/competencies/CompetencyWizard/steps/Step3ConstructFramework.jsx")).not.toMatch(
+      /Settings → Policies/
+    );
   });
 });

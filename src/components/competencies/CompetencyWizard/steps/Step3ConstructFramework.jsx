@@ -3,7 +3,7 @@
 //
 // Grounds the Student Model in a curriculum document. The author picks
 // a policy by name from the curricular policies uploaded under
-// Settings > Policies > Curricular Policies (JSON, NCF-style:
+// Policies → Curricular policies (JSON, NCF-style:
 // curricular goals -> competencies -> learning outcomes), then selects
 // one or more curricular goals from that policy. The free-text
 // Reference / Citation / Notes fields remain for frameworks that aren't
@@ -178,8 +178,8 @@ export default function Step3ConstructFramework() {
           {!isLoading && !isError && policies.length === 0 && (
             <p className="mt-1.5 text-xs text-slate-500">
               No curricular policies have been uploaded yet. An administrator can add them
-              under <span className="font-medium">Settings → Policies → Curricular
-              Policies</span> by uploading a JSON curriculum document.
+              under <span className="font-medium">Policies → Curricular policies</span> by
+              uploading a JSON curriculum document.
             </p>
           )}
 

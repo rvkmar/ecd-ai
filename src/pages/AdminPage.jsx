@@ -69,6 +69,14 @@ const DesignPatternBuilder = lazyPanel(() =>
 const HumanRatingQueue = lazyPanel(() =>
   import("@/components/rating/HumanRatingQueue")
 );
+const CurricularPolicyManager = lazyPanel(() =>
+  import("@/components/policies/CurricularPolicyManager")
+);
+const PolicyManager = lazyPanel(() =>
+  import("@/components/policies/PolicyManager").then((m) => ({
+    default: m.PolicyManager,
+  }))
+);
 
 export default function AdminPage() {
   const { auth, logout } = useAuth();
@@ -133,6 +141,22 @@ export default function AdminPage() {
             { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
             { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },
             { id: "calibration", label: "Parameter estimation", content: <CalibrationConsole /> },
+          ],
+        },
+        {
+          id: "policies",
+          label: "Policies",
+          tabs: [
+            {
+              id: "curricular-policies",
+              label: "Curricular policies",
+              content: <CurricularPolicyManager />,
+            },
+            {
+              id: "selection-policies",
+              label: "Selection policies",
+              content: <PolicyManager />,
+            },
           ],
         },
         {

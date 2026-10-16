@@ -56,8 +56,8 @@ export default function Step4SelectionAlgorithm() {
 
       {policies.length === 0 && (
         <p className="text-sm text-red-600">
-          No policies exist yet. Create one under Settings → Policies before
-          returning to this step.
+          No policies exist yet. Create one under Policies → Selection policies
+          before returning to this step.
         </p>
       )}
     </div>
