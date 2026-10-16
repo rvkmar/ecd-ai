@@ -106,17 +106,23 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     apiFetch.mockResolvedValue({});
   });
 
-  it("nests Assembly, Diagnostic design, and Parameter estimation under Models in source", () => {
+  it("keeps Assembly and Diagnostic design under Models, and moves estimation to Delivery", () => {
     const src = read("src/pages/AdminPage.jsx");
     const app = read("src/App.jsx");
+    const models = src.slice(src.indexOf('id: "models"'), src.indexOf('id: "libraries"'));
+    const delivery = src.slice(src.indexOf('id: "delivery"'), src.indexOf('id: "results"'));
+    const results = src.slice(src.indexOf('id: "results"'));
     expect(src).toMatch(/Student Model/);
     expect(src).toMatch(/AssemblyModelBuilder/);
-    expect(src).toMatch(/id: "assembly"/);
-    expect(src).toMatch(/id: "models"/);
+    expect(models).toMatch(/id: "assembly"/);
+    expect(models).toMatch(/id: "templates"/);
+    expect(models).not.toMatch(/id: "workproducts"/);
+    expect(models).not.toMatch(/id: "calibration"/);
+    expect(delivery).toMatch(/id: "calibration"/);
+    expect(delivery).not.toMatch(/id: "psychometrics"/);
+    expect(results).toMatch(/id: "psychometrics"/);
+    expect(results).toMatch(/id: "reports"/);
     expect(src).toMatch(/id: "implementation"/);
-    expect(src).toMatch(/id: "delivery"/);
-    expect(src).toMatch(/id: "reports"/);
-    expect(src).toMatch(/id: "psychometrics"/);
     expect(src).toMatch(/PsychometricsDashboard/);
     expect(src).toMatch(/PresentationModelBuilder/);
     expect(src).not.toMatch(/PresentationModelStub/);
@@ -168,15 +174,13 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
       "Design Patterns",
       "Student Model",
       "Evidence Model",
-      "Work Products",
-      "Rubrics",
-      "Task Model Variables",
       "Task Model",
       "Templates",
       "Assembly Model",
       "Diagnostic design",
-      "Parameter estimation",
     ]);
+    expect(screen.getByRole("tab", { name: "Libraries" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Results" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Competency Model" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Analytics" })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Domain analysis form")).toBeInTheDocument());
@@ -218,19 +222,51 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(screen.getByRole("tab", { name: "Human rating" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Evidence Accumulation (inspect)" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Presentation" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Psychometrics" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Reports" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Parameter estimation" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Psychometrics" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Reports" })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Sessions surface")).toBeInTheDocument());
 
     await user.click(screen.getByRole("tab", { name: "Presentation" }));
     await waitFor(() => expect(screen.getByText("Presentation builder")).toBeInTheDocument());
     expect(screen.queryByText("Presentation stub")).not.toBeInTheDocument();
 
+    await user.click(screen.getByRole("tab", { name: "Libraries" }));
+    expect(within(screen.getAllByRole("tablist").find((list) => list.textContent?.includes("Work Products"))).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Work Products",
+      "Rubrics",
+      "Task Model Variables",
+    ]);
+    await waitFor(() => expect(screen.getByText("Work Products library")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("tab", { name: "Results" }));
+    expect(screen.getByRole("tab", { name: "Psychometrics" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Reports" })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Psychometrics" }));
     await waitFor(() => expect(screen.getByText("Psychometrics shell")).toBeInTheDocument());
 
     await user.click(screen.getByRole("tab", { name: "Reports" }));
     await waitFor(() => expect(screen.getByText("Reports dashboard")).toBeInTheDocument());
+  });
+
+  it("opens a saved library or estimation address on the new group", async () => {
+    const { unmount } = render(
+      <MemoryRouter initialEntries={["/?tab=rubrics"]}>
+        <AdminPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(screen.getByText("Rubrics library")).toBeInTheDocument());
+    expect(screen.getByRole("tab", { name: "Libraries" })).toHaveAttribute("data-state", "active");
+    unmount();
+
+    render(
+      <MemoryRouter initialEntries={["/?tab=calibration"]}>
+        <AdminPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(screen.getByText("Calibration console")).toBeInTheDocument());
+    expect(screen.getByRole("tab", { name: "Delivery" })).toHaveAttribute("data-state", "active");
+    expect(screen.getByRole("tab", { name: "Parameter estimation" })).toHaveAttribute("data-state", "active");
   });
 
   it("opens curricular and selection policies on Home beside announcements", async () => {

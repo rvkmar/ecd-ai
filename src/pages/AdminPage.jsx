@@ -114,8 +114,8 @@ export default function AdminPage() {
           id: "models",
           label: "Models",
           tabs: [
-            // Authoring order: domain, pattern, the models they inform,
-            // the libraries a task cites, then assembly and estimation.
+            // Authoring order: domain, pattern, then the models they inform.
+            // Libraries and estimation sit in their own groups.
             {
               id: "domainanalyses",
               label: "Domain Analysis",
@@ -128,6 +128,20 @@ export default function AdminPage() {
             },
             { id: "student", label: "Student Model", content: <CompetencyModelBuilder /> },
             { id: "evidence", label: "Evidence Model", content: <EvidenceModelBuilder /> },
+            { id: "taskmodels", label: "Task Model", content: <TaskModelBuilder /> },
+            {
+              id: "templates",
+              label: "Templates",
+              content: <TemplateBuilder />,
+            },
+            { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
+            { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },
+          ],
+        },
+        {
+          id: "libraries",
+          label: "Libraries",
+          tabs: [
             {
               id: "workproducts",
               label: "Work Products",
@@ -143,15 +157,6 @@ export default function AdminPage() {
               label: "Task Model Variables",
               content: <TaskModelVariableBuilder />,
             },
-            { id: "taskmodels", label: "Task Model", content: <TaskModelBuilder /> },
-            {
-              id: "templates",
-              label: "Templates",
-              content: <TemplateBuilder />,
-            },
-            { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
-            { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },
-            { id: "calibration", label: "Parameter estimation", content: <CalibrationConsole /> },
           ],
         },
         {
@@ -170,6 +175,13 @@ export default function AdminPage() {
             { id: "human-rating", label: "Human rating", content: <HumanRatingQueue /> },
             { id: "accumulation", label: "Evidence Accumulation (inspect)", content: <EvidenceAccumulationInspector /> },
             { id: "presentation", label: "Presentation", content: <PresentationModelBuilder /> },
+            { id: "calibration", label: "Parameter estimation", content: <CalibrationConsole /> },
+          ],
+        },
+        {
+          id: "results",
+          label: "Results",
+          tabs: [
             { id: "psychometrics", label: "Psychometrics", content: <PsychometricsDashboard /> },
             { id: "reports", label: "Reports", content: <AnalyticsReports /> },
           ],

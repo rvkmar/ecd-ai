@@ -33,7 +33,8 @@ describe("calibration console wiring", () => {
     expect(src).toMatch(/id: "calibration"/);
     expect(src).toMatch(/label: "Parameter estimation"/);
     expect(src).toMatch(/CalibrationConsole/);
-    expect(src).toMatch(/id: "models"/);
+    const delivery = src.slice(src.indexOf('id: "delivery"'), src.indexOf('id: "results"'));
+    expect(delivery).toMatch(/id: "calibration"/);
   });
 
   it("DistrictDashboard no longer ships a Calibration tab (bookmark route remains)", () => {
