@@ -175,3 +175,33 @@ describe("class and district teacher reports are staff-only", () => {
     expect(res.body.classId).toBe("c1");
   });
 });
+
+describe("session report names the examinee and the option", () => {
+  it("resolves a username and the option label", async () => {
+    dbState.current.sessions = [{
+      ...SESSION,
+      studentId: "stud-chennai",
+      responses: [{
+        taskId: "t1",
+        itemId: "it1",
+        rawAnswer: "opt_a",
+        activated: null,
+      }],
+    }];
+    dbState.current.students = [];
+    dbState.current.users = [{ username: "stud-chennai", role: "student", name: "Chennai Student" }];
+    dbState.current.items = [{
+      id: "it1",
+      interaction: {
+        responseComponents: [{ id: "opt_a", label: "Cell membrane" }],
+      },
+    }];
+    const res = await request(app())
+      .get("/api/reports/session/s-d59")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`);
+    expect(res.status).toBe(200);
+    expect(res.body.student).toEqual({ id: "stud-chennai", name: "Chennai Student" });
+    expect(res.body.responses[0].option).toBe("Cell membrane");
+    expect(res.body.responses[0].activated).toBe(null);
+  });
+});

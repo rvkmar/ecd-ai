@@ -100,9 +100,12 @@ export default function SessionBuilder({ notify: notifyProp }) {
       apiFetch("/api/students/assignable", {}, auth).catch(() => null),
     ])
       .then(([activeData, archivedData, currentData, stuData, taskData, assignable]) => {
-        setActiveCount((activeData || []).length);
-        setArchivedCount((archivedData || []).length);
-        setSessions(currentData || []);   // ✅ show active or archived depending on tab
+        const activeList = Array.isArray(activeData) ? activeData : [];
+        const archivedList = Array.isArray(archivedData) ? archivedData : [];
+        const currentList = Array.isArray(currentData) ? currentData : [];
+        setActiveCount(activeList.length);
+        setArchivedCount(archivedList.length);
+        setSessions(currentList);
         if (assignable && Array.isArray(assignable.students) && assignable.students.length) {
           setStudents(assignable.students);
           setCohorts(assignable.cohorts || []);
@@ -137,7 +140,8 @@ export default function SessionBuilder({ notify: notifyProp }) {
         : created
           ? [created]
           : [];
-      setSessions((prev) => [...prev, ...createdSessions]);
+      setSessions((prev) => (sessionTab === "active" ? [...prev, ...createdSessions] : prev));
+      setActiveCount((count) => count + createdSessions.length);
       notify?.(
         createdSessions.length > 1
           ? `${createdSessions.length} sessions created for the cohort.`
@@ -257,6 +261,23 @@ export default function SessionBuilder({ notify: notifyProp }) {
     setReportSessionId(sessionId);
   };
 
+  const handleFinish = async (sessionId) => {
+    setBusy(true);
+    try {
+      const updated = await apiFetch(
+        `/api/sessions/${sessionId}/finish`,
+        { method: "POST" },
+        auth
+      );
+      setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, ...updated } : s)));
+      notify("Session finished.", "success");
+    } catch (e) {
+      notify(apiErrorMessage(e, "Failed to finish session"), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-6">Loading sessions...</div>;
   }
@@ -286,8 +307,8 @@ export default function SessionBuilder({ notify: notifyProp }) {
 
       <NavBar
         tabs={[
-          { id: "active", label: `Active Sessions (${activeCount})` },
-          { id: "archived", label: `Archived Sessions (${archivedCount})` },
+          { id: "active", label: `Active Sessions (${sessionTab === "active" ? sessions.length : activeCount})` },
+          { id: "archived", label: `Archived Sessions (${sessionTab === "archived" ? sessions.length : archivedCount})` },
         ]}
         active={sessionTab}
         onSelect={setSessionTab}
@@ -305,6 +326,7 @@ export default function SessionBuilder({ notify: notifyProp }) {
         onResume={handlePlay}
         onArchive={handleArchive}
         onViewReport={handleViewReport}
+        onFinish={handleFinish}
       />
 
       {/* Editor / Form area */}

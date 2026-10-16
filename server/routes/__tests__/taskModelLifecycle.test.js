@@ -241,6 +241,8 @@ describe("PUT /api/taskModels/:id — unlocked models", () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("confirmed");
     expect(res.body.locked).toBe(true);
+    expect(res.body.compositeLibrary.ok).toBe(true);
+    expect(res.body.compositeLibrary.itemCount).toBe(1);
   });
 
   it("rejects a confirmation whose observable weights do not total 1", async () => {

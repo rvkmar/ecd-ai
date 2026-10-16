@@ -106,6 +106,11 @@ function rejectUnassignedStudent(req, res, session, db) {
 router.post("/", (req, res) => {
   const { taskIds, studentId, studentIds, cohortId, selectionStrategy, nextTaskPolicy } = req.body;
   const db = loadDB();
+  // A brand-new store has no collections yet. Reading them as arrays is
+  // what lets the first session save instead of throwing on `.find`.
+  for (const key of ["tasks", "sessions", "policies", "students", "users"]) {
+    if (!Array.isArray(db[key])) db[key] = [];
+  }
 
   if (!Array.isArray(taskIds) || taskIds.length === 0) {
     return res.status(400).json({ error: "taskIds must be a non-empty array" });
@@ -129,31 +134,38 @@ router.post("/", (req, res) => {
     });
   }
 
-  // ✅ Policy validation
+  // Fixed Order is a selection policy (type "fixed"), the same record
+  // authored under Policies → Selection policies. When several policies
+  // share the strategy, the session must name one. A single match is
+  // the bootstrap for a store that has not been asked to choose yet.
   let strategy = selectionStrategy || "fixed";
   let policyConfig = nextTaskPolicy || {};
-
-  // Check against /api/policies
   const availablePolicies = db.policies || [];
-  const foundPolicy = availablePolicies.find((p) => p.type === strategy);
+  const ofType = availablePolicies.filter((p) => p.type === strategy);
 
-  if (!foundPolicy) {
-    return res.status(400).json({
-      error: `Invalid selectionStrategy: ${strategy}. No matching policy found in /api/policies`,
-    });
-  }
-
-  // If caller passed explicit policyId in nextTaskPolicy, check it
   if (policyConfig.policyId) {
-    const exists = availablePolicies.some((p) => p.id === policyConfig.policyId);
-    if (!exists) {
+    const chosen = availablePolicies.find((p) => p.id === policyConfig.policyId);
+    if (!chosen) {
       return res.status(400).json({
         error: `Invalid nextTaskPolicy.policyId: ${policyConfig.policyId}. Not found in /api/policies`,
       });
     }
+    if (chosen.type !== strategy) {
+      return res.status(400).json({
+        error: `Policy '${chosen.id}' is type '${chosen.type}', which does not match selectionStrategy '${strategy}'.`,
+      });
+    }
+    policyConfig = { policyId: chosen.id };
+  } else if (ofType.length === 1) {
+    policyConfig = { policyId: ofType[0].id };
+  } else if (ofType.length === 0) {
+    return res.status(400).json({
+      error: `Invalid selectionStrategy: ${strategy}. No matching policy found in /api/policies`,
+    });
   } else {
-    // If no explicit policyId, default to matched strategy policy
-    policyConfig = { policyId: foundPolicy.id, ...policyConfig };
+    return res.status(400).json({
+      error: `Choose a ${strategy} policy. More than one is available.`,
+    });
   }
 
   const now = new Date().toISOString();

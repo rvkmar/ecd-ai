@@ -15,7 +15,7 @@ import {
 } from "../utils/sessionDependencies.js";
 import { authorizeRole } from "../utils/authMiddleware.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
-import { compileAndActivate } from "../compositeLibrary/activation.js";
+import { compileAndActivate, rebuildPackageForTaskModel } from "../compositeLibrary/activation.js";
 import { logger } from "../utils/logger.js";
 
 const router = express.Router();
@@ -557,6 +557,12 @@ router.put("/:id", canAuthor, (req, res) => {
   db.taskModels[idx] = updated;
   saveDB(db);
 
+  if (nextStatus === "confirmed") {
+    const library = rebuildPackageForTaskModel(updated, db);
+    if (library.ok) saveDB(db);
+    return res.json({ ...updated, compositeLibrary: library });
+  }
+
   res.json(updated);
 });
 
@@ -603,7 +609,9 @@ router.post("/:id/confirm", canAuthor, (req, res) => {
   model.updatedAt = new Date().toISOString();
 
   saveDB(db);
-  res.json(model);
+  const library = rebuildPackageForTaskModel(model, db);
+  if (library.ok) saveDB(db);
+  res.json({ ...model, compositeLibrary: library });
 });
 
 /* =====================================================

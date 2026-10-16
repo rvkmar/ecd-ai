@@ -140,3 +140,26 @@ export function compileAndActivate(taskModel, db) {
   // that.
   return { ok: true, record, warnings };
 }
+
+/**
+ * Rebuild the active package for an instantiable Task Model.
+ * Does not save. An empty compile is a reported failure, not a thrown one,
+ * so confirmation can still land and the author can see why delivery
+ * would refuse scoring.
+ */
+export function rebuildPackageForTaskModel(taskModel, db) {
+  if (!taskModel) {
+    return { ok: false, error: "Task model not found; composite library was not rebuilt." };
+  }
+  const result = compileAndActivate(taskModel, db);
+  if (!result.ok) {
+    return { ok: false, error: result.error, details: result.details || [] };
+  }
+  return {
+    ok: true,
+    id: result.record.id,
+    taskModelId: result.record.taskModelId,
+    itemCount: result.record.items.length,
+    warnings: result.warnings || [],
+  };
+}

@@ -184,6 +184,15 @@ export function canViewCompletedSession(session) {
   return isClosedSession(session);
 }
 
+export function canFinishSession(session) {
+  if (!session || isClosedSession(session)) return false;
+  const taskIds = session.taskIds || [];
+  const responses = session.responses || [];
+  if (taskIds.length === 0 || responses.length === 0) return false;
+  const answered = new Set(responses.map((r) => r.taskId).filter(Boolean));
+  return taskIds.every((id) => answered.has(id));
+}
+
 export function canViewSessionReport(session) {
   return canViewCompletedSession(session);
 }

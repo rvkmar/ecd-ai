@@ -34,6 +34,53 @@ router.use(sanitizeRequestInputs);
 // another examinee's id is 403 (D72). Teacher-report remains staff-only.
 const canViewTeacherReports = authorizeRole(["admin", "district", "teacher"]);
 
+function personForStudentId(db, studentId) {
+  const id = String(studentId || "");
+  if (!id) return null;
+  const student = (db.students || []).find(
+    (s) => s && (s.id === id || s.username === id || s.userId === id)
+  );
+  const user = (db.users || []).find(
+    (u) => u && (u.username === id || u.id === id)
+  );
+  const name =
+    student?.name ||
+    user?.name ||
+    user?.profile?.name ||
+    user?.username ||
+    student?.username ||
+    id;
+  return { id: student?.id || user?.username || id, name };
+}
+
+function optionText(item, response) {
+  const raw = response?.rawAnswer;
+  const selected =
+    raw && typeof raw === "object" && !Array.isArray(raw) ? raw.selected : raw;
+  const key = Array.isArray(selected)
+    ? selected.join(", ")
+    : selected == null
+      ? ""
+      : String(selected);
+  const match = (item?.interaction?.responseComponents || []).find(
+    (opt) => opt.id === key || opt.value === key
+  );
+  return match?.label || key;
+}
+
+function responseLines(db, session) {
+  const items = db.items || [];
+  return (session.responses || []).map((response) => {
+    const item = items.find((row) => row.id === response.itemId);
+    return {
+      ...response,
+      itemId: response.itemId || null,
+      option: optionText(item, response),
+      activated: response.activated ?? null,
+    };
+  });
+}
+
 // ------------------------------
 // GET /api/reports/session/:id
 // ------------------------------
@@ -53,7 +100,7 @@ router.get("/session/:id", (req, res) => {
     return res.status(403).json({ error: "Forbidden" });
   }
 
-  const student = db.students?.find(stu => stu.id === session.studentId);
+  const student = personForStudentId(db, session.studentId);
 
   // 🔹 Lookup policy info
   const policies = db.policies || [];
@@ -80,7 +127,7 @@ router.get("/session/:id", (req, res) => {
           type: policyDetails.type,
         }
       : null,
-    responses: session.responses || [],
+    responses: responseLines(db, session),
     captured: [], // new: evidence & observations from tasks
     constructs: [],
     recommendations: [],
@@ -310,7 +357,7 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, (req, res) => {
     return res.status(403).json({ error: "Forbidden" });
   }
 
-  const student = db.students?.find(stu => stu.id === session.studentId);
+  const student = personForStudentId(db, session.studentId);
 
   // 🔹 Lookup policy info
   const policies = db.policies || [];
@@ -337,7 +384,7 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, (req, res) => {
   const report = {
     sessionId: id,
     studentId: session.studentId,
-    studentName: student ? student.name : null,
+    studentName: student ? student.name : session.studentId || null,
 
     // 🔹 Include policy info
     selectionStrategy: session.selectionStrategy,
@@ -351,7 +398,7 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, (req, res) => {
       : null,
 
     modelSummary: {},
-    responses: (session.responses || []).map((r) => {
+    responses: responseLines(db, session).map((r) => {
       const task = taskMap[r.taskId];
       const tm = task ? taskModelMap[task.taskModelId] : null;
 

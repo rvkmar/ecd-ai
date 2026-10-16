@@ -5,6 +5,7 @@ import {
   canPauseSession,
   canPlaySession,
   canReviewSession,
+  canFinishSession,
   canViewCompletedSession,
   canViewSessionReport,
 } from "@/utils/sessionPlay";
@@ -25,6 +26,7 @@ export default function SessionList({
   onDelete = () => {},
   onArchive = () => {},
   onViewReport = () => {},
+  onFinish = () => {},
 }) {
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
   const [expanded, setExpanded] = useState(null);
@@ -216,6 +218,15 @@ export default function SessionList({
                 className="rounded bg-slate-700 px-3 py-1 text-white hover:bg-slate-800"
               >
                 View
+              </button>
+            )}
+            {canFinishSession(s) && (
+              <button
+                type="button"
+                onClick={() => onFinish(s.id)}
+                className="rounded bg-emerald-700 px-3 py-1 text-white hover:bg-emerald-800"
+              >
+                Finish
               </button>
             )}
             {canViewSessionReport(s) && (

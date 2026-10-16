@@ -116,6 +116,32 @@ export default function SessionReport({ sessionId, onClose }) {
         </div>
       )}
 
+      {(report?.student || teacherReport?.studentId) && (
+        <div className="mb-4 text-sm text-gray-700" data-testid="report-student">
+          <div>
+            Student id: <strong>{report?.student?.id || teacherReport?.studentId}</strong>
+          </div>
+          <div>
+            Student name: <strong>{report?.student?.name || teacherReport?.studentName || "—"}</strong>
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(report?.responses) && report.responses.length > 0 && (
+        <div className="mb-4" data-testid="report-responses">
+          <h3 className="font-semibold mb-2">Responses</h3>
+          <ul className="space-y-1 text-sm">
+            {report.responses.map((row, i) => (
+              <li key={`${row.itemId || "item"}-${i}`}>
+                Item: <strong>{row.itemId || "—"}</strong>
+                {" · "}Option: <strong>{row.option || "—"}</strong>
+                {" · "}Activated: <strong>{row.activated == null ? "null" : String(row.activated)}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="mb-4 flex space-x-2">
         <button
           className={`px-3 py-1 rounded ${tab === "learner" ? "bg-purple-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}

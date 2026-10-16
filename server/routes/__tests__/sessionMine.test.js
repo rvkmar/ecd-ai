@@ -175,6 +175,48 @@ describe("POST /api/sessions assignment", () => {
     expect(res.body.studentIds).toEqual(["stud1"]);
     expect(res.body.status).toBe("ready");
   });
+
+  it("saves a session when the store has no collections yet", async () => {
+    const db = {};
+    loadDB.mockReturnValue(db);
+    const res = await request(app)
+      .post("/api/sessions")
+      .send({ taskIds: ["t1"], studentId: "stud1", selectionStrategy: "fixed" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Invalid taskId|No matching policy/);
+    expect(Array.isArray(db.tasks)).toBe(true);
+    expect(Array.isArray(db.sessions)).toBe(true);
+    expect(Array.isArray(db.policies)).toBe(true);
+  });
+
+  it("binds the chosen fixed-order policy when more than one exists", async () => {
+    const db = {
+      sessions: [],
+      students: [],
+      tasks: [{ id: "t1" }],
+      policies: [
+        { id: "p-old", type: "fixed", name: "Old" },
+        { id: "p-fixed-order", type: "fixed", name: "Fixed order" },
+      ],
+    };
+    loadDB.mockReturnValue(db);
+    const missing = await request(app)
+      .post("/api/sessions")
+      .send({ taskIds: ["t1"], studentId: "stud1", selectionStrategy: "fixed" });
+    expect(missing.status).toBe(400);
+    expect(missing.body.error).toMatch(/Choose a fixed policy/);
+
+    const res = await request(app)
+      .post("/api/sessions")
+      .send({
+        taskIds: ["t1"],
+        studentId: "stud1",
+        selectionStrategy: "fixed",
+        nextTaskPolicy: { policyId: "p-fixed-order" },
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.nextTaskPolicy.policyId).toBe("p-fixed-order");
+  });
 });
 
 describe("GET /api/sessions/mine is loadable by native Node ESM", () => {

@@ -127,9 +127,15 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
 
   const handleStrategyChange = (val) => {
     setSelectionStrategy(val);
-    // clear selected policy if switching
     setPolicyId("");
   };
+
+  useEffect(() => {
+    const matches = policies.filter((p) => p.type === selectionStrategy);
+    if (matches.length === 1) {
+      setPolicyId((current) => current || matches[0].id);
+    }
+  }, [policies, selectionStrategy]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -142,6 +148,11 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
       return notify("Please select a cohort or add at least one student");
     }
     if (!Array.isArray(selectedTasks) || selectedTasks.length === 0) return notify("Please select at least one activity");
+    const matchingPolicies = policies.filter((p) => p.type === selectionStrategy);
+    const chosen = policyId || (matchingPolicies.length === 1 ? matchingPolicies[0].id : "");
+    if (matchingPolicies.length > 0 && !chosen) {
+      return notify("Choose the selection policy for this strategy");
+    }
 
     const payload = {
       id: model.id,
@@ -150,7 +161,7 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
       cohortId: assignmentMode === "cohort" ? cohortId : "",
       taskIds: selectedTasks,
       selectionStrategy,
-      nextTaskPolicy: policyId ? { policyId } : {},
+      nextTaskPolicy: chosen ? { policyId: chosen } : {},
     };
 
     setBusy(true);
@@ -349,48 +360,51 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
         </Select>
       </div>
 
-      {selectionStrategy !== "fixed" && (
-        <div>
-          <label className="block font-medium mb-1">Select Assessment Policy</label>
-
-          <Select value={policyId} onValueChange={setPolicyId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a policy defined by Admin" />
-            </SelectTrigger>
-            <SelectContent>
-              {["IRT", "BayesianNetwork", "MarkovChain"].map((strategyType) => {
-                const groupPolicies = policies.filter((p) => p.type === strategyType);
-                if (groupPolicies.length === 0) return null;
-                return (
-                  <SelectGroup key={strategyType}>
-                    <SelectLabel>
-                      {strategyType === "IRT" && "IRT-based Policies"}
-                      {strategyType === "BayesianNetwork" && "Bayesian Network Policies"}
-                      {strategyType === "MarkovChain" && "Markov Chain Policies"}
-                    </SelectLabel>
-                    {groupPolicies.map((p) => (
-                      <TooltipProvider key={p.id}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <SelectItem value={p.id}>{p.name}</SelectItem>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs text-sm">
-                            {p.description || "No description provided by Admin."}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ))}
-                  </SelectGroup>
-                );
-              })}
-            </SelectContent>
-          </Select>
-
-          <p className="text-xs text-gray-400 mt-1">
-            Only Admin can add or modify policies.
+      <div>
+        <label className="block font-medium mb-1">Select Assessment Policy</label>
+        <Select value={policyId} onValueChange={setPolicyId}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a policy defined by Admin" />
+          </SelectTrigger>
+          <SelectContent>
+            {["fixed", "IRT", "BayesianNetwork", "MarkovChain"].map((strategyType) => {
+              const groupPolicies = policies.filter((p) => p.type === strategyType);
+              if (groupPolicies.length === 0 || strategyType !== selectionStrategy) return null;
+              return (
+                <SelectGroup key={strategyType}>
+                  <SelectLabel>
+                    {strategyType === "fixed" && "Fixed Order policies"}
+                    {strategyType === "IRT" && "IRT-based Policies"}
+                    {strategyType === "BayesianNetwork" && "Bayesian Network Policies"}
+                    {strategyType === "MarkovChain" && "Markov Chain Policies"}
+                  </SelectLabel>
+                  {groupPolicies.map((p) => (
+                    <TooltipProvider key={p.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SelectItem value={p.id}>{p.name}</SelectItem>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-sm">
+                          {p.description || "No description provided by Admin."}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ))}
+                </SelectGroup>
+              );
+            })}
+          </SelectContent>
+        </Select>
+        {policies.filter((p) => p.type === selectionStrategy).length === 0 ? (
+          <p className="mt-1 text-sm text-red-600">
+            No {selectionStrategy} policy yet. Create one under Policies → Selection policies.
           </p>
-        </div>
-      )}
+        ) : (
+          <p className="text-xs text-gray-400 mt-1">
+            Fixed Order uses a selection policy of type fixed. Create policies under Policies → Selection policies.
+          </p>
+        )}
+      </div>
 
 
       <div className="flex space-x-2">

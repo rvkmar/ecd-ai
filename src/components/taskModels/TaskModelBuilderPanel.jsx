@@ -143,6 +143,12 @@ export default function TaskModelBuilderPanel() {
             });
 
             toast.success(`Task Model moved to "${nextStatus}".`);
+            if (result?.compositeLibrary && result.compositeLibrary.ok === false) {
+                toast.error(
+                    result.compositeLibrary.error ||
+                    "Composite library was not rebuilt. Scoring will refuse this task model until it is rebuilt."
+                );
+            }
 
             setSelectedModel(null);
             setMode("list");
