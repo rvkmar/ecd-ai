@@ -24,6 +24,7 @@
 
 import React from "react";
 import { presentationChrome } from "./presentationChrome.js";
+import { stimulusBlockText } from "@/utils/stimulusText";
 
 // The raw answer shapes below are what sessionRoutes.js's /submit wraps
 // into a work product:
@@ -56,9 +57,10 @@ function StimulusBlocks({ stimulus }) {
         // unknown block type is shown rather than silently dropped —
         // an examinee missing part of the stimulus is a measurement
         // problem, not a cosmetic one.
+        const prose = stimulusBlockText(block);
         return (
           <p key={key} className="text-sm leading-relaxed whitespace-pre-wrap">
-            {block?.content ?? ""}
+            {prose}
           </p>
         );
       })}

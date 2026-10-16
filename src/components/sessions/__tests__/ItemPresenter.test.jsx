@@ -35,6 +35,19 @@ const mcqItem = {
 };
 
 describe("ItemPresenter", () => {
+  it("renders stimulus text stored as an object", () => {
+    const objectStem = {
+      ...mcqItem,
+      stimulus: {
+        layout: "single",
+        blocks: [{ type: "text", content: { text: "Name the part", format: "plain" } }],
+      },
+    };
+    render(<ItemPresenter item={objectStem} value={null} onChange={() => {}} />);
+    expect(screen.getByText("Name the part")).toBeInTheDocument();
+    expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
+  });
+
   it("renders the item's stimulus blocks", () => {
     render(<ItemPresenter item={mcqItem} value={null} onChange={() => {}} />);
     expect(

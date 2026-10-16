@@ -89,7 +89,7 @@ function completeItem(overrides = {}) {
     stimulus: { layout: "single", blocks: [{ id: "b1", type: "text", text: "…" }] },
     interaction: {
       type: "mcq",
-      responseComponents: [{ id: "rc1", label: "A" }],
+      responseComponents: [{ id: "rc1", label: "A", value: "A", isCorrect: true }],
       config: {},
     },
     scoring: {
@@ -354,6 +354,37 @@ describe("derivation from the Task Model", () => {
 /* ------------------------------------------------------ readiness */
 
 describe("itemReadiness", () => {
+  it("fails when the activating rule awards no score", () => {
+    const issues = activationMapIssues({
+      method: "dichotomous",
+      maxScore: 1,
+      evidenceActivationMap: [
+        {
+          responsePattern: { equalsCorrect: true },
+          score: 0,
+          activatesObservable: true,
+          rationale: "Correct, but the rule awards nothing.",
+        },
+      ],
+    });
+    expect(issues.some((issue) => /score greater than 0/.test(issue))).toBe(true);
+  });
+
+  it("fails a multiple-choice item with a blank option and no correct option", () => {
+    const item = completeItem({
+      interaction: {
+        type: "mcq",
+        responseComponents: [
+          { id: "a", label: "Cell membrane", value: "Nucleus", isCorrect: false },
+          { id: "b", label: "", value: "", isCorrect: false },
+        ],
+        config: {},
+      },
+    });
+    const failing = itemReadiness(item, ctxFor(item)).filter((c) => !c.ok);
+    expect(failing.map((f) => f.id)).toContain("choiceOptions");
+  });
+
   it("passes a fully authored item", () => {
     const item = completeItem();
     const failing = itemReadiness(item, ctxFor(item)).filter((c) => !c.ok);

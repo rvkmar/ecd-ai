@@ -32,6 +32,14 @@ const fx = vi.hoisted(() => ({
       name: "Retired item",
     },
     {
+      id: "itemObject",
+      taskModelId: "tm-live",
+      status: "confirmed",
+      stimulus: {
+        blocks: [{ type: "text", content: { text: "Name the part", format: "plain" } }],
+      },
+    },
+    {
       id: "itemOther",
       taskModelId: "tm-draft",
       status: "confirmed",
@@ -83,6 +91,8 @@ describe("TasksManager instantiable TM + item bind (D115b)", () => {
 
     const itemSelect = screen.getByLabelText("Item Bank item");
     expect(itemSelect).toHaveTextContent("What is 1/2?");
+    expect(itemSelect).toHaveTextContent("Name the part");
+    expect(itemSelect).not.toHaveTextContent("[object Object]");
     expect(itemSelect).not.toHaveTextContent("Retired item");
     expect(itemSelect).not.toHaveTextContent("Wrong TM item");
 

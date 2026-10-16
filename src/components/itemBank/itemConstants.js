@@ -348,6 +348,17 @@ export function activationMapIssues(scoring = {}) {
   }
 
   map.forEach((rule, i) => {
+    if (
+      rule?.activatesObservable === true &&
+      !(typeof rule.score === "number" && rule.score > 0)
+    ) {
+      issues.push(
+        `Rule ${i + 1}: activates the observable but awards no score. An activating rule must award a score greater than 0.`
+      );
+    }
+  });
+
+  map.forEach((rule, i) => {
     activationRuleIssues(rule, scoring.method).forEach((issue) =>
       issues.push(`Rule ${i + 1}: ${issue}`)
     );
@@ -610,6 +621,25 @@ export function itemReadiness(item = {}, ctx = {}) {
     (interaction.responseComponents || []).length > 0,
     "The interaction editor has to produce at least one response component, or there is nothing to score."
   );
+
+  if (interaction.type === "mcq" || interaction.type === "multiselect") {
+    const options = interaction.responseComponents || [];
+    const blank = options.some((opt) => !String(opt?.label ?? "").trim());
+    const marked = options.some((opt) => opt?.isCorrect === true);
+    push(
+      "choiceOptions",
+      "interaction",
+      interaction.type === "mcq"
+        ? "One option is marked correct, and none are blank"
+        : "At least one option is marked correct, and none are blank",
+      options.length > 0 && !blank && marked,
+      blank
+        ? "Every option needs a label. A blank option is what the examinee would see."
+        : interaction.type === "mcq"
+          ? "A multiple-choice item must mark one option correct."
+          : "A multi-select item must mark at least one option correct."
+    );
+  }
 
   /* --- 5. Scoring --- */
   push(

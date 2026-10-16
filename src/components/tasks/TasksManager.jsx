@@ -5,13 +5,14 @@ import { useItems } from "@/api/queries/items";
 import { useTasks, useCreateTask, useDeleteTask } from "@/api/queries/tasks";
 import { apiErrorMessage } from "@/api/apiClient";
 import { isInstantiableTaskModel, isDeliverableItem } from "@/utils/schema";
+import { stimulusBlockText } from "@/utils/stimulusText";
 
 function itemLabel(item) {
   if (!item) return "";
   if (item.stem) return item.stem;
   if (item.name) return item.name;
-  const first = item.stimulus?.blocks?.find((b) => b?.content)?.content;
-  if (first) return String(first).slice(0, 80);
+  const first = (item.stimulus?.blocks || []).map(stimulusBlockText).find(Boolean);
+  if (first) return first.slice(0, 80);
   return item.id;
 }
 

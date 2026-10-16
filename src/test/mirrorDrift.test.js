@@ -91,7 +91,7 @@ function makeItem(overrides = {}) {
     evidenceModelId: "em1",
     evidenceModelVersion: 1,
     stimulus: { layout: "single", blocks: [{ id: "b1", type: "text", text: "…" }] },
-    interaction: { type: "mcq", responseComponents: [{ id: "r1" }], config: {} },
+    interaction: { type: "mcq", responseComponents: [{ id: "r1", label: "Option A", value: "A", isCorrect: true }], config: {} },
     scoring: {
       method: "dichotomous",
       maxScore: 1,

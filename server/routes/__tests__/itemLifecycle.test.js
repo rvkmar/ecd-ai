@@ -110,7 +110,7 @@ function makeItem(overrides = {}) {
     evidenceModelId: "em1",
     evidenceModelVersion: 1,
     stimulus: { layout: "single", blocks: [{ id: "b1", type: "text", text: "…" }] },
-    interaction: { type: "mcq", responseComponents: [{ id: "r1" }], config: {} },
+    interaction: { type: "mcq", responseComponents: [{ id: "r1", label: "Option A", value: "A", isCorrect: true }], config: {} },
     scoring: {
       method: "dichotomous",
       maxScore: 1,
@@ -338,6 +338,44 @@ describe("PATCH /api/items/:id/lifecycle", () => {
     request(makeApp())
       .patch("/api/items/it1/lifecycle")
       .send({ nextStatus, ...body });
+
+  it("refuses to confirm a multiple-choice item with no correct option, a blank option, or a zero-score activating rule", () => {
+    const bad = makeItem({
+      status: "reviewed",
+      interaction: {
+        type: "mcq",
+        responseComponents: [
+          { id: "a", label: "Cell membrane", value: "Nucleus", isCorrect: false },
+          { id: "b", label: " ", value: "", isCorrect: false },
+        ],
+        config: {},
+      },
+      scoring: {
+        method: "dichotomous",
+        maxScore: 1,
+        evidenceActivationMap: [
+          {
+            responsePattern: { equalsCorrect: true },
+            score: 0,
+            activatesObservable: true,
+            rationale: "The correct selection is the observable.",
+          },
+        ],
+      },
+    });
+    loadDB.mockReturnValue(makeDB({ items: [bad] }));
+
+    return patch("confirmed")
+      .expect(400)
+      .then((res) => {
+        const text = JSON.stringify(res.body);
+        expect(text).toMatch(/mark one option correct/);
+        expect(text).toMatch(/blank label/);
+        expect(text).toMatch(/score greater than 0/);
+        expect(bad.status).toBe("reviewed");
+        expect(bad.locked).toBe(false);
+      });
+  });
 
   it("confirms a complete reviewed item and locks it", () => {
     loadDB.mockReturnValue(makeDB({ items: [makeItem({ status: "reviewed" })] }));

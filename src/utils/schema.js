@@ -4157,6 +4157,20 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       if (!Array.isArray(obj.interaction?.responseComponents) ||
           obj.interaction.responseComponents.length === 0) {
         errors.push("A confirmed item must configure at least one response component, or there is nothing to score.");
+      } else if (obj.interaction?.type === "mcq" || obj.interaction?.type === "multiselect") {
+        const options = obj.interaction.responseComponents;
+        options.forEach((opt, i) => {
+          if (!String(opt?.label ?? "").trim()) {
+            errors.push(`Option ${i + 1} has a blank label.`);
+          }
+        });
+        if (!options.some((opt) => opt?.isCorrect === true)) {
+          errors.push(
+            obj.interaction.type === "mcq"
+              ? "A multiple-choice item must mark one option correct."
+              : "A multi-select item must mark at least one option correct."
+          );
+        }
       }
 
       if (!obj.scoring?.method) {
@@ -4175,6 +4189,17 @@ export function validateEntity(collection, obj, db = null, options = {}) {
             "At least one activation rule must activate the observable, or this item can never contribute to the inference."
           );
         }
+
+        obj.scoring.evidenceActivationMap.forEach((map, i) => {
+          if (
+            map.activatesObservable === true &&
+            !(typeof map.score === "number" && map.score > 0)
+          ) {
+            errors.push(
+              `Activation rule ${i + 1} activates the observable but awards no score. An activating rule must award a score greater than 0.`
+            );
+          }
+        });
 
         obj.scoring.evidenceActivationMap.forEach((map, i) => {
 
