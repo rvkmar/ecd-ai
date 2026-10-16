@@ -74,7 +74,15 @@ export function recordItemUsage(item, db, { count } = {}) {
     updatedAt: new Date().toISOString(),
   };
 
-  const { valid, errors } = validateEntity("items", updated, db, { strict: true });
+  // Confirmation still requires a labeled correct option and a positive
+  // activating score. This write is not a confirmation: the item is
+  // already operational and delivery has already scored it. Re-applying
+  // those content gates here rejected the increment, so usageCount stayed
+  // 0. Scoring-model, lifecycle, and ceiling failures still refuse.
+  const { valid, errors } = validateEntity("items", updated, db, {
+    strict: true,
+    exposureAccounting: true,
+  });
 
   if (!valid) {
     return { ok: false, error: "Exposure update failed validation.", details: errors };

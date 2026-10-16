@@ -1969,6 +1969,16 @@ export function validateEntity(collection, obj, db = null, options = {}) {
      Defaults to false, so every existing call site is unchanged. */
   const allowDraftParents = options.allowDraftParents === true;
 
+  /* `exposureAccounting` relaxes ONLY the confirmation-content gates below:
+     a choice's label, a marked correct option, and a positive activating
+     score. recordItemUsage revalidates an item that is already operational
+     and that delivery has already scored. Those three gates were added to
+     refuse confirmation. Running them again on the exposure write rejected
+     the update, so usageCount stayed 0. Psychometrics, lifecycle,
+     referential integrity, and the operational exposure ceiling still run.
+     Confirmation never passes this flag. */
+  const exposureAccounting = options.exposureAccounting === true;
+
   function validateField(key, def, val) {
     if (val === undefined || val === null) return;
     switch (def.type) {
@@ -4172,7 +4182,10 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       if (!Array.isArray(obj.interaction?.responseComponents) ||
           obj.interaction.responseComponents.length === 0) {
         errors.push("A confirmed item must configure at least one response component, or there is nothing to score.");
-      } else if (obj.interaction?.type === "mcq" || obj.interaction?.type === "multiselect") {
+      } else if (
+        !exposureAccounting &&
+        (obj.interaction?.type === "mcq" || obj.interaction?.type === "multiselect")
+      ) {
         const options = obj.interaction.responseComponents;
         options.forEach((opt, i) => {
           if (!String(opt?.label ?? "").trim()) {
@@ -4205,16 +4218,18 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           );
         }
 
-        obj.scoring.evidenceActivationMap.forEach((map, i) => {
-          if (
-            map.activatesObservable === true &&
-            !(typeof map.score === "number" && map.score > 0)
-          ) {
-            errors.push(
-              `Activation rule ${i + 1} activates the observable but awards no score. An activating rule must award a score greater than 0.`
-            );
-          }
-        });
+        if (!exposureAccounting) {
+          obj.scoring.evidenceActivationMap.forEach((map, i) => {
+            if (
+              map.activatesObservable === true &&
+              !(typeof map.score === "number" && map.score > 0)
+            ) {
+              errors.push(
+                `Activation rule ${i + 1} activates the observable but awards no score. An activating rule must award a score greater than 0.`
+              );
+            }
+          });
+        }
 
         obj.scoring.evidenceActivationMap.forEach((map, i) => {
 
