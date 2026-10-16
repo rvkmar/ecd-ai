@@ -397,11 +397,11 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
         </Select>
         {policies.filter((p) => p.type === selectionStrategy).length === 0 ? (
           <p className="mt-1 text-sm text-red-600">
-            No {selectionStrategy} policy yet. Create one under Policies → Selection policies.
+            No {selectionStrategy} policy yet. Create one under Home → Selection policies.
           </p>
         ) : (
           <p className="text-xs text-gray-400 mt-1">
-            Fixed Order uses a selection policy of type fixed. Create policies under Policies → Selection policies.
+            Fixed Order uses a selection policy of type fixed. Create policies under Home → Selection policies.
           </p>
         )}
       </div>

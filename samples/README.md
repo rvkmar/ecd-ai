@@ -9,8 +9,8 @@ that doesn't exist yet just fails that row.
 | File | Upload target | Works as-is? |
 |---|---|---|
 | `sample-users.json` | Settings > Users | Yes |
-| `sample-policies.json` | Settings > Data > Upload, and Policies → Selection policies | Yes |
-| `sample-curricular-policies.json` | Settings > Data > Upload, and Policies → Curricular policies | Yes |
+| `sample-policies.json` | Settings > Data > Upload, and Home → Selection policies | Yes |
+| `sample-curricular-policies.json` | Settings > Data > Upload, and Home → Curricular policies | Yes |
 | `sample-competency-models.json` | Settings > Bulk Upload > Competency Models | Yes |
 | `sample-evidence-models.json` | Settings > Bulk Upload > Evidence Models | No — needs a real `competencyId` |
 | `sample-task-models.json` | Settings > Bulk Upload > Task Models | No — needs a real, confirmed `evidenceModelId` (and a two-pass upload for the composite row) |

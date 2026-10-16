@@ -10,7 +10,7 @@
 // session/report policy picker that lists `/api/policies`.
 //
 // Consumers:
-//   - Policies → Curricular policies (list, JSON upload, delete)
+//   - Home → Curricular policies (author, list, edit, delete)
 //   - CompetencyWizard Step 3 (policy name dropdown + curricular goal
 //     multi-select), via src/api/queries/curricularPolicies.js
 // ------------------------------------------------------------------

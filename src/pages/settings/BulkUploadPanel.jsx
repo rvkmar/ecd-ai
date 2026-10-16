@@ -68,7 +68,7 @@ export default function BulkUploadPanel() {
 
         <BulkUploadCard
           title="Curricular Policies"
-          description={'Array of { name, description?, version?, issuingBody?, subject?, stage?, curricularGoals }. Each curricular goal needs a code and a statement and may nest competencies (code, statement, optional learningOutcomes). These are curriculum documents (e.g. NCF-SE 2023), not the adaptive selection policies above -- they populate the policy/curricular-goal dropdowns in Competency Wizard Step 3. The same editor also lives at Policies → Curricular policies.'}
+          description={'Array of { name, description?, version?, issuingBody?, subject?, stage?, curricularGoals }. Each curricular goal needs a code and a statement and may nest competencies (code, statement, optional learningOutcomes). These are curriculum documents (e.g. NCF-SE 2023), not the adaptive selection policies above -- they populate the policy/curricular-goal dropdowns in Competency Wizard Step 3. Author the same document under Home → Curricular policies. This card imports an existing file.'}
           endpoint="/api/curricularPolicies/bulk"
           invalidateKey={curricularPoliciesKey}
           sampleHint='See samples/sample-curricular-policies.json for a ready-to-edit example.'

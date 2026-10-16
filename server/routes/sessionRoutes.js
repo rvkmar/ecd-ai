@@ -135,7 +135,7 @@ router.post("/", (req, res) => {
   }
 
   // Fixed Order is a selection policy (type "fixed"), the same record
-  // authored under Policies → Selection policies. When several policies
+  // authored under Home → Selection policies. When several policies
   // share the strategy, the session must name one. A single match is
   // the bootstrap for a store that has not been asked to choose yet.
   let strategy = selectionStrategy || "fixed";

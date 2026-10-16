@@ -233,7 +233,7 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     await waitFor(() => expect(screen.getByText("Reports dashboard")).toBeInTheDocument());
   });
 
-  it("opens Policies as its own group, with curricular policies first", async () => {
+  it("opens curricular and selection policies on Home beside announcements", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -241,15 +241,17 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
       </MemoryRouter>
     );
     await waitFor(() => screen.getByRole("tab", { name: "Home" }));
+    expect(screen.queryByRole("tab", { name: "Policies" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "Policies" }));
-    const policyList = screen.getAllByRole("tablist").find((list) =>
-      list.textContent?.includes("Curricular policies")
+    const homeList = screen.getAllByRole("tablist").find((list) =>
+      list.textContent?.includes("Announcements")
     );
-    expect(within(policyList).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+    expect(within(homeList).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Announcements",
       "Curricular policies",
       "Selection policies",
     ]);
+    await user.click(screen.getByRole("tab", { name: "Curricular policies" }));
     await waitFor(() =>
       expect(screen.getByText("Curricular policies editor")).toBeInTheDocument()
     );
@@ -259,16 +261,16 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     );
 
     const admin = read("src/pages/AdminPage.jsx");
-    const models = admin.slice(admin.indexOf('id: "models"'), admin.indexOf('id: "policies"'));
-    expect(models).not.toMatch(/CurricularPolicyManager|PolicyManager/);
+    expect(admin).not.toMatch(/id: "policies"/);
     expect(read("src/pages/SettingsPage.jsx")).not.toMatch(/value="policies"/);
     expect(read("src/pages/SettingsPage.jsx")).toMatch(/BulkUploadPanel/);
     expect(read("src/pages/DistrictDashboard.jsx")).not.toMatch(/CurricularPolicyManager|PolicyManager/);
     expect(read("src/components/competencies/CompetencyWizard/steps/Step3ConstructFramework.jsx")).toMatch(
-      /Policies → Curricular policies/
+      /Home → Curricular policies/
     );
     expect(read("src/components/competencies/CompetencyWizard/steps/Step3ConstructFramework.jsx")).not.toMatch(
       /Settings → Policies/
     );
+    expect(read("src/components/policies/CurricularPolicyManager.jsx")).not.toMatch(/BulkUploadCard/);
   });
 });

@@ -2,12 +2,11 @@
 // 🟢 Step 3 — Construct Framework
 //
 // Grounds the Student Model in a curriculum document. The author picks
-// a policy by name from the curricular policies uploaded under
-// Policies → Curricular policies (JSON, NCF-style:
-// curricular goals -> competencies -> learning outcomes), then selects
-// one or more curricular goals from that policy. The free-text
-// Reference / Citation / Notes fields remain for frameworks that aren't
-// (yet) uploaded as a policy document.
+// a policy by name from the curricular policies authored under
+// Home → Curricular policies (curricular goals -> competencies ->
+// learning outcomes), then selects one or more curricular goals from
+// that policy. The free-text Reference / Citation / Notes fields remain
+// for frameworks that aren't yet a policy document.
 //
 // Storage note: the selection writes BOTH a live reference (`policyId`)
 // and a snapshot (`policyName`, `curricularGoals`) into
@@ -177,9 +176,8 @@ export default function Step3ConstructFramework() {
 
           {!isLoading && !isError && policies.length === 0 && (
             <p className="mt-1.5 text-xs text-slate-500">
-              No curricular policies have been uploaded yet. An administrator can add them
-              under <span className="font-medium">Policies → Curricular policies</span> by
-              uploading a JSON curriculum document.
+              No curricular policies yet. An administrator can write one
+              under <span className="font-medium">Home → Curricular policies</span>.
             </p>
           )}
 

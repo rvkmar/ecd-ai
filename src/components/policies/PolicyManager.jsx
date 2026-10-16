@@ -59,7 +59,7 @@ export function PolicyManager() {
   return (
     <Card className="p-4">
       <CardHeader className="flex justify-between items-center">
-        <CardTitle>Policies</CardTitle>
+        <CardTitle>Selection policies</CardTitle>
         {role === "admin" && (
           <Button onClick={handleCreate}>+ New Policy</Button>
           )}

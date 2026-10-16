@@ -98,7 +98,18 @@ export default function AdminPage() {
       title="Admin Control Center"
       subtitle="Conceptual Assessment Framework (CAF), implementation, and delivery."
       groups={[
-        homeWorkbenchGroup(),
+        homeWorkbenchGroup([
+          {
+            id: "curricular-policies",
+            label: "Curricular policies",
+            content: <CurricularPolicyManager />,
+          },
+          {
+            id: "selection-policies",
+            label: "Selection policies",
+            content: <PolicyManager />,
+          },
+        ]),
         {
           id: "models",
           label: "Models",
@@ -141,22 +152,6 @@ export default function AdminPage() {
             { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
             { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },
             { id: "calibration", label: "Parameter estimation", content: <CalibrationConsole /> },
-          ],
-        },
-        {
-          id: "policies",
-          label: "Policies",
-          tabs: [
-            {
-              id: "curricular-policies",
-              label: "Curricular policies",
-              content: <CurricularPolicyManager />,
-            },
-            {
-              id: "selection-policies",
-              label: "Selection policies",
-              content: <PolicyManager />,
-            },
           ],
         },
         {

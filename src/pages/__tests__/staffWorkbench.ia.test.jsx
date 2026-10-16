@@ -57,6 +57,8 @@ describe("District and teacher RoleWorkbench (D73c)", () => {
     );
     await waitFor(() => screen.getByRole("tab", { name: "Home" }));
     expect(screen.getByText("Home announcements")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Curricular policies" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Selection policies" })).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Implementation" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Delivery" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Diagnostic design" })).not.toBeInTheDocument();

@@ -2,7 +2,7 @@
 //
 // React Query hooks for /api/curricularPolicies — published curriculum
 // documents (NCF-style Curricular Goals -> Competencies -> Learning
-// Outcomes) authored under Policies → Curricular policies.
+// Outcomes) authored under Home → Curricular policies.
 //
 // Distinct from ./policies.js, which covers the adaptive item-SELECTION
 // policies (fixed | IRT | BayesianNetwork | MarkovChain) that sessions

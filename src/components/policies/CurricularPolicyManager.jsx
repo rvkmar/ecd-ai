@@ -1,11 +1,11 @@
 // src/components/policies/CurricularPolicyManager.jsx
 // ------------------------------------------------------------------
-// Admin → Policies → Curricular policies.
+// Admin → Home → Curricular policies.
 //
 // A curricular policy is a published curriculum document (e.g. NCF-SE
-// 2023) uploaded as JSON, shaped as:
+// 2023) authored as:
 //   Curricular Goals -> Competencies -> Learning Outcomes
-// Once uploaded it becomes selectable in CompetencyWizard Step 3
+// Once saved it becomes selectable in CompetencyWizard Step 3
 // (Construct Framework): policy name dropdown + curricular goal
 // multi-select.
 //
@@ -21,21 +21,14 @@ import toast from "react-hot-toast";
 
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
-import BulkUploadCard from "@/pages/settings/BulkUploadCard";
 import { useAuth } from "@/auth/AuthProvider";
 import { apiErrorMessage } from "@/api/apiClient";
 import {
   useCurricularPolicies,
   useDeleteCurricularPolicy,
-  curricularPoliciesKey,
   countPolicyNodes,
 } from "@/api/queries/curricularPolicies";
-
-const UPLOAD_DESCRIPTION =
-  'Array of { name, description?, version?, issuingBody?, subject?, stage?, curricularGoals }. Each curricular goal needs a code and a statement, and may nest competencies (each with its own code, statement and optional learningOutcomes). Also accepts a file shaped as { "curricularPolicies": [...] }.';
-
-const UPLOAD_HINT =
-  'See samples/sample-curricular-policies.json for a complete, ready-to-edit NCF-style example.';
+import CurricularPolicyForm from "./CurricularPolicyForm";
 
 function GoalTree({ policy }) {
   const goals = Array.isArray(policy.curricularGoals) ? policy.curricularGoals : [];
@@ -88,6 +81,8 @@ export function CurricularPolicyManager() {
 
   const [expandedId, setExpandedId] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [showForm, setShowForm] = useState(false);
 
   async function handleConfirmDelete() {
     const target = pendingDelete;
@@ -113,25 +108,40 @@ export function CurricularPolicyManager() {
         <h2 className="text-xl font-semibold">Curricular Policies</h2>
         <p className="text-sm text-muted-foreground">
           Published curriculum documents expressed as curricular goals, their competencies, and
-          learning outcomes. Uploaded policies become selectable in the Student Model wizard
+          learning outcomes. Saved policies become selectable in the Student Model wizard
           at <span className="font-medium">Step 3 — Construct Framework</span>, where an author
           picks a policy by name and then the curricular goal(s) the model is grounded in.
         </p>
       </div>
 
-      {isAdmin && (
-        <BulkUploadCard
-          title="Upload Curricular Policies (JSON)"
-          description={UPLOAD_DESCRIPTION}
-          endpoint="/api/curricularPolicies/bulk"
-          invalidateKey={curricularPoliciesKey}
-          sampleHint={UPLOAD_HINT}
+      {isAdmin && !showForm && (
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setShowForm(true);
+          }}
+        >
+          New curricular policy
+        </Button>
+      )}
+
+      {isAdmin && showForm && (
+        <CurricularPolicyForm
+          policy={editing}
+          onCancel={() => {
+            setShowForm(false);
+            setEditing(null);
+          }}
+          onSaved={() => {
+            setShowForm(false);
+            setEditing(null);
+          }}
         />
       )}
 
       <div className="rounded-xl border border-border">
         <div className="px-4 py-3 border-b border-border text-sm font-medium">
-          Uploaded policies {policies.length > 0 && `(${policies.length})`}
+          Curricular policies {policies.length > 0 && `(${policies.length})`}
         </div>
 
         {isLoading ? (
@@ -139,11 +149,11 @@ export function CurricularPolicyManager() {
         ) : policies.length === 0 ? (
           <div className="px-4 py-8 text-center space-y-1">
             <BookOpen size={20} className="mx-auto text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">No curricular policies uploaded yet.</p>
+            <p className="text-sm text-muted-foreground">No curricular policies yet.</p>
             <p className="text-xs text-muted-foreground">
               {isAdmin
-                ? "Upload a JSON document above to make it selectable in the Competency Wizard."
-                : "Ask an administrator to upload a curriculum document."}
+                ? "Write one above to make it selectable in the Student Model wizard."
+                : "Ask an administrator to author a curriculum document."}
             </p>
           </div>
         ) : (
@@ -183,14 +193,26 @@ export function CurricularPolicyManager() {
                     </button>
 
                     {isAdmin ? (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setPendingDelete(p)}
-                        disabled={deletePolicy.isPending}
-                      >
-                        Delete
-                      </Button>
+                      <div className="flex shrink-0 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditing(p);
+                            setShowForm(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setPendingDelete(p)}
+                          disabled={deletePolicy.isPending}
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     ) : (
                       <span className="text-xs text-muted-foreground shrink-0">Read-only</span>
                     )}

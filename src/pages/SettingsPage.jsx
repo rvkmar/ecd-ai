@@ -9,8 +9,8 @@
 // Tabs:
 //   Users        -> src/pages/settings/UsersSettings.jsx (new, unified)
 //   Appearance   -> theme mode switch (light/dark/system)
-// Policy authoring lives on the Admin Policies group (Curricular policies,
-// Selection policies). This page keeps the Data bulk cards.
+// Policy authoring lives on Admin Home, beside Announcements. This page
+// keeps the Data bulk cards for importing an existing file.
 //   Data         -> two sub-tabs: Upload (independent JSON bulk-import
 //                   cards, one per entity type) and Download (the matching
 //                   JSON exporters, same entity list, round-trip shaped)
