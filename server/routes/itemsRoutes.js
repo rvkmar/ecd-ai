@@ -132,6 +132,17 @@ function applyDerivedBinding(record, db) {
   record.evidenceModelId = evidenceModelId;
   record.evidenceModelVersion = evidenceModelVersion;
 
+  // The statistical model is the evidence model's active model. The item
+  // stores that type so confirmation can still see it; it is not a choice.
+  const evidence = (db.evidenceModels || []).find((e) => e.id === evidenceModelId);
+  const activeType = evidence?.statisticalModels?.find((sm) => sm.active)?.type;
+  if (activeType) {
+    record.psychometrics = {
+      ...(record.psychometrics || {}),
+      statisticalModelType: activeType,
+    };
+  }
+
   return record;
 }
 

@@ -39,6 +39,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -161,6 +162,19 @@ export function ItemWizardProvider({ children, initialItem }) {
     },
     [isLocked]
   );
+
+  const activeModelType = ctx.activeStatisticalModel?.type || "";
+  useEffect(() => {
+    if (!canEdit || !activeModelType) return;
+    if (item.psychometrics?.statisticalModelType === activeModelType) return;
+    safeSetItem((prev) => ({
+      ...prev,
+      psychometrics: {
+        ...prev.psychometrics,
+        statisticalModelType: activeModelType,
+      },
+    }));
+  }, [canEdit, activeModelType, item.psychometrics?.statisticalModelType, safeSetItem]);
 
   const updateField = useCallback(
     (field, value) => safeSetItem((prev) => ({ ...prev, [field]: value })),

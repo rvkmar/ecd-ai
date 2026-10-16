@@ -14,6 +14,7 @@ import {
   constructFrameworkGrounded,
   constructGroundingMessage,
 } from "./constructGrounding.js";
+import { intendedDifficultyPlacement } from "./intendedDifficulty.js";
 
 // D53b: the same "defined once, imported by both sides" boundary as the
 // lifecycle matrix above. `dinaParametersAreUsable` is the ONE place that
@@ -4054,6 +4055,16 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           errors.push(
             `Scoring method '${obj.scoring.method}' is outside this Task Model's blueprint (allowed: ${blueprint.allowedScoringMethods.join(", ")}).`
           );
+        }
+
+        if (strict) {
+          const placement = intendedDifficultyPlacement(
+            obj.metadata?.difficulty,
+            blueprint.difficultyRange
+          );
+          if (placement.applicable && !placement.ok) {
+            errors.push(placement.message);
+          }
         }
       }
     }

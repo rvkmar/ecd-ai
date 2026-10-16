@@ -40,9 +40,9 @@ import {
   BLOOM_LEVELS,
   SOLO_LEVELS,
   REASONING_TYPES,
-  DIFFICULTY_BANDS,
   ITEM_SOURCES,
 } from "../../itemConstants";
+import { intendedDifficultyPlacement } from "@/utils/intendedDifficulty";
 
 const inputClasses =
   "w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed";
@@ -276,18 +276,42 @@ export default function Step6Metadata() {
         </h3>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select
-            label="Intended difficulty"
-            value={metadata.difficulty}
-            options={DIFFICULTY_BANDS}
-            onChange={setMeta("difficulty")}
-            disabled={!canEdit}
-            hint={
-              typeof blueprint.difficultyRange?.min === "number"
-                ? `Blueprint targets ${blueprint.difficultyRange.min} to ${blueprint.difficultyRange.max} on the Task Model's scale.`
-                : "The author's intention, before any calibration evidence exists."
-            }
-          />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="intended-difficulty">
+              Intended difficulty
+            </label>
+            <input
+              id="intended-difficulty"
+              type="number"
+              step="any"
+              disabled={!canEdit}
+              value={
+                intendedDifficultyPlacement(metadata.difficulty, blueprint.difficultyRange).value ??
+                (/^-?\d+(\.\d+)?$/.test(String(metadata.difficulty ?? "").trim())
+                  ? metadata.difficulty
+                  : "")
+              }
+              onChange={(e) => setMeta("difficulty")(e.target.value)}
+              placeholder={
+                typeof blueprint.difficultyRange?.min === "number"
+                  ? String(blueprint.difficultyRange.min)
+                  : "0"
+              }
+              className={inputClasses}
+            />
+            <p className="mt-1.5 text-xs text-slate-500">
+              {typeof blueprint.difficultyRange?.min === "number" &&
+              typeof blueprint.difficultyRange?.max === "number"
+                ? `A number inside the task range ${blueprint.difficultyRange.min} to ${blueprint.difficultyRange.max}.`
+                : "A number on the task model's difficulty scale, once that range exists."}
+            </p>
+            {metadata.difficulty &&
+              !/^-?\d+(\.\d+)?$/.test(String(metadata.difficulty).trim()) && (
+                <p className="mt-1.5 text-xs text-amber-700">
+                  Stored “{metadata.difficulty}” is not a number on the task scale.
+                </p>
+              )}
+          </div>
           <Select
             label="Source"
             value={metadata.source}
@@ -299,7 +323,7 @@ export default function Step6Metadata() {
 
         <div>
           <label className="mb-1.5 block text-sm font-medium text-slate-700">
-            Difficulty justification
+            Commentary
           </label>
           <textarea
             rows={3}

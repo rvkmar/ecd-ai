@@ -385,6 +385,20 @@ describe("itemReadiness", () => {
     expect(failing.map((f) => f.id)).toContain("choiceOptions");
   });
 
+  it("requires intended difficulty to sit inside the task range", () => {
+    const ranged = {
+      ...taskModel,
+      blueprintConstraints: { difficultyRange: { min: 0, max: 1 } },
+    };
+    const outside = completeItem({ metadata: { difficulty: "moderate" } });
+    const ctx = deriveItemContext(outside, { taskModel: ranged, evidenceModel });
+    expect(itemReadiness(outside, ctx).find((c) => c.id === "intendedDifficulty").ok).toBe(false);
+
+    const inside = completeItem({ metadata: { difficulty: "0.4" } });
+    const okCtx = deriveItemContext(inside, { taskModel: ranged, evidenceModel });
+    expect(itemReadiness(inside, okCtx).find((c) => c.id === "intendedDifficulty").ok).toBe(true);
+  });
+
   it("passes a fully authored item", () => {
     const item = completeItem();
     const failing = itemReadiness(item, ctxFor(item)).filter((c) => !c.ok);

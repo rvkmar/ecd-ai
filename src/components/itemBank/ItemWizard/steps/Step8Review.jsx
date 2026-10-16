@@ -38,8 +38,6 @@ import {
   interactionLabel,
   scoringLabel,
   versionLabel,
-  labelFor,
-  DIFFICULTY_BANDS,
 } from "../../itemConstants";
 
 function Row({ label, value, mono = false }) {
@@ -310,7 +308,7 @@ export default function Step8Review() {
           />
           <Row
             label="Intended difficulty"
-            value={labelFor(DIFFICULTY_BANDS, item.metadata?.difficulty)}
+            value={item.metadata?.difficulty || "—"}
           />
           <Row label="Equivalence group" value={item.equivalenceGroupId} mono />
           <Row

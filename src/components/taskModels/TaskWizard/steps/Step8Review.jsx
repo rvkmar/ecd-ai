@@ -23,7 +23,6 @@ import {
     evidenceCompatibilityNotes,
     formatWeight,
     labelFor,
-    normalizeFairnessRisks,
     operationalReadiness,
     PRESENTATION_MODES,
     RESPONSE_FORMATS,
@@ -71,7 +70,15 @@ export default function Step8Review({
     }, [evidenceModels]);
 
     const expectedObservations = draft.expectedObservations || [];
-    const risks = normalizeFairnessRisks(draft.fairnessRisks || []);
+    const fairnessEvidence =
+        (evidenceModels || []).find((em) => em.id === draft.primaryEvidenceModelId) ||
+        null;
+    const difRows = Array.isArray(fairnessEvidence?.difReviewChecklist)
+        ? fairnessEvidence.difReviewChecklist
+        : [];
+    const access = draft.accessibilityAssumptions || {};
+    const accessCount = ["assistiveSupport", "languageLoad", "accommodations", "sensoryMotorDemands"]
+        .filter((key) => String(access[key] || "").trim()).length;
     const structure = draft.taskStructure || {};
     const blueprint = draft.blueprintConstraints || {};
 
@@ -309,10 +316,13 @@ export default function Step8Review({
 
                 <SummaryBlock label="Fairness">
                     <span className="text-slate-700">
-                        {risks.length === 0
-                            ? "No risks recorded"
-                            : `${risks.length} risk${risks.length === 1 ? "" : "s"} recorded (${risks.filter((r) => r.severity === "high").length
-                            } high severity)`}
+                        {fairnessEvidence
+                            ? `${fairnessEvidence.name || fairnessEvidence.id}: ${
+                                String(fairnessEvidence.fairnessNotes || "").trim()
+                                    ? "fairness notes on the evidence model"
+                                    : "no fairness notes yet"
+                            }, ${difRows.length} DIF row${difRows.length === 1 ? "" : "s"}. ${accessCount} access assumption${accessCount === 1 ? "" : "s"}.`
+                            : "No evidence model bound. Access assumptions are the only task-level addition."}
                     </span>
                 </SummaryBlock>
 

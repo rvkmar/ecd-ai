@@ -125,7 +125,14 @@ export default function TaskModelWizardStepContainer({ onCancel }) {
                 );
 
             case "fairness":
-                return <Step7Fairness draft={draft} setDraft={setDraft} disabled={disabled} />;
+                return (
+                    <Step7Fairness
+                        draft={draft}
+                        setDraft={setDraft}
+                        disabled={disabled}
+                        evidenceModels={linkableEvidenceModels}
+                    />
+                );
 
             case "review":
                 return (

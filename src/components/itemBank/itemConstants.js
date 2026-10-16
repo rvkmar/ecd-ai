@@ -48,6 +48,7 @@ import {
 // sessionRoutes.js use, rather than re-deriving a range check that could
 // silently drift from theirs.
 import { dinaParametersAreUsable } from "../../../server/delivery/attributeAccumulation.js";
+import { intendedDifficultyPlacement } from "@/utils/intendedDifficulty";
 
 export {
   INTERACTION_TYPES,
@@ -509,6 +510,7 @@ export function itemReadiness(item = {}, ctx = {}) {
     activeStatisticalModel,
     allowedInteractionTypes = [],
     allowedScoringMethods = [],
+    blueprint = {},
   } = ctx;
 
   const scoring = item.scoring || {};
@@ -717,6 +719,20 @@ export function itemReadiness(item = {}, ctx = {}) {
   const needsDina = activeStatisticalModel?.type === "dina";
   const dina = item.psychometrics?.dinaParams || {};
 
+  const difficultyPlacement = intendedDifficultyPlacement(
+    item.metadata?.difficulty,
+    blueprint.difficultyRange
+  );
+  push(
+    "intendedDifficulty",
+    "metadata",
+    difficultyPlacement.applicable
+      ? "Intended difficulty sits inside the task range"
+      : "Intended difficulty follows the task range",
+    difficultyPlacement.ok,
+    difficultyPlacement.message
+  );
+
   push(
     "dinaParams",
     "operations",
@@ -905,19 +921,12 @@ export function itemCompatibilityNotes(item = {}, ctx = {}) {
     );
   }
 
-  /* Blueprint difficulty band, advisory only -- the blueprint states a
-     range on the task model's scale, the item states a qualitative band,
-     and the two are not commensurable. Surface it, never block on it. */
-  if (
-    blueprint.difficultyRange &&
-    typeof blueprint.difficultyRange.min === "number" &&
-    typeof blueprint.difficultyRange.max === "number" &&
-    !item.metadata?.difficulty
-  ) {
-    push(
-      "pending",
-      `The Task Model targets difficulty ${blueprint.difficultyRange.min} to ${blueprint.difficultyRange.max}. Record where this item is meant to sit.`
-    );
+  const difficultyPlacement = intendedDifficultyPlacement(
+    item.metadata?.difficulty,
+    blueprint.difficultyRange
+  );
+  if (difficultyPlacement.applicable && !difficultyPlacement.ok) {
+    push("blocking", difficultyPlacement.message);
   }
 
   return notes;

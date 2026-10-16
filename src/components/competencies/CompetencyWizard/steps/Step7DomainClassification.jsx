@@ -12,6 +12,8 @@ import React, { useMemo, useState, useEffect, memo, useCallback } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useCompetencyWizard } from "../CompetencyWizardContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import { DOMAIN_ANALYSIS_ENTITIES } from "@/utils/schema";
 
 /* =====================================================
    🔹 CARD COMPONENT (MEMOIZED)
@@ -129,8 +131,16 @@ const DomainCard = memo(function DomainCard({ comp, isLocked, updateCompetency }
     );
 });
 
+function sectionLines(value) {
+    if (Array.isArray(value)) return value.map((row) => String(row ?? "").trim()).filter(Boolean);
+    if (typeof value === "string" && value.trim()) return [value.trim()];
+    return [];
+}
+
 export default function Step7DomainClassification() {
     const { model, competencies, updateCompetency } = useCompetencyWizard();
+    const { data: domainAnalyses = [] } = useDomainAnalyses();
+    const analysis = domainAnalyses.find((row) => row.id === model?.domainAnalysisId) || null;
 
     const isLocked = model?.locked;
 
@@ -194,11 +204,15 @@ export default function Step7DomainClassification() {
                     Step 7 — Domain Classification
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 max-w-3xl">
-                    Assign descriptive taxonomy metadata to competencies. These fields are
-                    organizational only and do not influence structural relationships or
-                    statistical inference.
+                    Domain, strand, and facet are organizational tags. They do not
+                    change the latent structure. The Domain Analysis sections beside
+                    them are the analysis you cited, shown here so the tags are not
+                    mistaken for a second content outline.
                 </p>
             </div>
+
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="space-y-6">
 
             {/* Global Progress */}
             <div className="space-y-2">
@@ -250,6 +264,44 @@ export default function Step7DomainClassification() {
                 <strong className="font-semibold text-slate-600">ECD Note:</strong> Domain
                 classification organizes constructs conceptually. It does not alter latent
                 structure, relationships, or inferential modeling.
+            </div>
+            </div>
+
+            <aside className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-slate-800">Domain Analysis sections</h3>
+                {!model?.domainAnalysisId && (
+                    <p className="mt-2 text-sm text-slate-500">
+                        No Domain Analysis is cited. Declare one on Model Identity to see its sections here.
+                    </p>
+                )}
+                {model?.domainAnalysisId && !analysis && (
+                    <p className="mt-2 text-sm text-slate-500">
+                        The cited Domain Analysis is not in the menu.
+                    </p>
+                )}
+                {analysis && (
+                    <div className="mt-3 space-y-3">
+                        <p className="text-sm font-medium text-slate-900">{analysis.name}</p>
+                        {DOMAIN_ANALYSIS_ENTITIES.map(({ padi, field }) => {
+                            const lines = sectionLines(analysis[field]);
+                            return (
+                                <div key={field}>
+                                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{padi}</p>
+                                    {lines.length === 0 ? (
+                                        <p className="text-sm text-slate-400">No statements</p>
+                                    ) : (
+                                        <ul className="mt-1 list-disc pl-4 text-sm text-slate-700">
+                                            {lines.map((line) => (
+                                                <li key={line}>{line}</li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </aside>
             </div>
         </div>
     );
