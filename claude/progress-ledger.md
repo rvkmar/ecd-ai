@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D144** (W29 in progress). Q-matrices stay on `/api/qMatrixModels` with their ids and competency-model bindings (ADR 0012, `2a2a5c7`). Optional `domainAnalysisId` only when an analysis exists. Live dry-run found **0** Q-matrices; migration `007` was recorded at `2026-10-15T15:18:16Z` and rewrote nothing. Diagnostic design stayed. Handoff: `claude/day144-qmatrix-stays-dina-store.md`. |
+| Last completed unit | **D145** walk (W29 still open). The chain is not in the schema; the walk wrote the breaks and left the unpatterned Student Model path working (`b273d3f`, `claude/day145-chain-walk.md`). Calendar marked 2026-10-16; the 2027-03-17 date was not moved. |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -52,9 +52,10 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Off-calendar (2026-09-17) | EM remaining-gap inventory after residual close. No product code. Handoff: `claude/day81-offcal-em-remaining-gap-inventory.md`. **Not D81.** Next EM substance = W25 (workProducts/rubrics), not another EM-R*. |
 
-| Next queued | **D145**, alone (Tier 3, never-compress walk). Walk the surfaces that exist on `:6060` and write the breaks. Do not build a Domain Analysis → Design Pattern → Competency Model link in this unit. The W29 gate stays open: that chain is not in the schema. Confirm the unpatterned Competency Model path still works. No D146. D150 stays adversarial. |
+| Off-calendar (2026-10-16) | Five authoring screens after the second walk. Product `de9fe77`…`e306279`. Handoff: `claude/day145b-offcal-authoring-fixes.md`. **Not D146.** Live `:6060` was not rebuilt. |
+| Next queued | **D146**, alone, after a calibration. Do not treat `9e369f5` as the D146 close. The W29 gate stays open: a Domain Analysis still does not produce a Competency Model. |
 
-| Block | **W29 open** (D141–D144 done; D145 remains). Gate not held: an author cannot yet start at a Domain Analysis and reach a Competency Model. **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
+| Block | **W29 open** (D141–D145 done; D145 is a walk, not the gate). Gate not held: an author cannot yet start at a Domain Analysis and reach a Competency Model. **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ ~~W23: Changing a Presentation Model changes what an examinee sees, without touching item content (D115).~~ |
 
@@ -221,6 +222,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D143 | product **`2d64b38`** ≡ `main/master` before this close + `claude/day143-content-standards.md`. Suite close re-run **2170 passed / 9 skipped** (219 files, 244.02s); build green (1m 16s). Live dry-run found 0 policies; migration log `006` at `2026-10-15T03:57:26Z`. W29 still open. Next: D144 alone. |
 
 | HEAD at D144 | product **`2a2a5c7`** ≡ `main/master` before this close + `claude/day144-qmatrix-stays-dina-store.md`. Suite close re-run **2177 passed / 9 skipped** (222 files, 179.91s); build green (1m 2s). Live dry-run found 0 Q-matrices; migration log `007` at `2026-10-15T15:18:16Z`. W29 still open. Next: D145 alone. |
+| HEAD at 2026-10-16 off-cal | product **`e306279`** ≡ `main/master` before this close + `claude/day145b-offcal-authoring-fixes.md`. Suite close re-run **2240 passed / 9 skipped** (235 files, 96.27s); build green (21.71s; largest chunk EvidenceModelBuilder 371.25 kB). D145 calendar marked, date not moved. Live `:6060` not rebuilt. Next: D146 after calibration. |
 
 
 
@@ -520,6 +522,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-15 | D144 | 3, alone | Q-matrices stay `/api/qMatrixModels`. Optional `domainAnalysisId` only when the analysis exists. Close re-run **2177 passed / 9 skipped**. Live dry-run found 0 Q-matrices; migration `007` recorded and rewrote nothing. Diagnostic design stayed. No D145. |
 
 | 2026-10-15 | calibrate | — | D145 premise checked at `1b90e99`. Domain Analysis does not cite a Design Pattern. A pattern does not cite an analysis. Seeding requires an existing `competencyId` and writes draft Evidence and Task Models, not a Competency Model. Work order: D145 alone, a live walk that records the missing chain. Do not build the link. No D146. |
+| 2026-10-15 | D145 | 3, alone | Walk recorded the missing chain. Unpatterned Student Model still opened. Gate stays open. `b273d3f`. Calendar mark waited until 2026-10-16. No D146. |
+| 2026-10-16 | off-calendar | — | Five authoring screens: wizard save, rubric starter, worked examples, Libraries and Results, copied curriculum on the analysis. Suite close re-run **2240 passed / 9 skipped**. Not a schema change. Live `:6060` not rebuilt. No D146. |
 
 
 
@@ -588,6 +592,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 |---|---|---|---|
 
 | D58 | Write `sessionOrchestrator.js`; stop on accuracy, length, or coverage | Stop already in `activitySelection.js`; no coverage field | Persist `{ stopped }` on the session; player shows the reason; do not add a second orchestrator |
+| 2026-10-16 screens | The second walk's fixes would close the W29 chain | The breaks were missing foreign keys. The approved five sessions were forms, examples, and menus | Ship the five screens. Leave the chain unlinked. Do not call it D146 |
 
 | D59 | Split reports by role; attribute-profile UI; close teacher-report leak | One stack (`reportsRoutes` + `SessionReport`); teacher-report was authenticate-only; classification already computed, not shown on reports | Gate teacher routes with `authorizeRole`; stop the client fetching them as a student; attach `stopped` + `attributeProfile` to existing payloads/surfaces |
 
@@ -819,7 +824,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
-- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). ~~D138 seed-snapshot divergence~~ closed (`claude/day138-seed-snapshot-divergence.md`). ~~D139 pattern relations~~ closed (`claude/day139-pattern-relations.md`). ~~W28 neighbourhood graph (D140)~~ closed (`claude/day140-pattern-neighbourhood.md`). ~~D141 domainAnalyses schema~~ closed (`claude/day141-domain-analysis-schema.md`). ~~D142 upload and correction form~~ closed (`claude/day142-domain-analysis-upload.md`). ~~D143 content standards~~ closed (`claude/day143-content-standards.md`). ~~D144 Q-matrix re-home~~ closed as a stay-on-the-DINA-store decision (`claude/day144-qmatrix-stays-dina-store.md`). W29 domain analysis still open at D145. The live `/data/db.json` read at calibration on 2026-10-15 14:28Z is an empty default; draft `da1792032778751000` is not in that file.
+- ~~Design Patterns (W27 / G9)~~ closed D135 (`claude/day135-pattern-import-w27.md`). ~~D136 pattern ↔ template link~~ closed (`claude/day136-pattern-template-link.md`). ~~D137 seed drafts from a confirmed pattern~~ closed (`claude/day137-seed-from-design-pattern.md`). ~~D138 seed-snapshot divergence~~ closed (`claude/day138-seed-snapshot-divergence.md`). ~~D139 pattern relations~~ closed (`claude/day139-pattern-relations.md`). ~~W28 neighbourhood graph (D140)~~ closed (`claude/day140-pattern-neighbourhood.md`). ~~D141 domainAnalyses schema~~ closed (`claude/day141-domain-analysis-schema.md`). ~~D142 upload and correction form~~ closed (`claude/day142-domain-analysis-upload.md`). ~~D143 content standards~~ closed (`claude/day143-content-standards.md`). ~~D144 Q-matrix re-home~~ closed as a stay-on-the-DINA-store decision (`claude/day144-qmatrix-stays-dina-store.md`). ~~D145 chain walk~~ closed as a walk (`claude/day145-chain-walk.md`); the W29 gate stays open. Off-calendar authoring screens closed 2026-10-16 (`claude/day145b-offcal-authoring-fixes.md`) and are not on `:6060` until the frontend image is rebuilt. The live `/data/db.json` read at calibration on 2026-10-15 14:28Z is an empty default; draft `da1792032778751000` is not in that file.
 
 - ~~W17 psychometric dashboard shell + mandatory provenance stamp~~ closed D81 (`claude/day81-psychometric-dashboard-shell.md`)
 
