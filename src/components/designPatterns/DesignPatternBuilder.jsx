@@ -58,6 +58,28 @@ export const DESIGN_PATTERN_NARRATIVE_GUIDANCE = Object.freeze({
     "Other knowledge, skills, or abilities a task from this pattern may also demand, which are not the target. They are construct-irrelevant demands the designer is choosing to notice. They are not the Task Model fairness notes.",
 });
 
+export const DESIGN_PATTERN_EXAMPLES = Object.freeze({
+  title: "Name a plant part from a diagram",
+  summary: "The student names a plant part marked on a familiar diagram.",
+  rationale:
+    "Naming the part is the claim. A selected response can give evidence for one binary attribute.",
+  focalKsas: "Names the indicated plant part",
+  additionalKsas: "Reads a printed label",
+  potentialObservations: "The chosen name matches the indicated part",
+  potentialWorkProducts: "Selected plant-part name, from Work Products",
+  potentialRubrics: "Plant-part naming, from Rubrics",
+  characteristicFeatures: "The diagram shows a familiar plant",
+  variableFeatures: "Diagram familiarity, from Task Model Variables",
+});
+
+function FieldExample({ text }) {
+  return <p className="text-xs text-slate-500">Example: {text}</p>;
+}
+
+function listIsBlank(values) {
+  return !(values || []).some((entry) => String(entry?.label || "").trim());
+}
+
 export const DESIGN_PATTERN_MENU_GUIDANCE = Object.freeze({
   framing:
     "These lists are possibilities a later designer chooses from. Listing several does not commit a seeded Evidence Model or Task Model to using all of them.",
@@ -302,13 +324,14 @@ function PatternRelations({ patternId, patterns, relationships, references, onCh
   );
 }
 
-function LabelList({ legend, hint, hintId, values, onChange }) {
+function LabelList({ legend, hint, hintId, values, onChange, example }) {
   return (
     <fieldset className="space-y-2">
       <legend className="text-sm text-slate-700">{legend}</legend>
       <p id={hintId} className={hintClass}>
         {hint}
       </p>
+      {example && listIsBlank(values) ? <FieldExample text={example} /> : null}
       {values.map((entry, index) => (
         <div key={`${legend}-${index}`} className="flex gap-2">
           <input
@@ -355,6 +378,7 @@ function RefList({
   options,
   idKey,
   emptyOption,
+  example,
 }) {
   return (
     <fieldset className="space-y-2">
@@ -362,6 +386,7 @@ function RefList({
       <p id={hintId} className={hintClass}>
         {hint}
       </p>
+      {example && listIsBlank(values) ? <FieldExample text={example} /> : null}
       {values.map((entry, index) => (
         <div key={`${legend}-${index}`} className="flex gap-2">
           <select
@@ -419,6 +444,9 @@ function ObservationList({ values, onChange, options }) {
       <p id={hintId} className={hintClass}>
         {DESIGN_PATTERN_MENU_GUIDANCE.potentialObservations}
       </p>
+      {listIsBlank(values) ? (
+        <FieldExample text={DESIGN_PATTERN_EXAMPLES.potentialObservations} />
+      ) : null}
       {values.map((entry, index) => (
         <div key={`obs-${index}`} className="grid gap-2 sm:grid-cols-2">
           <input
@@ -780,6 +808,7 @@ export function DesignPatternLibraryView({
             <p id="dp-title-guidance" className={hintClass}>
               {DESIGN_PATTERN_NARRATIVE_GUIDANCE.title}
             </p>
+            {!form.name.trim() ? <FieldExample text={DESIGN_PATTERN_EXAMPLES.title} /> : null}
             <input
               id="dp-title"
               className={inputClass}
@@ -794,6 +823,7 @@ export function DesignPatternLibraryView({
             <p id="dp-summary-guidance" className={hintClass}>
               {DESIGN_PATTERN_NARRATIVE_GUIDANCE.summary}
             </p>
+            {!form.summary.trim() ? <FieldExample text={DESIGN_PATTERN_EXAMPLES.summary} /> : null}
             <textarea
               id="dp-summary"
               className={inputClass}
@@ -808,6 +838,7 @@ export function DesignPatternLibraryView({
             <p id="dp-rationale-guidance" className={hintClass}>
               {DESIGN_PATTERN_NARRATIVE_GUIDANCE.rationale}
             </p>
+            {!form.rationale.trim() ? <FieldExample text={DESIGN_PATTERN_EXAMPLES.rationale} /> : null}
             <textarea
               id="dp-rationale"
               className={inputClass}
@@ -820,6 +851,7 @@ export function DesignPatternLibraryView({
               legend="Focal KSAs"
               hint={DESIGN_PATTERN_NARRATIVE_GUIDANCE.focalKsas}
               hintId="dp-focal-guidance"
+              example={DESIGN_PATTERN_EXAMPLES.focalKsas}
               values={form.focalKsas}
               onChange={(focalKsas) => patchForm({ focalKsas })}
             />
@@ -827,6 +859,7 @@ export function DesignPatternLibraryView({
               legend="Additional KSAs"
               hint={DESIGN_PATTERN_NARRATIVE_GUIDANCE.additionalKsas}
               hintId="dp-additional-guidance"
+              example={DESIGN_PATTERN_EXAMPLES.additionalKsas}
               values={form.additionalKsas}
               onChange={(additionalKsas) => patchForm({ additionalKsas })}
             />
@@ -852,6 +885,7 @@ export function DesignPatternLibraryView({
               }))}
               idKey="workProductId"
               emptyOption="Choose a work product"
+              example={DESIGN_PATTERN_EXAMPLES.potentialWorkProducts}
             />
             <RefList
               legend="Potential Rubrics"
@@ -865,11 +899,13 @@ export function DesignPatternLibraryView({
               }))}
               idKey="rubricId"
               emptyOption="Choose a rubric"
+              example={DESIGN_PATTERN_EXAMPLES.potentialRubrics}
             />
             <LabelList
               legend="Characteristic Features"
               hint={DESIGN_PATTERN_MENU_GUIDANCE.characteristicFeatures}
               hintId="dp-cf-guidance"
+              example={DESIGN_PATTERN_EXAMPLES.characteristicFeatures}
               values={form.characteristicFeatures}
               onChange={(characteristicFeatures) =>
                 patchForm({ characteristicFeatures })
@@ -887,6 +923,7 @@ export function DesignPatternLibraryView({
               }))}
               idKey="taskModelVariableId"
               emptyOption="Choose a task model variable"
+              example={DESIGN_PATTERN_EXAMPLES.variableFeatures}
             />
             <PatternRelations
               patternId={editingId}

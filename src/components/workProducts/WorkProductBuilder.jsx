@@ -19,6 +19,7 @@ import {
   WORK_PRODUCT_TYPES,
   workProductTypeLabel,
 } from "@/utils/ecdVocabulary";
+import WorkedExample from "@/components/authoring/WorkedExample";
 
 export function consumersForWorkProduct(items, workProductId) {
   if (!workProductId) return [];
@@ -116,6 +117,17 @@ export function WorkProductLibraryView({
           No CAF lifecycle on these records.
         </p>
       </div>
+
+      {workProducts.length === 0 && (
+        <WorkedExample
+          title="Selected plant-part name"
+          lines={[
+            "Type: selected response.",
+            "The name the student chooses for the indicated part on a diagram.",
+          ]}
+          citedBy="an Item, as interaction.workProductId. A Design Pattern may also list it as a possible work product"
+        />
+      )}
 
       <form
         onSubmit={handleSubmit}

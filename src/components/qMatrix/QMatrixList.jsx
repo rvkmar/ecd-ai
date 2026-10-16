@@ -9,6 +9,7 @@ import React from "react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
+import WorkedExample from "@/components/authoring/WorkedExample";
 import LifecycleStatusBadge from "@/components/ui/LifecycleStatusBadge";
 import { apiErrorMessage } from "@/api/apiClient";
 import { useCompetencyModels } from "@/api/queries/competencies";
@@ -58,7 +59,20 @@ export default function QMatrixList({ onCreate, onEdit, readOnly = false, domain
       ) : null}
 
       {shown.length === 0 ? (
-        <p className="text-sm text-slate-500">No Q-matrices yet.</p>
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500">No Q-matrices yet.</p>
+          {!readOnly && (
+            <WorkedExample
+              title="Plant part naming"
+              lines={[
+                "Student Model: one binary attribute, Names a plant part.",
+                "One row per item. A marked cell means that item gives evidence about that attribute.",
+                "A row with no marks is unfinished.",
+              ]}
+              citedBy="a DINA or G-DINA Evidence Model, as structureConfig.qMatrixId. A Domain Analysis can open this list for its own analysis"
+            />
+          )}
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-md border border-slate-200">
           <table className="min-w-full text-caption">

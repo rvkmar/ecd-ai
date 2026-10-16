@@ -11,6 +11,7 @@ import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
+import WorkedExample from "@/components/authoring/WorkedExample";
 import { apiErrorMessage } from "@/api/apiClient";
 import {
   useTemplates,
@@ -360,6 +361,19 @@ export function TemplateLibraryView({
           Task Model&apos;s TMV settings.
         </p>
       </header>
+
+      {templates.length === 0 && (
+        <WorkedExample
+          title="Plant part naming"
+          lines={[
+            "Student Model: Plant part naming.",
+            "Evidence Model: the claim that a selected name is evidence of that competency.",
+            "Task Model: name the indicated part on a familiar diagram.",
+            "Presentation Model: how that task is shown.",
+          ]}
+          citedBy="a Design Pattern, which can link this template once it is confirmed"
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-lg border border-slate-200 bg-white p-4">

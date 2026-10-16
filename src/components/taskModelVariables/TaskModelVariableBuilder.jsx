@@ -21,6 +21,7 @@ import {
   tmvTypeLabel,
   taskModelVariableValueIds,
 } from "@/utils/ecdVocabulary";
+import WorkedExample from "@/components/authoring/WorkedExample";
 
 export function consumersForVariable(taskModels, variableId) {
   if (!variableId) return [];
@@ -162,6 +163,18 @@ export function TaskModelVariableLibraryView({
           value set is named — not copied. No CAF lifecycle on these records.
         </p>
       </div>
+
+      {variables.length === 0 && (
+        <WorkedExample
+          title="Diagram familiarity"
+          lines={[
+            "Type: categorical.",
+            "Values: familiar, unfamiliar.",
+            "Whether the plant in the diagram is one the student has already studied.",
+          ]}
+          citedBy="a Task Model, in taskModelVariableIds. A Design Pattern may list it as a variable feature"
+        />
+      )}
 
       <form
         onSubmit={handleSubmit}
