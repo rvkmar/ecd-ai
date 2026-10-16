@@ -18,6 +18,7 @@ import {
   useDeleteRubric,
 } from "@/api/queries/rubrics";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
+import { RUBRIC_SUBJECTS, generateRubricDraft } from "./rubricStarter";
 
 export function consumersForRubric(evidenceModels, rubricId) {
   if (!rubricId) return [];
@@ -26,16 +27,37 @@ export function consumersForRubric(evidenceModels, rubricId) {
   );
 }
 
-const blankDimension = () => ({
-  id: `dim_${Math.random().toString(36).slice(2, 8)}`,
-  name: "Criterion",
-  levels: [
-    { value: 0, label: "Low", descriptor: "", exemplar: "" },
-    { value: 1, label: "High", descriptor: "", exemplar: "" },
-  ],
-  activatesAt: 1,
-  exemplars: {},
-});
+const LOW_HIGH = [
+  { value: 0, label: "Low", descriptor: "", exemplar: "" },
+  { value: 1, label: "High", descriptor: "", exemplar: "" },
+];
+
+function blankDimension(templateLevels) {
+  const levels = templateLevels?.length
+    ? templateLevels.map((level) => ({
+        value: level.value,
+        label: level.label,
+        descriptor: "",
+        exemplar: "",
+      }))
+    : LOW_HIGH.map((level) => ({ ...level }));
+  const accomplished = levels.find((level) => level.label === "Accomplished");
+  return {
+    id: `dim_${Math.random().toString(36).slice(2, 8)}`,
+    name: "Criterion",
+    levels,
+    activatesAt: accomplished ? accomplished.value : 1,
+    exemplars: {},
+  };
+}
+
+function levelHeaders(dimensions) {
+  return dimensions.reduce(
+    (headers, dimension) =>
+      (dimension.levels?.length || 0) > headers.length ? dimension.levels : headers,
+    []
+  );
+}
 
 const emptyForm = () => ({
   name: "",
@@ -111,6 +133,9 @@ export function RubricLibraryView({
 }) {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
+  const [subjectId, setSubjectId] = useState("");
+  const [topicId, setTopicId] = useState("");
+  const topics = RUBRIC_SUBJECTS.find((subject) => subject.id === subjectId)?.topics || [];
 
   const editing = useMemo(
     () => (editingId ? rubrics.find((v) => v.id === editingId) : null),
@@ -125,6 +150,19 @@ export function RubricLibraryView({
   function cancelEdit() {
     setEditingId(null);
     setForm(emptyForm());
+    setSubjectId("");
+    setTopicId("");
+  }
+
+  function writeDraft() {
+    const draft = generateRubricDraft({ subjectId, topicId });
+    if (!draft) return;
+    setForm((current) => ({
+      ...current,
+      name: current.name.trim() ? current.name : draft.name,
+      description: current.description.trim() ? current.description : draft.description,
+      dimensions: draft.dimensions,
+    }));
   }
 
   async function handleSubmit(e) {
@@ -164,10 +202,10 @@ export function RubricLibraryView({
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Rubrics</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Reusable scoring rubrics with exemplars per level. Bind on an Evidence
-          Model evaluation procedure via rubricId. Confirm before binding.
-          Inline EM rubric artifacts remain valid; this collection is the
-          shared definition.
+          Choose a subject and a topic to write a first grid: criteria down the
+          side, four levels across, with a sentence in every cell. Edit the
+          cells, then save the draft. Subject and topic are not stored. Bind
+          the confirmed rubric on an Evidence Model via rubricId.
         </p>
       </div>
 
@@ -195,6 +233,46 @@ export function RubricLibraryView({
 
         <div className="grid gap-3 md:grid-cols-2">
           <label className="block text-sm">
+            <span className="font-medium">Subject</span>
+            <select
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+              value={subjectId}
+              onChange={(event) => {
+                setSubjectId(event.target.value);
+                setTopicId("");
+              }}
+            >
+              <option value="">Choose a subject</option>
+              {RUBRIC_SUBJECTS.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="font-medium">Topic</span>
+            <select
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+              value={topicId}
+              disabled={!subjectId}
+              onChange={(event) => setTopicId(event.target.value)}
+            >
+              <option value="">{subjectId ? "Choose a topic" : "Choose a subject first"}</option>
+              {topics.map((topic) => (
+                <option key={topic.id} value={topic.id}>
+                  {topic.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <Button type="button" variant="outline" disabled={!topicId} onClick={writeDraft}>
+          Write a first draft
+        </Button>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="block text-sm">
             <span className="font-medium">Name</span>
             <input
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
@@ -214,57 +292,73 @@ export function RubricLibraryView({
           </label>
         </div>
 
-        {form.dimensions.map((dim, di) => (
-          <div key={dim.id} className="rounded border border-slate-200 p-3 dark:border-slate-700">
-            <div className="mb-2 flex gap-2">
-              <input
-                className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950"
-                value={dim.name}
-                onChange={(e) => updateDim(di, { name: e.target.value })}
-                placeholder="Dimension name"
-              />
-              <input
-                className="w-24 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950"
-                value={dim.id}
-                onChange={(e) => updateDim(di, { id: e.target.value })}
-                placeholder="id"
-              />
-            </div>
-            {dim.levels.map((lvl, li) => (
-              <div key={li} className="mb-2 grid gap-2 md:grid-cols-4">
-                <input
-                  className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950"
-                  type="number"
-                  value={lvl.value}
-                  onChange={(e) => updateLevel(di, li, { value: e.target.value })}
-                  placeholder="value"
-                />
-                <input
-                  className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950"
-                  value={lvl.label}
-                  onChange={(e) => updateLevel(di, li, { label: e.target.value })}
-                  placeholder="label"
-                />
-                <input
-                  className="rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950 md:col-span-2"
-                  value={lvl.exemplar}
-                  onChange={(e) => updateLevel(di, li, { exemplar: e.target.value })}
-                  placeholder="exemplar (required to confirm)"
-                />
-              </div>
-            ))}
-          </div>
-        ))}
+        <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
+          <table className="min-w-full text-left text-sm">
+            <caption className="sr-only">Rubric criteria and performance levels</caption>
+            <thead className="bg-slate-100 dark:bg-slate-800">
+              <tr>
+                <th className="px-3 py-2 font-medium">Criterion</th>
+                {levelHeaders(form.dimensions).map((level) => (
+                  <th key={level.label} className="px-3 py-2 font-medium">
+                    {level.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {form.dimensions.map((dim, di) => (
+                <tr key={dim.id} className="border-t border-slate-200 align-top dark:border-slate-700">
+                  <th scope="row" className="px-3 py-2 font-normal">
+                    <input
+                      className="w-40 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950"
+                      value={dim.name}
+                      aria-label={`Criterion ${di + 1}`}
+                      onChange={(event) => updateDim(di, { name: event.target.value })}
+                    />
+                  </th>
+                  {levelHeaders(form.dimensions).map((header, li) => {
+                    const level = dim.levels[li];
+                    if (!level) {
+                      return <td key={header.label} className="px-3 py-2" />;
+                    }
+                    const text = level.descriptor || level.exemplar || "";
+                    return (
+                      <td key={header.label} className="px-3 py-2">
+                        <textarea
+                          className="min-h-24 w-52 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950"
+                          aria-label={`${dim.name} ${level.label}`}
+                          value={text}
+                          onChange={(event) =>
+                            updateLevel(di, li, {
+                              descriptor: event.target.value,
+                              exemplar: event.target.value,
+                            })
+                          }
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={() =>
-              setForm((f) => ({ ...f, dimensions: [...f.dimensions, blankDimension()] }))
+              setForm((current) => ({
+                ...current,
+                dimensions: [
+                  ...current.dimensions,
+                  blankDimension(current.dimensions[0]?.levels),
+                ],
+              }))
             }
           >
-            Add dimension
+            Add criterion
           </Button>
           <Button type="submit" disabled={createPending || updatePending}>
             {editingId ? "Save" : "Create draft"}
