@@ -2,8 +2,8 @@
 // model. Sample size is the number of students with a scored response.
 // LSAT7 stays a named fixture and is not used here.
 
-export const MIN_SESSION_ITEM_ANALYSIS_N = 10;
-export const SESSION_ITEM_ANALYSIS_SEED = 20261016;
+const MIN_SESSION_ITEM_ANALYSIS_N = 10;
+const SESSION_ITEM_ANALYSIS_SEED = 20261016;
 
 const CLOSED_STATUSES = new Set(["completed", "submitted", "reviewed"]);
 
