@@ -25,6 +25,10 @@ import {
   useCompetencyModels,
 } from "@/api/queries/competencies";
 import { computeStructuralAudit } from "./structuralAudit";
+import {
+  isSameAuthorConfirmation,
+  sameAuthorAcknowledgementReady,
+} from "@/utils/sameAuthorConfirm";
 import { syncSmVariablesFromCompetencies } from "./smVariableSync";
 import { PSYCHOLOGICAL_PERSPECTIVE_VALUES } from "@/utils/ecdVocabulary";
 
@@ -356,8 +360,17 @@ export function CompetencyWizardProvider({
     // renders, so the gate and the display can never disagree.
     validity[8] = computeStructuralAudit({ model, competencies }).allPassed;
 
+    // Step 9. Save for Review stays available on a draft (the audit on
+    // step 8 is what blocks an incomplete model). Lock & Confirm, which
+    // is the only promote action once status is reviewed, stays disabled
+    // until a same-author admin has checked the acknowledgment and given
+    // a reason the confirm route will accept.
+    const sameAuthor = isSameAuthorConfirmation(model, auth?.username);
+    validity[9] =
+      !sameAuthor || sameAuthorAcknowledgementReady(confirmAck);
+
     return validity;
-  }, [model, competencies]);
+  }, [model, competencies, confirmAck, auth?.username]);
 
   function canProceed(step) {
     return stepValidity[step] ?? true;
@@ -391,8 +404,9 @@ export function CompetencyWizardProvider({
     try {
       let savedModel = model;
 
+      const { reviewSubmitter: _reviewSubmitter, ...modelFields } = model;
       const payload = {
-        ...model,
+        ...modelFields,
         smVariables: syncSmVariablesFromCompetencies(
           competencies,
           model.smVariables || []

@@ -2,6 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { computeStructuralAudit } from "../studentModelAudit";
 import { syncSmVariablesFromCompetencies } from "../smVariableSync";
+import { validateEntity } from "../schema.js";
 
 function baseModel(overrides = {}) {
   return {
@@ -86,6 +87,28 @@ describe("studentModelAudit + smVariableSync", () => {
     expect(smvs[0].priorDistribution.family).toBe("bernoulli");
     expect(smvs[3].priorDistribution.family).toBe("normal");
     expect(smvs[0].scale.states).toEqual(["0", "1"]);
+  });
+
+  it("omits scale.states when Step 4 has not authored them yet", () => {
+    const empty = comps().map((c) =>
+      c.variableType === "continuous" ? c : { ...c, states: [] }
+    );
+    const smvs = syncSmVariablesFromCompetencies(empty, []);
+    expect(smvs[0].scale.states).toBeUndefined();
+    expect(smvs[1].scale.states).toBeUndefined();
+
+    const model = baseModel({
+      id: "cm-draft",
+      versionNumber: 1,
+      status: "draft",
+      locked: false,
+      measurementIntent: "unidimensional",
+      smVariables: [smvs[0]],
+    });
+    const { errors } = validateEntity("competencyModels", model, {});
+    expect(errors || []).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/exactly 2 scale\.states/)])
+    );
   });
 
   it("passes structural audit for a complete multidimensional model", () => {

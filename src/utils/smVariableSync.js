@@ -37,6 +37,11 @@ function scaleFromCompetency(comp) {
     const states = Array.isArray(comp.states)
       ? comp.states.map((s) => s.value).filter((v) => v !== undefined && v !== null && String(v).length > 0)
       : [];
+    // Step 4 saves a binary competency before Step 5 authors the two
+    // states. An empty array is present, so schema rejects it
+    // ("exactly 2 scale.states"). Omit the key until states exist.
+    // A short non-empty list is still sent, and still fails validation.
+    if (states.length === 0) return {};
     return { states };
   }
   return {};

@@ -33,6 +33,15 @@ router.use(sanitizeRequestInputs);
 // Competency Model. Matches itemsRoutes.js's canAuthor pattern.
 const canAuthor = authorizeRole(["admin"]);
 
+// reviewSubmitter is computed for the wizard. It is not a stored field.
+function presentCompetencyModel(db, model, extra = {}) {
+  return {
+    ...model,
+    ...extra,
+    reviewSubmitter: resolveReviewSubmitter(db, "competencyModels", model),
+  };
+}
+
 const genId = (prefix = "cm") => `${prefix}${Date.now()}`;
 
 /* =====================================================
@@ -56,7 +65,7 @@ router.get("/models/:id", (req, res) => {
 
   const competencies = db.competencies?.filter(c => c.modelId === model.id) || [];
 
-  res.json({ ...model, competencies });
+  res.json(presentCompetencyModel(db, model, { competencies }));
 });
 
 /* =====================================================
@@ -464,9 +473,12 @@ router.put("/models/:id", canAuthor, (req, res) => {
      steps from the Operate tab's Review button -- forcing "draft" here
      would demote the model behind the reviewer's back and put the final
      step's Lock & Confirm button out of reach. */
+  const body = { ...req.body };
+  delete body.reviewSubmitter;
+
   const updated = {
     ...existing,
-    ...req.body,
+    ...body,
     status: existing.status === "reviewed" ? "reviewed" : "draft",
     locked: false,
     updatedAt: new Date().toISOString()
@@ -666,23 +678,34 @@ router.patch("/models/:id/lifecycle", canAuthor, (req, res) => {
 
   const now = new Date().toISOString();
 
+  if (prevStatus !== nextStatus && nextStatus === "reviewed") {
+    const related = (db.competencies || []).filter((c) => c.modelId === model.id);
+    const smVariables = syncSmVariablesFromCompetencies(
+      related,
+      model.smVariables || []
+    );
+    const audit = computeStructuralAudit({
+      model: { ...model, smVariables, status: "reviewed" },
+      competencies: related,
+    });
+    if (!audit.allPassed) {
+      return res.status(400).json({
+        error: "Structural audit failed. Resolve checklist items before review.",
+        checks: audit.checks.filter((c) => !c.passed),
+      });
+    }
+    model.smVariables = smVariables;
+  }
+
   if (prevStatus !== nextStatus) {
     model.status = nextStatus;
     model.locked = false;
     // D109: review timestamps → append-only history via saveDB; no reviewMeta blob.
-    // Keep SMVs aligned whenever a model enters review.
-    if (nextStatus === "reviewed") {
-      const related = (db.competencies || []).filter((c) => c.modelId === model.id);
-      model.smVariables = syncSmVariablesFromCompetencies(
-        related,
-        model.smVariables || []
-      );
-    }
     model.updatedAt = now;
     saveDB(db);
   }
 
-  res.json(model);
+  res.json(presentCompetencyModel(db, model));
 });
 
 /* =====================================================

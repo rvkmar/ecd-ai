@@ -9,6 +9,7 @@ import CloneModelDialog from "../components/CloneModelDialog";
 import Modal from "@/components/ui/Modal";
 import { canArchiveCompetencyModel, isLinkableCompetencyModel } from "@/utils/schema";
 import { buildStudentModelSpecification } from "../smVariableSync";
+import { isSameAuthorConfirmation, reviewSubmitterOf } from "@/utils/sameAuthorConfirm";
 
 export default function Step9Confirmation() {
     const {
@@ -47,12 +48,8 @@ export default function Step9Confirmation() {
         URL.revokeObjectURL(url);
     }
 
-    const submitter = model?.reviewMeta?.submittedBy;
-    const sameAuthor =
-        model?.status === "reviewed" &&
-        submitter &&
-        auth?.username &&
-        submitter === auth.username;
+    const submitter = reviewSubmitterOf(model);
+    const sameAuthor = isSameAuthorConfirmation(model, auth?.username);
 
     if (model?.locked) {
         const archived = model.status === "archived";
