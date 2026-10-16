@@ -593,9 +593,9 @@ export function isSmVariablePriorComplete(smv) {
    strongly", since a mismatch against the measurement model chosen
    downstream produces a substantially less informative assessment (e.g.
    a trait-perspective model scored with a diagnostic classification
-   model). Declared as one enum field on the Competency Model now, ahead
-   of the full Domain Analysis layer (~W23+), because it costs one field
-   and is the coherence check that catches that mismatch early.
+   model).    Declared once on the Domain Analysis. A Student Model inherits it
+   when the model cites that analysis. A perspective already stored on
+   the Student Model stays until the model is rebuilt.
 ===================================================== */
 
 export const PSYCHOLOGICAL_PERSPECTIVES = [

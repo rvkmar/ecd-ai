@@ -8,6 +8,7 @@ import previewRemoveLifecycleMeta from "./migrations/004-preview-remove-lifecycl
 import removeLifecycleMeta from "./migrations/005-remove-lifecycle-meta.js";
 import domainAnalysisContentStandards from "./migrations/006-domain-analysis-content-standards.js";
 import qMatrixDomainAnalysisLink from "./migrations/007-qmatrix-domain-analysis-link.js";
+import perspectiveInheritance from "./migrations/008-perspective-inheritance.js";
 
 export const MIGRATION_REGISTRY = [
   normalizeSessionStatus,
@@ -17,6 +18,7 @@ export const MIGRATION_REGISTRY = [
   removeLifecycleMeta,
   domainAnalysisContentStandards,
   qMatrixDomainAnalysisLink,
+  perspectiveInheritance,
 ];
 
 export function migrationRegistryIds() {

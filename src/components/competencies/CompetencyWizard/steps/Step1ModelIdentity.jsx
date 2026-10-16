@@ -1,19 +1,34 @@
 // CompetencyWizard/steps/Step1ModelIdentity.jsx
-// Step 1 — Model Identity + psychological perspective (TR9 §2.3.1)
+// Step 1 — Model identity. Perspective is inherited from a Domain Analysis.
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
 import { useCompetencyWizard } from "../CompetencyWizardContext";
-import { PSYCHOLOGICAL_PERSPECTIVES } from "@/utils/ecdVocabulary";
+import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import {
+  PSYCHOLOGICAL_PERSPECTIVE_VALUES,
+  psychologicalPerspectiveLabel,
+} from "@/utils/ecdVocabulary";
+import {
+  applyDomainAnalysisChoice,
+  rebuildPerspective,
+} from "@/utils/perspectiveInheritance";
 
 export default function Step1ModelIdentity() {
     const { model, updateModelField } = useCompetencyWizard();
+    const { data: domainAnalyses = [], isLoading: analysesLoading } = useDomainAnalyses();
+    const baselinePerspective = useRef(undefined);
+
+    useEffect(() => {
+        if (baselinePerspective.current !== undefined || !model) return;
+        baselinePerspective.current = model.psychologicalPerspective || "";
+    }, [model]);
 
     const [localErrors, setLocalErrors] = useState({});
     const [touched, setTouched] = useState({
         name: false,
         description: false,
-        psychologicalPerspective: false,
+        domainAnalysisId: false,
     });
 
     function markTouched(field) {
@@ -22,7 +37,7 @@ export default function Step1ModelIdentity() {
 
     useEffect(() => {
         validate();
-    }, [model?.name, model?.description, model?.psychologicalPerspective]);
+    }, [model?.name, model?.description, model?.psychologicalPerspective, model?.domainAnalysisId]);
 
     function validate() {
         const errors = {};
@@ -36,9 +51,9 @@ export default function Step1ModelIdentity() {
                 "Description should clearly describe the construct (min 10 characters).";
         }
 
-        if (!model?.psychologicalPerspective) {
-            errors.psychologicalPerspective =
-                "Select the psychological perspective this Student Model claims (TR9).";
+        if (!PSYCHOLOGICAL_PERSPECTIVE_VALUES.includes(model?.psychologicalPerspective)) {
+            errors.domainAnalysisId =
+                "Choose a Domain Analysis to inherit its psychological perspective.";
         }
 
         setLocalErrors(errors);
@@ -54,8 +69,8 @@ export default function Step1ModelIdentity() {
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 max-w-3xl">
                     Define the conceptual identity of this Student Model (PADI TR9
-                    §2.3.1 — what we are measuring). Include the psychological
-                    perspective that warrants later Evidence Model choices.
+                    §2.3.1 — what we are measuring). The psychological perspective
+                    is declared on the Domain Analysis and inherited here.
                 </p>
             </div>
 
@@ -108,44 +123,21 @@ export default function Step1ModelIdentity() {
                     )}
                 </div>
 
-                <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                        Psychological Perspective <span className="text-red-500">*</span>
-                    </label>
-                    <p className="mb-2 text-xs text-slate-500">
-                        TR9 grounds the Student Model claim stance (e.g. trait vs
-                        information-processing) so Evidence Models stay coherent.
-                    </p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                        {PSYCHOLOGICAL_PERSPECTIVES.map((p) => {
-                            const selected = model?.psychologicalPerspective === p.value;
-                            return (
-                                <button
-                                    key={p.value}
-                                    type="button"
-                                    disabled={isLocked}
-                                    onClick={() => {
-                                        markTouched("psychologicalPerspective");
-                                        updateModelField("psychologicalPerspective", p.value);
-                                    }}
-                                    className={`rounded-lg border p-3 text-left text-sm transition ${
-                                        selected
-                                            ? "border-slate-900 bg-slate-50"
-                                            : "border-slate-200 bg-white hover:border-slate-400"
-                                    } disabled:cursor-not-allowed disabled:opacity-60`}
-                                >
-                                    <div className="font-semibold text-slate-800">{p.label}</div>
-                                    <div className="mt-1 text-xs text-slate-500">{p.hint}</div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                    {touched.psychologicalPerspective && localErrors.psychologicalPerspective && (
-                        <p className="mt-1.5 text-xs font-medium text-red-600">
-                            {localErrors.psychologicalPerspective}
-                        </p>
-                    )}
-                </div>
+                <PerspectiveInheritance
+                    model={model}
+                    analyses={domainAnalyses}
+                    analysesLoading={analysesLoading}
+                    baselinePerspective={baselinePerspective.current || ""}
+                    isLocked={isLocked}
+                    error={touched.domainAnalysisId ? localErrors.domainAnalysisId : ""}
+                    onTouched={() => markTouched("domainAnalysisId")}
+                    onChange={(next) => {
+                        updateModelField("domainAnalysisId", next.domainAnalysisId);
+                        if (next.psychologicalPerspective !== model?.psychologicalPerspective) {
+                            updateModelField("psychologicalPerspective", next.psychologicalPerspective);
+                        }
+                    }}
+                />
             </div>
 
             <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3.5 text-sm text-blue-800">
@@ -156,6 +148,102 @@ export default function Step1ModelIdentity() {
                     abilities. It must remain free from task or observable detail.
                 </p>
             </div>
+        </div>
+    );
+}
+
+function PerspectiveInheritance({
+    model,
+    analyses,
+    analysesLoading,
+    baselinePerspective,
+    isLocked,
+    error,
+    onTouched,
+    onChange,
+}) {
+    const inheritable = analyses.filter((row) =>
+        PSYCHOLOGICAL_PERSPECTIVE_VALUES.includes(row.psychologicalPerspective)
+    );
+    const selected = inheritable.find((row) => row.id === model?.domainAnalysisId);
+    const stored = PSYCHOLOGICAL_PERSPECTIVE_VALUES.includes(model?.psychologicalPerspective)
+        ? model.psychologicalPerspective
+        : "";
+    const declared = selected?.psychologicalPerspective || "";
+    const awaitingRebuild = Boolean(stored && declared && stored !== declared);
+
+    function choose(id) {
+        onTouched();
+        onChange(
+            applyDomainAnalysisChoice({
+                model,
+                domainAnalysisId: id,
+                analyses: inheritable,
+                baselinePerspective,
+            })
+        );
+    }
+
+    return (
+        <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700" htmlFor="domain-analysis">
+                Domain Analysis
+            </label>
+            <p className="mb-2 text-xs text-slate-500">
+                The psychological perspective is declared on the Domain Analysis.
+                This Student Model inherits it.
+            </p>
+            <select
+                id="domain-analysis"
+                value={model?.domainAnalysisId || ""}
+                disabled={isLocked || analysesLoading}
+                onBlur={onTouched}
+                onChange={(event) => choose(event.target.value)}
+                className={`w-full rounded-md border bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-400 ${
+                    error
+                        ? "border-red-400 focus:ring-red-500/10 focus:border-red-500"
+                        : "border-slate-300 focus:ring-slate-900/10 focus:border-slate-400"
+                }`}
+            >
+                <option value="">
+                    {stored ? "Keep the perspective stored on this model" : "Choose a Domain Analysis"}
+                </option>
+                {inheritable.map((row) => (
+                    <option key={row.id} value={row.id}>
+                        {row.name} — {psychologicalPerspectiveLabel(row.psychologicalPerspective)}
+                    </option>
+                ))}
+            </select>
+            {analysesLoading && (
+                <p className="mt-1.5 text-xs text-slate-500">Loading domain analyses…</p>
+            )}
+            {!analysesLoading && inheritable.length === 0 && (
+                <p className="mt-1.5 text-xs text-slate-500">
+                    No Domain Analysis has a perspective yet. Declare one under Models → Domain Analysis.
+                </p>
+            )}
+            {stored && (
+                <p className="mt-2 text-sm text-slate-700">
+                    Perspective: {psychologicalPerspectiveLabel(stored)}
+                    {selected && !awaitingRebuild ? ` Inherited from ${selected.name}.` : ""}
+                    {awaitingRebuild
+                        ? " Stored on this model until you rebuild it from the Domain Analysis."
+                        : ""}
+                    {!selected && baselinePerspective ? " Stored on this model until you rebuild it from a Domain Analysis." : ""}
+                </p>
+            )}
+            {awaitingRebuild && !isLocked && (
+                <button
+                    type="button"
+                    className="mt-2 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-800 hover:border-slate-400"
+                    onClick={() => onChange(rebuildPerspective(model, inheritable))}
+                >
+                    Rebuild from Domain Analysis
+                </button>
+            )}
+            {error && (
+                <p className="mt-1.5 text-xs font-medium text-red-600">{error}</p>
+            )}
         </div>
     );
 }

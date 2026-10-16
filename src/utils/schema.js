@@ -234,7 +234,10 @@ export const schema = {
     jointPrior: 'object',
 
     // See ecdVocabulary.js §7. Optional single enum, validated if present.
+    // Declared on the Domain Analysis. Stored here as the inherited copy.
+    // Models authored before that citation keep this value until rebuilt.
     psychologicalPerspective: 'string',
+    domainAnalysisId: 'string',
 
     createdAt: 'date',
     updatedAt: 'date',
@@ -5696,6 +5699,14 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         errors.push(
           `Invalid psychologicalPerspective '${obj.psychologicalPerspective}'. Must be one of: ${PSYCHOLOGICAL_PERSPECTIVE_VALUES.join(", ")}.`
         );
+      }
+    }
+
+    if (obj.domainAnalysisId != null && obj.domainAnalysisId !== "") {
+      if (typeof obj.domainAnalysisId !== "string") {
+        errors.push("domainAnalysisId should be string");
+      } else if (db && !(db.domainAnalyses || []).some((row) => row.id === obj.domainAnalysisId)) {
+        errors.push(`Invalid domainAnalysisId: ${obj.domainAnalysisId}`);
       }
     }
 

@@ -91,7 +91,12 @@ function createCompetencyModelRecord(payload = {}, db, idSuffix = "") {
     constructFramework: payload.constructFramework || {},
     // TR9 §2.3.1 — claim stance + SMV distribution. Previously dropped on
     // create, which made the schema fields unreachable from bulk/POST.
-    psychologicalPerspective: payload.psychologicalPerspective || undefined,
+    domainAnalysisId: payload.domainAnalysisId || undefined,
+    psychologicalPerspective:
+      payload.psychologicalPerspective ||
+      (db.domainAnalyses || []).find((row) => row.id === payload.domainAnalysisId)
+        ?.psychologicalPerspective ||
+      undefined,
     smVariables: Array.isArray(payload.smVariables) ? payload.smVariables : [],
 
     status: "draft",
