@@ -11,7 +11,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"), // 👈 add this
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   build: {
@@ -19,7 +19,9 @@ export default defineConfig({
     sourcemap: true,
     // D74: keep the Vite >500 kB warning meaningful — do not raise the
     // limit; split heavy vendors so route chunks stay under it.
-    rollupOptions: {
+    // Vite 8 renamed rollupOptions to rolldownOptions. The function form
+    // of manualChunks is still honored (the object form was removed).
+    rolldownOptions: {
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
