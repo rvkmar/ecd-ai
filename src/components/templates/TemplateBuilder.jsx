@@ -32,6 +32,9 @@ import {
 } from "@/utils/taskModelVariableFamily";
 import { taskModelVariableValueIds, tmvTypeLabel } from "@/utils/ecdVocabulary";
 import { templateReadiness } from "@/utils/templateReadiness";
+import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import PerspectiveAtDecision from "@/components/authoring/PerspectiveAtDecision";
+import { readStudentPerspective } from "@/utils/perspectiveInheritance";
 
 const selectClass =
   "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
@@ -147,6 +150,7 @@ export function TemplateLibraryView({
   presentationModels = [],
   taskModelVariables = [],
   designPatterns = [],
+  domainAnalyses = [],
   focusId = null,
   onCreate,
   onUpdate,
@@ -447,6 +451,12 @@ export function TemplateLibraryView({
                 ))}
               </select>
             </label>
+            <PerspectiveAtDecision
+              reading={readStudentPerspective(
+                competencyModels.find((model) => model.id === form.competencyModelId),
+                domainAnalyses
+              )}
+            />
 
             <label className="block text-sm">
               <span className="mb-1 block text-slate-700">Evidence Model</span>
@@ -693,6 +703,7 @@ export default function TemplateBuilder() {
   const { data: templates = [], isLoading, error } = useTemplates();
   const { data: designPatterns = [] } = useDesignPatterns();
   const { data: competencyModels = [] } = useCompetencyModels();
+  const { data: domainAnalyses = [] } = useDomainAnalyses();
   const { data: competencies = [] } = useCompetencies();
   const { data: evidenceModels = [] } = useEvidenceModels();
   const { data: taskModels = [] } = useTaskModels();
@@ -726,6 +737,7 @@ export default function TemplateBuilder() {
       presentationModels={presentationModels}
       taskModelVariables={taskModelVariables}
       designPatterns={designPatterns}
+      domainAnalyses={domainAnalyses}
       focusId={focusId}
       createPending={createMut.isPending}
       updatePending={updateMut.isPending}

@@ -7,6 +7,10 @@
 import React, { useMemo } from "react";
 import { Info } from "lucide-react";
 
+import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import PerspectiveAtDecision from "@/components/authoring/PerspectiveAtDecision";
+import { readStudentPerspective } from "@/utils/perspectiveInheritance";
+
 import { useEvidenceWizardContext }
     from "../EvidenceWizardContext";
 
@@ -34,8 +38,13 @@ export default function StatisticalModelSelector({
 
 }) {
 
-    const { selectedCompetency } =
+    const { selectedCompetency, selectedCompetencyModel } =
         useEvidenceWizardContext();
+    const { data: domainAnalyses = [] } = useDomainAnalyses();
+    const perspectiveReading = readStudentPerspective(
+        selectedCompetencyModel,
+        domainAnalyses
+    );
 
 
     /* =====================================================
@@ -218,6 +227,8 @@ export default function StatisticalModelSelector({
             {/* =====================================================
                 Model Selection Cards
             ===================================================== */}
+
+            <PerspectiveAtDecision reading={perspectiveReading} />
 
             <div>
 
