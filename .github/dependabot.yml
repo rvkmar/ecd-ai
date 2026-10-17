@@ -6,6 +6,23 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    groups:
+      # react-dom pins a peer on the same React major. Updating `react`
+      # alone makes npm loop on ERESOLVE (peer react@^18 from react-dom@18)
+      # until the updater times out: dependency_file_not_resolvable.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      # Collapse routine dev noise so the open-PR limit stays available
+      # for production and major updates. Majors stay ungrouped.
+      dev-minor-patch:
+        dependency-type: development
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: github-actions
     directory: "/"
