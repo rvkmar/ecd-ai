@@ -36,7 +36,8 @@ import { AlertTriangle, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
 import { useQMatrixModels } from "@/api/queries/qMatrixModels";
-import { psychologicalPerspectiveLabel } from "@/utils/ecdVocabulary";
+import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import { readStudentPerspective, traitDiagnosticAdvisory } from "@/utils/perspectiveInheritance";
 
 import { useEvidenceWizardContext } from "../../EvidenceWizardContext";
 
@@ -50,6 +51,7 @@ import { useEvidenceWizardContext } from "../../EvidenceWizardContext";
 export function DINAConfigPanelView({
   model,
   competencyModel,
+  domainAnalyses = [],
   qMatrices = [],
   isLoading = false,
   onChange,
@@ -97,22 +99,15 @@ export function DINAConfigPanelView({
     });
   }, [boundQMatrix, selectedCompetencyModel]);
 
-  /* =====================================================
-     COHERENCE ADVISORY (UI SPEC §2.2)
-     -----------------------------------------------------
-     "if the Competency Model's psychologicalPerspective is trait-based
-     and a diagnostic model is selected, show the advisory... Advisory,
-     not blocking, until W30 makes it a modelled rule."
+  /* The effective perspective is the stored Student Model value when one
+     exists, otherwise the Domain Analysis. A trait value beside DINA or
+     G-DINA is advisory. Confirmation is unchanged. */
 
-     The vocabulary states the pairing itself: `trait` is "the classical
-     IRT/CTT view", `information_processing` is "the usual fit for
-     DINA/G-DINA". So this reads the declared perspective rather than
-     inventing a judgement about it, and it stays silent when no
-     perspective is declared -- an absent field is not a contradiction.
-  ===================================================== */
-
-  const perspective = selectedCompetencyModel?.psychologicalPerspective;
-  const perspectiveConflict = perspective === "trait";
+  const perspectiveReading = readStudentPerspective(selectedCompetencyModel, domainAnalyses);
+  const advisoryText =
+    model?.type === "dina" || model?.type === "gdina"
+      ? traitDiagnosticAdvisory(perspectiveReading)
+      : "";
 
   /* =====================================================
      RENDER
@@ -166,23 +161,13 @@ export function DINAConfigPanelView({
       </section>
 
       {/* ---------- Coherence advisory ---------- */}
-      {perspectiveConflict && (
+      {advisoryText && (
         <div
           role="note"
           className="flex gap-3 rounded-md border border-amber-300 bg-amber-50 p-3"
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
-          <div className="text-caption text-amber-800">
-            <span className="font-medium">
-              This competency model declares a {psychologicalPerspectiveLabel(perspective)}{" "}
-              perspective.
-            </span>{" "}
-            A trait perspective describes competence as a continuous latent trait, which a
-            diagnostic model does not estimate — it classifies into discrete attribute mastery
-            instead. This is advisory, not blocking: change the perspective on the competency model
-            if the design really is diagnostic, or choose an IRT or Rasch model if it really is a
-            trait.
-          </div>
+          <p className="text-caption text-amber-800">{advisoryText}</p>
         </div>
       )}
 
@@ -276,11 +261,13 @@ export default function DINAConfigPanel(props) {
   const { data: qMatrices = [], isLoading } = useQMatrixModels(competencyModelId, {
     enabled: Boolean(competencyModelId),
   });
+  const { data: domainAnalyses = [] } = useDomainAnalyses();
 
   return (
     <DINAConfigPanelView
       {...props}
       competencyModel={selectedCompetencyModel}
+      domainAnalyses={domainAnalyses}
       qMatrices={qMatrices}
       isLoading={isLoading}
     />

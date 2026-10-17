@@ -169,6 +169,12 @@ vi.mock("@/api/queries/qMatrixModels", () => ({
   },
 }));
 
+const analyses = vi.hoisted(() => ({ current: [] }));
+
+vi.mock("@/api/queries/domainAnalyses", () => ({
+  useDomainAnalyses: () => ({ data: analyses.current }),
+}));
+
 vi.mock("../../../EvidenceWizardContext", () => ({
   useEvidenceWizardContext: () => ctx.current,
 }));
@@ -198,12 +204,14 @@ vi.mock("@/components/ui/combobox", () => ({
 function setup({
   model = { id: "sm1", type: "dina", structureConfig: {} },
   competencyModel = fx.competencyModel,
+  domainAnalyses = [],
   qMatrices = fx.qMatrices,
   isLoading = false,
   locked = false,
   onChange = vi.fn(),
 } = {}) {
   ctx.current = { selectedCompetencyModel: competencyModel };
+  analyses.current = domainAnalyses;
   qm.current = qMatrices;
   qm.isLoading = isLoading;
   render(<DINAConfigPanel model={model} onChange={onChange} locked={locked} />);
@@ -309,12 +317,54 @@ describe("attribute bindings", () => {
 });
 
 describe("the coherence advisory", () => {
-  it("fires when the competency model declares a trait perspective", () => {
+  it("names a trait value stored on the Student Model", () => {
     setup({
       competencyModel: { ...fx.competencyModel, psychologicalPerspective: "trait" },
     });
-    expect(screen.getByRole("note")).toHaveTextContent(/trait/i);
+    expect(screen.getByRole("note")).toHaveTextContent(/Stored on the Student Model/);
     expect(screen.getByRole("note")).toHaveTextContent(/advisory, not blocking/i);
+  });
+
+  it("names the Domain Analysis when that is the effective source", () => {
+    setup({
+      competencyModel: {
+        ...fx.competencyModel,
+        domainAnalysisId: "da1",
+        psychologicalPerspective: "",
+      },
+      domainAnalyses: [
+        { id: "da1", name: "Fractions", psychologicalPerspective: "trait" },
+      ],
+    });
+    expect(screen.getByRole("note")).toHaveTextContent(/Declared on Fractions/);
+  });
+
+  it("names a Student Model override when it differs from the analysis", () => {
+    setup({
+      competencyModel: {
+        ...fx.competencyModel,
+        domainAnalysisId: "da1",
+        psychologicalPerspective: "trait",
+      },
+      domainAnalyses: [
+        { id: "da1", name: "Fractions", psychologicalPerspective: "information_processing" },
+      ],
+    });
+    expect(screen.getByRole("note")).toHaveTextContent(/Stored on the Student Model until it is rebuilt from Fractions/);
+  });
+
+  it("stays silent when a stored non-trait value overrides a trait analysis", () => {
+    setup({
+      competencyModel: {
+        ...fx.competencyModel,
+        domainAnalysisId: "da1",
+        psychologicalPerspective: "information_processing",
+      },
+      domainAnalyses: [
+        { id: "da1", name: "Fractions", psychologicalPerspective: "trait" },
+      ],
+    });
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
   it("stays silent for a perspective that fits a diagnostic model", () => {

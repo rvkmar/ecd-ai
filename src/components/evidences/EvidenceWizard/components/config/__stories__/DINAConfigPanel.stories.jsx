@@ -76,9 +76,8 @@ export const Bound = {
   render: () => <Stateful initialQMatrixId="qm1" />,
 };
 
-/* The advisory the UI spec asks for by name: a trait perspective declared
-   on the competency model while a diagnostic model is selected. Advisory,
-   never blocking. */
+/* A trait perspective stored on the Student Model while a diagnostic model
+   is selected. Advisory, never blocking. */
 export const TraitPerspectiveAdvisory = {
   render: () => (
     <DINAConfigPanelView

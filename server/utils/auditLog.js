@@ -13,6 +13,7 @@ import { randomUUID } from "crypto";
 import { STATUS, CALIBRATION_JOB_STATUS } from "./lifecycleMatrix.js";
 import { getAuditActor, getAuditRequestId } from "./auditContext.js";
 import { logger } from "./logger.js";
+import { traitDiagnosticDeparture } from "../../src/utils/perspectiveInheritance.js";
 
 /** Authored entities on the shared STATUS machine. */
 const LIFECYCLE_ENTITY_COLLECTIONS = Object.freeze([
@@ -64,6 +65,25 @@ function buildAuditEntry(partial = {}) {
   };
 }
 
+function pushTraitDiagnosticProceed(entries, collection, prev, row, before, after) {
+  if (collection !== "evidenceModels") return;
+  const next = traitDiagnosticDeparture(row, after);
+  if (!next) return;
+  const previous = prev ? traitDiagnosticDeparture(prev, before) : null;
+  if (previous && JSON.stringify(previous) === JSON.stringify(next)) return;
+  entries.push(
+    buildAuditEntry({
+      action: "coherence.proceed",
+      entity: {
+        collection,
+        id: row.id,
+        version: entityVersion(row),
+      },
+      detail: next,
+    })
+  );
+}
+
 function indexById(rows) {
   const map = new Map();
   for (const row of rows || []) {
@@ -112,6 +132,7 @@ function collectSaveAudits(before, after) {
             },
           })
         );
+        pushTraitDiagnosticProceed(entries, collection, null, row, before, after);
         continue;
       }
       const prevStatus = prev.status;
@@ -131,6 +152,7 @@ function collectSaveAudits(before, after) {
           })
         );
       }
+      pushTraitDiagnosticProceed(entries, collection, prev, row, before, after);
     }
   }
 

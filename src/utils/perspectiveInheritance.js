@@ -58,6 +58,43 @@ export function perspectiveReadout(reading) {
   return label;
 }
 
+const DIAGNOSTIC_MODEL_TYPES = new Set(["dina", "gdina"]);
+
+export function traitDiagnosticDeparture(evidence, db = {}) {
+  const modelTypes = (evidence?.statisticalModels || [])
+    .filter((model) => model && model.active !== false && DIAGNOSTIC_MODEL_TYPES.has(model.type))
+    .map((model) => model.type)
+    .sort();
+  if (!modelTypes.length) return null;
+  const reading = readEvidencePerspective(evidence, db);
+  if (reading.effective !== "trait") return null;
+  const source = reading.override || !reading.declared ? "student_model" : "domain_analysis";
+  return {
+    modelTypes,
+    source,
+    override: Boolean(reading.override),
+    sourceName: reading.sourceName || "",
+    declared: reading.declared || "",
+    stored: reading.stored || "",
+  };
+}
+
+export function traitDiagnosticAdvisory(reading) {
+  if (reading?.effective !== "trait") return "";
+  let sourceLine;
+  if (reading.override) {
+    const source = reading.sourceName || "the Domain Analysis";
+    sourceLine = `Stored on the Student Model until it is rebuilt from ${source}.`;
+  } else if (reading.declared) {
+    sourceLine = reading.sourceName
+      ? `Declared on ${reading.sourceName}.`
+      : "Declared on the Domain Analysis.";
+  } else {
+    sourceLine = "Stored on the Student Model.";
+  }
+  return `${sourceLine} A trait perspective describes competence as a continuous latent trait, which a diagnostic model does not estimate. This is advisory, not blocking.`;
+}
+
 export function applyDomainAnalysisChoice({
   model,
   domainAnalysisId,
