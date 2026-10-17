@@ -524,6 +524,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-15 | calibrate | — | D145 premise checked at `1b90e99`. Domain Analysis does not cite a Design Pattern. A pattern does not cite an analysis. Seeding requires an existing `competencyId` and writes draft Evidence and Task Models, not a Competency Model. Work order: D145 alone, a live walk that records the missing chain. Do not build the link. No D146. |
 | 2026-10-15 | D145 | 3, alone | Walk recorded the missing chain. Unpatterned Student Model still opened. Gate stays open. `b273d3f`. Calendar mark waited until 2026-10-16. No D146. |
 | 2026-10-16 | off-calendar | — | Five authoring screens: wizard save, rubric starter, worked examples, Libraries and Results, copied curriculum on the analysis. Suite close re-run **2240 passed / 9 skipped**. Not a schema change. Live `:6060` not rebuilt. No D146. |
+| 2026-10-17 | calibrate | — | D146 premise checked at `67ef113`. Inheritance already copies onto an empty Student Model and leaves a stored perspective until rebuild. Evidence, Task, and Design Pattern do not carry the field. Work order: D146 alone. No D147. D150 stays never-compress. |
 
 
 
@@ -593,6 +594,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 | D58 | Write `sessionOrchestrator.js`; stop on accuracy, length, or coverage | Stop already in `activitySelection.js`; no coverage field | Persist `{ stopped }` on the session; player shows the reason; do not add a second orchestrator |
 | 2026-10-16 screens | The second walk's fixes would close the W29 chain | The breaks were missing foreign keys. The approved five sessions were forms, examples, and menus | Ship the five screens. Leave the chain unlinked. Do not call it D146 |
+| D146 | Declare the perspective once on the Domain Analysis and copy it onto Design Patterns, Student, Evidence, and Task Models, with no two fields able to disagree | The Domain Analysis already has the field (D141). The Student Model has its own field. A new model copies the analysis when its stored value is empty; a stored value is kept until rebuild, and validation allows the two to differ. Evidence Models, Task Models, and Design Patterns have no perspective field | Finish that contract. Downstream layers read the analysis. A stored Student Model value is an override, visible as one, until rebuild. Do not add a second silent field. Not closed by `9e369f5` |
 
 | D59 | Split reports by role; attribute-profile UI; close teacher-report leak | One stack (`reportsRoutes` + `SessionReport`); teacher-report was authenticate-only; classification already computed, not shown on reports | Gate teacher routes with `authorizeRole`; stop the client fetching them as a student; attach `stopped` + `attributeProfile` to existing payloads/surfaces |
 
