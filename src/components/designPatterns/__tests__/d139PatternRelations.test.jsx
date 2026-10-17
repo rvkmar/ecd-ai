@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DesignPatternLibraryView } from "../DesignPatternBuilder.jsx";
+import { openDesignPatternStep } from "./openDesignPatternStep.js";
 
 const parent = {
   id: "dp-parent",
@@ -36,6 +37,7 @@ describe("D139 relation control", () => {
 
     const editButtons = screen.getAllByRole("button", { name: "Edit" });
     await user.click(editButtons[1]);
+    await openDesignPatternStep(user, "Relations (kind-of) & references");
     await user.click(screen.getByRole("button", { name: "Add relation" }));
     await user.selectOptions(screen.getByRole("combobox", { name: "Related pattern 1" }), "dp-parent");
     await user.click(screen.getByRole("button", { name: "Save" }));

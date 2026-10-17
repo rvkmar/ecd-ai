@@ -14,6 +14,7 @@ import { WorkProductLibraryView } from "@/components/workProducts/WorkProductBui
 import { TaskModelVariableLibraryView } from "@/components/taskModelVariables/TaskModelVariableBuilder";
 import { TemplateLibraryView } from "@/components/templates/TemplateBuilder";
 import { DesignPatternLibraryView } from "@/components/designPatterns/DesignPatternBuilder";
+import { openDesignPatternStep } from "@/components/designPatterns/__tests__/openDesignPatternStep";
 import QMatrixList from "@/components/qMatrix/QMatrixList";
 
 describe("worked examples on empty authoring screens", () => {
@@ -48,9 +49,12 @@ describe("worked examples on empty authoring screens", () => {
     const user = userEvent.setup();
     render(<DesignPatternLibraryView patterns={[]} onCreate={vi.fn()} />);
     expect(screen.getByText("Example: Name a plant part from a diagram")).toBeInTheDocument();
+    await openDesignPatternStep(user, "Focal KSAs");
     expect(screen.getByText("Example: Names the indicated plant part")).toBeInTheDocument();
+    await openDesignPatternStep(user, "Identity");
     await user.type(screen.getByLabelText("Title"), "Named pattern");
     expect(screen.queryByText("Example: Name a plant part from a diagram")).not.toBeInTheDocument();
+    await openDesignPatternStep(user, "Focal KSAs");
     expect(screen.getByText("Example: Names the indicated plant part")).toBeInTheDocument();
   });
 });

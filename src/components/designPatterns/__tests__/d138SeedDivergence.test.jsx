@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DesignPatternLibraryView } from "../DesignPatternBuilder.jsx";
+import { openDesignPatternStep } from "./openDesignPatternStep.js";
 
 const pattern = {
   id: "dp1",
@@ -50,6 +51,7 @@ describe("D138 descendant report", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
+    await openDesignPatternStep(user, "Review & confirm");
     expect(screen.getByText(/now reads "Names a different claim"/)).toBeInTheDocument();
     expect(screen.getByText("Matches the seed snapshot.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Confirm" })).toBeEnabled();

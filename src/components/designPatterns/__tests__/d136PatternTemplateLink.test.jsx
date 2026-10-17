@@ -6,6 +6,7 @@ import {
   DesignPatternLibraryView,
   patternTemplateHref,
 } from "../DesignPatternBuilder.jsx";
+import { openDesignPatternStep } from "./openDesignPatternStep.js";
 import {
   TemplateLibraryView,
   templatePatternHref,
@@ -53,6 +54,7 @@ describe("D136 pattern and template navigation", () => {
     expect(fromLibrary).toHaveAttribute("href", patternTemplateHref("tpl1"));
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
+    await openDesignPatternStep(user, "Review & confirm");
     await user.selectOptions(screen.getByLabelText("Link a template"), "tpl2");
     await user.click(screen.getByRole("button", { name: "Link template" }));
     expect(onLinkTemplate).toHaveBeenCalledWith({

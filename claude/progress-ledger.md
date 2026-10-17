@@ -525,6 +525,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-15 | D145 | 3, alone | Walk recorded the missing chain. Unpatterned Student Model still opened. Gate stays open. `b273d3f`. Calendar mark waited until 2026-10-16. No D146. |
 | 2026-10-16 | off-calendar | — | Five authoring screens: wizard save, rubric starter, worked examples, Libraries and Results, copied curriculum on the analysis. Suite close re-run **2240 passed / 9 skipped**. Not a schema change. Live `:6060` not rebuilt. No D146. |
 | 2026-10-17 | calibrate | — | D146 premise checked at `67ef113`. Inheritance already copies onto an empty Student Model and leaves a stored perspective until rebuild. Evidence, Task, and Design Pattern do not carry the field. Work order: D146 alone. No D147. D150 stays never-compress. |
+| 2026-10-17 | off-calendar | — | Design Pattern authoring on the shared wizard shell, convention C. Nine steps, ungated rail, draft/confirmed toolbar. Suite **2247 passed / 9 skipped** (236 files). Not a schema change. **Not D146.** Handoff: `claude/day145c-offcal-design-pattern-wizard.md`. |
 | 2026-10-17 | off-calendar | — | Domain Analysis workspace and optional guided setup. Not a schema change. Suite **2246 passed / 9 skipped**. Not D146. Handoff: `claude/day145d-offcal-domain-analysis-workspace.md`. |
 
 

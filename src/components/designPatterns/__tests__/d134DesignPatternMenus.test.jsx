@@ -7,6 +7,7 @@ import {
   designPatternPayload,
   DESIGN_PATTERN_MENU_GUIDANCE,
 } from "../DesignPatternBuilder.jsx";
+import { openDesignPatternStep } from "./openDesignPatternStep.js";
 
 const libraries = {
   workProducts: [{ id: "wp1", name: "Written explanation", type: "essay" }],
@@ -18,7 +19,8 @@ const libraries = {
 };
 
 describe("D134 design pattern menus", () => {
-  it("states that the menus are possibilities, not commitments", () => {
+  it("states that the menus are possibilities, not commitments", async () => {
+    const user = userEvent.setup({ delay: null });
     render(
       <DesignPatternLibraryView
         patterns={[]}
@@ -29,10 +31,13 @@ describe("D134 design pattern menus", () => {
         onDelete={vi.fn()}
       />
     );
+    await openDesignPatternStep(user, "Potential observations");
     expect(screen.getByText(DESIGN_PATTERN_MENU_GUIDANCE.framing)).toBeInTheDocument();
+    await openDesignPatternStep(user, "Work products & rubrics");
     expect(
       screen.getByText(DESIGN_PATTERN_MENU_GUIDANCE.potentialWorkProducts)
     ).toBeInTheDocument();
+    await openDesignPatternStep(user, "Characteristic & variable features");
     expect(
       screen.getByText(DESIGN_PATTERN_MENU_GUIDANCE.characteristicFeatures)
     ).toBeInTheDocument();
@@ -102,6 +107,7 @@ describe("D134 design pattern menus", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
+    await openDesignPatternStep(user, "Potential observations");
     await user.click(screen.getByRole("button", { name: "Add Potential Observations" }));
     await user.type(
       screen.getByLabelText("Potential Observations label 1"),
@@ -111,6 +117,7 @@ describe("D134 design pattern menus", () => {
       screen.getByLabelText("Potential Observations 1"),
       "obs-explain"
     );
+    await openDesignPatternStep(user, "Work products & rubrics");
     await user.click(screen.getByRole("button", { name: "Add Potential Work Products" }));
     await user.selectOptions(
       screen.getByLabelText("Potential Work Products 1"),
@@ -118,6 +125,7 @@ describe("D134 design pattern menus", () => {
     );
     await user.click(screen.getByRole("button", { name: "Add Potential Rubrics" }));
     await user.selectOptions(screen.getByLabelText("Potential Rubrics 1"), "rb1");
+    await openDesignPatternStep(user, "Characteristic & variable features");
     await user.click(
       screen.getByRole("button", { name: "Add Characteristic Features" })
     );
