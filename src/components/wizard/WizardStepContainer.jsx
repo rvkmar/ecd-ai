@@ -71,6 +71,9 @@ export default function WizardStepContainer({
     cancelLabel,
     stepTitle,
     showProgressPercent = false,
+    // Convention A still says "Save for Review". A caller with no
+    // reviewed status can pass "Save draft".
+    saveDraftLabel = "Save for Review",
     editable,
     children,
 }) {
@@ -334,7 +337,7 @@ export default function WizardStepContainer({
                                         "bg-emerald-600 hover:bg-emerald-700"
                                     )}
                                 >
-                                    {saving ? "Saving…" : "Save for Review"}
+                                    {saving ? "Saving…" : saveDraftLabel}
                                 </button>
                             )}
 

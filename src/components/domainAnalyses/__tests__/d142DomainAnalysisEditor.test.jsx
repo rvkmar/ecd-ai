@@ -60,6 +60,7 @@ describe("D142 Domain Analysis correction form", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Explaining a labelled scientific diagram/ }));
+    await user.click(screen.getByRole("tab", { name: "Valued knowledge" }));
     const knowledge = screen.getByRole("textbox", { name: "Valued knowledge" });
     expect(knowledge).toHaveValue("How parts and relations fit together");
 
@@ -117,6 +118,7 @@ describe("D142 Domain Analysis correction form", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Explaining a labelled scientific diagram/ }));
+    await user.click(screen.getByRole("tab", { name: "Curriculum" }));
     const copied = screen.getByRole("region", { name: "Copied curricular policy" });
     expect(copied).toHaveTextContent("Plant diagram curriculum");
     expect(copied).toHaveTextContent("Name the parts of a plant");
