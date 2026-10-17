@@ -87,6 +87,8 @@ describe("District and teacher RoleWorkbench (D73c)", () => {
     expect(screen.getByRole("tab", { name: "Sessions" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Evidence Accumulation (inspect)" })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Reports" }));
-    expect(screen.getByText("Reports dashboard")).toBeInTheDocument();
+    // React 19 resolves lazy() on a microtask after the tab click. The
+    // district case above already waits for the same Suspense boundary.
+    await waitFor(() => expect(screen.getByText("Reports dashboard")).toBeInTheDocument());
   });
 });
