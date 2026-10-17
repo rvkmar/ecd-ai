@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import WizardSidebar from "@/components/wizard/WizardSidebar";
@@ -76,13 +76,18 @@ export default function EvidenceWizard({ onCancel, onSaved, readOnly = false }) 
     return JSON.stringify(draftModel) !== lastSavedSnapshot;
   }, [draftModel, lastSavedSnapshot]);
 
-  const handleValidityChange = (isValid) => {
+  // Steps 3, 4, and 7 list this callback in their effect dependencies.
+  // A fresh array on every report re-renders the wizard, mints a new
+  // callback, and runs the effect again. React then stops the step
+  // with error 185. Keep the previous array when the flag is unchanged.
+  const handleValidityChange = useCallback((isValid) => {
     setStepValidity((prev) => {
+      if (prev[currentStepIndex] === isValid) return prev;
       const updated = [...prev];
       updated[currentStepIndex] = isValid;
       return updated;
     });
-  };
+  }, [currentStepIndex]);
 
   /* ==========================================================
      SAVE DRAFT
