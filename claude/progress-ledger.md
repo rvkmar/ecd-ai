@@ -581,10 +581,10 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | D67 | Live TAM LSAT7 CTT not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `cttPipeline.test.js` | this PR's CI | **closed** — live job green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`; observed KR-20 0.4542 recorded, not pinned) |
 
 | D68 | Live mid-flight ingest + second submit on `:6060` | HTTP switchover tests; player regression only | D71 | **open — standing risk** escalated at W26 close 2026-10-13 (carried past two block closes). Still no unstopped two-item live walk. |
-| D146 | Perspective readout not opened on `:6060` | Exit check was the inheritance test. The nginx image is behind `a8abc57` and the 16 October authoring screens | W30 close (D150) | **open** |
-| D147 | New advisory wording not opened on `:6060` | Exit check was the panel test and the audit test. The nginx image is behind `ea1dedf` | W30 close (D150) | **open** |
-| D148 | New decision-point lines not opened on `:6060` | Exit check was the selector test, the template test, and the Storybook component. The nginx image is behind `8fdf732` | W30 close (D150) | **open** |
-| D149 | Relationship control and overlap note not opened on `:6060` | Exit check was the schema test and the builder test. The nginx image is behind `bcfc71a` | W30 close (D150) | **open** |
+| D146 | Perspective readout not opened on `:6060` | Exit check was the inheritance test. The nginx image is behind `a8abc57` and the 16 October authoring screens | Next live admin walk after the frontend image is rebuilt | **open** — re-dated at D150. The image is behind `bcfc71a`, so the walk could not be discharged |
+| D147 | New advisory wording not opened on `:6060` | Exit check was the panel test and the audit test. The nginx image is behind `ea1dedf` | Next live admin walk after the frontend image is rebuilt | **open** — re-dated at D150. The image is behind `bcfc71a` |
+| D148 | New decision-point lines not opened on `:6060` | Exit check was the selector test, the template test, and the Storybook component. The nginx image is behind `8fdf732` | Next live admin walk after the frontend image is rebuilt | **open** — re-dated at D150. The image is behind `bcfc71a` |
+| D149 | Relationship control and overlap note not opened on `:6060` | Exit check was the schema test and the builder test. The nginx image is behind `bcfc71a` | Next live admin walk after the frontend image is rebuilt | **open** — re-dated at D150. The image was not rebuilt |
 
 | D69 | Live difR planted-item flags not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `difPipeline.test.js` | this PR's CI | **closed** — live job green (`difR 6.1.0`, unique ETS C on Item.5; first two live runs failed the unique-item rule, recorded in the handoff) |
 
