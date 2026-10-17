@@ -7,9 +7,11 @@ import {
   designPatternPayload,
   DESIGN_PATTERN_NARRATIVE_GUIDANCE,
 } from "../DesignPatternBuilder.jsx";
+import { openDesignPatternStep } from "./openDesignPatternStep.js";
 
 describe("D133 design pattern narrative", () => {
-  it("explains what each narrative attribute is for", () => {
+  it("explains what each narrative attribute is for", async () => {
+    const user = userEvent.setup({ delay: null });
     render(
       <DesignPatternLibraryView
         patterns={[]}
@@ -19,12 +21,23 @@ describe("D133 design pattern narrative", () => {
         onDelete={vi.fn()}
       />
     );
-    for (const text of Object.values(DESIGN_PATTERN_NARRATIVE_GUIDANCE)) {
-      expect(screen.getByText(text)).toBeInTheDocument();
+    const stepsForGuidance = [
+      ["Identity", ["title", "summary"]],
+      ["Rationale", ["rationale"]],
+      ["Focal KSAs", ["focalKsas"]],
+      ["Additional KSAs", ["additionalKsas"]],
+    ];
+    for (const [step, keys] of stepsForGuidance) {
+      if (step !== "Identity") await openDesignPatternStep(user, step);
+      for (const key of keys) {
+        expect(screen.getByText(DESIGN_PATTERN_NARRATIVE_GUIDANCE[key])).toBeInTheDocument();
+      }
     }
+    await openDesignPatternStep(user, "Identity");
     expect(screen.getByLabelText("Title")).toHaveAccessibleDescription(
       DESIGN_PATTERN_NARRATIVE_GUIDANCE.title
     );
+    await openDesignPatternStep(user, "Rationale");
     expect(screen.getByLabelText("Rationale")).toHaveAccessibleDescription(
       DESIGN_PATTERN_NARRATIVE_GUIDANCE.rationale
     );
@@ -127,12 +140,15 @@ describe("D133 design pattern narrative", () => {
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
     await user.type(screen.getByLabelText("Summary"), "Students explain a labelled diagram.");
+    await openDesignPatternStep(user, "Rationale");
     await user.type(
       screen.getByLabelText("Rationale"),
       "The pattern separates explanation from recognition."
     );
+    await openDesignPatternStep(user, "Focal KSAs");
     await user.click(screen.getByRole("button", { name: "Add Focal KSAs" }));
     await user.type(screen.getByLabelText("Focal KSAs 1"), "Model-based explanation");
+    await openDesignPatternStep(user, "Additional KSAs");
     await user.click(screen.getByRole("button", { name: "Add Additional KSAs" }));
     await user.type(screen.getByLabelText("Additional KSAs 1"), "Diagram conventions");
 

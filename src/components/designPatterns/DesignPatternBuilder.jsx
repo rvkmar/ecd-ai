@@ -3,12 +3,25 @@
 // D133–D134 / W27: narrative plus menus of possibilities.
 // D137: a confirmed pattern can seed draft Evidence and Task Models.
 // Confirming still authorises no student delivery (ADR 0009).
+//
+// Off-calendar (not D146): the authoring form is the shared wizard shell
+// (convention C). Payload, formFromRow, and readiness are unchanged.
+// Lifecycle stays draft | confirmed. Create draft / Save and Confirm live
+// in the toolbar slot. The shell promote pair stays hidden.
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
+import WizardSidebar from "@/components/wizard/WizardSidebar";
+import WizardStepContainer from "@/components/wizard/WizardStepContainer";
+import {
+  DESIGN_PATTERN_WIZARD_STEPS,
+  canNavigateDesignPatternRail,
+  designPatternBlockersCopy,
+  designPatternStepComplete,
+} from "./designPatternWizardContract.js";
 import { apiErrorMessage, apiFetch } from "@/api/apiClient";
 import { useAuth } from "@/auth/AuthProvider";
 import {
@@ -702,7 +715,9 @@ export function DesignPatternLibraryView({
   const [serverError, setServerError] = useState("");
   const [linkTemplateId, setLinkTemplateId] = useState("");
   const [descendantTick, setDescendantTick] = useState(0);
+  const [stepIndex, setStepIndex] = useState(0);
   const appliedFocus = useRef(null);
+  const steps = DESIGN_PATTERN_WIZARD_STEPS;
 
   useEffect(() => {
     if (!focusId || appliedFocus.current === focusId) return;
@@ -712,6 +727,7 @@ export function DesignPatternLibraryView({
     setEditingId(row.id);
     setForm(formFromRow(row));
     setServerError("");
+    setStepIndex(0);
   }, [focusId, patterns]);
 
   const editing = useMemo(
@@ -738,12 +754,19 @@ export function DesignPatternLibraryView({
     setEditingId(row.id);
     setForm(formFromRow(row));
     setServerError("");
+    setStepIndex(0);
   }
 
   function cancelEdit() {
     setEditingId(null);
     setForm(emptyForm());
     setServerError("");
+    setStepIndex(0);
+  }
+
+  function goToStep(index) {
+    if (!canNavigateDesignPatternRail(index, steps.length)) return;
+    setStepIndex(index);
   }
 
   async function handleSubmit(event) {
@@ -781,27 +804,27 @@ export function DesignPatternLibraryView({
   }
 
   const busy = createPending || updatePending || confirmPending;
+  const status = editing?.status || "draft";
+  const blockersCopy = designPatternBlockersCopy(confirmCheck.errors);
+  const workProductOptions = workProducts.map((row) => ({
+    id: row.id,
+    name: row.name || row.id,
+    type: row.type,
+  }));
+  const rubricOptions = rubrics.map((row) => ({
+    id: row.id,
+    name: row.name || row.id,
+  }));
+  const variableOptions = taskModelVariables.map((row) => ({
+    id: row.id,
+    name: row.name || row.id,
+  }));
 
-  return (
-    <div className="space-y-6 p-4">
-      <header>
-        <h2 className="text-lg font-semibold text-slate-900">Design Patterns</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Write the argument: title, summary, rationale, and the KSAs it
-          centres. A confirmed pattern may be referenced by later seeding.
-          It does not authorise a student session.
-        </p>
-        <p className="mt-2 text-sm text-slate-600">
-          {DESIGN_PATTERN_MENU_GUIDANCE.framing}
-        </p>
-      </header>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <h3 className="mb-3 text-sm font-medium text-slate-800">
-            {editingId ? `Edit ${editing?.name || editingId}` : "New design pattern"}
-          </h3>
-          <form className="space-y-3" onSubmit={handleSubmit}>
+  function renderStep() {
+    switch (steps[stepIndex].id) {
+      case "identity":
+        return (
+          <div className="space-y-3">
             <label className="block text-sm" htmlFor="dp-title">
               <span className="mb-1 block text-slate-700">Title</span>
             </label>
@@ -832,13 +855,20 @@ export function DesignPatternLibraryView({
               value={form.summary}
               onChange={(event) => patchForm({ summary: event.target.value })}
             />
+          </div>
+        );
+      case "rationale":
+        return (
+          <div className="space-y-3">
             <label className="block text-sm" htmlFor="dp-rationale">
               <span className="mb-1 block text-slate-700">Rationale</span>
             </label>
             <p id="dp-rationale-guidance" className={hintClass}>
               {DESIGN_PATTERN_NARRATIVE_GUIDANCE.rationale}
             </p>
-            {!form.rationale.trim() ? <FieldExample text={DESIGN_PATTERN_EXAMPLES.rationale} /> : null}
+            {!form.rationale.trim() ? (
+              <FieldExample text={DESIGN_PATTERN_EXAMPLES.rationale} />
+            ) : null}
             <textarea
               id="dp-rationale"
               className={inputClass}
@@ -847,42 +877,51 @@ export function DesignPatternLibraryView({
               value={form.rationale}
               onChange={(event) => patchForm({ rationale: event.target.value })}
             />
-            <LabelList
-              legend="Focal KSAs"
-              hint={DESIGN_PATTERN_NARRATIVE_GUIDANCE.focalKsas}
-              hintId="dp-focal-guidance"
-              example={DESIGN_PATTERN_EXAMPLES.focalKsas}
-              values={form.focalKsas}
-              onChange={(focalKsas) => patchForm({ focalKsas })}
-            />
-            <LabelList
-              legend="Additional KSAs"
-              hint={DESIGN_PATTERN_NARRATIVE_GUIDANCE.additionalKsas}
-              hintId="dp-additional-guidance"
-              example={DESIGN_PATTERN_EXAMPLES.additionalKsas}
-              values={form.additionalKsas}
-              onChange={(additionalKsas) => patchForm({ additionalKsas })}
-            />
+          </div>
+        );
+      case "focalKsas":
+        return (
+          <LabelList
+            legend="Focal KSAs"
+            hint={DESIGN_PATTERN_NARRATIVE_GUIDANCE.focalKsas}
+            hintId="dp-focal-guidance"
+            example={DESIGN_PATTERN_EXAMPLES.focalKsas}
+            values={form.focalKsas}
+            onChange={(focalKsas) => patchForm({ focalKsas })}
+          />
+        );
+      case "additionalKsas":
+        return (
+          <LabelList
+            legend="Additional KSAs"
+            hint={DESIGN_PATTERN_NARRATIVE_GUIDANCE.additionalKsas}
+            hintId="dp-additional-guidance"
+            example={DESIGN_PATTERN_EXAMPLES.additionalKsas}
+            values={form.additionalKsas}
+            onChange={(additionalKsas) => patchForm({ additionalKsas })}
+          />
+        );
+      case "observations":
+        return (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">{DESIGN_PATTERN_MENU_GUIDANCE.framing}</p>
             <ObservationList
               values={form.potentialObservations}
-              onChange={(potentialObservations) =>
-                patchForm({ potentialObservations })
-              }
+              onChange={(potentialObservations) => patchForm({ potentialObservations })}
               options={observationChoices}
             />
+          </div>
+        );
+      case "workProducts":
+        return (
+          <div className="space-y-6">
             <RefList
               legend="Potential Work Products"
               hint={DESIGN_PATTERN_MENU_GUIDANCE.potentialWorkProducts}
               hintId="dp-wp-guidance"
               values={form.potentialWorkProducts}
-              onChange={(potentialWorkProducts) =>
-                patchForm({ potentialWorkProducts })
-              }
-              options={workProducts.map((row) => ({
-                id: row.id,
-                name: row.name || row.id,
-                type: row.type,
-              }))}
+              onChange={(potentialWorkProducts) => patchForm({ potentialWorkProducts })}
+              options={workProductOptions}
               idKey="workProductId"
               emptyOption="Choose a work product"
               example={DESIGN_PATTERN_EXAMPLES.potentialWorkProducts}
@@ -893,23 +932,23 @@ export function DesignPatternLibraryView({
               hintId="dp-rubric-guidance"
               values={form.potentialRubrics}
               onChange={(potentialRubrics) => patchForm({ potentialRubrics })}
-              options={rubrics.map((row) => ({
-                id: row.id,
-                name: row.name || row.id,
-              }))}
+              options={rubricOptions}
               idKey="rubricId"
               emptyOption="Choose a rubric"
               example={DESIGN_PATTERN_EXAMPLES.potentialRubrics}
             />
+          </div>
+        );
+      case "features":
+        return (
+          <div className="space-y-6">
             <LabelList
               legend="Characteristic Features"
               hint={DESIGN_PATTERN_MENU_GUIDANCE.characteristicFeatures}
               hintId="dp-cf-guidance"
               example={DESIGN_PATTERN_EXAMPLES.characteristicFeatures}
               values={form.characteristicFeatures}
-              onChange={(characteristicFeatures) =>
-                patchForm({ characteristicFeatures })
-              }
+              onChange={(characteristicFeatures) => patchForm({ characteristicFeatures })}
             />
             <RefList
               legend="Variable Features"
@@ -917,21 +956,46 @@ export function DesignPatternLibraryView({
               hintId="dp-vf-guidance"
               values={form.variableFeatures}
               onChange={(variableFeatures) => patchForm({ variableFeatures })}
-              options={taskModelVariables.map((row) => ({
-                id: row.id,
-                name: row.name || row.id,
-              }))}
+              options={variableOptions}
               idKey="taskModelVariableId"
               emptyOption="Choose a task model variable"
               example={DESIGN_PATTERN_EXAMPLES.variableFeatures}
             />
-            <PatternRelations
-              patternId={editingId}
-              patterns={patterns}
-              relationships={form.relationships}
-              references={form.references}
-              onChange={patchForm}
-            />
+          </div>
+        );
+      case "relations":
+        return (
+          <PatternRelations
+            patternId={editingId}
+            patterns={patterns}
+            relationships={form.relationships}
+            references={form.references}
+            onChange={patchForm}
+          />
+        );
+      case "review":
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-slate-800">Review</h3>
+              <p className={hintClass}>
+                Confirming records the argument. It does not authorise a student session.
+              </p>
+              <dl className="mt-3 space-y-2 text-sm">
+                <div>
+                  <dt className="text-slate-500">Title</dt>
+                  <dd className="text-slate-900">{form.name.trim() || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">Summary</dt>
+                  <dd className="text-slate-900">{form.summary.trim() || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">Rationale</dt>
+                  <dd className="text-slate-900">{form.rationale.trim() || "—"}</dd>
+                </div>
+              </dl>
+            </div>
             {editingId ? (
               <PatternTemplateLinks
                 patternId={editingId}
@@ -940,13 +1004,17 @@ export function DesignPatternLibraryView({
                 onLinkTemplateId={setLinkTemplateId}
                 onLinkTemplate={onLinkTemplate}
               />
-            ) : null}
+            ) : (
+              <p className="text-sm text-slate-600">
+                Save a draft before linking a template or seeding models.
+              </p>
+            )}
             {editing?.status === "confirmed" && onSeed ? (
               <SeedFromPattern
                 pattern={editing}
                 competencies={competencies}
-                onSeed={async (payload) => {
-                  const seeded = await onSeed(payload);
+                onSeed={async (seedPayload) => {
+                  const seeded = await onSeed(seedPayload);
                   setDescendantTick((tick) => tick + 1);
                   return seeded;
                 }}
@@ -961,38 +1029,84 @@ export function DesignPatternLibraryView({
                 refreshKey={descendantTick}
               />
             ) : null}
+          </div>
+        );
+      default:
+        return null;
+    }
+  }
+
+  return (
+    <div className="space-y-6 p-4">
+      <header>
+        <h2 className="text-lg font-semibold text-slate-900">Design Patterns</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Write the argument: title, summary, rationale, and the KSAs it
+          centres. A confirmed pattern may be referenced by later seeding.
+          It does not authorise a student session.
+        </p>
+      </header>
+
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="flex min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <WizardSidebar
+            steps={steps}
+            currentStepIndex={stepIndex}
+            onStepClick={goToStep}
+            canNavigateTo={(index) => canNavigateDesignPatternRail(index, steps.length)}
+            isStepComplete={(railStep) =>
+              designPatternStepComplete(railStep.id, form, {
+                confirmReady: confirmCheck.ready,
+              })
+            }
+            locked={false}
+            status={status}
+            title="Design Pattern"
+            subtitle={editingId ? editing?.name || editingId : "New design pattern"}
+            brandInitial="D"
+            footerLabel="Design Pattern"
+          />
+          <WizardStepContainer
+            step={stepIndex + 1}
+            totalSteps={steps.length}
+            onNext={() => goToStep(stepIndex + 1)}
+            onBack={() => goToStep(stepIndex - 1)}
+            onCancel={cancelEdit}
+            canProceed
+            isLast={stepIndex === steps.length - 1}
+            locked={false}
+            status={status}
+            isDirty={false}
+            modelLabel="Design pattern"
+            hidePromoteActions
+            editable
+            stepTitle={steps[stepIndex].label}
+            showProgressPercent
+            blockersBanner={blockersCopy || null}
+            toolbarActions={
+              <div className="flex flex-wrap gap-2" data-testid="design-pattern-toolbar">
+                <Button type="button" disabled={busy || !draftCheck.ready} onClick={handleSubmit}>
+                  {editingId ? "Save" : "Create draft"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!editingId || busy || !confirmCheck.ready}
+                  onClick={handleConfirm}
+                >
+                  Confirm
+                </Button>
+              </div>
+            }
+          >
             {serverError ? (
-              <p className="text-sm text-red-600" role="alert">
+              <p className="mb-4 text-sm text-red-600" role="alert">
                 {serverError}
               </p>
             ) : null}
-            {!confirmCheck.ready ? (
-              <ul className="list-disc pl-5 text-sm text-slate-600">
-                {confirmCheck.errors.map((error) => (
-                  <li key={error}>{error}</li>
-                ))}
-              </ul>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={busy || !draftCheck.ready}>
-                {editingId ? "Save" : "Create draft"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!editingId || busy || !confirmCheck.ready}
-                onClick={handleConfirm}
-              >
-                Confirm
-              </Button>
-              {editingId ? (
-                <Button type="button" variant="outline" onClick={cancelEdit}>
-                  Cancel
-                </Button>
-              ) : null}
-            </div>
-          </form>
-        </section>
+            {renderStep()}
+          </WizardStepContainer>
+        </div>
 
         <section className="rounded-lg border border-slate-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-medium text-slate-800">Library</h3>

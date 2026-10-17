@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DesignPatternLibraryView } from "../DesignPatternBuilder.jsx";
+import { openDesignPatternStep } from "./openDesignPatternStep.js";
 
 const pattern = {
   id: "dp1",
@@ -37,6 +38,7 @@ describe("D137 seed control", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
+    await openDesignPatternStep(user, "Review & confirm");
     await user.selectOptions(screen.getByLabelText("Competency"), "c1");
     await user.click(screen.getByRole("checkbox", { name: "Names the claim" }));
     await user.click(screen.getByRole("button", { name: "Seed draft models" }));
@@ -68,6 +70,7 @@ describe("D137 seed control", () => {
       />
     );
     await user.click(screen.getByRole("button", { name: "Edit" }));
+    await openDesignPatternStep(user, "Review & confirm");
     expect(screen.queryByRole("button", { name: "Seed draft models" })).not.toBeInTheDocument();
   });
 });
