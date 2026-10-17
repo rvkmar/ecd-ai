@@ -15,7 +15,7 @@ import {
   studentForbiddenFromSession,
 } from "../../src/utils/sessionPlay.js";
 import { applyWizardTimingToSession } from "../../src/utils/sessionWizardTiming.js";
-import { identifyEvidence } from "../delivery/evidenceIdentification.js";
+import { identifyEvidence, rescoreStoredItemResponses } from "../delivery/evidenceIdentification.js";
 import {
   completeHumanEvaluation,
   pendingHumanRatingsFromSession,
@@ -291,6 +291,15 @@ router.get("/rating-queue", staffRater, (req, res) => {
 // ------------------------------
 // GET /api/sessions/:id
 // ------------------------------
+// Re-apply identification to stored responses that were saved unscored.
+// Admin only. Does not accept new answers.
+router.post("/rescore-responses", authorizeRole(["admin"]), (req, res) => {
+  const db = loadDB();
+  const updated = rescoreStoredItemResponses(db);
+  if (updated > 0) saveDB(db);
+  res.json({ updated });
+});
+
 router.get("/:id", (req, res) => {
   // Belt-and-suspenders: if /mine (or /active, /archived) is not registered
   // — native ESM miss, stale process — do not treat the collection name as

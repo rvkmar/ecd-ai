@@ -62,6 +62,57 @@ import { applyPhaseGate } from "./evaluationPhases.js";
  * auto activatingPatterns); re-exported here only via the import above.
  */
 
+function componentSets(item) {
+  const components = item?.interaction?.responseComponents;
+  if (!Array.isArray(components) || components.length === 0) return null;
+  const correct = [];
+  const incorrect = [];
+  for (const component of components) {
+    if (!component || component.id == null || component.id === "") continue;
+    if (component.isCorrect === true) correct.push(component.id);
+    else incorrect.push(component.id);
+  }
+  if (correct.length === 0) return null;
+  return { correct, incorrect };
+}
+
+function selectedIds(workProduct) {
+  if (!workProduct || typeof workProduct !== "object" || Array.isArray(workProduct)) return [];
+  const selected = workProduct.selected;
+  if (selected == null || selected === "") return [];
+  return Array.isArray(selected) ? selected : [selected];
+}
+
+/**
+ * The item wizard stores a dichotomous rule as `{ equalsCorrect: true }`.
+ * A delivered work product is `{ selected: optionId }` and never carries
+ * `equalsCorrect`. Resolve the abstract flag against the item's own
+ * option keys before matching, so the client is not asked to assert
+ * correctness.
+ */
+function patternResolvingEqualsCorrect(pattern, sets) {
+  if (!pattern || typeof pattern !== "object" || Array.isArray(pattern)) return pattern;
+  if (typeof pattern.equalsCorrect !== "boolean" || !sets) return pattern;
+  const ids = pattern.equalsCorrect ? sets.correct : sets.incorrect;
+  if (ids.length === 0) return pattern;
+  const rest = { ...pattern };
+  delete rest.equalsCorrect;
+  return { ...rest, selected: ids.length === 1 ? ids[0] : ids };
+}
+
+function dichotomousMiss(activationMap, sets, workProduct) {
+  if (!sets) return false;
+  const usesEqualsCorrect = activationMap.some(
+    (row) => typeof row?.responsePattern?.equalsCorrect === "boolean"
+  );
+  if (!usesEqualsCorrect) return false;
+  const chosen = selectedIds(workProduct);
+  if (chosen.length === 0) return false;
+  const known = new Set([...sets.correct, ...sets.incorrect]);
+  if (!chosen.every((id) => known.has(id))) return false;
+  return chosen.every((id) => !sets.correct.includes(id));
+}
+
 function emptyIdentification(observationId, extras = {}) {
   return {
     observationId,
@@ -136,14 +187,28 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
   const evidenceRule = entry.evidenceRule || null;
   const evaluationProcedure = entry.evaluationProcedure || null;
   const activationMap = entry.scoring?.evidenceActivationMap || [];
+  const optionSets = componentSets(item);
+  const resolvedMap = activationMap.map((row) => ({
+    ...row,
+    responsePattern: patternResolvingEqualsCorrect(row.responsePattern, optionSets),
+  }));
 
   // Prefer item activation map. Only when the map is empty, fall back to
   // the baked evaluationProcedure artifact (EM-R1: key | rubric | auto |
   // process_log). A non-empty map that fails to match stays a "no pattern"
   // warning — do not reinterpret it as artifact-based non-activation.
-  let matchedEntry = activationMap.find((entryRow) =>
+  // A resolved equalsCorrect rule is the exception: a known distractor is
+  // a scored non-activation, not an unscored miss.
+  let matchedEntry = resolvedMap.find((entryRow) =>
     matchesResponsePattern(entryRow.responsePattern, workProduct)
   );
+
+  if (!matchedEntry && dichotomousMiss(activationMap, optionSets, workProduct)) {
+    matchedEntry = {
+      activatesObservable: false,
+      rationale: "The selected response is not the keyed option.",
+    };
+  }
 
   if (!matchedEntry && activationMap.length === 0 && evaluationProcedure?.artifact) {
     const artifactResult = applyEvaluationArtifact(evaluationProcedure, workProduct);
@@ -238,4 +303,45 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
     },
     evaluationProcedure
   );
+}
+
+/**
+ * Re-identify stored item responses whose activated flag is still null.
+ * Completed sessions keep the raw option id; this applies the current
+ * identification rules without asking the examinee to submit again.
+ * Responses that still do not resolve are left unchanged.
+ *
+ * @returns {number} responses updated
+ */
+export function rescoreStoredItemResponses(db) {
+  if (!db || !Array.isArray(db.sessions)) return 0;
+  let updated = 0;
+  for (const session of db.sessions) {
+    for (const response of session?.responses || []) {
+      if (!response?.itemId) continue;
+      if (response.activated === true || response.activated === false) continue;
+      const item = (db.items || []).find((row) => row.id === response.itemId);
+      if (!item) continue;
+      const raw = response.rawAnswer;
+      const workProduct =
+        raw && typeof raw === "object" && !Array.isArray(raw) ? raw : { selected: raw };
+      let evidence;
+      try {
+        evidence = identifyEvidence(workProduct, item, db, {
+          taskModelId: item.taskModelId,
+        });
+      } catch {
+        continue;
+      }
+      if (!evidence || evidence.refused || typeof evidence.activated !== "boolean") continue;
+      response.activated = evidence.activated;
+      response.direction = evidence.direction ?? response.direction ?? null;
+      response.strength = evidence.strength ?? null;
+      response.rationale = evidence.rationale ?? null;
+      if (evidence.warning) response.warning = evidence.warning;
+      else delete response.warning;
+      updated += 1;
+    }
+  }
+  return updated;
 }

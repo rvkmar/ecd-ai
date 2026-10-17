@@ -8,7 +8,7 @@
 // against that sample data.
 
 import { describe, it, expect } from "vitest";
-import { identifyEvidence } from "../evidenceIdentification.js";
+import { identifyEvidence, rescoreStoredItemResponses } from "../evidenceIdentification.js";
 import { seedActivePackages } from "../../test/seedActivePackage.js";
 
 const evidenceModel = {
@@ -414,5 +414,67 @@ describe("identifyEvidence — strength resolution when nothing declares a stren
     expect(result.activated).toBe(true);
     expect(result.strength).toBeNull();
     expect(Number.isNaN(result.strength)).toBe(false);
+  });
+});
+
+describe("identifyEvidence — equalsCorrect resolves against the item key", () => {
+  const keyedItem = {
+    ...equivalentFractionsItem,
+    id: "item-keyed-part",
+    interaction: {
+      type: "mcq",
+      responseComponents: [
+        { id: "opt_root", isCorrect: true, label: "Root" },
+        { id: "opt_leaf", isCorrect: false, label: "Leaf" },
+      ],
+    },
+    scoring: {
+      method: "dichotomous",
+      evidenceActivationMap: [
+        {
+          responsePattern: { equalsCorrect: true },
+          activatesObservable: true,
+          rationale: "Keyed option.",
+        },
+      ],
+    },
+  };
+
+  it("activates when the selected option is the keyed one", () => {
+    const result = identify({ selected: "opt_root" }, keyedItem);
+    expect(result.activated).toBe(true);
+    expect(result.rationale).toBe("Keyed option.");
+    expect(result.warning).toBeUndefined();
+  });
+
+  it("records a scored non-activation for a known distractor", () => {
+    const result = identify({ selected: "opt_leaf" }, keyedItem);
+    expect(result.activated).toBe(false);
+    expect(result.warning).toBeUndefined();
+  });
+
+  it("leaves an unknown option unscored", () => {
+    const result = identify({ selected: "opt_missing" }, keyedItem);
+    expect(result.activated).toBeNull();
+    expect(result.warning).toMatch(/did not match/);
+  });
+
+  it("rescores a stored null activation from the raw option id", () => {
+    const db = makeDb({ items: [keyedItem] });
+    db.sessions = [
+      {
+        id: "s1",
+        responses: [
+          { itemId: keyedItem.id, rawAnswer: "opt_root", activated: null, warning: "unscored" },
+          { itemId: keyedItem.id, rawAnswer: "opt_leaf", activated: null },
+          { itemId: keyedItem.id, rawAnswer: "opt_root", activated: true },
+        ],
+      },
+    ];
+    expect(rescoreStoredItemResponses(db)).toBe(2);
+    expect(db.sessions[0].responses[0].activated).toBe(true);
+    expect(db.sessions[0].responses[0].warning).toBeUndefined();
+    expect(db.sessions[0].responses[1].activated).toBe(false);
+    expect(db.sessions[0].responses[2].activated).toBe(true);
   });
 });

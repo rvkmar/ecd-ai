@@ -3,7 +3,6 @@ import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB } from "../../src/utils/db-server.js";
-import { dbAdapter } from "../utils/dbAdapter.js";
 import { sessionMeasurementReport } from "../delivery/sessionReportMeasurement.js";
 import { studentForbiddenFromSession } from "../../src/utils/sessionPlay.js";
 import { assertCallerMayAccessDistrict } from "../utils/tenancyScope.js";
@@ -932,16 +931,38 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, (req, res) =>
 // GET /api/reports/dashboard
 // D99: aggregates ONLY over JWT-scoped sessions/students (never query-role).
 // ------------------------------
+function percentFromMean(mean) {
+  if (!Number.isFinite(mean)) return 0;
+  return mean <= 1 ? Math.round(mean * 100) : Math.round(mean);
+}
+
+function responseScore(response) {
+  if (!response || typeof response !== "object") return null;
+  if (typeof response.scoredValue === "number" && Number.isFinite(response.scoredValue)) {
+    return response.scoredValue;
+  }
+  if (response.scoredValue != null && response.scoredValue !== "") {
+    const parsed = parseFloat(response.scoredValue);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  if (response.activated === true) return 1;
+  if (response.activated === false) return 0;
+  return null;
+}
+
 router.get("/dashboard", async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     const role = req.user?.role || "student";
 
-    const [sessions, tasks, students] = await Promise.all([
-      dbAdapter.list("sessions"),
-      dbAdapter.list("tasks"),
-      dbAdapter.list("students"),
-    ]);
+    // Same store as the session and class-report routes. dbAdapter follows
+    // DB_MODE, which on the live server is mongo, while delivery writes
+    // the JSON file. Reading mongo here showed an empty dashboard beside
+    // sessions that had just been completed.
+    const db = loadDB();
+    const sessions = db.sessions || [];
+    const tasks = db.tasks || [];
+    const students = db.students || [];
 
     // Scope from JWT claims only (ignore query districtId/teacherId spoofing).
     let scopedStudents = [...students];
@@ -991,12 +1012,8 @@ router.get("/dashboard", async (req, res) => {
     const avgScore =
       filteredSessions.reduce((sum, s) => {
         const vals = (s.responses || [])
-          .map((r) =>
-            typeof r.scoredValue === "number"
-              ? r.scoredValue
-              : parseFloat(r.scoredValue)
-          )
-          .filter((v) => !isNaN(v));
+          .map(responseScore)
+          .filter((v) => v != null);
         return (
           sum +
           (vals.length > 0
@@ -1016,8 +1033,8 @@ router.get("/dashboard", async (req, res) => {
         totalSessions > 0 && totalSessions < MIN_CELL_SIZE ? null : totalSessions,
       sessionsSuppressed:
         totalSessions > 0 && totalSessions < MIN_CELL_SIZE,
-      averageScore: Math.round(avgScore),
-      masteryRate: `${Math.round(avgScore)}%`,
+      averageScore: percentFromMean(avgScore),
+      masteryRate: `${percentFromMean(avgScore)}%`,
       activeStudents,
       activeStudentsSuppressed:
         activeStudentsRaw > 0 && activeStudentsRaw < MIN_CELL_SIZE,
@@ -1031,7 +1048,7 @@ router.get("/dashboard", async (req, res) => {
         .toISOString()
         .slice(0, 10);
       if (!byDate[d]) byDate[d] = [];
-      const vals = (s.responses || []).map((r) => Number(r.scoredValue) || 0);
+      const vals = (s.responses || []).map(responseScore).filter((v) => v != null);
       if (vals.length > 0)
         byDate[d].push(vals.reduce((a, b) => a + b, 0) / vals.length);
     }
@@ -1039,7 +1056,7 @@ router.get("/dashboard", async (req, res) => {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, vals]) => ({
         date,
-        average: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length),
+        average: percentFromMean(vals.reduce((a, b) => a + b, 0) / vals.length),
         n:
           vals.length > 0 && vals.length < MIN_CELL_SIZE ? null : vals.length,
       }));
@@ -1047,16 +1064,18 @@ router.get("/dashboard", async (req, res) => {
     const masteryMap = {};
     for (const s of filteredSessions) {
       for (const r of s.responses || []) {
-        if (!r.evidenceId) continue;
-        masteryMap[r.evidenceId] = masteryMap[r.evidenceId] || [];
-        masteryMap[r.evidenceId].push(Number(r.scoredValue) || 0);
+        const key = r.evidenceId || r.evidenceModelId;
+        const score = responseScore(r);
+        if (!key || score == null) continue;
+        masteryMap[key] = masteryMap[key] || [];
+        masteryMap[key].push(score);
       }
     }
     const mastery = Object.entries(masteryMap)
       .filter(([, vals]) => vals.length === 0 || vals.length >= MIN_CELL_SIZE)
       .map(([competency, vals]) => ({
         competency,
-        score: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length),
+        score: percentFromMean(vals.reduce((a, b) => a + b, 0) / vals.length),
         n: vals.length,
       }));
 
@@ -1084,13 +1103,11 @@ router.get("/dashboard", async (req, res) => {
     const table = filteredSessions.slice(-10).map((s) => ({
       // D99: no raw session id as "name" for non-admin small lists.
       name: role === "admin" ? s.id : "session",
-      score: Math.round(
-        ((s.responses || [])
-          .map((r) => Number(r.scoredValue) || 0)
-          .reduce((a, b) => a + b, 0) /
-          ((s.responses || []).length || 1)) ||
-          0
-      ),
+      score: (() => {
+        const vals = (s.responses || []).map(responseScore).filter((v) => v != null);
+        if (vals.length === 0) return 0;
+        return percentFromMean(vals.reduce((a, b) => a + b, 0) / vals.length);
+      })(),
       tasks: s.taskIds?.length || 0,
       date: s.finishedAt
         ? new Date(s.finishedAt).toISOString().slice(0, 10)
