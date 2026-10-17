@@ -40,6 +40,7 @@ const WRITE_KEYS = [
   "variableFeatures",
   "relationships",
   "references",
+  "domainAnalysisId",
   "status",
 ];
 

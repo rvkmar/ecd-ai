@@ -161,6 +161,7 @@ describe("D134 design pattern menus", () => {
         ],
         relationships: [],
         references: [],
+        domainAnalysisId: "",
       },
     });
     expect(onConfirm).toHaveBeenCalledWith("dp1");

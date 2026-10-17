@@ -25,7 +25,9 @@ import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { AlertTriangle, ChevronDown, ChevronUp, Star } from "lucide-react";
 import { isLinkableEvidenceModel } from "@/utils/schema";
-import { useCompetencies } from "@/api/queries/competencies";
+import { useCompetencies, useCompetencyModels } from "@/api/queries/competencies";
+import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import { perspectiveReadout, readEvidencePerspective } from "@/utils/perspectiveInheritance";
 
 const STATUS_TONE = {
     confirmed: "bg-blue-100 text-blue-700",
@@ -44,6 +46,8 @@ export default function Step2EvidenceBinding({
     // Read-only construct labels. The competency is displayed, never
     // selected -- it belongs to the Evidence Model.
     const { data: competencies = [] } = useCompetencies();
+    const { data: competencyModels = [] } = useCompetencyModels();
+    const { data: domainAnalyses = [] } = useDomainAnalyses();
 
     const competencyById = useMemo(() => {
         const map = {};
@@ -204,6 +208,14 @@ export default function Step2EvidenceBinding({
 
                                         <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-xs text-slate-500 sm:grid-cols-2 lg:grid-cols-3">
                                             <Field label="Competency" value={competency?.name || em.competencyId || "—"} />
+                                            <Field
+                                                label="Perspective"
+                                                value={perspectiveReadout(readEvidencePerspective(em, {
+                                                    competencies,
+                                                    competencyModels,
+                                                    domainAnalyses,
+                                                })) || "—"}
+                                            />
                                             <Field label="Version" value={`v${em.versionNumber ?? 1}`} />
                                             <Field label="Statistical model" value={activeStatModel?.type || "None active"} />
                                             <Field label="Observables" value={observables.length} />

@@ -922,6 +922,9 @@ export const schema = {
       label: 'string',
       url: 'string',
     }],
+    // D146. A citation. The perspective is read from that Domain Analysis.
+    // This record does not store psychologicalPerspective.
+    domainAnalysisId: 'string',
     status: 'string',
     districtId: 'string',
     schoolId: 'string',
@@ -6442,13 +6445,21 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
     errors.push(...designPatternMenuErrors(obj, db));
     errors.push(...designPatternRelationErrors(obj, db));
+    if (obj.domainAnalysisId != null && obj.domainAnalysisId !== "") {
+      if (typeof obj.domainAnalysisId !== "string") {
+        errors.push("domainAnalysisId should be string");
+      } else if (db && !(db.domainAnalyses || []).some((row) => row.id === obj.domainAnalysisId)) {
+        errors.push(`Invalid domainAnalysisId: ${obj.domainAnalysisId}`);
+      }
+    }
   }
 
   /* =====================================================
      DOMAIN ANALYSES — D141, W29 G10, ADR 0010
      Seven Layer-1 sections as labels. draft | confirmed.
      Confirmed authorises no student delivery. The perspective
-     is declared here and is not copied onto a Competency Model.
+     is declared here. A Student Model may store an override until
+     rebuild. Evidence, Task, and Design Pattern read this field.
   ===================================================== */
 
   if (collection === "domainAnalyses") {

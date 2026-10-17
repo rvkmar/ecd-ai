@@ -10,6 +10,8 @@
 // ✔ Pure structural alignment with schema
 
 import { useEffect, useMemo, useState } from "react";
+import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import { perspectiveReadout, readStudentPerspective } from "@/utils/perspectiveInheritance";
 import { useEvidenceWizardContext } from "../EvidenceWizardContext";
 import CompetencyStructuralPanel from "../components/CompetencyStructuralPanel";
 import {
@@ -39,6 +41,10 @@ export default function Step1ClaimIdentity({ onValidityChange, locked }) {
         selectedCompetencyModel,
         selectedModelMeta
     } = useEvidenceWizardContext();
+    const { data: domainAnalyses = [] } = useDomainAnalyses();
+    const perspective = perspectiveReadout(
+        readStudentPerspective(selectedCompetencyModel, domainAnalyses)
+    );
 
     const [errors, setErrors] = useState({});
 
@@ -265,6 +271,9 @@ export default function Step1ClaimIdentity({ onValidityChange, locked }) {
                             {errors.competencyId}
                         </p>
                     )}
+                    {perspective ? (
+                        <p className="mt-1.5 text-xs text-slate-600">Perspective: {perspective}</p>
+                    ) : null}
                 </div>
             </div>
 

@@ -107,6 +107,7 @@ describe("D133 design pattern narrative", () => {
       variableFeatures: [],
       relationships: [],
       references: [],
+      domainAnalysisId: "",
     });
     expect(onConfirm).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
@@ -171,6 +172,7 @@ describe("D133 design pattern narrative", () => {
         variableFeatures: [],
         relationships: [],
         references: [],
+        domainAnalysisId: "",
       },
     });
     expect(onConfirm).toHaveBeenCalledWith("dp1");

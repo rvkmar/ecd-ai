@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { validateEntity } from "../schema.js";
+import { schema, validateEntity } from "../schema.js";
 import {
   applyDomainAnalysisChoice,
+  perspectiveReadout,
+  readDesignPatternPerspective,
+  readEvidencePerspective,
+  readStudentPerspective,
+  readTaskPerspective,
   rebuildPerspective,
 } from "../perspectiveInheritance.js";
 
@@ -65,5 +70,65 @@ describe("D146 perspective inheritance", () => {
     expect(rebuildPerspective(kept, [analysis]).psychologicalPerspective).toBe(
       "information_processing"
     );
+  });
+
+  it("names a stored Student Model perspective as an override until rebuild", () => {
+    const reading = readStudentPerspective(
+      model({ domainAnalysisId: "da1" }),
+      [analysis]
+    );
+    expect(reading.override).toBe(true);
+    expect(reading.declared).toBe("information_processing");
+    expect(reading.stored).toBe("trait");
+    expect(perspectiveReadout(reading)).toMatch(/Stored on the Student Model/);
+
+    const rebuilt = rebuildPerspective(model({ domainAnalysisId: "da1" }), [analysis]);
+    expect(readStudentPerspective(rebuilt, [analysis]).override).toBe(false);
+    expect(readStudentPerspective(rebuilt, [analysis]).effective).toBe("information_processing");
+  });
+
+  it("reads the same perspective through an Evidence Model and a Task Model", () => {
+    const db = {
+      domainAnalyses: [analysis],
+      competencyModels: [model({ domainAnalysisId: "da1", psychologicalPerspective: "information_processing" })],
+      competencies: [{ id: "comp1", modelId: "cm1" }],
+      evidenceModels: [{ id: "em1", competencyId: "comp1" }],
+    };
+    expect(readEvidencePerspective(db.evidenceModels[0], db).effective).toBe("information_processing");
+    expect(readTaskPerspective({ primaryEvidenceModelId: "em1" }, db).effective).toBe(
+      "information_processing"
+    );
+    expect(readEvidencePerspective(db.evidenceModels[0], {
+      ...db,
+      competencyModels: [model({ domainAnalysisId: "da1" })],
+    }).override).toBe(true);
+  });
+
+  it("reads a Design Pattern from the cited analysis and stores no perspective of its own", () => {
+    const pattern = { id: "dp1", name: "Name a part", domainAnalysisId: "da1", psychologicalPerspective: "trait" };
+    const reading = readDesignPatternPerspective(pattern, [analysis]);
+    expect(reading.effective).toBe("information_processing");
+    expect(reading.stored).toBe("");
+    expect(reading.override).toBe(false);
+
+    const { errors } = validateEntity("designPatterns", {
+      id: "dp1",
+      name: "Name a part",
+      status: "draft",
+      domainAnalysisId: "missing",
+    }, { domainAnalyses: [analysis] });
+    expect((errors || []).join(" ")).toMatch(/Invalid domainAnalysisId: missing/);
+
+    const cited = validateEntity("designPatterns", {
+      id: "dp1",
+      name: "Name a part",
+      summary: "The student names a plant part.",
+      rationale: "Naming the part is the claim this pattern centres.",
+      status: "draft",
+      domainAnalysisId: "da1",
+    }, { domainAnalyses: [analysis] }, { strict: false });
+    expect(cited.errors || []).toEqual([]);
+    expect(schema.designPatterns).not.toHaveProperty("psychologicalPerspective");
+    expect(schema.designPatterns.domainAnalysisId).toBe("string");
   });
 });

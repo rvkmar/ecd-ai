@@ -24,6 +24,11 @@ import {
 } from "./designPatternWizardContract.js";
 import { apiErrorMessage, apiFetch } from "@/api/apiClient";
 import { useAuth } from "@/auth/AuthProvider";
+import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import {
+  readDesignPatternPerspective,
+  perspectiveReadout,
+} from "@/utils/perspectiveInheritance";
 import {
   useDesignPatterns,
   useCreateDesignPattern,
@@ -169,6 +174,7 @@ const emptyForm = () => ({
   variableFeatures: [],
   relationships: [],
   references: [],
+  domainAnalysisId: "",
 });
 
 function formFromRow(row) {
@@ -208,11 +214,12 @@ function formFromRow(row) {
       label: entry.label || "",
       url: entry.url || "",
     })),
+    domainAnalysisId: row.domainAnalysisId || "",
   };
 }
 
 export function designPatternPayload(form) {
-  return {
+  const payload = {
     name: form.name.trim(),
     summary: form.summary.trim(),
     rationale: form.rationale.trim(),
@@ -236,6 +243,10 @@ export function designPatternPayload(form) {
       }))
       .filter((entry) => entry.label),
   };
+  if (Object.prototype.hasOwnProperty.call(form, "domainAnalysisId")) {
+    payload.domainAnalysisId = String(form.domainAnalysisId || "").trim();
+  }
+  return payload;
 }
 
 function PatternRelations({ patternId, patterns, relationships, references, onChange }) {
@@ -689,6 +700,7 @@ function PatternDescendantReport({ patternId, report, onLoad, refreshKey = 0 }) 
 
 export function DesignPatternLibraryView({
   patterns = [],
+  domainAnalyses = [],
   templates = [],
   workProducts = [],
   rubrics = [],
@@ -840,6 +852,26 @@ export function DesignPatternLibraryView({
               onChange={(event) => patchForm({ name: event.target.value })}
               required
             />
+            <label className="block text-sm" htmlFor="dp-domain-analysis">
+              <span className="mb-1 block text-slate-700">Domain Analysis</span>
+              <select
+                id="dp-domain-analysis"
+                className={inputClass}
+                value={form.domainAnalysisId || ""}
+                onChange={(event) => patchForm({ domainAnalysisId: event.target.value })}
+              >
+                <option value="">No Domain Analysis cited</option>
+                {domainAnalyses.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="text-xs text-slate-600">
+              {perspectiveReadout(readDesignPatternPerspective(form, domainAnalyses)) ||
+                "The psychological perspective is read from the Domain Analysis. This pattern does not store one."}
+            </p>
             <label className="block text-sm" htmlFor="dp-summary">
               <span className="mb-1 block text-slate-700">Summary</span>
             </label>
@@ -1263,6 +1295,7 @@ export default function DesignPatternBuilder() {
   const [searchParams] = useSearchParams();
   const focusId = searchParams.get("focus");
   const { data: patterns = [], isLoading, error } = useDesignPatterns();
+  const { data: domainAnalyses = [] } = useDomainAnalyses();
   const { data: templates = [] } = useTemplates();
   const { data: competencies = [] } = useCompetencies();
   const seedMut = useSeedDesignPattern();
@@ -1294,6 +1327,7 @@ export default function DesignPatternBuilder() {
   return (
     <DesignPatternLibraryView
       patterns={patterns}
+      domainAnalyses={domainAnalyses}
       templates={templates}
       competencies={competencies}
       seedPending={seedMut.isPending}
