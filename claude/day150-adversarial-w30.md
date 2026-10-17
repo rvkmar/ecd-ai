@@ -70,4 +70,4 @@ D146, D147, D148, and D149 were opened on `:6060`. The trait/DINA advisory is on
 
 ## Next
 
-The P1 delete is the open provenance hole. D151 was not started. W29 stays open. The W30 advisory was read on the DINA panel. **Part naming evidence** is operational as Rasch 1PL. Task model version 2 (`tm1792249385692001`) is operational. Assembly model **Plant part naming assembly** (`am1792249848051000`) is confirmed. Version 1 of the task model stays confirmed. The block is not closed, because W29 is a separate gate.
+The P1 delete is the open provenance hole. D151 was not started. W29 stays open. The W30 advisory was read on the DINA panel. **Part naming evidence** is operational as Rasch 1PL. Task model version 2 (`tm1792249385692001`) is operational. Assembly model **Plant part naming assembly** (`am1792249848051000`) is confirmed. Version 1 of the task model stays confirmed. W30's restated gate holds. W29 is a separate gate and stays open. Close record: `claude/day150-w30-session-close.md`.
