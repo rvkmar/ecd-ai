@@ -152,6 +152,11 @@ describe("D133 design pattern narrative", () => {
     await openDesignPatternStep(user, "Additional KSAs");
     await user.click(screen.getByRole("button", { name: "Add Additional KSAs" }));
     await user.type(screen.getByLabelText("Additional KSAs 1"), "Diagram conventions");
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
+    await user.selectOptions(
+      screen.getByLabelText("Additional KSAs 1 relationship"),
+      "required_but_not_measured"
+    );
 
     const confirm = screen.getByRole("button", { name: "Confirm" });
     expect(confirm).toBeEnabled();
@@ -164,7 +169,9 @@ describe("D133 design pattern narrative", () => {
         summary: "Students explain a labelled diagram.",
         rationale: "The pattern separates explanation from recognition.",
         focalKsas: [{ label: "Model-based explanation" }],
-        additionalKsas: [{ label: "Diagram conventions" }],
+        additionalKsas: [
+          { label: "Diagram conventions", relationship: "required_but_not_measured" },
+        ],
         potentialObservations: [],
         potentialWorkProducts: [],
         potentialRubrics: [],

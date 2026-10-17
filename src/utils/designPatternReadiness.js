@@ -64,7 +64,7 @@ export function designPatternReadiness(record = {}, options = {}) {
     }
   }
 
-  errors.push(...designPatternMenuErrors(record, null));
+  errors.push(...designPatternMenuErrors(record, null, { claimComplete }));
   errors.push(...designPatternRelationErrors(record, null));
 
   return { ready: errors.length === 0, errors };

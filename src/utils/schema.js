@@ -61,6 +61,7 @@ import {
   taskModelVariableValueIds,
   WORK_PRODUCT_TYPE_VALUES,
 } from "./ecdVocabulary.js";
+import { ADDITIONAL_KSA_RELATIONSHIP_VALUES } from "./additionalKsaAdvisory.js";
 import {
   designFeatureContextFromTaskModel,
   isDesignFeatureValueAllowed,
@@ -1364,7 +1365,6 @@ const DESIGN_PATTERN_MENU_KEYS = DESIGN_PATTERN_PADI_ATTRIBUTES
 
 const DESIGN_PATTERN_LABEL_ONLY_MENUS = Object.freeze([
   "focalKsas",
-  "additionalKsas",
   "characteristicFeatures",
 ]);
 
@@ -1398,7 +1398,7 @@ function knownObservationIds(db) {
  * Empty menus are allowed. A non-array is already caught by the generic
  * shape check.
  */
-export function designPatternMenuErrors(obj = {}, db = null) {
+export function designPatternMenuErrors(obj = {}, db = null, { claimComplete = false } = {}) {
   const errors = [];
   const observationIds = db ? knownObservationIds(db) : null;
 
@@ -1413,6 +1413,21 @@ export function designPatternMenuErrors(obj = {}, db = null) {
       }
       if (entry.label == null || String(entry.label).trim() === "") {
         errors.push(`${key}[${i}].label is required.`);
+      }
+
+      if (key === "additionalKsas") {
+        const relationship = String(entry.relationship || "").trim();
+        const named = String(entry.label || "").trim() !== "";
+        if (relationship && !ADDITIONAL_KSA_RELATIONSHIP_VALUES.includes(relationship)) {
+          errors.push(
+            `${key}[${i}].relationship '${relationship}' is not a known relationship.`
+          );
+        } else if (claimComplete && named && !relationship) {
+          errors.push(
+            `${key}[${i}].relationship is required to confirm. Use required_but_not_measured or potentially_confounding.`
+          );
+        }
+        return;
       }
 
       if (DESIGN_PATTERN_LABEL_ONLY_MENUS.includes(key)) return;
@@ -6443,7 +6458,7 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       }
     }
 
-    errors.push(...designPatternMenuErrors(obj, db));
+    errors.push(...designPatternMenuErrors(obj, db, { claimComplete }));
     errors.push(...designPatternRelationErrors(obj, db));
     if (obj.domainAnalysisId != null && obj.domainAnalysisId !== "") {
       if (typeof obj.domainAnalysisId !== "string") {

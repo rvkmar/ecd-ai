@@ -12,6 +12,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import {
+  ADDITIONAL_KSA_RELATIONSHIPS,
+  additionalKsaFocalOverlap,
+} from "@/utils/additionalKsaAdvisory";
 
 import { Button } from "@/components/ui/button";
 import WizardSidebar from "@/components/wizard/WizardSidebar";
@@ -136,6 +140,19 @@ function labelledEntries(entries) {
     .filter((entry) => entry.label);
 }
 
+function additionalKsaEntries(entries) {
+  return (entries || [])
+    .map((entry) => {
+      const label = String(entry?.label || "").trim();
+      const relationship = String(entry?.relationship || "").trim();
+      if (!label && !relationship) return null;
+      const row = { label };
+      if (relationship) row.relationship = relationship;
+      return row;
+    })
+    .filter(Boolean);
+}
+
 function observationEntries(entries) {
   return (entries || [])
     .map((entry) => {
@@ -185,6 +202,7 @@ function formFromRow(row) {
     focalKsas: (row.focalKsas || []).map((entry) => ({ label: entry.label || "" })),
     additionalKsas: (row.additionalKsas || []).map((entry) => ({
       label: entry.label || "",
+      relationship: entry.relationship || "",
     })),
     potentialObservations: (row.potentialObservations || []).map((entry) => ({
       label: entry.label || "",
@@ -224,7 +242,7 @@ export function designPatternPayload(form) {
     summary: form.summary.trim(),
     rationale: form.rationale.trim(),
     focalKsas: labelledEntries(form.focalKsas),
-    additionalKsas: labelledEntries(form.additionalKsas),
+    additionalKsas: additionalKsaEntries(form.additionalKsas),
     potentialObservations: observationEntries(form.potentialObservations),
     potentialWorkProducts: libraryEntries(form.potentialWorkProducts, "workProductId"),
     potentialRubrics: libraryEntries(form.potentialRubrics, "rubricId"),
@@ -386,6 +404,77 @@ function LabelList({ legend, hint, hintId, values, onChange, example }) {
         Add {legend}
       </Button>
     </fieldset>
+  );
+}
+
+function AdditionalKsaList({ values, onChange, overlaps }) {
+  return (
+    <div className="space-y-3">
+      <fieldset className="space-y-2">
+        <legend className="text-sm text-slate-700">Additional KSAs</legend>
+        <p id="dp-additional-guidance" className={hintClass}>
+          {DESIGN_PATTERN_NARRATIVE_GUIDANCE.additionalKsas}
+        </p>
+        {listIsBlank(values) ? (
+          <FieldExample text={DESIGN_PATTERN_EXAMPLES.additionalKsas} />
+        ) : null}
+        {values.map((entry, index) => (
+          <div key={`additional-${index}`} className="flex gap-2">
+            <input
+              className={inputClass}
+              aria-label={`Additional KSAs ${index + 1}`}
+              aria-describedby="dp-additional-guidance"
+              value={entry.label}
+              onChange={(event) => {
+                const next = values.slice();
+                next[index] = { ...entry, label: event.target.value };
+                onChange(next);
+              }}
+            />
+            <select
+              className={inputClass}
+              aria-label={`Additional KSAs ${index + 1} relationship`}
+              value={entry.relationship || ""}
+              onChange={(event) => {
+                const next = values.slice();
+                next[index] = { ...entry, relationship: event.target.value };
+                onChange(next);
+              }}
+            >
+              <option value="">Choose a relationship</option>
+              {ADDITIONAL_KSA_RELATIONSHIPS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onChange(values.filter((_, i) => i !== index))}
+            >
+              Remove
+            </Button>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onChange([...values, { label: "", relationship: "" }])}
+        >
+          Add Additional KSAs
+        </Button>
+      </fieldset>
+      {overlaps.map((hit) => (
+        <p
+          key={`${hit.patternId}-${hit.label}`}
+          role="note"
+          className="text-xs text-amber-800"
+        >
+          “{hit.label}” is a Focal KSA of {hit.patternName}. This is advisory, not blocking.
+        </p>
+      ))}
+    </div>
   );
 }
 
@@ -748,6 +837,10 @@ export function DesignPatternLibraryView({
   );
 
   const payload = designPatternPayload(form);
+  const focalOverlaps = additionalKsaFocalOverlap(
+    { id: editingId, additionalKsas: payload.additionalKsas },
+    patterns
+  );
   const draftCheck = designPatternReadiness(
     { ...payload, status: "draft" },
     { strict: false }
@@ -924,12 +1017,9 @@ export function DesignPatternLibraryView({
         );
       case "additionalKsas":
         return (
-          <LabelList
-            legend="Additional KSAs"
-            hint={DESIGN_PATTERN_NARRATIVE_GUIDANCE.additionalKsas}
-            hintId="dp-additional-guidance"
-            example={DESIGN_PATTERN_EXAMPLES.additionalKsas}
+          <AdditionalKsaList
             values={form.additionalKsas}
+            overlaps={focalOverlaps}
             onChange={(additionalKsas) => patchForm({ additionalKsas })}
           />
         );
