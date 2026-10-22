@@ -3,7 +3,7 @@
 // Tabs and one panel. Same button row as the Competency, Evidence, and
 // Task model builders (Dashboard, then Structure, then Manage). Those
 // three keep their own buttons so their label tests stay on their own
-// source. Design Pattern is the only caller.
+// source. Design Pattern and Domain Analysis call this shell.
 
 import React from "react";
 import { Button } from "@/components/ui/button";
