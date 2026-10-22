@@ -556,6 +556,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-22 | off-calendar | — | Manage Design Pattern and Manage Domain Analysis use the same list console as Manage Task Model: New, search, filters, expandable cards, Edit, Duplicate, and Delete. Not a schema change. Suite **2296 passed / 9 skipped**. **Not D146.** Handoff: `claude/day145g-offcal-manage-tab-parity.md`. |
 | 2026-10-22 | off-calendar | — | Templates three-tab shell and Manage list console, matching Task Model: Dashboard, Template Structure, Manage Templates. Not a schema change. Suite **2305 passed / 9 skipped**. **Not D146.** Handoff: `claude/day145h-offcal-templates-parity.md`. |
 | 2026-10-22 | off-calendar | — | Assembly Model three-tab shell and Manage list console, matching Task Model: Dashboard, Assembly Structure, Manage Assembly Models. Not a schema change. Suite **2315 passed / 9 skipped**. **Not D146.** Handoff: `claude/day145i-offcal-assembly-parity.md`. |
+| 2026-10-22 | off-calendar | — | Diagnostic Design three-tab shell and Manage list console, matching Task Model: Dashboard, Diagnostic Design Structure, Manage Diagnostic Designs. The artifact stays a Q-matrix. Not a schema change. Suite **2328 passed / 9 skipped**. **Not D146.** Handoff: `claude/day145j-offcal-diagnostic-design-parity.md`. |
 
 
 
