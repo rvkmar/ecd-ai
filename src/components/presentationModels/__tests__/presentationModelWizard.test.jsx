@@ -40,11 +40,16 @@ vi.mock("../PresentationModelWizard/PresentationModelWizardContext", () => ({
 const here = dirname(fileURLToPath(import.meta.url));
 
 describe("Presentation Model authoring is not the stub", () => {
-  it("AdminPage imports PresentationModelBuilder, not PresentationModelStub", () => {
+  it("AdminPage mounts Presentation Model under Models, not Delivery", () => {
     const admin = readFileSync(join(here, "../../../pages/AdminPage.jsx"), "utf8");
+    const models = admin.slice(admin.indexOf('id: "models"'), admin.indexOf('id: "libraries"'));
+    const delivery = admin.slice(admin.indexOf('id: "delivery"'), admin.indexOf('id: "results"'));
     expect(admin).toMatch(/PresentationModelBuilder/);
     expect(admin).not.toMatch(/PresentationModelStub/);
-    expect(admin).toMatch(/id: "presentation"/);
+    expect(models).toMatch(/id: "presentation"/);
+    expect(models).toMatch(/Presentation Model/);
+    expect(delivery).not.toMatch(/id: "presentation"/);
+    expect(delivery).not.toMatch(/PresentationModelBuilder/);
   });
 
   it("stub file is gone", () => {

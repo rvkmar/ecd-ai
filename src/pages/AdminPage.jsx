@@ -129,6 +129,15 @@ export default function AdminPage() {
             { id: "student", label: "Student Model", content: <CompetencyModelBuilder /> },
             { id: "evidence", label: "Evidence Model", content: <EvidenceModelBuilder /> },
             { id: "taskmodels", label: "Task Model", content: <TaskModelBuilder /> },
+            // Bound to a Task Model, and one of the four bindings a Template
+            // cites, so it sits between those two. The leaf id stays
+            // "presentation" so Delivery-era ?tab=presentation addresses
+            // still open this Models tab.
+            {
+              id: "presentation",
+              label: "Presentation Model",
+              content: <PresentationModelBuilder />,
+            },
             {
               id: "templates",
               label: "Templates",
@@ -174,7 +183,6 @@ export default function AdminPage() {
             { id: "sessions", label: "Sessions", content: <SessionBuilder /> },
             { id: "human-rating", label: "Human rating", content: <HumanRatingQueue /> },
             { id: "accumulation", label: "Evidence Accumulation (inspect)", content: <EvidenceAccumulationInspector /> },
-            { id: "presentation", label: "Presentation", content: <PresentationModelBuilder /> },
             { id: "calibration", label: "Parameter estimation", content: <CalibrationConsole /> },
           ],
         },

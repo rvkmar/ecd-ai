@@ -56,7 +56,35 @@ const emptyDraft = () => ({
   locked: false,
 });
 
-export function PresentationModelWizardProvider({ presentationModelId, onSaved, children }) {
+// Duplicate has no clone route. The create form opens with these fields
+// copied and no id, so the next save is a new draft. Status, lock, and
+// version stay off the copy.
+function draftFromSeed(seed) {
+  if (!seed) return emptyDraft();
+  return {
+    ...emptyDraft(),
+    name: seed.name || "",
+    description: seed.description || "",
+    taskModelId: seed.taskModelId || "",
+    taskModelVersion: seed.taskModelVersion,
+    layout: seed.layout && typeof seed.layout === "object" ? { ...seed.layout } : {},
+    conditionalDisplay:
+      seed.conditionalDisplay && typeof seed.conditionalDisplay === "object"
+        ? { ...seed.conditionalDisplay }
+        : {},
+    accessibility:
+      seed.accessibility && typeof seed.accessibility === "object"
+        ? { ...seed.accessibility }
+        : {},
+  };
+}
+
+export function PresentationModelWizardProvider({
+  presentationModelId,
+  initialDraft = null,
+  onSaved,
+  children,
+}) {
   const isEditing = Boolean(presentationModelId);
 
   const { data: existing, isLoading: loadingExisting } = usePresentationModel(presentationModelId, {
@@ -64,7 +92,9 @@ export function PresentationModelWizardProvider({ presentationModelId, onSaved, 
   });
   const { data: taskModels = [] } = useTaskModels();
 
-  const [draft, setDraft] = useState(emptyDraft());
+  const [draft, setDraft] = useState(() =>
+    isEditing ? emptyDraft() : draftFromSeed(initialDraft)
+  );
   const [currentStep, setCurrentStep] = useState(1);
   const [isDirty, setIsDirty] = useState(false);
 
