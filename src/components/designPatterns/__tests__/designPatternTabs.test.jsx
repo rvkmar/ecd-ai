@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { useDesignPatterns } from "@/api/queries/designPatterns";
@@ -116,8 +116,10 @@ describe("Design Pattern three-tab shell", () => {
     expect(screen.getByRole("button", { name: "Design Pattern Structure" })).toHaveClass("bg-primary");
 
     await user.click(screen.getByRole("button", { name: "Manage Design Pattern" }));
-    expect(screen.getByRole("heading", { name: "Design Patterns" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Create draft" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Manage Design Pattern" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New Design Pattern" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Name a plant part/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create draft" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Design Pattern Dashboard" })).not.toBeInTheDocument();
   });
 
@@ -127,6 +129,61 @@ describe("Design Pattern three-tab shell", () => {
     expect(screen.getByRole("button", { name: "Manage Design Pattern" })).toHaveClass("bg-primary");
     expect(screen.queryByRole("heading", { name: "Design Pattern Dashboard" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Title")).toHaveValue(readyDraft.name);
-    expect(screen.getByRole("heading", { name: "Design Patterns" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Design Pattern" })).toBeInTheDocument();
+  });
+
+  it("opens the existing wizard from New and returns to the list on Cancel", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderBuilder();
+    await user.click(screen.getByRole("button", { name: "Manage Design Pattern" }));
+    await user.click(screen.getByRole("button", { name: "New Design Pattern" }));
+
+    expect(screen.getByRole("button", { name: "Create draft" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Title")).toHaveValue("");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("heading", { name: "Manage Design Pattern" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create draft" })).not.toBeInTheDocument();
+  });
+
+  it("edits, duplicates, and deletes from the card", async () => {
+    const user = userEvent.setup({ delay: null });
+    const remove = vi.fn().mockResolvedValue({ success: true });
+    useDeleteDesignPattern.mockReturnValue({ mutateAsync: remove, isPending: false });
+    renderBuilder();
+    await user.click(screen.getByRole("button", { name: "Manage Design Pattern" }));
+
+    await user.click(screen.getByRole("button", { name: /Name a plant part/ }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByLabelText("Title")).toHaveValue("Name a plant part");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: /Unfinished argument/ }));
+    await user.click(screen.getByRole("button", { name: "Duplicate" }));
+    expect(screen.getByLabelText("Title")).toHaveValue("Unfinished argument copy");
+    expect(screen.getByRole("button", { name: "Create draft" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: /Unfinished argument/ }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
+    expect(remove).toHaveBeenCalledWith("dp-thin");
+  });
+
+  it("filters by status and refuses delete while a template still cites the pattern", async () => {
+    const user = userEvent.setup({ delay: null });
+    useTemplates.mockReturnValue(query([
+      { id: "tpl-ready", name: "Name the part", designPatternId: "dp-ready" },
+    ]));
+    renderBuilder();
+    await user.click(screen.getByRole("button", { name: "Manage Design Pattern" }));
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by lifecycle status" }), "confirmed");
+    expect(screen.getByRole("button", { name: /Explain a diagram/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Name a plant part/ })).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by lifecycle status" }), "all");
+    await user.click(screen.getByRole("button", { name: /Name a plant part/ }));
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
   });
 });

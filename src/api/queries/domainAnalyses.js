@@ -44,6 +44,16 @@ export function useUpdateDomainAnalysis() {
   });
 }
 
+export function useDeleteDomainAnalysis() {
+  const { auth } = useAuth() || {};
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) =>
+      apiFetch(`/api/domainAnalyses/${id}`, { method: "DELETE" }, auth),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: domainAnalysesKey }),
+  });
+}
+
 export function useConfirmDomainAnalysis() {
   const { auth } = useAuth() || {};
   const queryClient = useQueryClient();

@@ -10,8 +10,9 @@
 // in the toolbar slot. The shell promote pair stays hidden.
 //
 // The default export is the three-tab shell (Dashboard / Design Pattern
-// Structure / Manage Design Pattern). Manage still renders
-// DesignPatternLibraryView. A focus id in the URL opens Manage.
+// Structure / Manage Design Pattern). Manage is the list console.
+// New, Edit, and Duplicate open DesignPatternLibraryView. A focus id
+// in the URL opens Manage on that pattern.
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -22,6 +23,13 @@ import {
 } from "@/utils/additionalKsaAdvisory";
 
 import { Button } from "@/components/ui/button";
+import Modal from "@/components/ui/Modal";
+import { openActionLabel } from "@/utils/modelActionLabel";
+import ModelManageList, {
+  manageDangerButtonClass,
+  manageOpenButtonClass,
+  manageQuietButtonClass,
+} from "@/components/shared/ModelManageList";
 import WizardSidebar from "@/components/wizard/WizardSidebar";
 import WizardStepContainer from "@/components/wizard/WizardStepContainer";
 import {
@@ -50,6 +58,7 @@ import { useWorkProducts } from "@/api/queries/workProducts";
 import { useRubrics } from "@/api/queries/rubrics";
 import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
+import { useTaskModels } from "@/api/queries/taskModels";
 import { useTemplates, useUpdateTemplate } from "@/api/queries/templates";
 import { designPatternReadiness } from "@/utils/designPatternReadiness";
 import { DESIGN_PATTERN_PADI_ATTRIBUTES } from "@/utils/schema";
@@ -817,8 +826,12 @@ export function DesignPatternLibraryView({
   updatePending = false,
   confirmPending = false,
   deletePending = false,
+  onDismiss = null,
+  initialForm = null,
 }) {
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() =>
+    initialForm ? { ...emptyForm(), ...initialForm } : emptyForm()
+  );
   const [editingId, setEditingId] = useState(null);
   const [serverError, setServerError] = useState("");
   const [linkTemplateId, setLinkTemplateId] = useState("");
@@ -909,6 +922,10 @@ export function DesignPatternLibraryView({
     try {
       await onUpdate({ id: editingId, payload });
       await onConfirm(editingId);
+      if (onDismiss) {
+        onDismiss();
+        return;
+      }
       cancelEdit();
     } catch (err) {
       setServerError(apiErrorMessage(err, "Confirm failed"));
@@ -1165,18 +1182,22 @@ export function DesignPatternLibraryView({
     }
   }
 
+  const embedded = Boolean(onDismiss);
+
   return (
     <div className="space-y-6 p-4">
-      <header>
-        <h2 className="text-lg font-semibold text-slate-900">Design Patterns</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Write the argument: title, summary, rationale, and the KSAs it
-          centres. A confirmed pattern may be referenced by later seeding.
-          It does not authorise a student session.
-        </p>
-      </header>
+      {embedded ? null : (
+        <header>
+          <h2 className="text-lg font-semibold text-slate-900">Design Patterns</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Write the argument: title, summary, rationale, and the KSAs it
+            centres. A confirmed pattern may be referenced by later seeding.
+            It does not authorise a student session.
+          </p>
+        </header>
+      )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className={embedded ? "space-y-6" : "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]"}>
         <div className="flex min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
           <WizardSidebar
             steps={steps}
@@ -1200,7 +1221,7 @@ export function DesignPatternLibraryView({
             totalSteps={steps.length}
             onNext={() => goToStep(stepIndex + 1)}
             onBack={() => goToStep(stepIndex - 1)}
-            onCancel={cancelEdit}
+            onCancel={onDismiss || cancelEdit}
             canProceed
             isLast={stepIndex === steps.length - 1}
             locked={false}
@@ -1237,6 +1258,24 @@ export function DesignPatternLibraryView({
           </WizardStepContainer>
         </div>
 
+        {embedded ? (
+          editingId ? (
+            <section className="rounded-lg border border-slate-200 bg-white p-4">
+              <h3 className="mb-3 text-sm font-medium text-slate-800">Neighbourhood</h3>
+              <PatternNeighbourhood
+                patternId={editingId}
+                patterns={patterns}
+                report={descendantReport}
+                onLoad={onLoadDescendants}
+                refreshKey={descendantTick}
+                onOpen={(id) => {
+                  const row = patterns.find((item) => item.id === id);
+                  if (row) startEdit(row);
+                }}
+              />
+            </section>
+          ) : null
+        ) : (
         <section className="rounded-lg border border-slate-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-medium text-slate-800">Library</h3>
           {editingId ? (
@@ -1291,6 +1330,7 @@ export function DesignPatternLibraryView({
             </ul>
           )}
         </section>
+        )}
       </div>
     </div>
   );
@@ -1387,10 +1427,24 @@ function PatternTemplateLinks({
   );
 }
 
+function duplicatePatternForm(row) {
+  const form = formFromRow(row);
+  const name = form.name.trim();
+  form.name = name ? `${name} copy` : "copy";
+  return form;
+}
+
+function patternReadinessValue(row) {
+  return designPatternReadiness(row, { strict: true }).ready ? "ready" : "not-ready";
+}
+
 function DesignPatternManage() {
   const { auth } = useAuth() || {};
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const focusId = searchParams.get("focus");
+  const [screen, setScreen] = useState(focusId ? "edit" : "list");
+  const [seedForm, setSeedForm] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
   const { data: patterns = [], isLoading, error } = useDesignPatterns();
   const { data: domainAnalyses = [] } = useDomainAnalyses();
   const { data: templates = [] } = useTemplates();
@@ -1401,6 +1455,7 @@ function DesignPatternManage() {
   const { data: rubrics = [] } = useRubrics();
   const { data: taskModelVariables = [] } = useTaskModelVariables();
   const { data: evidenceModels = [] } = useEvidenceModels();
+  const { data: taskModels = [] } = useTaskModels();
   const observationChoices = useMemo(
     () => observationChoicesFromModels(evidenceModels),
     [evidenceModels]
@@ -1410,19 +1465,65 @@ function DesignPatternManage() {
   const confirmMut = useConfirmDesignPattern();
   const deleteMut = useDeleteDesignPattern();
 
+  useEffect(() => {
+    if (focusId) setScreen("edit");
+  }, [focusId]);
+
+  function clearFocus() {
+    if (!searchParams.get("focus")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("focus");
+    setSearchParams(next, { replace: true });
+  }
+
+  function backToList() {
+    clearFocus();
+    setSeedForm(null);
+    setScreen("list");
+  }
+
+  function openCreate() {
+    clearFocus();
+    setSeedForm(null);
+    setScreen("create");
+  }
+
+  function openEdit(row) {
+    const next = new URLSearchParams(searchParams);
+    next.set("focus", row.id);
+    setSearchParams(next);
+    setSeedForm(null);
+    setScreen("edit");
+  }
+
+  function openDuplicate(row) {
+    clearFocus();
+    setSeedForm(duplicatePatternForm(row));
+    setScreen("create");
+  }
+
   if (isLoading) {
-    return <p className="p-4 text-sm text-slate-500">Loading design patterns…</p>;
+    return (
+      <div className="p-6">
+        <h2 className="mb-4 text-2xl font-semibold">Manage Design Pattern</h2>
+        <p className="text-sm text-slate-500">Loading design patterns…</p>
+      </div>
+    );
   }
   if (error) {
     return (
-      <p className="p-4 text-sm text-red-600">
-        {apiErrorMessage(error, "Failed to load design patterns")}
-      </p>
+      <div className="p-6">
+        <h2 className="mb-4 text-2xl font-semibold">Manage Design Pattern</h2>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {apiErrorMessage(error, "Failed to load design patterns")}
+        </div>
+      </div>
     );
   }
 
-  return (
+  const library = (
     <DesignPatternLibraryView
+      key={screen === "edit" ? `edit-${focusId || "record"}` : `create-${seedForm?.name || "blank"}`}
       patterns={patterns}
       domainAnalyses={domainAnalyses}
       templates={templates}
@@ -1431,7 +1532,9 @@ function DesignPatternManage() {
       onLoadDescendants={(id) =>
         apiFetch(`/api/designPatterns/${id}/descendants`, {}, auth)
       }
-      focusId={focusId}
+      focusId={screen === "edit" ? focusId : null}
+      initialForm={screen === "create" ? seedForm : null}
+      onDismiss={backToList}
       workProducts={workProducts}
       rubrics={rubrics}
       taskModelVariables={taskModelVariables}
@@ -1499,6 +1602,122 @@ function DesignPatternManage() {
         }
       }}
     />
+  );
+
+  if (screen === "create" || screen === "edit") return library;
+
+  return (
+    <>
+      <ModelManageList
+        title="Manage Design Pattern"
+        description="Author, review and confirm Design Patterns. A confirmed pattern may be referenced by later seeding. It does not authorise a student session."
+        newLabel="New Design Pattern"
+        onCreate={openCreate}
+        records={patterns}
+        emptyMessage="No Design Patterns defined yet."
+        filteredEmptyMessage="No Design Patterns match the current filters."
+        searchLabel="Search design patterns"
+        searchPlaceholder="Search patterns…"
+        searchText={(row) => `${row.name || ""} ${row.summary || ""}`}
+        readinessOf={patternReadinessValue}
+        renderMeta={(row) => {
+          const ready = patternReadinessValue(row) === "ready";
+          const focal = (row.focalKsas || []).length;
+          const linked = templatesForPattern(templates, row.id).length;
+          const seeded =
+            evidenceModels.filter((item) => item?.seededFrom?.designPatternId === row.id).length +
+            taskModels.filter((item) => item?.seededFrom?.designPatternId === row.id).length;
+          const domainId = String(row.domainAnalysisId || "").trim();
+          const domain = domainId
+            ? domainAnalyses.find((item) => item.id === domainId)?.name || domainId
+            : "Not linked";
+          return (
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide ${
+                  ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {ready ? "Ready" : "Not ready"}
+              </span>
+              <span>
+                {focal} focal KSA{focal === 1 ? "" : "s"}
+              </span>
+              <span>{domain}</span>
+              <span>
+                {linked} template{linked === 1 ? "" : "s"}
+              </span>
+              <span>
+                {seeded} seeded model{seeded === 1 ? "" : "s"}
+              </span>
+            </div>
+          );
+        }}
+        renderDetails={(row) => (
+          <>
+            <p className="leading-relaxed text-slate-600">
+              {String(row.summary || "").trim() || "No summary yet."}
+            </p>
+            <p className="leading-relaxed text-slate-600">
+              {String(row.rationale || "").trim() || "No rationale yet."}
+            </p>
+          </>
+        )}
+        renderActions={(row) => {
+          const linked = templatesForPattern(templates, row.id);
+          return (
+            <>
+              <button type="button" onClick={() => openEdit(row)} className={manageOpenButtonClass}>
+                {openActionLabel(row)}
+              </button>
+              <button
+                type="button"
+                onClick={() => openDuplicate(row)}
+                className={manageQuietButtonClass}
+                title="Open the create wizard with a copy of this pattern"
+              >
+                Duplicate
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingDelete(row)}
+                disabled={linked.length > 0 || deleteMut.isPending}
+                title={
+                  linked.length > 0
+                    ? "Unlink templates before deleting."
+                    : undefined
+                }
+                className={manageDangerButtonClass}
+              >
+                Delete
+              </button>
+            </>
+          );
+        }}
+      />
+      <Modal
+        isOpen={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          try {
+            await deleteMut.mutateAsync(pendingDelete.id);
+            toast.success("Design pattern deleted");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Delete failed"));
+          }
+          setPendingDelete(null);
+        }}
+        title="Delete Design Pattern"
+        message={
+          pendingDelete
+            ? `Delete "${pendingDelete.name || pendingDelete.id}"? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        confirmClass="bg-red-600 hover:bg-red-700 text-white"
+      />
+    </>
   );
 }
 
