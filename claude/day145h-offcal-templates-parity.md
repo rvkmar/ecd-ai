@@ -51,7 +51,13 @@ This VM ran the suite on Node 22. CI installs Node 24. `npm ci` printed an engin
 
 ## Browser
 
-Filled in after the live walk.
+Local Vite `http://localhost:5173` and the API on `:3000`, `DB_MODE=json`, `ECD_DB_FILE` pointing at the same JSON file the user store uses, signed in as `admin1`. The store held three templates and two task models.
+
+Before the shell, Templates was one screen: the heading Templates, the new-template form, and a library of Name the part, Unfinished family, and Fraction family. There were no Dashboard, Template Structure, or Manage Templates buttons.
+
+After, Dashboard showed Total 3, Confirmed 1, Draft 2, Ready to confirm 1. The donuts were Templates counted 3: about 67% draft / 33% confirmed, and 33% linked to a Design Pattern / 67% not linked. Structure showed Name the part (Ready, Explain a diagram, family size 6), Fraction family (Ready, Not linked, family size 6 because it binds the same Task Model), and Unfinished family (Not ready, em dash). Ingredients for Name the part showed the seven groups and the subtitle `Explain a diagram • Ready`. Task Model Variables was 2. Manage showed the title, New Template, search, status, readiness, and three cards. Edit filled Name with Name the part and Student Model with Plant part naming. Back to list and Cancel returned to the cards. Expanded cards showed Edit, Duplicate, and Delete.
+
+Manage Task Model was opened on the same session and was not restyled. It showed the same header, New button, filters, and expandable cards. Light and dark were both readable on Dashboard, Structure, and Manage: cards, table text, badges, and the New button stayed distinct from the page surface. No error toast. Live `:6060` was not rebuilt.
 
 ## Half-applied work
 
