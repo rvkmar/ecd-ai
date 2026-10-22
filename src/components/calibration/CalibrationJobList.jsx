@@ -1,6 +1,6 @@
 // src/components/calibration/CalibrationJobList.jsx
 // Browsing table: status, kind, evidence model, attempts, timestamps,
-// converged. Mirrors QMatrixList.
+// converged.
 
 import React from "react";
 

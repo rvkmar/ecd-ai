@@ -1,5 +1,5 @@
 // List console shared by Manage Design Pattern, Manage Domain Analysis,
-// Manage Templates, and Manage Assembly Models.
+// Manage Templates, Manage Assembly Models, and Manage Diagnostic Designs.
 // The header, filters, and expandable cards follow TaskModelBuilderPanel
 // and TaskModelList: title and description on the left, a black
 // "+ New …" button on the right, then status and search, then one card
@@ -89,10 +89,12 @@ export default function ModelManageList({
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {secondaryActions}
-          <button type="button" onClick={onCreate} className={manageNewButtonClass}>
-            <Plus size={16} strokeWidth={2.25} />
-            {newLabel}
-          </button>
+          {typeof onCreate === "function" ? (
+            <button type="button" onClick={onCreate} className={manageNewButtonClass}>
+              <Plus size={16} strokeWidth={2.25} />
+              {newLabel}
+            </button>
+          ) : null}
         </div>
       </div>
 

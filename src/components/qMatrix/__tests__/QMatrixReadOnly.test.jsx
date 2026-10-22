@@ -20,7 +20,6 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
-import QMatrixList from "../QMatrixList";
 import QMatrixGrid from "../QMatrixGrid";
 import QMatrixEditor from "../QMatrixEditor";
 import QMatrixModelBuilder from "../QMatrixModelBuilder";
@@ -97,44 +96,70 @@ vi.mock("@/api/queries/competencies", () => ({
 
 vi.mock("@/api/queries/evidenceModels", () => ({ useEvidenceModels: () => ({ data: fx.empty }) }));
 vi.mock("@/api/queries/items", () => ({ useItems: () => ({ data: fx.empty }) }));
+vi.mock("@/api/queries/domainAnalyses", () => ({
+  useDomainAnalyses: () => ({ data: fx.empty, isLoading: false, error: null }),
+}));
+
+async function openManage(user, readOnly = false) {
+  render(
+    <MemoryRouter>
+      <QMatrixModelBuilder readOnly={readOnly} />
+    </MemoryRouter>
+  );
+  await user.click(screen.getByRole("button", { name: "Manage Diagnostic Designs" }));
+}
 
 describe("district read-only list", () => {
-  it("offers no way to create a Q-matrix", () => {
-    render(<QMatrixList readOnly onCreate={vi.fn()} onEdit={vi.fn()} />);
+  it("offers no way to create a Q-matrix", async () => {
+    const user = userEvent.setup();
+    await openManage(user, true);
     expect(screen.queryByRole("button", { name: /new diagnostic design/i })).not.toBeInTheDocument();
   });
 
-  it("offers no way to delete one, even an unlocked draft", () => {
+  it("offers no way to delete one, even an unlocked draft", async () => {
     // The admin list shows Delete on any unlocked record. A draft is the
     // case that would slip through a check written only against `locked`.
-    render(<QMatrixList readOnly onCreate={vi.fn()} onEdit={vi.fn()} />);
+    const user = userEvent.setup();
+    await openManage(user, true);
+    await user.click(screen.getByRole("button", { name: /Fractions Diagnostic/ }));
     expect(screen.queryByRole("button", { name: /^delete$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^duplicate$/i })).not.toBeInTheDocument();
   });
 
-  it("labels the row action 'View', not 'Edit' or 'Review'", () => {
-    render(<QMatrixList readOnly onCreate={vi.fn()} onEdit={vi.fn()} />);
+  it("labels the row action 'View', not 'Edit' or 'Review'", async () => {
+    const user = userEvent.setup();
+    await openManage(user, true);
 
-    const views = screen.getAllByRole("button", { name: /^view$/i });
-    expect(views).toHaveLength(2);
+    await user.click(screen.getByRole("button", { name: /Fractions Diagnostic/ }));
+    expect(screen.getByRole("button", { name: /^view$/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Locked Matrix/ }));
+    expect(screen.getByRole("button", { name: /^view$/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^review$/i })).not.toBeInTheDocument();
   });
 
-  it("still shows the records themselves — read-only is not hidden", () => {
-    render(<QMatrixList readOnly onCreate={vi.fn()} onEdit={vi.fn()} />);
-    expect(screen.getByText("Fractions Diagnostic")).toBeInTheDocument();
-    expect(screen.getByText("Locked Matrix")).toBeInTheDocument();
+  it("still shows the records themselves — read-only is not hidden", async () => {
+    const user = userEvent.setup();
+    await openManage(user, true);
+    expect(screen.getByRole("button", { name: /Fractions Diagnostic/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Locked Matrix/ })).toBeInTheDocument();
   });
 
-  it("keeps every authoring affordance for an admin (the guard admits too)", () => {
+  it("keeps every authoring affordance for an admin (the guard admits too)", async () => {
     // A read-only guard that also blanks the admin surface is not a guard,
-    // it is a bug. Assert the converse explicitly.
-    render(<QMatrixList onCreate={vi.fn()} onEdit={vi.fn()} />);
+    // it is a bug. Assert the converse explicitly. A locked design opens
+    // as View; an unlocked draft opens as Edit.
+    const user = userEvent.setup();
+    await openManage(user, false);
 
     expect(screen.getByRole("button", { name: /new diagnostic design/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Fractions Diagnostic/ }));
     expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^review$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^duplicate$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^delete$/i })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: /Locked Matrix/ }));
+    expect(screen.getByRole("button", { name: /^view$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^delete$/i })).toBeDisabled();
   });
 });
 
@@ -180,25 +205,22 @@ describe("the surface threads readOnly end to end", () => {
   // so this is where it gets checked.
   it("opens the editor read-only after View is clicked", async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <QMatrixModelBuilder readOnly />
-      </MemoryRouter>
-    );
-
-    await user.click(screen.getAllByRole("button", { name: /^view$/i })[0]);
+    await openManage(user, true);
+    await user.click(screen.getByRole("button", { name: /Fractions Diagnostic/ }));
+    await user.click(screen.getByRole("button", { name: /^view$/i }));
 
     expect(screen.getByDisplayValue("Fractions Diagnostic")).toBeDisabled();
     expect(screen.queryByRole("button", { name: /save for review/i })).not.toBeInTheDocument();
   });
 
-  it("opens the editor editable after Edit is clicked, for an author", () => {
-    render(
-      <MemoryRouter>
-        <QMatrixModelBuilder />
-      </MemoryRouter>
-    );
+  it("opens the editor editable after Edit is clicked, for an author", async () => {
+    const user = userEvent.setup();
+    await openManage(user, false);
     expect(screen.getByRole("button", { name: /new diagnostic design/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Fractions Diagnostic/ }));
+    await user.click(screen.getByRole("button", { name: /^edit$/i }));
+    expect(screen.getByDisplayValue("Fractions Diagnostic")).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /save for review/i })).toBeInTheDocument();
   });
 });
 
