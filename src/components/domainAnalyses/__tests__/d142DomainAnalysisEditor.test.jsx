@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
-import DomainAnalysisEditor from "../DomainAnalysisEditor.jsx";
+import { DomainAnalysisWorkspace as DomainAnalysisEditor } from "../DomainAnalysisEditor.jsx";
 
 const update = vi.fn();
 const confirm = vi.fn();

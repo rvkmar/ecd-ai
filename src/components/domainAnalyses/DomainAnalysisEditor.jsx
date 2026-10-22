@@ -3,8 +3,13 @@
 // Off-calendar workspace for a Domain Analysis (not D146). The stored
 // payload is the D142 correction form. Confirm still authorises no
 // student delivery. contentStandards stays read-only (ADR 0011).
+//
+// The default export is the three-tab shell (Dashboard / Domain Analysis
+// Structure / Manage Domain Analysis). Manage still renders
+// DomainAnalysisWorkspace, including Guided setup. A focus id in the URL
+// opens Manage with that analysis loaded.
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Check, Circle } from "lucide-react";
 import toast from "react-hot-toast";
@@ -23,6 +28,9 @@ import { DOMAIN_ANALYSIS_ENTITIES } from "@/utils/schema";
 import { PSYCHOLOGICAL_PERSPECTIVES } from "@/utils/ecdVocabulary";
 import { useQMatrixModels } from "@/api/queries/qMatrixModels";
 import DomainAnalysisGuidedSetup from "./DomainAnalysisGuidedSetup";
+import ModelTabShell from "@/components/shared/ModelTabShell";
+import DomainAnalysisDashboard from "./DomainAnalysisDashboard";
+import DomainAnalysisTable from "./DomainAnalysisTable";
 import {
   SECTION_HINT,
   WORKSPACE_TABS,
@@ -32,6 +40,16 @@ import {
   payloadFromForm,
   confirmRequirementItems,
 } from "./domainAnalysisForm";
+
+/** focus, id, or the domainAnalysisId the Q-matrix handoff leaves on the URL. */
+export function domainAnalysisFocusId(searchParams) {
+  return (
+    searchParams.get("focus") ||
+    searchParams.get("id") ||
+    searchParams.get("domainAnalysisId") ||
+    ""
+  );
+}
 
 function ContentStandardsView({ standards }) {
   if (!standards) return null;
@@ -112,7 +130,7 @@ function ConfirmChecklist({ items, activeTab, onJump }) {
   );
 }
 
-export default function DomainAnalysisEditor() {
+export function DomainAnalysisWorkspace() {
   const { data: rows = [], isLoading } = useDomainAnalyses();
   const { data: qMatrices = [] } = useQMatrixModels();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -126,6 +144,20 @@ export default function DomainAnalysisEditor() {
   const [mode, setMode] = useState("workspace");
   const [guidedStep, setGuidedStep] = useState(1);
   const [snapshot, setSnapshot] = useState(null);
+  const appliedFocus = useRef(null);
+  const focusId = domainAnalysisFocusId(searchParams);
+
+  useEffect(() => {
+    if (!focusId || appliedFocus.current === focusId) return;
+    const row = rows.find((item) => item.id === focusId);
+    if (!row) return;
+    appliedFocus.current = focusId;
+    setMode("workspace");
+    setEditingId(row.id);
+    setStandards(row.contentStandards || null);
+    setForm(formFromRow(row));
+    setTab("overview");
+  }, [focusId, rows]);
 
   const payload = payloadFromForm(form);
   const confirmCheck = domainAnalysisReadiness(
@@ -427,5 +459,35 @@ export default function DomainAnalysisEditor() {
         <ConfirmChecklist items={checklist} activeTab={tab} onJump={setTab} />
       </div>
     </div>
+  );
+}
+
+export default function DomainAnalysisEditor() {
+  const [searchParams] = useSearchParams();
+  const focusId = domainAnalysisFocusId(searchParams);
+  const [mode, setMode] = useState(focusId ? "manage" : "dashboard");
+
+  useEffect(() => {
+    if (focusId) setMode("manage");
+  }, [focusId]);
+
+  return (
+    <ModelTabShell
+      mode={mode}
+      onModeChange={setMode}
+      tabs={[
+        { id: "dashboard", label: "Dashboard", panel: <DomainAnalysisDashboard /> },
+        {
+          id: "structure",
+          label: "Domain Analysis Structure",
+          panel: <DomainAnalysisTable />,
+        },
+        {
+          id: "manage",
+          label: "Manage Domain Analysis",
+          panel: <DomainAnalysisWorkspace />,
+        },
+      ]}
+    />
   );
 }
