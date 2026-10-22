@@ -15,7 +15,7 @@ that doesn't exist yet just fails that row.
 | `sample-evidence-models.json` | Settings > Bulk Upload > Evidence Models | No — needs a real `competencyId` |
 | `sample-task-models.json` | Settings > Bulk Upload > Task Models | No — needs a real, confirmed `evidenceModelId` (and a two-pass upload for the composite row) |
 | `sample-items.json` | Settings > Bulk Upload > Items | No — needs a real, confirmed `taskModelId` |
-| `sample-presentation-models.json` | D113 fixture (Admin Delivery > Presentation wizard; no Bulk Upload card yet) | No — needs a real, confirmed `taskModelId` |
+| `sample-presentation-models.json` | D113 fixture (Admin → Models → Presentation Model wizard; no Bulk Upload card yet) | No — needs a real, confirmed `taskModelId` |
 | `sample-domain-analyses.json` | Settings > Data > Upload > Domain Analyses | Yes |
 | `sample-design-patterns.json` | Settings > Data > Upload > Design Patterns | No — needs real `workProductId`, `rubricId`, and `taskModelVariableId` |
 

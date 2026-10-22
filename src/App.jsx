@@ -139,8 +139,9 @@ export default function App() {
                     <Route path="assembly-models" element={<AssemblyModelBuilder />} />
 
                     {/* D113: Presentation Model authoring (W23 G8). Admin-authored
-                        overlay; district may read the HTTP surface. Also a Delivery
-                        tab on AdminPage so the surface is not URL-only. */}
+                        overlay; district may read the HTTP surface. Also a Models
+                        tab on AdminPage (id "presentation", so older Delivery
+                        addresses still open it) so the surface is not URL-only. */}
                     <Route path="presentation-models" element={<PresentationModelBuilder />} />
 
                     {/* D65: calibration job console. Also a tab on

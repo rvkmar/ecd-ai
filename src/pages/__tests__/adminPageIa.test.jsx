@@ -126,6 +126,10 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(src).toMatch(/PsychometricsDashboard/);
     expect(src).toMatch(/PresentationModelBuilder/);
     expect(src).not.toMatch(/PresentationModelStub/);
+    expect(models).toMatch(/id: "presentation"/);
+    expect(models.indexOf('id: "taskmodels"')).toBeLessThan(models.indexOf('id: "presentation"'));
+    expect(models.indexOf('id: "presentation"')).toBeLessThan(models.indexOf('id: "templates"'));
+    expect(delivery).not.toMatch(/id: "presentation"/);
     expect(app).toMatch(/path="psychometrics"/);
     expect(app).toMatch(/PsychometricsPage/);
     expect(app).toMatch(/path="presentation-models"/);
@@ -175,6 +179,7 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
       "Student Model",
       "Evidence Model",
       "Task Model",
+      "Presentation Model",
       "Templates",
       "Assembly Model",
       "Diagnostic design",
@@ -212,6 +217,9 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
       () => expect(screen.getByText("Design patterns library")).toBeInTheDocument(),
       { timeout: 8000 }
     );
+    await user.click(screen.getByRole("tab", { name: "Presentation Model" }));
+    await waitFor(() => expect(screen.getByText("Presentation builder")).toBeInTheDocument());
+    expect(screen.queryByText("Presentation stub")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Implementation" }));
     await waitFor(() => expect(screen.getByText("Item bank")).toBeInTheDocument());
@@ -221,15 +229,12 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(screen.getByRole("tab", { name: "Sessions" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Human rating" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Evidence Accumulation (inspect)" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Presentation" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Presentation" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Presentation Model" })).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Parameter estimation" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Psychometrics" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Reports" })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Sessions surface")).toBeInTheDocument());
-
-    await user.click(screen.getByRole("tab", { name: "Presentation" }));
-    await waitFor(() => expect(screen.getByText("Presentation builder")).toBeInTheDocument());
-    expect(screen.queryByText("Presentation stub")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: "Libraries" }));
     expect(within(screen.getAllByRole("tablist").find((list) => list.textContent?.includes("Work Products"))).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
@@ -247,6 +252,18 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
 
     await user.click(screen.getByRole("tab", { name: "Reports" }));
     await waitFor(() => expect(screen.getByText("Reports dashboard")).toBeInTheDocument());
+  });
+
+  it("opens a saved Delivery presentation address on Models", async () => {
+    render(
+      <MemoryRouter initialEntries={["/?tab=presentation"]}>
+        <AdminPage />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(screen.getByText("Presentation builder")).toBeInTheDocument());
+    expect(screen.getByRole("tab", { name: "Models" })).toHaveAttribute("data-state", "active");
+    expect(screen.getByRole("tab", { name: "Presentation Model" })).toHaveAttribute("data-state", "active");
+    expect(screen.getByRole("tab", { name: "Delivery" })).not.toHaveAttribute("data-state", "active");
   });
 
   it("opens a saved library or estimation address on the new group", async () => {
