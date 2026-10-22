@@ -553,6 +553,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-17 | D150 | 3, alone | Adversarial review of W27–W30. No P0. The trait/DINA advisory holds and confirm is not blocked. P1: deleting a pattern drops the seed back-link. Suite close re-run **2277 passed / 9 skipped**. W30 closed on the restated gate. W29 stays open. No D151. |
 | 2026-10-22 | off-calendar | — | Design Pattern three-tab shell: Dashboard, Design Pattern Structure, Manage Design Pattern. Not a schema change. Suite **2283 passed / 9 skipped**. **Not D146.** Handoff: `claude/day145e-offcal-design-pattern-tabs.md`. |
 | 2026-10-22 | off-calendar | — | Domain Analysis three-tab shell: Dashboard, Domain Analysis Structure, Manage Domain Analysis. Not a schema change. Suite **2290 passed / 9 skipped**. **Not D146.** Handoff: `claude/day145f-offcal-domain-analysis-tabs.md`. |
+| 2026-10-22 | off-calendar | — | Manage Design Pattern and Manage Domain Analysis use the same list console as Manage Task Model: New, search, filters, expandable cards, Edit, Duplicate, and Delete. Not a schema change. Suite **2296 passed / 9 skipped**. **Not D146.** Handoff: `claude/day145g-offcal-manage-tab-parity.md`. |
 
 
 

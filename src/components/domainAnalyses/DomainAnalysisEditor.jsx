@@ -5,9 +5,10 @@
 // student delivery. contentStandards stays read-only (ADR 0011).
 //
 // The default export is the three-tab shell (Dashboard / Domain Analysis
-// Structure / Manage Domain Analysis). Manage still renders
-// DomainAnalysisWorkspace, including Guided setup. A focus id in the URL
-// opens Manage with that analysis loaded.
+// Structure / Manage Domain Analysis). Manage is the list console.
+// New, Edit, and Duplicate open DomainAnalysisWorkspace. Guided setup
+// stays available from that list. A focus, id, or domainAnalysisId in
+// the URL opens Manage on that analysis.
 
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -22,15 +23,29 @@ import {
   useCreateDomainAnalysis,
   useUpdateDomainAnalysis,
   useConfirmDomainAnalysis,
+  useDeleteDomainAnalysis,
 } from "@/api/queries/domainAnalyses";
 import { domainAnalysisReadiness } from "@/utils/domainAnalysisReadiness";
 import { DOMAIN_ANALYSIS_ENTITIES } from "@/utils/schema";
-import { PSYCHOLOGICAL_PERSPECTIVES } from "@/utils/ecdVocabulary";
+import { PSYCHOLOGICAL_PERSPECTIVES, psychologicalPerspectiveLabel } from "@/utils/ecdVocabulary";
+import { openActionLabel } from "@/utils/modelActionLabel";
+import Modal from "@/components/ui/Modal";
+import ModelManageList, {
+  manageDangerButtonClass,
+  manageOpenButtonClass,
+  manageQuietButtonClass,
+  manageSecondaryButtonClass,
+} from "@/components/shared/ModelManageList";
+import { useDesignPatterns } from "@/api/queries/designPatterns";
 import { useQMatrixModels } from "@/api/queries/qMatrixModels";
 import DomainAnalysisGuidedSetup from "./DomainAnalysisGuidedSetup";
 import ModelTabShell from "@/components/shared/ModelTabShell";
 import DomainAnalysisDashboard from "./DomainAnalysisDashboard";
-import DomainAnalysisTable from "./DomainAnalysisTable";
+import DomainAnalysisTable, {
+  patternsForAnalysis,
+  policyName,
+  qMatricesForAnalysis,
+} from "./DomainAnalysisTable";
 import {
   SECTION_HINT,
   WORKSPACE_TABS,
@@ -130,7 +145,14 @@ function ConfirmChecklist({ items, activeTab, onJump }) {
   );
 }
 
-export function DomainAnalysisWorkspace() {
+export function DomainAnalysisWorkspace({
+  layout = "library",
+  onExit = null,
+  recordId = "",
+  ignoreUrlFocus = false,
+  initialMode = "workspace",
+  seedForm = null,
+} = {}) {
   const { data: rows = [], isLoading } = useDomainAnalyses();
   const { data: qMatrices = [] } = useQMatrixModels();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -139,13 +161,14 @@ export function DomainAnalysisWorkspace() {
   const confirmAnalysis = useConfirmDomainAnalysis();
   const [editingId, setEditingId] = useState(null);
   const [standards, setStandards] = useState(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() => (seedForm ? seedForm : emptyForm()));
   const [tab, setTab] = useState("overview");
-  const [mode, setMode] = useState("workspace");
+  const [mode, setMode] = useState(initialMode);
   const [guidedStep, setGuidedStep] = useState(1);
   const [snapshot, setSnapshot] = useState(null);
   const appliedFocus = useRef(null);
-  const focusId = domainAnalysisFocusId(searchParams);
+  const urlFocus = ignoreUrlFocus ? "" : domainAnalysisFocusId(searchParams);
+  const focusId = recordId || urlFocus;
 
   useEffect(() => {
     if (!focusId || appliedFocus.current === focusId) return;
@@ -202,8 +225,14 @@ export function DomainAnalysisWorkspace() {
       setStandards(snapshot.standards);
       setForm(snapshot.form);
       setTab(snapshot.tab);
+      setSnapshot(null);
+      setMode("workspace");
+      return;
     }
-    setSnapshot(null);
+    if (onExit) {
+      onExit();
+      return;
+    }
     setMode("workspace");
   }
 
@@ -267,9 +296,34 @@ export function DomainAnalysisWorkspace() {
   }
 
   const activeSection = DOMAIN_ANALYSIS_ENTITIES.find((section) => section.field === tab);
+  const editor = layout === "editor";
+  const editingRow = editingId ? rows.find((row) => row.id === editingId) : null;
 
   return (
-    <div className="grid gap-8 selection:bg-slate-900 selection:text-white lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <div
+      className={
+        editor
+          ? "space-y-6 p-6"
+          : "grid gap-8 selection:bg-slate-900 selection:text-white lg:grid-cols-[16rem_minmax(0,1fr)]"
+      }
+    >
+      {editor ? (
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900">
+              {editingRow?.name || "New Domain Analysis"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Author the seven sections. Confirming records the analysis and authorises no student delivery.
+            </p>
+          </div>
+          {onExit ? (
+            <button type="button" onClick={onExit} className={manageSecondaryButtonClass}>
+              Back to list
+            </button>
+          ) : null}
+        </div>
+      ) : (
       <section aria-label="Domain analyses">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold text-slate-900">Domain Analysis</h2>
@@ -311,6 +365,7 @@ export function DomainAnalysisWorkspace() {
           })}
         </ul>
       </section>
+      )}
 
       <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <form
@@ -462,6 +517,239 @@ export function DomainAnalysisWorkspace() {
   );
 }
 
+function duplicateAnalysisForm(row) {
+  const form = formFromRow(row);
+  const name = String(form.name || "").trim();
+  form.name = name ? `${name} copy` : "copy";
+  return form;
+}
+
+function analysisReadinessValue(row) {
+  return domainAnalysisReadiness(row, { strict: true }).ready ? "ready" : "not-ready";
+}
+
+function statementCount(row) {
+  return DOMAIN_ANALYSIS_ENTITIES.reduce(
+    (sum, section) => sum + (Array.isArray(row?.[section.field]) ? row[section.field].length : 0),
+    0
+  );
+}
+
+function clearAnalysisFocus(searchParams) {
+  const next = new URLSearchParams(searchParams);
+  let changed = false;
+  for (const key of ["focus", "id", "domainAnalysisId"]) {
+    if (next.has(key)) {
+      next.delete(key);
+      changed = true;
+    }
+  }
+  return changed ? next : null;
+}
+
+function DomainAnalysisManage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusId = domainAnalysisFocusId(searchParams);
+  const [screen, setScreen] = useState(focusId ? "edit" : "list");
+  const [seedForm, setSeedForm] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const { data: rows = [], isLoading, error } = useDomainAnalyses();
+  const { data: patterns = [] } = useDesignPatterns();
+  const { data: qMatrices = [] } = useQMatrixModels();
+  const deleteAnalysis = useDeleteDomainAnalysis();
+
+  useEffect(() => {
+    if (focusId) setScreen("edit");
+  }, [focusId]);
+
+  function dropFocus() {
+    const next = clearAnalysisFocus(searchParams);
+    if (next) setSearchParams(next, { replace: true });
+  }
+
+  function backToList() {
+    dropFocus();
+    setSeedForm(null);
+    setScreen("list");
+  }
+
+  function openCreate() {
+    dropFocus();
+    setSeedForm(null);
+    setScreen("create");
+  }
+
+  function openEdit(row) {
+    const next = new URLSearchParams(searchParams);
+    next.set("focus", row.id);
+    next.delete("id");
+    next.delete("domainAnalysisId");
+    setSearchParams(next);
+    setSeedForm(null);
+    setScreen("edit");
+  }
+
+  function openDuplicate(row) {
+    dropFocus();
+    setSeedForm(duplicateAnalysisForm(row));
+    setScreen("create");
+  }
+
+  function openGuided() {
+    dropFocus();
+    setSeedForm(null);
+    setScreen("guided");
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <h2 className="mb-4 text-2xl font-semibold">Manage Domain Analysis</h2>
+        <p className="text-sm text-slate-500">Loading domain analyses…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <h2 className="mb-4 text-2xl font-semibold">Manage Domain Analysis</h2>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {apiErrorMessage(error, "Failed to load domain analyses")}
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "create" || screen === "edit" || screen === "guided") {
+    return (
+      <DomainAnalysisWorkspace
+        key={
+          screen === "guided"
+            ? "guided"
+            : screen === "edit"
+              ? `edit-${focusId || "record"}`
+              : `create-${seedForm?.name || "blank"}`
+        }
+        layout="editor"
+        onExit={backToList}
+        initialMode={screen === "guided" ? "guided" : "workspace"}
+        seedForm={screen === "create" ? seedForm : null}
+        recordId={screen === "edit" ? focusId : ""}
+        ignoreUrlFocus={screen !== "edit"}
+      />
+    );
+  }
+
+  return (
+    <>
+      <ModelManageList
+        title="Manage Domain Analysis"
+        description="Author, review and confirm Domain Analyses. Confirming records the analysis. It does not authorise a student session."
+        newLabel="New Domain Analysis"
+        onCreate={openCreate}
+        secondaryActions={
+          <button type="button" onClick={openGuided} className={manageSecondaryButtonClass}>
+            Guided setup
+          </button>
+        }
+        records={rows}
+        emptyMessage="No Domain Analyses defined yet. Upload a JSON file under Settings → Data, or start one here."
+        filteredEmptyMessage="No Domain Analyses match the current filters."
+        searchLabel="Search domain analyses"
+        searchPlaceholder="Search analyses…"
+        searchText={(row) => row.name || ""}
+        readinessOf={analysisReadinessValue}
+        renderMeta={(row) => {
+          const ready = analysisReadinessValue(row) === "ready";
+          const statements = statementCount(row);
+          const linkedPatterns = patternsForAnalysis(row.id, patterns).length;
+          const matrices = qMatricesForAnalysis(row.id, qMatrices).length;
+          return (
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide ${
+                  ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {ready ? "Ready" : "Not ready"}
+              </span>
+              <span>
+                {row.psychologicalPerspective
+                  ? psychologicalPerspectiveLabel(row.psychologicalPerspective)
+                  : "No perspective"}
+              </span>
+              <span>
+                {statements} statement{statements === 1 ? "" : "s"}
+              </span>
+              <span>{policyName(row)}</span>
+              <span>
+                {linkedPatterns} design pattern{linkedPatterns === 1 ? "" : "s"}
+              </span>
+              <span>
+                {matrices} Q-matri{matrices === 1 ? "x" : "ces"}
+              </span>
+            </div>
+          );
+        }}
+        renderDetails={(row) => (
+          <p className="leading-relaxed text-slate-600">
+            {row.psychologicalPerspective
+              ? `Perspective: ${psychologicalPerspectiveLabel(row.psychologicalPerspective)}.`
+              : "No psychological perspective yet."}{" "}
+            Policy: {policyName(row)}.
+          </p>
+        )}
+        renderActions={(row) => (
+          <>
+            <button type="button" onClick={() => openEdit(row)} className={manageOpenButtonClass}>
+              {openActionLabel(row)}
+            </button>
+            <button
+              type="button"
+              onClick={() => openDuplicate(row)}
+              className={manageQuietButtonClass}
+              title="Open a new draft with these statements copied. The curricular policy is not written from this form."
+            >
+              Duplicate
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingDelete(row)}
+              disabled={deleteAnalysis.isPending}
+              className={manageDangerButtonClass}
+            >
+              Delete
+            </button>
+          </>
+        )}
+      />
+      <Modal
+        isOpen={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          try {
+            await deleteAnalysis.mutateAsync(pendingDelete.id);
+            toast.success("Domain Analysis deleted");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Could not delete the Domain Analysis."));
+          }
+          setPendingDelete(null);
+        }}
+        title="Delete Domain Analysis"
+        message={
+          pendingDelete
+            ? `Delete "${pendingDelete.name || pendingDelete.id}"? Design patterns and Q-matrices that name it keep that citation. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        confirmClass="bg-red-600 hover:bg-red-700 text-white"
+      />
+    </>
+  );
+}
+
 export default function DomainAnalysisEditor() {
   const [searchParams] = useSearchParams();
   const focusId = domainAnalysisFocusId(searchParams);
@@ -485,7 +773,7 @@ export default function DomainAnalysisEditor() {
         {
           id: "manage",
           label: "Manage Domain Analysis",
-          panel: <DomainAnalysisWorkspace />,
+          panel: <DomainAnalysisManage />,
         },
       ]}
     />
