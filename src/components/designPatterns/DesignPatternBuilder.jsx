@@ -8,6 +8,10 @@
 // (convention C). Payload, formFromRow, and readiness are unchanged.
 // Lifecycle stays draft | confirmed. Create draft / Save and Confirm live
 // in the toolbar slot. The shell promote pair stays hidden.
+//
+// The default export is the three-tab shell (Dashboard / Design Pattern
+// Structure / Manage Design Pattern). Manage still renders
+// DesignPatternLibraryView. A focus id in the URL opens Manage.
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -50,6 +54,9 @@ import { useTemplates, useUpdateTemplate } from "@/api/queries/templates";
 import { designPatternReadiness } from "@/utils/designPatternReadiness";
 import { DESIGN_PATTERN_PADI_ATTRIBUTES } from "@/utils/schema";
 import PatternNeighbourhood from "./PatternNeighbourhood.jsx";
+import ModelTabShell from "@/components/shared/ModelTabShell";
+import DesignPatternDashboard from "./DesignPatternDashboard";
+import DesignPatternTable from "./DesignPatternTable";
 
 const SEED_FIELDS = [
   "potentialObservations",
@@ -194,7 +201,7 @@ const emptyForm = () => ({
   domainAnalysisId: "",
 });
 
-function formFromRow(row) {
+export function formFromRow(row) {
   return {
     name: row.name || "",
     summary: row.summary || "",
@@ -1380,7 +1387,7 @@ function PatternTemplateLinks({
   );
 }
 
-export default function DesignPatternBuilder() {
+function DesignPatternManage() {
   const { auth } = useAuth() || {};
   const [searchParams] = useSearchParams();
   const focusId = searchParams.get("focus");
@@ -1491,6 +1498,36 @@ export default function DesignPatternBuilder() {
           throw err;
         }
       }}
+    />
+  );
+}
+
+export default function DesignPatternBuilder() {
+  const [searchParams] = useSearchParams();
+  const focusId = searchParams.get("focus");
+  const [mode, setMode] = useState(focusId ? "manage" : "dashboard");
+
+  useEffect(() => {
+    if (focusId) setMode("manage");
+  }, [focusId]);
+
+  return (
+    <ModelTabShell
+      mode={mode}
+      onModeChange={setMode}
+      tabs={[
+        { id: "dashboard", label: "Dashboard", panel: <DesignPatternDashboard /> },
+        {
+          id: "structure",
+          label: "Design Pattern Structure",
+          panel: <DesignPatternTable />,
+        },
+        {
+          id: "manage",
+          label: "Manage Design Pattern",
+          panel: <DesignPatternManage />,
+        },
+      ]}
     />
   );
 }
