@@ -5,14 +5,30 @@
 // on the Task Model — this UI edits a working copy and can write through
 // to an unlocked TM; it does not store a second settings copy on the
 // template). Binding coherence errors come from the server (apiErrorMessage).
+//
+// The default export is the three-tab shell (Dashboard, Template
+// Structure, Manage Templates). TemplateLibraryView is the create and
+// edit form. Manage opens that form for New, Edit, and Duplicate.
+// There is no clone route, so Duplicate prefills a new draft.
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
+import Modal from "@/components/ui/Modal";
 import WorkedExample from "@/components/authoring/WorkedExample";
 import { apiErrorMessage } from "@/api/apiClient";
+import { openActionLabel } from "@/utils/modelActionLabel";
+import ModelManageList, {
+  manageOpenButtonClass,
+  manageQuietButtonClass,
+  manageDangerButtonClass,
+  manageSecondaryButtonClass,
+} from "@/components/shared/ModelManageList";
+import ModelTabShell from "@/components/shared/ModelTabShell";
+import TemplateDashboard from "./TemplateDashboard";
+import TemplateTable, { boundName, familySizeForTemplate } from "./TemplateTable";
 import {
   useTemplates,
   useCreateTemplate,
@@ -161,8 +177,12 @@ export function TemplateLibraryView({
   updatePending = false,
   confirmPending = false,
   deletePending = false,
+  onDismiss = null,
+  initialForm = null,
 }) {
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() =>
+    initialForm ? { ...emptyForm(), ...initialForm } : emptyForm()
+  );
   const [editingId, setEditingId] = useState(null);
   const [serverError, setServerError] = useState("");
   const appliedFocus = useRef(null);
@@ -349,14 +369,36 @@ export function TemplateLibraryView({
       await persistTaskModelSettingsIfNeeded();
       await onUpdate({ id: editingId, payload: templatePayload(form) });
       await onConfirm(editingId);
+      if (onDismiss) {
+        onDismiss();
+        return;
+      }
       cancelEdit();
     } catch (err) {
       setServerError(apiErrorMessage(err, "Confirm failed"));
     }
   }
 
+  const embedded = Boolean(onDismiss);
+
   return (
-    <div className="space-y-6 p-4">
+    <div className={embedded ? "space-y-6 p-6" : "space-y-6 p-4"}>
+      {embedded ? (
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900">
+              {editing?.name || form.name.trim() || "New Template"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Bind Student, Evidence, Task, and Presentation. Family size comes
+              from the bound Task Model.
+            </p>
+          </div>
+          <button type="button" onClick={onDismiss} className={manageSecondaryButtonClass}>
+            Back to list
+          </button>
+        </div>
+      ) : (
       <header>
         <h2 className="text-lg font-semibold text-slate-900">Templates</h2>
         <p className="mt-1 text-sm text-slate-600">
@@ -365,6 +407,7 @@ export function TemplateLibraryView({
           Task Model&apos;s TMV settings.
         </p>
       </header>
+      )}
 
       {templates.length === 0 && (
         <WorkedExample
@@ -379,7 +422,7 @@ export function TemplateLibraryView({
         />
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className={embedded ? "space-y-6" : "grid gap-6 lg:grid-cols-2"}>
         <section className="rounded-lg border border-slate-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-medium text-slate-800">
             {editingId ? `Edit ${editing?.name || editingId}` : "New template"}
@@ -633,8 +676,12 @@ export function TemplateLibraryView({
                   Confirm
                 </Button>
               )}
-              {editingId && (
-                <Button type="button" variant="outline" onClick={cancelEdit}>
+              {(editingId || onDismiss) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => (onDismiss ? onDismiss() : cancelEdit())}
+                >
                   Cancel
                 </Button>
               )}
@@ -642,6 +689,7 @@ export function TemplateLibraryView({
           </form>
         </section>
 
+        {embedded ? null : (
         <section className="rounded-lg border border-slate-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-medium text-slate-800">Library</h3>
           {templates.length === 0 ? (
@@ -692,14 +740,29 @@ export function TemplateLibraryView({
             </ul>
           )}
         </section>
+        )}
       </div>
     </div>
   );
 }
 
-export default function TemplateBuilder() {
-  const [searchParams] = useSearchParams();
+function duplicateTemplateForm(row, taskModels) {
+  const form = formFromRow(row, taskModels);
+  const name = String(form.name || "").trim();
+  form.name = name ? `${name} copy` : "copy";
+  return form;
+}
+
+function templateReadinessValue(row) {
+  return templateReadiness(row, { strict: true }).ready ? "ready" : "not-ready";
+}
+
+function TemplateManage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const focusId = searchParams.get("focus");
+  const [screen, setScreen] = useState(focusId ? "edit" : "list");
+  const [seedForm, setSeedForm] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
   const { data: templates = [], isLoading, error } = useTemplates();
   const { data: designPatterns = [] } = useDesignPatterns();
   const { data: competencyModels = [] } = useCompetencyModels();
@@ -716,73 +779,255 @@ export default function TemplateBuilder() {
   const deleteMut = useDeleteTemplate();
   const updateTmMut = useUpdateTaskModel();
 
+  useEffect(() => {
+    if (focusId) setScreen("edit");
+  }, [focusId]);
+
+  function clearFocus() {
+    if (!searchParams.get("focus")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("focus");
+    setSearchParams(next, { replace: true });
+  }
+
+  function backToList() {
+    clearFocus();
+    setSeedForm(null);
+    setScreen("list");
+  }
+
+  function openCreate() {
+    clearFocus();
+    setSeedForm(null);
+    setScreen("create");
+  }
+
+  function openEdit(row) {
+    const next = new URLSearchParams(searchParams);
+    next.set("focus", row.id);
+    setSearchParams(next);
+    setSeedForm(null);
+    setScreen("edit");
+  }
+
+  function openDuplicate(row) {
+    clearFocus();
+    setSeedForm(duplicateTemplateForm(row, taskModels));
+    setScreen("create");
+  }
+
   if (isLoading) {
-    return <p className="p-4 text-sm text-slate-500">Loading templates…</p>;
+    return (
+      <div className="p-6">
+        <h2 className="mb-4 text-2xl font-semibold">Manage Templates</h2>
+        <p className="text-sm text-slate-500">Loading templates…</p>
+      </div>
+    );
   }
   if (error) {
     return (
-      <p className="p-4 text-sm text-red-600">
-        {apiErrorMessage(error, "Failed to load templates")}
-      </p>
+      <div className="p-6">
+        <h2 className="mb-4 text-2xl font-semibold">Manage Templates</h2>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {apiErrorMessage(error, "Failed to load templates")}
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "create" || screen === "edit") {
+    return (
+      <TemplateLibraryView
+        key={
+          screen === "edit"
+            ? `edit-${focusId || "record"}`
+            : `create-${seedForm?.name || "blank"}`
+        }
+        templates={templates}
+        competencyModels={competencyModels}
+        competencies={competencies}
+        evidenceModels={evidenceModels}
+        taskModels={taskModels}
+        presentationModels={presentationModels}
+        taskModelVariables={taskModelVariables}
+        designPatterns={designPatterns}
+        domainAnalyses={domainAnalyses}
+        focusId={screen === "edit" ? focusId : null}
+        initialForm={screen === "create" ? seedForm : null}
+        onDismiss={backToList}
+        createPending={createMut.isPending}
+        updatePending={updateMut.isPending}
+        confirmPending={confirmMut.isPending}
+        deletePending={deleteMut.isPending}
+        onCreate={async (payload) => {
+          try {
+            const created = await createMut.mutateAsync(payload);
+            toast.success("Template created");
+            return created;
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Create failed"));
+            throw err;
+          }
+        }}
+        onUpdate={async ({ id, payload }) => {
+          try {
+            await updateMut.mutateAsync({ id, payload });
+            toast.success("Template saved");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Save failed"));
+            throw err;
+          }
+        }}
+        onConfirm={async (id) => {
+          try {
+            await confirmMut.mutateAsync(id);
+            toast.success("Template confirmed");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Confirm failed"));
+            throw err;
+          }
+        }}
+        onDelete={async (id) => {
+          try {
+            await deleteMut.mutateAsync(id);
+            toast.success("Template deleted");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Delete failed"));
+            throw err;
+          }
+        }}
+        onSaveTaskModelSettings={async ({ id, payload }) => {
+          await updateTmMut.mutateAsync({ id, payload });
+        }}
+      />
     );
   }
 
   return (
-    <TemplateLibraryView
-      templates={templates}
-      competencyModels={competencyModels}
-      competencies={competencies}
-      evidenceModels={evidenceModels}
-      taskModels={taskModels}
-      presentationModels={presentationModels}
-      taskModelVariables={taskModelVariables}
-      designPatterns={designPatterns}
-      domainAnalyses={domainAnalyses}
-      focusId={focusId}
-      createPending={createMut.isPending}
-      updatePending={updateMut.isPending}
-      confirmPending={confirmMut.isPending}
-      deletePending={deleteMut.isPending}
-      onCreate={async (payload) => {
-        try {
-          const created = await createMut.mutateAsync(payload);
-          toast.success("Template created");
-          return created;
-        } catch (err) {
-          toast.error(apiErrorMessage(err, "Create failed"));
-          throw err;
+    <>
+      <ModelManageList
+        title="Manage Templates"
+        description="Bind Student, Evidence, Task, and Presentation into a family-generating blueprint. Confirming records the bindings. It does not generate items."
+        newLabel="New Template"
+        onCreate={openCreate}
+        records={templates}
+        emptyMessage="No Templates defined yet."
+        filteredEmptyMessage="No Templates match the current filters."
+        searchLabel="Search templates"
+        searchPlaceholder="Search templates…"
+        searchText={(row) =>
+          [
+            row.name,
+            row.description,
+            boundName(competencyModels, row.competencyModelId),
+            boundName(taskModels, row.taskModelId),
+            boundName(designPatterns, row.designPatternId),
+          ]
+            .filter((part) => part && part !== "Not linked")
+            .join(" ")
         }
-      }}
-      onUpdate={async ({ id, payload }) => {
-        try {
-          await updateMut.mutateAsync({ id, payload });
-          toast.success("Template saved");
-        } catch (err) {
-          toast.error(apiErrorMessage(err, "Save failed"));
-          throw err;
+        readinessOf={templateReadinessValue}
+        renderMeta={(row) => {
+          const ready = templateReadinessValue(row) === "ready";
+          const familySize = familySizeForTemplate(row, taskModels, taskModelVariables);
+          return (
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide ${
+                  ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {ready ? "Ready" : "Not ready"}
+              </span>
+              <span>{boundName(competencyModels, row.competencyModelId)}</span>
+              <span>{boundName(designPatterns, row.designPatternId)}</span>
+              <span>
+                {familySize == null ? "No task model" : `Family size ${familySize}`}
+              </span>
+            </div>
+          );
+        }}
+        renderDetails={(row) => (
+          <>
+            <p className="leading-relaxed text-slate-600">
+              {String(row.description || "").trim() || "No description yet."}
+            </p>
+            <p className="leading-relaxed text-slate-600">
+              Student: {boundName(competencyModels, row.competencyModelId)}. Evidence:{" "}
+              {boundName(evidenceModels, row.evidenceModelId)}. Task:{" "}
+              {boundName(taskModels, row.taskModelId)}. Presentation:{" "}
+              {boundName(presentationModels, row.presentationModelId)}.
+            </p>
+          </>
+        )}
+        renderActions={(row) => (
+          <>
+            <button type="button" onClick={() => openEdit(row)} className={manageOpenButtonClass}>
+              {openActionLabel(row)}
+            </button>
+            <button
+              type="button"
+              onClick={() => openDuplicate(row)}
+              className={manageQuietButtonClass}
+              title="Open the create form with these bindings copied"
+            >
+              Duplicate
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingDelete(row)}
+              disabled={deleteMut.isPending}
+              className={manageDangerButtonClass}
+            >
+              Delete
+            </button>
+          </>
+        )}
+      />
+      <Modal
+        isOpen={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          try {
+            await deleteMut.mutateAsync(pendingDelete.id);
+            toast.success("Template deleted");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Delete failed"));
+          }
+          setPendingDelete(null);
+        }}
+        title="Delete Template"
+        message={
+          pendingDelete
+            ? `Delete "${pendingDelete.name || pendingDelete.id}"? This cannot be undone.`
+            : ""
         }
-      }}
-      onConfirm={async (id) => {
-        try {
-          await confirmMut.mutateAsync(id);
-          toast.success("Template confirmed");
-        } catch (err) {
-          toast.error(apiErrorMessage(err, "Confirm failed"));
-          throw err;
-        }
-      }}
-      onDelete={async (id) => {
-        try {
-          await deleteMut.mutateAsync(id);
-          toast.success("Template deleted");
-        } catch (err) {
-          toast.error(apiErrorMessage(err, "Delete failed"));
-          throw err;
-        }
-      }}
-      onSaveTaskModelSettings={async ({ id, payload }) => {
-        await updateTmMut.mutateAsync({ id, payload });
-      }}
+        confirmLabel="Delete"
+        confirmClass="bg-red-600 hover:bg-red-700 text-white"
+      />
+    </>
+  );
+}
+
+export default function TemplateBuilder() {
+  const [searchParams] = useSearchParams();
+  const focusId = searchParams.get("focus");
+  const [mode, setMode] = useState(focusId ? "manage" : "dashboard");
+
+  useEffect(() => {
+    if (focusId) setMode("manage");
+  }, [focusId]);
+
+  return (
+    <ModelTabShell
+      mode={mode}
+      onModeChange={setMode}
+      tabs={[
+        { id: "dashboard", label: "Dashboard", panel: <TemplateDashboard /> },
+        { id: "structure", label: "Template Structure", panel: <TemplateTable /> },
+        { id: "manage", label: "Manage Templates", panel: <TemplateManage /> },
+      ]}
     />
   );
 }

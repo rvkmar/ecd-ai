@@ -1,4 +1,5 @@
-// List console shared by Manage Design Pattern and Manage Domain Analysis.
+// List console shared by Manage Design Pattern, Manage Domain Analysis,
+// and Manage Templates.
 // The header, filters, and expandable cards follow TaskModelBuilderPanel
 // and TaskModelList: title and description on the left, a black
 // "+ New …" button on the right, then status and search, then one card
