@@ -60,7 +60,42 @@ const emptyDraft = () => ({
   locked: false,
 });
 
-export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly = false, domainAnalysisId }) {
+function itemIdsFrom(entries) {
+  return Array.from(new Set((entries || []).map((entry) => entry.itemId).filter(Boolean)));
+}
+
+// Duplicate has no clone route. The create form opens with these fields
+// copied and no id, so the next save is a new draft. Status, lock, and
+// version stay off the copy. A Domain Analysis citation on the URL fills
+// only when the seed does not already name one.
+function draftFromSeed(seed, domainAnalysisId) {
+  const base = emptyDraft();
+  if (domainAnalysisId) base.domainAnalysisId = domainAnalysisId;
+  if (!seed) return base;
+  return {
+    ...base,
+    name: seed.name || "",
+    description: seed.description || "",
+    competencyModelId: seed.competencyModelId || "",
+    competencyModelVersion: seed.competencyModelVersion,
+    attributeIds: Array.isArray(seed.attributeIds) ? [...seed.attributeIds] : [],
+    entries: Array.isArray(seed.entries) ? seed.entries.map((entry) => ({ ...entry })) : [],
+    domainAnalysisId: seed.domainAnalysisId || domainAnalysisId || "",
+    status: "draft",
+    locked: false,
+    id: undefined,
+  };
+}
+
+export default function QMatrixEditor({
+  qMatrixId,
+  onCancel,
+  onSaved,
+  readOnly = false,
+  domainAnalysisId,
+  initialDraft = null,
+  domainAnalyses = [],
+}) {
   const isEditing = Boolean(qMatrixId);
   const { data: existing, isLoading: loadingExisting } = useQMatrixModel(qMatrixId, {
     enabled: isEditing,
@@ -71,8 +106,8 @@ export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly =
   const { data: evidenceModels = [] } = useEvidenceModels();
   const { data: competencies = [] } = useCompetencies();
 
-  const [draft, setDraft] = useState(emptyDraft());
-  const [includedItemIds, setIncludedItemIds] = useState([]);
+  const [draft, setDraft] = useState(() => draftFromSeed(initialDraft, domainAnalysisId));
+  const [includedItemIds, setIncludedItemIds] = useState(() => itemIdsFrom(initialDraft?.entries));
   const [isDirty, setIsDirty] = useState(false);
 
   // `draft.id` is also mirrored into this ref, updated synchronously
@@ -96,13 +131,10 @@ export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly =
   }, [isEditing, existing]);
 
   useEffect(() => {
-    if (!isEditing && domainAnalysisId) {
-      setDraft((current) =>
-        current.domainAnalysisId === domainAnalysisId
-          ? current
-          : { ...current, domainAnalysisId }
-      );
-    }
+    if (isEditing || !domainAnalysisId) return;
+    setDraft((current) =>
+      current.domainAnalysisId ? current : { ...current, domainAnalysisId }
+    );
   }, [isEditing, domainAnalysisId]);
 
   const createMutation = useCreateQMatrixModel();
@@ -110,6 +142,7 @@ export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly =
   const transitionMutation = useTransitionQMatrixModel();
 
   const competencyModel = competencyModels.find((m) => m.id === draft.competencyModelId);
+  const namedAnalysis = domainAnalyses.find((row) => row.id === draft.domainAnalysisId);
   const availableAttributes = (competencyModel?.smVariables || []).filter(
     (v) => v.type === "binary"
   );
@@ -403,6 +436,12 @@ export default function QMatrixEditor({ qMatrixId, onCancel, onSaved, readOnly =
             onChange={(e) => patchDraft({ description: e.target.value })}
           />
         </div>
+
+        {draft.domainAnalysisId ? (
+          <p className="text-sm text-slate-600">
+            This design names {namedAnalysis?.name || draft.domainAnalysisId}.
+          </p>
+        ) : null}
 
         {draft.competencyModelId && (
           <>
