@@ -66,7 +66,36 @@ const emptyDraft = () => ({
   locked: false,
 });
 
-export function AssemblyModelWizardProvider({ assemblyModelId, onSaved, children }) {
+// Duplicate has no clone route. The create form opens with these fields
+// copied and no id, so the next save is a new draft. Status, lock, and
+// version stay off the copy.
+function draftFromSeed(seed) {
+  if (!seed) return emptyDraft();
+  return {
+    ...emptyDraft(),
+    name: seed.name || "",
+    description: seed.description || "",
+    competencyModelId: seed.competencyModelId || "",
+    competencyModelVersion: seed.competencyModelVersion,
+    targetsBySMV: Array.isArray(seed.targetsBySMV)
+      ? seed.targetsBySMV.map((row) => ({ ...row }))
+      : [],
+    stoppingRules:
+      seed.stoppingRules && typeof seed.stoppingRules === "object"
+        ? { ...seed.stoppingRules }
+        : {},
+    selectionAlgorithm: seed.selectionAlgorithm?.policyId
+      ? { policyId: seed.selectionAlgorithm.policyId }
+      : {},
+  };
+}
+
+export function AssemblyModelWizardProvider({
+  assemblyModelId,
+  initialDraft = null,
+  onSaved,
+  children,
+}) {
   const isEditing = Boolean(assemblyModelId);
 
   const { data: existing, isLoading: loadingExisting } = useAssemblyModel(assemblyModelId, {
@@ -75,7 +104,9 @@ export function AssemblyModelWizardProvider({ assemblyModelId, onSaved, children
   const { data: competencyModels = [] } = useCompetencyModels();
   const { data: policies = [] } = usePolicies();
 
-  const [draft, setDraft] = useState(emptyDraft());
+  const [draft, setDraft] = useState(() =>
+    isEditing ? emptyDraft() : draftFromSeed(initialDraft)
+  );
   const [currentStep, setCurrentStep] = useState(1);
   const [isDirty, setIsDirty] = useState(false);
 
