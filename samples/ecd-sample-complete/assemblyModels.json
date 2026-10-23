@@ -1,0 +1,48 @@
+[
+  {
+    "id": "am-plant",
+    "name": "Plant part naming assembly",
+    "description": "Stops when both plant attributes are classified accurately enough, under the fixed form.",
+    "status": "draft",
+    "competencyModelId": "cm-plant",
+    "targetsBySMV": [
+      {
+        "smvId": "smv-names-part",
+        "requiredClassificationAccuracy": 0.8
+      },
+      {
+        "smvId": "smv-names-function",
+        "requiredClassificationAccuracy": 0.75
+      }
+    ],
+    "stoppingRules": {
+      "minItems": 4,
+      "maxItems": 12,
+      "targetsMet": true
+    },
+    "selectionAlgorithm": {
+      "policyId": "p-fixed"
+    }
+  },
+  {
+    "id": "am-frac",
+    "name": "Fraction equivalence assembly",
+    "description": "Stops when fraction equivalence is classified accurately enough, under the Bayesian diagnostic policy.",
+    "status": "draft",
+    "competencyModelId": "cm-frac",
+    "targetsBySMV": [
+      {
+        "smvId": "smv-equiv",
+        "requiredClassificationAccuracy": 0.8
+      }
+    ],
+    "stoppingRules": {
+      "minItems": 5,
+      "maxItems": 15,
+      "targetsMet": true
+    },
+    "selectionAlgorithm": {
+      "policyId": "p-bayes"
+    }
+  }
+]

@@ -52,6 +52,7 @@ import { beginAuditRequest } from "./utils/auditContext.js";
 import auditLogRoutes from "./routes/auditLogRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import opsRoutes from "./routes/opsRoutes.js";
+import dataZipRoutes from "./routes/dataZipRoutes.js";
 
 const app = express();
 app.use(express.json());
@@ -136,6 +137,8 @@ app.use("/api/presentationModels", presentationModelsRoutes);
 app.use("/api/compositeLibrary", compositeLibraryRoutes);
 app.use("/api/announcements", announcementsRoutes);
 app.use("/api/tenancy", tenancyRoutes);
+// One zip for every ECD collection. Admin only; see dataZipRoutes.js.
+app.use("/api/data/zip", dataZipRoutes);
 
 // D97: storage-layer TenancyError → 403 (sync throws from loadDB/saveDB).
 app.use((err, req, res, next) => {

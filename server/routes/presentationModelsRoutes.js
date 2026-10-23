@@ -57,37 +57,50 @@ router.get("/:id", (req, res) => {
 // Always created as a draft; status/locked/versionNumber are server-
 // authoritative so a payload cannot arrive pre-confirmed.
 // ------------------------------
-router.post("/", canAuthor, (req, res) => {
-  const db = loadDB();
+export function createPresentationModelRecord(payload = {}, db, options = {}) {
   const now = new Date().toISOString();
-
+  const preserve = options.preserveLifecycle === true;
   const record = {
-    ...req.body,
-    id: genId(),
-    status: "draft",
-    locked: false,
-    versionNumber: req.body?.versionNumber ?? 1,
+    ...payload,
+    id: options.assignedId || genId(),
+    status: preserve && payload.status ? payload.status : "draft",
+    locked: preserve && typeof payload.locked === "boolean" ? payload.locked : false,
+    versionNumber: preserve
+      ? Number.isFinite(payload.versionNumber)
+        ? payload.versionNumber
+        : 1
+      : payload.versionNumber ?? 1,
     createdAt: now,
     updatedAt: now,
   };
 
   const { valid, errors } = validateEntity("presentationModels", record, db);
   if (!valid) {
-    return res.status(400).json({ error: "Presentation model validation failed", details: errors });
+    return { ok: false, error: "Presentation model validation failed", details: errors };
   }
 
   const lifecycleErrors = validatePresentationModelLifecycle(record, db);
   if (lifecycleErrors.length > 0) {
-    return res.status(400).json({
+    return {
+      ok: false,
       error: "Presentation model lifecycle validation failed",
       details: lifecycleErrors,
-    });
+    };
   }
 
   db.presentationModels = db.presentationModels || [];
   db.presentationModels.push(record);
+  return { ok: true, record };
+}
+
+router.post("/", canAuthor, (req, res) => {
+  const db = loadDB();
+  const result = createPresentationModelRecord(req.body || {}, db);
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error, details: result.details });
+  }
   saveDB(db);
-  res.status(201).json(record);
+  res.status(201).json(result.record);
 });
 
 // ------------------------------

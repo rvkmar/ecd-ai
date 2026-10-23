@@ -11,6 +11,7 @@
 import React from "react";
 import BulkUploadCard from "./BulkUploadCard";
 import UnifiedBulkUploadPanel from "./UnifiedBulkUploadPanel";
+import ZipBundlePanel from "./ZipBundlePanel";
 import { usersKey } from "@/api/queries/users";
 import { policiesKey } from "@/api/queries/policies";
 import { curricularPoliciesKey } from "@/api/queries/curricularPolicies";
@@ -38,6 +39,8 @@ export default function BulkUploadPanel() {
           confirming any record still enforces the full confirmed+locked chain.
         </p>
       </div>
+
+      <ZipBundlePanel />
 
       <UnifiedBulkUploadPanel />
 

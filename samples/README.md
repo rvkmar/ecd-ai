@@ -6,6 +6,11 @@ rules as creating that entity one at a time through its normal form/wizard —
 there's no cross-file smart ordering, so a row that references something
 that doesn't exist yet just fails that row.
 
+`ecd-sample-complete.zip` is the one-archive exception. Settings, Data, Upload
+reads it in dependency order and rewrites ids. The JSON next to it is the
+same data. See `ecd-sample-complete/README.md`. That zip imports with no
+failed rows.
+
 | File | Upload target | Works as-is? |
 |---|---|---|
 | `sample-users.json` | Settings > Users | Yes |

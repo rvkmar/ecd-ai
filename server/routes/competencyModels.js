@@ -82,9 +82,10 @@ router.get("/", (req, res) => {
    save it -- the caller persists once, so bulk import writes the file
    once per batch instead of once per row.
 ===================================================== */
-function createCompetencyModelRecord(payload = {}, db, idSuffix = "") {
+function createCompetencyModelRecord(payload = {}, db, idSuffix = "", options = {}) {
+  const life = options.preserveLifecycle ? options.lifecycle || {} : null;
   const newModel = {
-    id: `${genId()}${idSuffix}`,
+    id: options.assignedId || `${genId()}${idSuffix}`,
     name: payload.name || "",
     description: payload.description || "",
     measurementIntent: payload.measurementIntent || "",
@@ -99,10 +100,15 @@ function createCompetencyModelRecord(payload = {}, db, idSuffix = "") {
       undefined,
     smVariables: Array.isArray(payload.smVariables) ? payload.smVariables : [],
 
-    status: "draft",
-    locked: false,
-    versionNumber: 1,
-    parentModelId: null,
+    status: life?.status || "draft",
+    locked: life && typeof life.locked === "boolean" ? life.locked : false,
+    versionNumber: life && Number.isFinite(life.versionNumber) ? life.versionNumber : 1,
+    parentModelId:
+      options.parentModelId !== undefined
+        ? options.parentModelId || null
+        : life
+          ? life.parentModelId || null
+          : null,
 
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -123,7 +129,7 @@ function createCompetencyModelRecord(payload = {}, db, idSuffix = "") {
    only variableType is required; state/scale completeness is enforced
    later at /models/:id/confirm.
 ===================================================== */
-function createCompetencyRecord(payload = {}, db, modelId, idSuffix = "") {
+export function createCompetencyRecord(payload = {}, db, modelId, idSuffix = "", options = {}) {
   const {
     id: _ignoreId,
     modelId: _ignoreModelId,
@@ -135,7 +141,7 @@ function createCompetencyRecord(payload = {}, db, modelId, idSuffix = "") {
 
   const newComp = {
     ...rest,
-    id: `c${Date.now()}${idSuffix}`,
+    id: options.assignedId || `c${Date.now()}${idSuffix}`,
     modelId,
     relationships: [],
     createdAt: new Date().toISOString(),
@@ -206,6 +212,7 @@ function createNestedCompetenciesForModel({
   db,
   rowIndex,
   existingSmVariables = [],
+  competencyIdFor,
 }) {
   if (!Array.isArray(competencies) || competencies.length === 0) {
     return {
@@ -246,7 +253,8 @@ function createNestedCompetenciesForModel({
       comp || {},
       db,
       model.id,
-      `_${rowIndex}_${j}`
+      `_${rowIndex}_${j}`,
+      { assignedId: competencyIdFor?.(comp, j) }
     );
     if (!result.ok) {
       competencyResults.push({
@@ -273,6 +281,7 @@ function createNestedCompetenciesForModel({
       index: j,
       ok: true,
       id: record.id,
+      sourceId: oldId || null,
       name: record.name,
     });
   });
@@ -362,6 +371,104 @@ router.post("/models", canAuthor, (req, res) => {
   res.status(result.status).json(result.record);
 });
 
+export function importCompetencyModelRow(row, db, rowIndex, options = {}) {
+  const lifecycle = options.preserveLifecycle
+    ? {
+        status: row?.status,
+        locked: row?.locked,
+        versionNumber: row?.versionNumber,
+        parentModelId: row?.parentModelId ?? null,
+      }
+    : null;
+  const stripped = stripStudentModelImportIdentity(row || {});
+  const { competencies, smVariables, ...modelPayload } = stripped;
+  const modelResult = createCompetencyModelRecord(
+    {
+      ...modelPayload,
+      // Priors/SMVs are synced after nested comps land; avoid validating
+      // stale export ids on the empty model shell.
+      smVariables: [],
+    },
+    db,
+    `_${rowIndex}`,
+    {
+      assignedId: options.assignedId,
+      preserveLifecycle: options.preserveLifecycle === true,
+      lifecycle,
+      ...(options.keepParentLink
+        ? { parentModelId: row?.parentModelId || null }
+        : {}),
+    }
+  );
+  if (!modelResult.ok) {
+    return {
+      index: rowIndex,
+      ok: false,
+      error: modelResult.error,
+      details: modelResult.details,
+    };
+  }
+
+  const newModel = modelResult.record;
+  const nest = createNestedCompetenciesForModel({
+    competencies,
+    model: newModel,
+    db,
+    rowIndex,
+    existingSmVariables: Array.isArray(smVariables) ? smVariables : [],
+    competencyIdFor: options.competencyIdFor,
+  });
+
+  if (!nest.ok) {
+    db.competencyModels = (db.competencyModels || []).filter((m) => m.id !== newModel.id);
+    return {
+      index: rowIndex,
+      ok: false,
+      error: nest.error,
+      details: nest.details,
+      competenciesCreated: nest.competenciesCreated,
+      competenciesFailed: nest.competenciesFailed,
+      competencyResults: nest.competencyResults,
+    };
+  }
+
+  const warnings = [];
+  if (
+    options.restoreBareSmVariables &&
+    (!Array.isArray(competencies) || competencies.length === 0) &&
+    Array.isArray(smVariables) &&
+    smVariables.length
+  ) {
+    const kept = [];
+    const dropped = [];
+    for (const smv of smVariables) {
+      if (!smv || typeof smv !== "object") continue;
+      newModel.smVariables = [...kept, smv];
+      const check = validateEntity("competencyModels", newModel, db);
+      if (check.valid) kept.push(smv);
+      else dropped.push(smv.id || smv.label || "smv");
+    }
+    newModel.smVariables = kept;
+    if (dropped.length) {
+      warnings.push(
+        `Left out student-model variable(s) that failed validation: ${dropped.join(", ")}.`
+      );
+    }
+  }
+
+  return {
+    index: rowIndex,
+    ok: true,
+    id: newModel.id,
+    name: newModel.name,
+    competenciesCreated: nest.competenciesCreated,
+    competenciesFailed: nest.competenciesFailed,
+    competencyResults: nest.competencyResults,
+    smVariableCount: Array.isArray(newModel.smVariables) ? newModel.smVariables.length : 0,
+    warnings,
+  };
+}
+
 /* =====================================================
    🔹 CREATE MODELS IN BULK (DRAFT ONLY, WITH OPTIONAL NESTED COMPETENCIES)
    Accepts a JSON array, { competencyModels: [...] }, a single model
@@ -382,61 +489,7 @@ router.post("/models/bulk", canAuthor, (req, res) => {
   }
 
   const db = loadDB();
-  const results = rows.map((row, i) => {
-    const stripped = stripStudentModelImportIdentity(row || {});
-    const { competencies, smVariables, ...modelPayload } = stripped;
-    const modelResult = createCompetencyModelRecord(
-      {
-        ...modelPayload,
-        // Priors/SMVs are synced after nested comps land; avoid validating
-        // stale export ids on the empty model shell.
-        smVariables: [],
-      },
-      db,
-      `_${i}`
-    );
-    if (!modelResult.ok) {
-      return { index: i, ok: false, error: modelResult.error, details: modelResult.details };
-    }
-
-    const newModel = modelResult.record;
-    const nest = createNestedCompetenciesForModel({
-      competencies,
-      model: newModel,
-      db,
-      rowIndex: i,
-      existingSmVariables: Array.isArray(smVariables) ? smVariables : [],
-    });
-
-    if (!nest.ok) {
-      // Remove the orphan model shell if nested create failed.
-      db.competencyModels = (db.competencyModels || []).filter(
-        (m) => m.id !== newModel.id
-      );
-      return {
-        index: i,
-        ok: false,
-        error: nest.error,
-        details: nest.details,
-        competenciesCreated: nest.competenciesCreated,
-        competenciesFailed: nest.competenciesFailed,
-        competencyResults: nest.competencyResults,
-      };
-    }
-
-    return {
-      index: i,
-      ok: true,
-      id: newModel.id,
-      name: newModel.name,
-      competenciesCreated: nest.competenciesCreated,
-      competenciesFailed: nest.competenciesFailed,
-      competencyResults: nest.competencyResults,
-      smVariableCount: Array.isArray(newModel.smVariables)
-        ? newModel.smVariables.length
-        : 0,
-    };
-  });
+  const results = rows.map((row, i) => importCompetencyModelRow(row, db, i));
   saveDB(db);
 
   const created = results.filter((r) => r.ok).length;

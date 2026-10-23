@@ -1,0 +1,74 @@
+[
+  {
+    "id": "pm-plant",
+    "name": "Plant part presentation",
+    "description": "One item at a time, large type, for the plant-part task.",
+    "status": "draft",
+    "taskModelId": "tm-plant",
+    "taskModelVersion": 1,
+    "layout": {
+      "itemOrder": "authored",
+      "grouping": "single_item",
+      "navigation": "linear"
+    },
+    "conditionalDisplay": {
+      "showFeedback": "immediate",
+      "allowSkip": false,
+      "allowReview": true,
+      "showProgress": true
+    },
+    "accessibility": {
+      "profile": "large_text",
+      "fontScale": 1.5,
+      "timeMultiplier": 1.5
+    }
+  },
+  {
+    "id": "pm-function",
+    "name": "Plant function presentation",
+    "description": "The same linear overlay, bound to the function task.",
+    "status": "draft",
+    "taskModelId": "tm-function",
+    "taskModelVersion": 1,
+    "layout": {
+      "itemOrder": "authored",
+      "grouping": "single_item",
+      "navigation": "linear"
+    },
+    "conditionalDisplay": {
+      "showFeedback": "delayed_end",
+      "allowSkip": false,
+      "allowReview": true,
+      "showProgress": true
+    },
+    "accessibility": {
+      "profile": "default",
+      "fontScale": 1,
+      "timeMultiplier": 1
+    }
+  },
+  {
+    "id": "pm-frac",
+    "name": "Fraction presentation",
+    "description": "Linear presentation for the equivalent-fractions task.",
+    "status": "draft",
+    "taskModelId": "tm-frac",
+    "taskModelVersion": 1,
+    "layout": {
+      "itemOrder": "authored",
+      "grouping": "single_item",
+      "navigation": "linear"
+    },
+    "conditionalDisplay": {
+      "showFeedback": "none",
+      "allowSkip": false,
+      "allowReview": false,
+      "showProgress": true
+    },
+    "accessibility": {
+      "profile": "default",
+      "fontScale": 1,
+      "timeMultiplier": 1
+    }
+  }
+]

@@ -68,7 +68,7 @@ router.get("/:id", (req, res) => {
 // creating several policies inside the same millisecond doesn't collide
 // on `cp${Date.now()}`. (Same pattern as policiesRoutes.js.)
 // ------------------------------
-function createCurricularPolicyRecord(payload = {}, db, idSuffix = "") {
+export function createCurricularPolicyRecord(payload = {}, db, idSuffix = "", options = {}) {
   const {
     name,
     description,
@@ -80,7 +80,7 @@ function createCurricularPolicyRecord(payload = {}, db, idSuffix = "") {
   } = payload;
 
   const newPolicy = {
-    id: `cp${Date.now()}${idSuffix}`,
+    id: options.assignedId || `cp${Date.now()}${idSuffix}`,
     name: name || "",
     description: description || "",
     version: version || "",

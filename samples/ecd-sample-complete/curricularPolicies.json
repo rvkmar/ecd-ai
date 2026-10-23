@@ -1,0 +1,67 @@
+[
+  {
+    "id": "cp-math",
+    "name": "NCF-SE 2023 - Mathematics, Middle Stage",
+    "description": "Illustrative sample modelled on the National Curriculum Framework for School Education 2023 (Curricular Goals, Competencies, Learning Outcomes). The fractions chain below is grounded in CG-1.",
+    "version": "2023",
+    "issuingBody": "NCERT",
+    "subject": "Mathematics",
+    "stage": "Middle Stage (Grades 6-8)",
+    "curricularGoals": [
+      {
+        "code": "CG-1",
+        "statement": "Understands numbers (whole numbers, integers, fractions, rational numbers), represents them, and performs operations on them fluently.",
+        "competencies": [
+          {
+            "code": "C-1.1",
+            "statement": "Represents rational numbers on the number line and compares and orders them.",
+            "learningOutcomes": [
+              "Locates positive and negative rational numbers on a number line.",
+              "Compares two rational numbers and justifies the comparison."
+            ]
+          },
+          {
+            "code": "C-1.2",
+            "statement": "Performs the four arithmetic operations on fractions and integers and applies them in context.",
+            "learningOutcomes": [
+              "Adds and subtracts fractions with unlike denominators.",
+              "Identifies equivalent fractions such as 2/4 and 1/2."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cp-plants",
+    "name": "NCF-SE 2023 - Science, Middle Stage",
+    "description": "Illustrative science curriculum document for the plant-part chain. Goals name the structures a labelled diagram is drawn to show.",
+    "version": "2023",
+    "issuingBody": "NCERT",
+    "subject": "Science",
+    "stage": "Middle Stage (Grades 6-8)",
+    "curricularGoals": [
+      {
+        "code": "CG-S1",
+        "statement": "Explains how the parts of a plant carry out the work the organism needs.",
+        "competencies": [
+          {
+            "code": "C-S1.1",
+            "statement": "Names the visible parts of a flowering plant on a labelled diagram.",
+            "learningOutcomes": [
+              "Points to leaf, root, stem, and flower on a standard diagram.",
+              "Uses the diagram's labels rather than inventing new names."
+            ]
+          },
+          {
+            "code": "C-S1.2",
+            "statement": "States the function of a named plant part.",
+            "learningOutcomes": [
+              "Connects the leaf to food-making and the root to water uptake."
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

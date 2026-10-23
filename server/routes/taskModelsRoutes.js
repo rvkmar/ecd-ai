@@ -245,7 +245,7 @@ export function createTaskModelRecord(payload = {}, db, idSuffix = "", options =
   const newTaskModel = {
     ...payload,
 
-    id: `${genId()}${idSuffix}`,
+    id: options.assignedId || `${genId()}${idSuffix}`,
     name: payload.name || "",
     description: payload.description || "",
     designRationale: payload.designRationale || "",
@@ -274,10 +274,19 @@ export function createTaskModelRecord(payload = {}, db, idSuffix = "", options =
     accessibilityAssumptions: payload.accessibilityAssumptions || {},
     equivalenceGroupId: payload.equivalenceGroupId || "",
 
-    status: "draft",
-    locked: false,
-    versionNumber: 1,
-    parentModelId: null,
+    status: options.preserveLifecycle && payload.status ? payload.status : "draft",
+    locked:
+      options.preserveLifecycle && typeof payload.locked === "boolean"
+        ? payload.locked
+        : false,
+    versionNumber:
+      options.preserveLifecycle && Number.isFinite(payload.versionNumber)
+        ? payload.versionNumber
+        : 1,
+    parentModelId:
+      options.keepParentLink || options.preserveLifecycle
+        ? payload.parentModelId || null
+        : null,
 
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()

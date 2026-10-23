@@ -255,7 +255,7 @@ function resolveUniqueByName(list, name, label) {
   return { record: matches[0] };
 }
 
-function createQMatrixRecord(payload = {}, db, idSuffix = "") {
+export function createQMatrixRecord(payload = {}, db, idSuffix = "", options = {}) {
   const now = new Date().toISOString();
   let competencyModelId = payload.competencyModelId;
 
@@ -347,8 +347,9 @@ function createQMatrixRecord(payload = {}, db, idSuffix = "") {
     });
   }
 
+  const preserve = options.preserveLifecycle === true;
   const record = {
-    id: `${genId()}${idSuffix}`,
+    id: options.assignedId || `${genId()}${idSuffix}`,
     name: payload.name || "",
     description: payload.description || "",
     competencyModelId,
@@ -356,12 +357,16 @@ function createQMatrixRecord(payload = {}, db, idSuffix = "") {
       payload.competencyModelVersion ?? competencyModel.versionNumber ?? 1,
     attributeIds,
     entries,
-    status: "draft",
-    locked: false,
+    status: preserve && payload.status ? payload.status : "draft",
+    locked: preserve && typeof payload.locked === "boolean" ? payload.locked : false,
     versionNumber: payload.versionNumber ?? 1,
     createdAt: now,
     updatedAt: now,
   };
+  if (options.includeLinks) {
+    if (payload.domainAnalysisId) record.domainAnalysisId = payload.domainAnalysisId;
+    if (payload.parentModelId) record.parentModelId = payload.parentModelId;
+  }
 
   const { valid, errors } = validateEntity("qMatrixModels", record, db);
   if (!valid) {

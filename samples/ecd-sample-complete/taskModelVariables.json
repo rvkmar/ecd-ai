@@ -1,0 +1,52 @@
+[
+  {
+    "id": "tmv-diagram",
+    "name": "Plant diagram",
+    "description": "Which labelled plant diagram the task shows.",
+    "type": "categorical",
+    "possibleValues": [
+      {
+        "value": "leaf",
+        "label": "Leaf called out"
+      },
+      {
+        "value": "root",
+        "label": "Root called out"
+      },
+      {
+        "value": "flower",
+        "label": "Flower called out"
+      }
+    ]
+  },
+  {
+    "id": "tmv-bloom",
+    "name": "Bloom demand",
+    "description": "Cognitive demand the plant task is written to.",
+    "type": "categorical",
+    "possibleValues": [
+      {
+        "value": "remember",
+        "label": "Remember"
+      },
+      {
+        "value": "understand",
+        "label": "Understand"
+      },
+      {
+        "value": "apply",
+        "label": "Apply"
+      }
+    ]
+  },
+  {
+    "id": "tmv-denominator",
+    "name": "Fraction denominator",
+    "description": "Largest denominator appearing in a fractions item.",
+    "type": "numeric",
+    "range": {
+      "min": 2,
+      "max": 12
+    }
+  }
+]

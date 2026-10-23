@@ -73,13 +73,13 @@ function rejectIfInvalid(res, record, db) {
   });
 }
 
-function createDesignPatternRecord(body, db, req, { forceDraft = false } = {}) {
+export function createDesignPatternRecord(body, db, req, { forceDraft = false, assignedId } = {}) {
   const now = new Date().toISOString();
   const writes = pickWrites(body);
   const record = {
     ...writes,
     status: forceDraft ? "draft" : writes.status || "draft",
-    id: genId(),
+    id: assignedId || genId(),
     ...authorTenancy(req),
     createdAt: now,
     updatedAt: now,

@@ -1,0 +1,163 @@
+[
+  {
+    "id": "em-plant",
+    "name": "Part naming evidence",
+    "description": "Evidence that the student can name the plant part a diagram calls out.",
+    "competencyId": "c-plant",
+    "competencyName": "Names the part",
+    "claimStatement": "The student can name the plant part indicated on a labelled diagram.",
+    "seededFrom": {
+      "designPatternId": "dp-plant"
+    },
+    "warrants": [
+      {
+        "id": "w-plant-name",
+        "reasoningStatement": "Selecting the name of the called-out part requires knowing which structure the label points to.",
+        "performanceCondition": "A flowering-plant diagram with one part called out, and four part names.",
+        "limitationClause": "Does not show that the student can state the part's function."
+      }
+    ],
+    "observables": [
+      {
+        "id": "obs-plant-name",
+        "statement": "The learner selects the name of the called-out plant part.",
+        "type": "selected_response",
+        "warrantId": "w-plant-name"
+      }
+    ],
+    "evidenceRules": [
+      {
+        "id": "er-plant-name",
+        "observableId": "obs-plant-name",
+        "direction": "supports",
+        "strengthLevel": 4,
+        "activationCondition": "The selected option is the name of the called-out part.",
+        "justification": "A correct selection is direct evidence of part-name knowledge."
+      }
+    ],
+    "statisticalModels": [
+      {
+        "id": "sm-plant-irt",
+        "type": "irt",
+        "subtype": "2pl",
+        "active": true,
+        "structureConfig": {
+          "observableIds": [
+            "obs-plant-name"
+          ],
+          "dimensions": 1
+        },
+        "parameterSets": [],
+        "activeParameterSetId": null
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "em-function",
+    "name": "Part function evidence",
+    "description": "Diagnostic evidence that the student can state what a named plant part does.",
+    "competencyId": "c-function",
+    "competencyName": "Names the function",
+    "claimStatement": "The student can state the function of a named plant part.",
+    "seededFrom": {
+      "designPatternId": "dp-diagram"
+    },
+    "warrants": [
+      {
+        "id": "w-plant-fn",
+        "reasoningStatement": "Choosing the job of a named part requires linking that structure to the work it does.",
+        "performanceCondition": "The part is named in the stem. The options are functions.",
+        "limitationClause": "Does not show that the student can find the part on an unlabelled diagram."
+      }
+    ],
+    "observables": [
+      {
+        "id": "obs-plant-function",
+        "statement": "The learner selects the function of the named plant part.",
+        "type": "selected_response",
+        "warrantId": "w-plant-fn"
+      }
+    ],
+    "evidenceRules": [
+      {
+        "id": "er-plant-fn",
+        "observableId": "obs-plant-function",
+        "direction": "supports",
+        "strengthLevel": 3,
+        "activationCondition": "The selected option is the function of the named part.",
+        "justification": "A correct function is direct evidence of the function attribute."
+      }
+    ],
+    "statisticalModels": [
+      {
+        "id": "sm-plant-dina",
+        "type": "dina",
+        "active": true,
+        "structureConfig": {
+          "observableIds": [
+            "obs-plant-function"
+          ],
+          "qMatrixName": "Plant part Q-matrix"
+        },
+        "parameterSets": [],
+        "activeParameterSetId": null
+      }
+    ],
+    "status": "draft"
+  },
+  {
+    "id": "em-frac",
+    "name": "Fraction evidence",
+    "description": "Evidence that the student recognises equivalent fractions.",
+    "competencyId": "c-frac",
+    "competencyName": "Fraction equivalence",
+    "claimStatement": "The student can identify a fraction equivalent to a given fraction.",
+    "seededFrom": {
+      "designPatternId": "dp-frac"
+    },
+    "warrants": [
+      {
+        "id": "w-equiv",
+        "reasoningStatement": "Selecting 1/2 as equivalent to 2/4 requires seeing that both name the same amount.",
+        "performanceCondition": "A stem fraction and four options, one of which is equivalent.",
+        "limitationClause": "Does not show fluency with fraction arithmetic."
+      }
+    ],
+    "observables": [
+      {
+        "id": "obs-equiv",
+        "statement": "The learner selects the fraction equivalent to the stem fraction.",
+        "type": "selected_response",
+        "warrantId": "w-equiv"
+      }
+    ],
+    "evidenceRules": [
+      {
+        "id": "er-equiv",
+        "observableId": "obs-equiv",
+        "direction": "supports",
+        "strengthLevel": 4,
+        "activationCondition": "The selected option is equivalent to the stem.",
+        "justification": "A correct selection is direct evidence of equivalence."
+      }
+    ],
+    "statisticalModels": [
+      {
+        "id": "sm-frac-irt",
+        "type": "irt",
+        "subtype": "2pl",
+        "active": true,
+        "structureConfig": {
+          "observableIds": [
+            "obs-equiv"
+          ],
+          "dimensions": 1
+        },
+        "parameterSets": [],
+        "activeParameterSetId": null
+      }
+    ],
+    "status": "draft"
+  }
+]

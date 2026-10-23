@@ -7,13 +7,15 @@
 
 // A wrapper around fetch that includes Authorization header if logged in
 export function apiFetch(url, options = {}, auth) {
-  const headers = {
-    ...(options.headers || {}),
-    "Content-Type": "application/json",
-  };
+  // rawBody: send the body as given (a zip File) and keep the caller's
+  // Content-Type. responseType "blob": return the bytes (the entity zip
+  // export) instead of parsing JSON. Both are stripped before fetch().
+  const { rawBody = false, responseType, ...rest } = options;
+  const headers = { ...(rest.headers || {}) };
+  if (!rawBody) headers["Content-Type"] = "application/json";
   if (auth?.token) headers["Authorization"] = `Bearer ${auth.token}`;
 
-  return fetch(url, { ...options, headers }).then(async (res) => {
+  return fetch(url, { ...rest, headers }).then(async (res) => {
     if (!res.ok) {
       const text = await res.text();
       const error = new Error(`${res.status}: ${text}`);
@@ -42,6 +44,7 @@ export function apiFetch(url, options = {}, auth) {
     // until a manual page refresh. Read the body as text first and only
     // attempt to parse it as JSON if there's actually something there.
     if (res.status === 204) return null;
+    if (responseType === "blob") return res.blob();
 
     const text = await res.text();
     if (!text) return null;

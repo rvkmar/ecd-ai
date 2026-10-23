@@ -87,23 +87,38 @@ router.get("/:id", (req, res) => {
   res.json(row);
 });
 
-router.post("/", canAuthor, (req, res) => {
-  const db = loadDB();
+export function createTaskModelVariableRecord(payload = {}, db, req, { assignedId } = {}) {
   const now = new Date().toISOString();
   const record = {
-    ...pickWrites(req.body),
-    id: genId(),
+    ...pickWrites(payload),
+    id: assignedId || genId(),
     ...authorTenancy(req),
     createdAt: now,
     updatedAt: now,
   };
 
-  if (rejectIfInvalid(res, record, db)) return;
+  const { valid, errors } = validateEntity("taskModelVariables", record, db);
+  if (!valid) {
+    return {
+      ok: false,
+      error: errors[0] || "Task Model Variable validation failed",
+      details: errors,
+    };
+  }
 
   db.taskModelVariables = db.taskModelVariables || [];
   db.taskModelVariables.push(record);
+  return { ok: true, record };
+}
+
+router.post("/", canAuthor, (req, res) => {
+  const db = loadDB();
+  const result = createTaskModelVariableRecord(req.body || {}, db, req);
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error, details: result.details });
+  }
   saveDB(db);
-  res.status(201).json(record);
+  res.status(201).json(result.record);
 });
 
 router.put("/:id", canAuthor, (req, res) => {

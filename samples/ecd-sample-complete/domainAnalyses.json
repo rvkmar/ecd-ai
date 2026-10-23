@@ -1,0 +1,125 @@
+[
+  {
+    "id": "da-diagram",
+    "name": "Explaining a labelled scientific diagram",
+    "status": "draft",
+    "psychologicalPerspective": "information_processing",
+    "valuedWork": [
+      {
+        "label": "Explain how the named parts of a system produce what the diagram shows"
+      }
+    ],
+    "taskFeatures": [
+      {
+        "label": "A figure whose parts are already labelled"
+      }
+    ],
+    "representationalForms": [
+      {
+        "label": "Diagram plus a written explanation"
+      }
+    ],
+    "performanceOutcomes": [
+      {
+        "label": "A causal account, not a list of the labels"
+      }
+    ],
+    "valuedKnowledge": [
+      {
+        "label": "How parts, relations, and the whole fit together"
+      }
+    ],
+    "knowledgeStructure": [
+      {
+        "label": "Parts and the relations among them"
+      }
+    ],
+    "knowledgeTaskRelationships": [
+      {
+        "label": "The task asks for the relation the diagram is drawn to show"
+      }
+    ]
+  },
+  {
+    "id": "da-plant",
+    "name": "Plant structure",
+    "status": "draft",
+    "psychologicalPerspective": "information_processing",
+    "valuedWork": [
+      {
+        "label": "Name a plant part and say what that part does for the plant"
+      }
+    ],
+    "taskFeatures": [
+      {
+        "label": "A labelled diagram of a flowering plant, with one part called out"
+      }
+    ],
+    "representationalForms": [
+      {
+        "label": "A diagram and a selected name or function"
+      }
+    ],
+    "performanceOutcomes": [
+      {
+        "label": "The correct part name, or the correct function of a named part"
+      }
+    ],
+    "valuedKnowledge": [
+      {
+        "label": "Leaf, root, stem, and flower, and the job each one does"
+      }
+    ],
+    "knowledgeStructure": [
+      {
+        "label": "A part and the function that belongs to it"
+      }
+    ],
+    "knowledgeTaskRelationships": [
+      {
+        "label": "The diagram shows the part; the question asks for its name or its job"
+      }
+    ]
+  },
+  {
+    "id": "da-frac",
+    "name": "Fractions",
+    "status": "draft",
+    "psychologicalPerspective": "trait",
+    "valuedWork": [
+      {
+        "label": "Decide whether two fractions name the same amount"
+      }
+    ],
+    "taskFeatures": [
+      {
+        "label": "Two fractions written in lowest or non-lowest terms"
+      }
+    ],
+    "representationalForms": [
+      {
+        "label": "A selected-response comparison of two fractions"
+      }
+    ],
+    "performanceOutcomes": [
+      {
+        "label": "The fraction that is equivalent, or a justified choice of the larger"
+      }
+    ],
+    "valuedKnowledge": [
+      {
+        "label": "Equivalence of fractions that simplify to the same value"
+      }
+    ],
+    "knowledgeStructure": [
+      {
+        "label": "A single number-sense trait for fraction magnitude"
+      }
+    ],
+    "knowledgeTaskRelationships": [
+      {
+        "label": "The item asks only about equivalence, not about operations on fractions"
+      }
+    ]
+  }
+]

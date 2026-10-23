@@ -1,0 +1,41 @@
+[
+  {
+    "id": "p-fixed",
+    "name": "Fixed Form - Grade 6 Numeracy Benchmark",
+    "description": "Non-adaptive fixed-form policy used for the term-end Grade 6 numeracy benchmark.",
+    "type": "fixed",
+    "config": {
+      "formLength": 20,
+      "itemOrder": "fixed",
+      "allowBacktrack": true,
+      "timeLimitMinutes": 45
+    }
+  },
+  {
+    "id": "p-irt",
+    "name": "IRT Adaptive - Grade 6-8 Numeracy CAT",
+    "description": "2PL adaptive policy for the cross-grade numeracy computer-adaptive test.",
+    "type": "IRT",
+    "config": {
+      "model": "2PL",
+      "startingTheta": 0,
+      "thetaStepSize": 0.3,
+      "maxItems": 25,
+      "minItems": 10,
+      "stoppingRule": "standardError",
+      "standardErrorThreshold": 0.3
+    }
+  },
+  {
+    "id": "p-bayes",
+    "name": "Bayesian Network - Fractions Mastery Diagnostic",
+    "description": "Bayesian-network diagnostic policy for the fractions mastery micro-assessment.",
+    "type": "BayesianNetwork",
+    "config": {
+      "networkId": "fractions-mastery-v1",
+      "posteriorThreshold": 0.75,
+      "maxItems": 15,
+      "priorBelief": "uniform"
+    }
+  }
+]

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "cm-plant",
+    "name": "Plant part naming",
+    "description": "Multidimensional student model for naming a plant part and stating what that part does. Grounded in the plant-structure domain analysis.",
+    "measurementIntent": "multidimensional",
+    "domainAnalysisId": "da-plant",
+    "psychologicalPerspective": "information_processing",
+    "constructFramework": {
+      "reference": "NCF-SE 2023 Science, Middle Stage, CG-S1",
+      "citation": "Illustrative science curricular policy in this sample.",
+      "notes": "Two binary attributes: the part's name, and the part's function.",
+      "ungroundedWaiver": true,
+      "ungroundedReason": "Sample draft. Bind CG-S1 in Step 3 before confirmation."
+    },
+    "status": "draft",
+    "locked": false,
+    "versionNumber": 1,
+    "smVariables": [
+      {
+        "id": "smv-names-part",
+        "label": "Names the part",
+        "type": "binary",
+        "scale": {
+          "states": [
+            "not_mastered",
+            "mastered"
+          ]
+        },
+        "priorDistribution": {
+          "family": "bernoulli",
+          "params": {
+            "p": 0.5
+          }
+        }
+      },
+      {
+        "id": "smv-names-function",
+        "label": "Names the function",
+        "type": "binary",
+        "scale": {
+          "states": [
+            "not_mastered",
+            "mastered"
+          ]
+        },
+        "priorDistribution": {
+          "family": "bernoulli",
+          "params": {
+            "p": 0.5
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "cm-frac",
+    "name": "Grade 6 Numeracy - Fractions",
+    "description": "Unidimensional student model for fraction equivalence, in the sense of the Grade 6 numeracy sample.",
+    "measurementIntent": "unidimensional",
+    "domainAnalysisId": "da-frac",
+    "psychologicalPerspective": "trait",
+    "constructFramework": {
+      "reference": "CCSS.MATH.CONTENT.6.NS",
+      "citation": "National Council of Teachers of Mathematics (NCTM) Numeracy Standards, 2023",
+      "notes": "Single latent construct: fraction equivalence.",
+      "ungroundedWaiver": true,
+      "ungroundedReason": "Sample draft. Bind CG-1 in Step 3 before confirmation."
+    },
+    "status": "draft",
+    "locked": false,
+    "versionNumber": 1,
+    "smVariables": [
+      {
+        "id": "smv-equiv",
+        "label": "Fraction equivalence",
+        "type": "binary",
+        "scale": {
+          "states": [
+            "not_mastered",
+            "mastered"
+          ]
+        },
+        "priorDistribution": {
+          "family": "bernoulli",
+          "params": {
+            "p": 0.5
+          }
+        }
+      }
+    ]
+  }
+]

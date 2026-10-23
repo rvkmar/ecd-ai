@@ -1,0 +1,122 @@
+[
+  {
+    "id": "dp-diagram",
+    "name": "Explain a labelled diagram",
+    "status": "draft",
+    "summary": "A family of situations in which the examinee explains a labelled scientific diagram rather than only naming its parts.",
+    "rationale": "Explanation of a diagram is worth assessing separately from recognition. A later copy of this pattern should keep that distinction.",
+    "domainAnalysisId": "da-diagram",
+    "focalKsas": [
+      {
+        "label": "Model-based explanation"
+      }
+    ],
+    "additionalKsas": [
+      {
+        "label": "Diagram conventions",
+        "relationship": "required_but_not_measured"
+      }
+    ],
+    "potentialObservations": [
+      {
+        "label": "Names the claim shown in the diagram"
+      }
+    ],
+    "characteristicFeatures": [
+      {
+        "label": "Uses a labelled diagram"
+      }
+    ],
+    "variableFeatures": [
+      {
+        "label": "Which diagram is shown",
+        "taskModelVariableId": "tmv-diagram"
+      }
+    ],
+    "references": [
+      {
+        "label": "Mislevy, Steinberg, and Almond, PADI design patterns"
+      }
+    ]
+  },
+  {
+    "id": "dp-plant",
+    "name": "Name a plant part",
+    "status": "draft",
+    "summary": "The examinee names the part a plant diagram calls out.",
+    "rationale": "Naming is the recognition task that explanation builds on. It is a kind of the labelled-diagram pattern, limited to the part's name.",
+    "domainAnalysisId": "da-plant",
+    "focalKsas": [
+      {
+        "label": "Plant-part vocabulary"
+      }
+    ],
+    "additionalKsas": [
+      {
+        "label": "Reading a label",
+        "relationship": "potentially_confounding"
+      }
+    ],
+    "potentialObservations": [
+      {
+        "label": "Selects the name of the called-out part"
+      }
+    ],
+    "characteristicFeatures": [
+      {
+        "label": "One part is called out on a flowering-plant diagram"
+      }
+    ],
+    "variableFeatures": [
+      {
+        "label": "Which part is called out",
+        "taskModelVariableId": "tmv-diagram"
+      },
+      {
+        "label": "Bloom demand of the wording",
+        "taskModelVariableId": "tmv-bloom"
+      }
+    ],
+    "relationships": [
+      {
+        "type": "kind-of",
+        "targetPatternId": "dp-diagram"
+      }
+    ]
+  },
+  {
+    "id": "dp-frac",
+    "name": "Explain a fraction",
+    "status": "draft",
+    "summary": "The examinee decides whether two fractions name the same amount.",
+    "rationale": "Equivalence is the claim. Comparison of unlike magnitudes is a different pattern and is not this one.",
+    "domainAnalysisId": "da-frac",
+    "focalKsas": [
+      {
+        "label": "Fraction equivalence"
+      }
+    ],
+    "additionalKsas": [
+      {
+        "label": "Arithmetic fluency with small integers",
+        "relationship": "potentially_confounding"
+      }
+    ],
+    "potentialObservations": [
+      {
+        "label": "Selects the fraction equivalent to the stem"
+      }
+    ],
+    "characteristicFeatures": [
+      {
+        "label": "Two fractions, one of which simplifies to the other"
+      }
+    ],
+    "variableFeatures": [
+      {
+        "label": "Largest denominator",
+        "taskModelVariableId": "tmv-denominator"
+      }
+    ]
+  }
+]
