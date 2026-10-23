@@ -42,7 +42,7 @@ import { createAssemblyModelRecord } from "../routes/assemblyModelsRoutes.js";
 import { createPresentationModelRecord } from "../routes/presentationModelsRoutes.js";
 import { createTemplateRecord } from "../routes/templatesRoutes.js";
 
-export const IMPORT_ORDER = [
+const IMPORT_ORDER = [
   "curricularPolicies",
   "policies",
   "domainAnalyses",
@@ -59,7 +59,7 @@ export const IMPORT_ORDER = [
   "templates",
 ];
 
-export const EXPORT_FILES = IMPORT_ORDER.map((collection) => ({
+const EXPORT_FILES = IMPORT_ORDER.map((collection) => ({
   collection,
   fileName: `${collection}.json`,
 }));
@@ -178,7 +178,7 @@ function allocateId(db, collection, desired, keepOriginalIds, used) {
   };
 }
 
-export function collectionFromZipName(name) {
+function collectionFromZipName(name) {
   const base = String(name).replace(/\\/g, "/").split("/").pop() || "";
   if (!base.toLowerCase().endsWith(".json")) return null;
   const stem = base.slice(0, -5).replace(/[^a-zA-Z0-9]/g, "").toLowerCase();

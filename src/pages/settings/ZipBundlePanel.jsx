@@ -6,7 +6,7 @@ import React, { useState } from "react";
 import { UploadCloud, DownloadCloud, Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/auth/AuthProvider";
-import { apiErrorMessage } from "@/api/apiClient";
+import { apiErrorMessage, apiFetch } from "@/api/apiClient";
 
 const ENTITY_LABELS = {
   curricularPolicies: "Curricular policies",
@@ -24,20 +24,6 @@ const ENTITY_LABELS = {
   presentationModels: "Presentation models",
   templates: "Templates",
 };
-
-async function readError(res) {
-  const text = await res.text();
-  let body = null;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = null;
-  }
-  const error = new Error(body?.error || `${res.status}`);
-  error.body = body;
-  error.status = res.status;
-  return error;
-}
 
 function ResultLine({ row }) {
   if (row.ok) {
@@ -131,11 +117,7 @@ export function ZipExportButton() {
   const onExport = async () => {
     setBusy(true);
     try {
-      const res = await fetch("/api/data/zip", {
-        headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : {},
-      });
-      if (!res.ok) throw await readError(res);
-      const blob = await res.blob();
+      const blob = await apiFetch("/api/data/zip", { responseType: "blob" }, auth);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -178,16 +160,16 @@ export default function ZipBundlePanel() {
       dryRun: dryRun ? "1" : "0",
       keepOriginalIds: keepOriginalIds ? "1" : "0",
     });
-    const res = await fetch(`/api/data/zip?${params}`, {
-      method: "POST",
-      headers: {
-        ...(auth?.token ? { Authorization: `Bearer ${auth.token}` } : {}),
-        "Content-Type": "application/zip",
+    return apiFetch(
+      `/api/data/zip?${params}`,
+      {
+        method: "POST",
+        rawBody: true,
+        headers: { "Content-Type": "application/zip" },
+        body: file,
       },
-      body: file,
-    });
-    if (!res.ok) throw await readError(res);
-    return res.json();
+      auth
+    );
   };
 
   const onPreview = async () => {

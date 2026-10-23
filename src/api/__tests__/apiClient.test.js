@@ -119,4 +119,30 @@ describe("apiFetch", () => {
 
     await expect(apiFetch("/api/x")).resolves.toBeNull();
   });
+
+  it("sends a raw body with the caller's content type", async () => {
+    global.fetch.mockResolvedValue(okResponse({ created: 1 }));
+    const body = new Uint8Array([1, 2, 3]);
+
+    await apiFetch(
+      "/api/data/zip",
+      { method: "POST", rawBody: true, headers: { "Content-Type": "application/zip" }, body },
+      { token: "t" }
+    );
+
+    const [, init] = global.fetch.mock.calls[0];
+    expect(init.body).toBe(body);
+    expect(init.headers["Content-Type"]).toBe("application/zip");
+    expect(init.headers.Authorization).toBe("Bearer t");
+    expect(init.rawBody).toBeUndefined();
+  });
+
+  it("returns a blob when responseType is blob", async () => {
+    const blob = new Blob(["zip"]);
+    global.fetch.mockResolvedValue({ ok: true, status: 200, blob: async () => blob });
+
+    await expect(apiFetch("/api/data/zip", { responseType: "blob" })).resolves.toBe(blob);
+    const [, init] = global.fetch.mock.calls[0];
+    expect(init.responseType).toBeUndefined();
+  });
 });

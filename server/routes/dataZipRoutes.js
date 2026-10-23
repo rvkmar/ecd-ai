@@ -4,6 +4,7 @@
 
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
+import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { exportDbAsZip, importZipIntoDb, ZipError } from "../import/ecdZipImport.js";
 import { ZIP_LIMITS } from "../utils/safeZip.js";
@@ -12,6 +13,7 @@ const router = express.Router();
 
 router.use(authenticateToken);
 router.use(authorizeRole(["admin"]));
+router.use(sanitizeRequestInputs);
 
 function flag(value) {
   return value === "1" || value === "true" || value === "yes";
@@ -28,7 +30,7 @@ router.get("/", (req, res, next) => {
   }
 });
 
-router.post("/", (req, res, next) => {
+router.post("/", authorizeRole(["admin"]), (req, res, next) => {
   express.raw({ type: () => true, limit: ZIP_LIMITS.maxBytes })(req, res, (err) => {
     if (err) {
       const tooLarge = err.type === "entity.too.large" || err.status === 413;

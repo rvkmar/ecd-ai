@@ -38,12 +38,12 @@ describe("ZipBundlePanel", () => {
 
   it("previews a zip, then imports it, and leaves single-entity copy in place", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi.fn(async (url, options = {}) => {
+    const fetchMock = vi.fn(async (url) => {
       const dryRun = String(url).includes("dryRun=1");
       return {
         ok: true,
-        json: async () => ({ ...previewBody, dryRun }),
-        text: async () => "",
+        status: 200,
+        text: async () => JSON.stringify({ ...previewBody, dryRun }),
       };
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -95,6 +95,7 @@ describe("ZipBundlePanel", () => {
     const user = userEvent.setup();
     const fetchMock = vi.fn(async () => ({
       ok: true,
+      status: 200,
       blob: async () => new Blob(["zip"]),
     }));
     vi.stubGlobal("fetch", fetchMock);
@@ -103,9 +104,15 @@ describe("ZipBundlePanel", () => {
     render(<ZipExportButton />);
     await user.click(screen.getByRole("button", { name: "Export all as zip" }));
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/data/zip", {
-      headers: { Authorization: "Bearer token-1" },
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/data/zip",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer token-1",
+          "Content-Type": "application/json",
+        }),
+      })
+    );
     expect(click).toHaveBeenCalled();
     click.mockRestore();
   });

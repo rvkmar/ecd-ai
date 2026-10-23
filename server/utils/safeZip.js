@@ -36,7 +36,7 @@ function dosDateTime(date = new Date()) {
   return { time, dosDate };
 }
 
-export function assertSafeZipName(name) {
+function assertSafeZipName(name) {
   if (typeof name !== "string" || name.length === 0) {
     throw new ZipError("Zip entry name is empty.");
   }
