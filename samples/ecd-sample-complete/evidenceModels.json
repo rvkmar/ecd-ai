@@ -51,6 +51,16 @@
         "activeParameterSetId": null
       }
     ],
+    "evaluationProcedures": [
+      {
+        "id": "ep-plant-name",
+        "observableId": "obs-plant-name",
+        "workProductId": "wp-part-name",
+        "workProductType": "selected_response",
+        "method": "key",
+        "description": "The selected option is scored against the name of the called-out part."
+      }
+    ],
     "status": "draft"
   },
   {
@@ -102,6 +112,24 @@
         },
         "parameterSets": [],
         "activeParameterSetId": null
+      }
+    ],
+    "evaluationProcedures": [
+      {
+        "id": "ep-plant-fn",
+        "observableId": "obs-plant-function",
+        "workProductId": "wp-part-function",
+        "workProductType": "selected_response",
+        "method": "rubric",
+        "rubricId": "rub-function",
+        "description": "A rater scores the chosen job of the named part with the plant function rubric.",
+        "phases": [
+          {
+            "order": 1,
+            "kind": "human",
+            "rubricId": "rub-function"
+          }
+        ]
       }
     ],
     "status": "draft"
@@ -156,6 +184,24 @@
         },
         "parameterSets": [],
         "activeParameterSetId": null
+      }
+    ],
+    "evaluationProcedures": [
+      {
+        "id": "ep-equiv",
+        "observableId": "obs-equiv",
+        "workProductId": "wp-equiv",
+        "workProductType": "selected_response",
+        "method": "rubric",
+        "rubricId": "rub-equiv",
+        "description": "A rater scores whether the chosen fraction names the same amount as the stem.",
+        "phases": [
+          {
+            "order": 1,
+            "kind": "human",
+            "rubricId": "rub-equiv"
+          }
+        ]
       }
     ],
     "status": "draft"

@@ -37,6 +37,19 @@
       {
         "label": "Mislevy, Steinberg, and Almond, PADI design patterns"
       }
+    ],
+    "potentialWorkProducts": [
+      {
+        "label": "Selected plant-part function",
+        "workProductId": "wp-part-function",
+        "workProductType": "selected_response"
+      }
+    ],
+    "potentialRubrics": [
+      {
+        "label": "Plant function judgement",
+        "rubricId": "rub-function"
+      }
     ]
   },
   {
@@ -75,6 +88,13 @@
       {
         "label": "Bloom demand of the wording",
         "taskModelVariableId": "tmv-bloom"
+      }
+    ],
+    "potentialWorkProducts": [
+      {
+        "label": "Selected plant-part name",
+        "workProductId": "wp-part-name",
+        "workProductType": "selected_response"
       }
     ],
     "relationships": [
@@ -116,6 +136,19 @@
       {
         "label": "Largest denominator",
         "taskModelVariableId": "tmv-denominator"
+      }
+    ],
+    "potentialWorkProducts": [
+      {
+        "label": "Selected equivalent fraction",
+        "workProductId": "wp-equiv",
+        "workProductType": "selected_response"
+      }
+    ],
+    "potentialRubrics": [
+      {
+        "label": "Fraction equivalence judgement",
+        "rubricId": "rub-equiv"
       }
     ]
   }

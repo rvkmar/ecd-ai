@@ -12,6 +12,8 @@ One zip the Settings zip uploader accepts with no failed rows. It is two short c
 | policies.json | 3 | Fixed form, IRT adaptive, Bayesian fractions diagnostic |
 | domainAnalyses.json | 3 | Labelled diagram, plant structure, fractions |
 | taskModelVariables.json | 3 | Plant diagram, Bloom demand, fraction denominator |
+| workProducts.json | 3 | Selected plant-part name, selected plant-part function, selected equivalent fraction |
+| rubrics.json | 2 | Plant function judgement (confirmed, with an exemplar), Fraction equivalence judgement (draft) |
 | competencyModels.json | 2 | Plant part naming (two binary attributes), Grade 6 fractions (one) |
 | competencies.json | 3 | Names the part, Names the function, Fraction equivalence |
 | designPatterns.json | 3 | Explain a labelled diagram, Name a plant part (kind-of that pattern), Explain a fraction |
@@ -23,7 +25,9 @@ One zip the Settings zip uploader accepts with no failed rows. It is two short c
 | presentationModels.json | 3 | One linear overlay per task model |
 | templates.json | 3 | One family binding per task |
 
-Every row is a draft. Ids in the files are stable (`cm-plant`, `em-plant`, `tm-plant`, and so on). Cross-references use those ids. Work products and rubrics are not zip collections, so the design-pattern work-product and rubric menus are omitted rather than filled with placeholders.
+Ids in the files are stable (`cm-plant`, `em-plant`, `tm-plant`, `wp-part-name`, `rub-function`, and so on). Cross-references use those ids. Work products have no status. Plant function judgement is confirmed in the file and stays confirmed only when "Keep original ids and statuses" is on and the row is valid. With the toggle off it is stored as a draft. Fraction equivalence judgement is a draft. Every other governed row is a draft.
+
+Design patterns list these work products and rubrics. Part naming evidence scores the selected plant-part name with a key. Part function evidence and Fraction evidence score with the matching rubric (method rubric), and each procedure's human phase cites that same rubric. The four items bind the work product that matches their stem, on interaction.workProductId.
 
 Creating a curricular policy also writes a content-standard shell onto Domain Analysis. After import the Domain Analysis list shows the three analyses above plus one shell per curricular policy. That is the existing curricular-policy builder, not a second copy of `domainAnalyses.json`.
 
@@ -33,7 +37,7 @@ Creating a curricular policy also writes a content-standard shell onto Domain An
 2. Open Settings, then Data, then Upload.
 3. Choose `ecd-sample-complete.zip`.
 4. Preview, then Import.
-5. Leave "Keep original ids and statuses" off for new ids and draft status. Turn it on only on an empty store (or any store that does not already use these ids) when the screens should keep `cm-plant`, `tm-plant`, and the other ids in this folder.
+5. Leave "Keep original ids and statuses" off for new ids and draft status. Turn it on only on an empty store (or any store that does not already use these ids) when the screens should keep `cm-plant`, `tm-plant`, `wp-part-name`, `rub-function`, and the other ids in this folder. That is also when Plant function judgement stays confirmed.
 
 A bad row in some other zip does not cancel the rest. This zip is written so Preview reports 0 failed.
 
