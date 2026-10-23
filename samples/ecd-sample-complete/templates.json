@@ -1,0 +1,35 @@
+[
+  {
+    "id": "tpl-plant",
+    "name": "Plant part template",
+    "description": "Family binding for naming a plant part.",
+    "status": "draft",
+    "competencyModelId": "cm-plant",
+    "evidenceModelId": "em-plant",
+    "taskModelId": "tm-plant",
+    "presentationModelId": "pm-plant",
+    "designPatternId": "dp-plant"
+  },
+  {
+    "id": "tpl-function",
+    "name": "Plant function template",
+    "description": "Family binding for stating a plant part's function.",
+    "status": "draft",
+    "competencyModelId": "cm-plant",
+    "evidenceModelId": "em-function",
+    "taskModelId": "tm-function",
+    "presentationModelId": "pm-function",
+    "designPatternId": "dp-diagram"
+  },
+  {
+    "id": "tpl-frac",
+    "name": "Fraction template",
+    "description": "Family binding for fraction equivalence.",
+    "status": "draft",
+    "competencyModelId": "cm-frac",
+    "evidenceModelId": "em-frac",
+    "taskModelId": "tm-frac",
+    "presentationModelId": "pm-frac",
+    "designPatternId": "dp-frac"
+  }
+]

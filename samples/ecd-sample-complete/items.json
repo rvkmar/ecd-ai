@@ -1,0 +1,254 @@
+[
+  {
+    "id": "it-leaf",
+    "name": "Leaf on the diagram",
+    "taskModelId": "tm-plant",
+    "observationId": "obs-plant-name",
+    "stimulus": {
+      "layout": "single",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "The arrow points to a flat green part. What is it called?"
+        }
+      ]
+    },
+    "interaction": {
+      "type": "mcq",
+      "responseComponents": [
+        {
+          "id": "opt_a",
+          "label": "Leaf"
+        },
+        {
+          "id": "opt_b",
+          "label": "Root"
+        },
+        {
+          "id": "opt_c",
+          "label": "Stem"
+        },
+        {
+          "id": "opt_d",
+          "label": "Flower"
+        }
+      ]
+    },
+    "scoring": {
+      "method": "dichotomous",
+      "maxScore": 1,
+      "evidenceActivationMap": [
+        {
+          "responsePattern": {
+            "selected": "opt_a"
+          },
+          "activatesObservable": true,
+          "strengthOverride": 4,
+          "rationale": "Leaf is the name of the called-out part."
+        }
+      ]
+    },
+    "learningDomain": "cognitive",
+    "cognitiveDemand": {
+      "bloomLevel": "remember"
+    },
+    "metadata": {
+      "gradeBand": "6",
+      "subject": "Science",
+      "tags": [
+        "plants",
+        "leaf"
+      ]
+    },
+    "status": "draft"
+  },
+  {
+    "id": "it-root",
+    "name": "Root on the diagram",
+    "taskModelId": "tm-plant",
+    "observationId": "obs-plant-name",
+    "stimulus": {
+      "layout": "single",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "The arrow points to the part under the soil. What is it called?"
+        }
+      ]
+    },
+    "interaction": {
+      "type": "mcq",
+      "responseComponents": [
+        {
+          "id": "opt_a",
+          "label": "Flower"
+        },
+        {
+          "id": "opt_b",
+          "label": "Root"
+        },
+        {
+          "id": "opt_c",
+          "label": "Leaf"
+        },
+        {
+          "id": "opt_d",
+          "label": "Fruit"
+        }
+      ]
+    },
+    "scoring": {
+      "method": "dichotomous",
+      "maxScore": 1,
+      "evidenceActivationMap": [
+        {
+          "responsePattern": {
+            "selected": "opt_b"
+          },
+          "activatesObservable": true,
+          "strengthOverride": 4,
+          "rationale": "Root is the name of the called-out part."
+        }
+      ]
+    },
+    "learningDomain": "cognitive",
+    "cognitiveDemand": {
+      "bloomLevel": "remember"
+    },
+    "metadata": {
+      "gradeBand": "6",
+      "subject": "Science",
+      "tags": [
+        "plants",
+        "root"
+      ]
+    },
+    "status": "draft"
+  },
+  {
+    "id": "it-function",
+    "name": "Job of the leaf",
+    "taskModelId": "tm-function",
+    "observationId": "obs-plant-function",
+    "stimulus": {
+      "layout": "single",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "What does a leaf do for the plant?"
+        }
+      ]
+    },
+    "interaction": {
+      "type": "mcq",
+      "responseComponents": [
+        {
+          "id": "opt_a",
+          "label": "Makes food"
+        },
+        {
+          "id": "opt_b",
+          "label": "Takes up water"
+        },
+        {
+          "id": "opt_c",
+          "label": "Holds the plant in the soil"
+        },
+        {
+          "id": "opt_d",
+          "label": "Makes seeds"
+        }
+      ]
+    },
+    "scoring": {
+      "method": "dichotomous",
+      "maxScore": 1,
+      "evidenceActivationMap": [
+        {
+          "responsePattern": {
+            "selected": "opt_a"
+          },
+          "activatesObservable": true,
+          "strengthOverride": 3,
+          "rationale": "Making food is the function of the leaf."
+        }
+      ]
+    },
+    "learningDomain": "cognitive",
+    "cognitiveDemand": {
+      "bloomLevel": "understand"
+    },
+    "metadata": {
+      "gradeBand": "6",
+      "subject": "Science",
+      "tags": [
+        "plants",
+        "function"
+      ]
+    },
+    "status": "draft"
+  },
+  {
+    "id": "it-equiv",
+    "name": "Equivalent to 2/4",
+    "taskModelId": "tm-frac",
+    "observationId": "obs-equiv",
+    "stimulus": {
+      "layout": "single",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "Which fraction is equivalent to 2/4?"
+        }
+      ]
+    },
+    "interaction": {
+      "type": "mcq",
+      "responseComponents": [
+        {
+          "id": "opt_a",
+          "label": "1/2"
+        },
+        {
+          "id": "opt_b",
+          "label": "3/8"
+        },
+        {
+          "id": "opt_c",
+          "label": "2/3"
+        },
+        {
+          "id": "opt_d",
+          "label": "5/6"
+        }
+      ]
+    },
+    "scoring": {
+      "method": "dichotomous",
+      "maxScore": 1,
+      "evidenceActivationMap": [
+        {
+          "responsePattern": {
+            "selected": "opt_a"
+          },
+          "activatesObservable": true,
+          "strengthOverride": 4,
+          "rationale": "1/2 and 2/4 name the same amount."
+        }
+      ]
+    },
+    "learningDomain": "cognitive",
+    "cognitiveDemand": {
+      "bloomLevel": "apply"
+    },
+    "metadata": {
+      "gradeBand": "6",
+      "subject": "Mathematics",
+      "tags": [
+        "fractions",
+        "equivalence"
+      ]
+    },
+    "status": "draft"
+  }
+]

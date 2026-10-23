@@ -1,0 +1,68 @@
+[
+  {
+    "id": "c-plant",
+    "name": "Names the part",
+    "description": "The student names the plant part the diagram calls out.",
+    "modelId": "cm-plant",
+    "variableType": "binary",
+    "states": [
+      {
+        "id": "absent",
+        "label": "Does not name the part",
+        "order": 0
+      },
+      {
+        "id": "present",
+        "label": "Names the part",
+        "order": 1
+      }
+    ],
+    "domain": "Science",
+    "strand": "Plant structure",
+    "facet": "Part name"
+  },
+  {
+    "id": "c-function",
+    "name": "Names the function",
+    "description": "The student states the job of a named plant part.",
+    "modelId": "cm-plant",
+    "variableType": "binary",
+    "states": [
+      {
+        "id": "absent",
+        "label": "Does not state the function",
+        "order": 0
+      },
+      {
+        "id": "present",
+        "label": "States the function",
+        "order": 1
+      }
+    ],
+    "domain": "Science",
+    "strand": "Plant structure",
+    "facet": "Part function"
+  },
+  {
+    "id": "c-frac",
+    "name": "Fraction equivalence",
+    "description": "The student recognises that two fractions name the same amount.",
+    "modelId": "cm-frac",
+    "variableType": "binary",
+    "states": [
+      {
+        "id": "absent",
+        "label": "Does not recognise equivalence",
+        "order": 0
+      },
+      {
+        "id": "present",
+        "label": "Recognises equivalence",
+        "order": 1
+      }
+    ],
+    "domain": "Mathematics",
+    "strand": "Number sense",
+    "facet": "Equivalence"
+  }
+]

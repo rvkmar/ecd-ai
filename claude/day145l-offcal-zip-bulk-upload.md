@@ -1,4 +1,4 @@
-# Off-calendar — One zip for every ECD entity
+# Off-calendar: one zip for every ECD entity
 
 **Not D146.** Not a calendar unit. Settings → Data can take one zip for the whole chain. The staged uploader and the single-entity cards stay.
 
@@ -66,21 +66,51 @@ With the toggle on, created/failed stay 43/56. Ids actually kept: curricular pol
 
 Two side effects of the existing builders are not in the per-file created count. Creating a curricular policy upserts content-standard domain analyses, so the database holds 10 domain analyses after 7 file rows succeed. Student Model import writes nested competencies, so the database holds 10 competencies even though `competencies.json` created 0. Export writes what is stored (domain analyses 10, competencies 10).
 
+## Complete sample (`ecd-sample-complete.zip`)
+
+`samples/ecd-sample-complete.zip` is a second archive, written so every row the zip route accepts passes the existing validators. The JSON files in `samples/ecd-sample-complete/` are the same entries, one file per entity. `node samples/ecd-sample-complete/build-zip.mjs` rebuilds the zip from that folder. `server/routes/__tests__/ecdSampleCompleteZip.test.js` imports the committed zip into an empty store with the toggle off and on, and it fails if a created count changes or any row fails.
+
+Two chains, using names and stems from the tab fixtures and `samples/`. Plants: science curricular policy, labelled-diagram and plant-structure analyses, diagram and Bloom variables, a multidimensional Student Model (Names the part, Names the function), design patterns Explain a labelled diagram and Name a plant part, IRT and DINA evidence, two task models, three items, a Q-matrix, an assembly on the fixed-form policy, two presentation models, two templates. Fractions: mathematics curricular policy, fractions analysis, denominator variable, a unidimensional Student Model (Fraction equivalence), one design pattern, IRT evidence, one task model, one item (Equivalent to 2/4), a Q-matrix, an assembly on the Bayesian policy, one presentation model, one template. The three selection policies (fixed, IRT, Bayesian) are shared.
+
+Every row is draft, so both modes keep the same counts and record no status-fallback warnings. Competencies live in `competencies.json`, not nested inside the Student Model, so attribute ids stay `smv-names-part`, `smv-names-function`, and `smv-equiv` with the toggle off and on. The DINA evidence row names the Q-matrix (`Plant part Q-matrix`) and does not carry `qMatrixId`; the post-walk rebind sets it (`qMatrixLinksBound` 1). Design patterns omit work-product and rubric menus, because those collections are not in the zip. Observation ids on design patterns are omitted for the same reason. Task and item observation ids (`obs-plant-name`, `obs-plant-function`, `obs-equiv`) are shared with the evidence observables and are not remapped.
+
+Empty database, both modes. File-level errors: 0. Skipped: none. Warnings: none. With the toggle on, every source id is kept.
+
+| Entity | Created | Failed |
+|---|---:|---:|
+| Curricular policies | 2 | 0 |
+| Selection policies | 3 | 0 |
+| Domain analyses | 3 | 0 |
+| Task model variables | 3 | 0 |
+| Student Models | 2 | 0 |
+| Competencies | 3 | 0 |
+| Design patterns | 3 | 0 |
+| Evidence models | 3 | 0 |
+| Task models | 3 | 0 |
+| Items | 4 | 0 |
+| Q-matrix models | 2 | 0 |
+| Assembly models | 2 | 0 |
+| Presentation models | 3 | 0 |
+| Templates | 3 | 0 |
+| **Total** | **39** | **0** |
+
+Creating a curricular policy still upserts a content-standard shell, so Domain Analysis holds 5 records after 3 file rows succeed. That is the existing curricular-policy builder. The zip report counts the 3 file rows.
+
 ## Verification
 
 ```
 NODE_OPTIONS=--max-old-space-size=4096 npx vitest run
-  2363 passed | 9 skipped (2372)
-  Test Files 264 passed
-  69.82s, exit 0
+  2366 passed | 9 skipped (2375)
+  Test Files 265 passed
+  54.38s, exit 0
 
 npm run build
-  green (1.55s). Largest JS chunk recharts 425.06 kB (gzip 117.21 kB).
+  green (1.34s). Largest JS chunk recharts 425.06 kB (gzip 117.21 kB).
   EvidenceModelBuilder 373.88 kB (gzip 82.85 kB).
   SettingsPage 78.43 kB (gzip 18.66 kB).
 ```
 
-Previous close on this tree was Presentation Model parity, **2340 passed / 9 skipped**. Delta: **+23 tests / +3 files** (`safeZip.test.js`, `dataZipRoutes.test.js`, `zipBundlePanel.test.jsx`). `apiClient.test.js` gained the raw-body and blob cases. Skips unchanged.
+Previous close on this tree was Presentation Model parity, **2340 passed / 9 skipped**. The zip route added **+23 tests / +3 files** (`safeZip.test.js`, `dataZipRoutes.test.js`, `zipBundlePanel.test.jsx`). `apiClient.test.js` gained the raw-body and blob cases. The complete sample adds **+3 tests / +1 file** (`ecdSampleCompleteZip.test.js`: zip matches the JSON folder, import with new ids, import keeping original ids). Skips unchanged. Suite is now **2366 passed / 9 skipped**.
 
 This VM ran the suite on Node 22. CI installs Node 24. `npm ci` printed an engine warning and still installed. `npm audit` still reports the pre-existing moderate finding. No dependency was added, and the high-severity audit gate was not loosened.
 
@@ -91,6 +121,8 @@ Local Vite `http://localhost:5173` and the API on `:3000`, `DB_MODE=json`, `ECD_
 Settings → Data → Upload showed "All entities in one zip", the keep-ids checkbox unchecked, Preview, and Import, with "Or upload one entity type at a time" and the Users and Policies cards still underneath. Preview of `by-entity-final.zip` said "Preview: 43 created, 56 failed.", "Nothing has been written yet.", and skipped `README-by-entity.txt`. Import said "Imported: 43 created, 56 failed." and toasted "Imported 43 record(s)." The database stayed empty of those entities until Import. Download showed Export all as zip; the click toasted "Exported all entities as a zip." and the browser saved `ecd-entities.zip` (12.4 KB). A fresh `GET /api/data/zip` after that import was 200 and 12672 bytes, with the stored counts above.
 
 Task Model (`?tab=taskmodels`) then showed Total 3: Name the plant part, Plant part naming, and Fractions, all draft, which is the default (new ids, draft) import. Light theme. No error toast.
+
+A later pass used a fresh throwaway store and `samples/ecd-sample-complete.zip`, with keep-ids left off. Preview said "Preview: 39 created, 0 failed." and "Nothing has been written yet." Import said "Import finished. Imported: 39 created, 0 failed." Manage Task Model then listed Name the plant part, Name the plant function, and Name the fraction. Manage Evidence Model listed Part naming evidence, Part function evidence, and Fraction evidence. Manage Diagnostic Designs listed Plant part Q-matrix and Fraction equivalence Q-matrix. Part function evidence stored `qMatrixId` equal to the Plant part Q-matrix id. Domain Analysis holds 5 records: the 3 file rows plus 2 content-standard shells from the curricular-policy builder.
 
 ## Half-applied work
 

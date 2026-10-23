@@ -1,0 +1,138 @@
+[
+  {
+    "id": "tm-plant",
+    "name": "Name the plant part",
+    "description": "Selected-response items that ask for the name of one called-out plant part.",
+    "designRationale": "Recognition of the part name, before any explanation of its function.",
+    "status": "draft",
+    "evidenceModelIds": [
+      "em-plant"
+    ],
+    "primaryEvidenceModelId": "em-plant",
+    "seededFrom": {
+      "designPatternId": "dp-plant"
+    },
+    "expectedObservations": [
+      {
+        "observationId": "obs-plant-name",
+        "evidenceModelId": "em-plant",
+        "required": true,
+        "weight": 1
+      }
+    ],
+    "taskModelVariableIds": [
+      "tmv-diagram",
+      "tmv-bloom"
+    ],
+    "taskModelVariableSettings": [
+      {
+        "taskModelVariableId": "tmv-diagram",
+        "variation": "varying"
+      },
+      {
+        "taskModelVariableId": "tmv-bloom",
+        "variation": "fixed",
+        "fixedValue": "remember"
+      }
+    ],
+    "taskStructure": {
+      "prompt": "Name the part the diagram calls out."
+    },
+    "blueprintConstraints": {
+      "allowedInteractionTypes": [
+        "mcq"
+      ],
+      "allowedScoringMethods": [
+        "dichotomous"
+      ],
+      "difficultyRange": {
+        "min": 0.2,
+        "max": 0.8
+      }
+    }
+  },
+  {
+    "id": "tm-function",
+    "name": "Name the plant function",
+    "description": "Selected-response items that ask what a named plant part does.",
+    "designRationale": "The function claim, scored against the plant-part Q-matrix.",
+    "status": "draft",
+    "evidenceModelIds": [
+      "em-function"
+    ],
+    "primaryEvidenceModelId": "em-function",
+    "seededFrom": {
+      "designPatternId": "dp-diagram"
+    },
+    "expectedObservations": [
+      {
+        "observationId": "obs-plant-function",
+        "evidenceModelId": "em-function",
+        "required": true,
+        "weight": 1
+      }
+    ],
+    "taskModelVariableIds": [
+      "tmv-diagram"
+    ],
+    "taskModelVariableSettings": [
+      {
+        "taskModelVariableId": "tmv-diagram",
+        "variation": "varying"
+      }
+    ],
+    "taskStructure": {
+      "prompt": "State the job of the named part."
+    },
+    "blueprintConstraints": {
+      "allowedInteractionTypes": [
+        "mcq"
+      ],
+      "allowedScoringMethods": [
+        "dichotomous"
+      ]
+    }
+  },
+  {
+    "id": "tm-frac",
+    "name": "Name the fraction",
+    "description": "Selected-response items that ask which fraction is equivalent to the stem.",
+    "designRationale": "One observable, equivalence, on the fractions student model.",
+    "status": "draft",
+    "evidenceModelIds": [
+      "em-frac"
+    ],
+    "primaryEvidenceModelId": "em-frac",
+    "seededFrom": {
+      "designPatternId": "dp-frac"
+    },
+    "expectedObservations": [
+      {
+        "observationId": "obs-equiv",
+        "evidenceModelId": "em-frac",
+        "required": true,
+        "weight": 1
+      }
+    ],
+    "taskModelVariableIds": [
+      "tmv-denominator"
+    ],
+    "taskModelVariableSettings": [
+      {
+        "taskModelVariableId": "tmv-denominator",
+        "variation": "varying"
+      }
+    ],
+    "taskStructure": {
+      "prompt": "Which fraction is equivalent to the stem?"
+    },
+    "blueprintConstraints": {
+      "allowedInteractionTypes": [
+        "mcq"
+      ],
+      "allowedScoringMethods": [
+        "dichotomous"
+      ]
+    }
+  }
+]

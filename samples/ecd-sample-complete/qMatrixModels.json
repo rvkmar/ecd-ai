@@ -1,0 +1,49 @@
+[
+  {
+    "id": "qm-plant",
+    "name": "Plant part Q-matrix",
+    "description": "Binary attributes for the plant student model: naming the part, and naming its function.",
+    "status": "draft",
+    "competencyModelId": "cm-plant",
+    "domainAnalysisId": "da-plant",
+    "attributeIds": [
+      "smv-names-part",
+      "smv-names-function"
+    ],
+    "entries": [
+      {
+        "itemId": "it-leaf",
+        "attributeId": "smv-names-part",
+        "required": true
+      },
+      {
+        "itemId": "it-root",
+        "attributeId": "smv-names-part",
+        "required": true
+      },
+      {
+        "itemId": "it-function",
+        "attributeId": "smv-names-function",
+        "required": true
+      }
+    ]
+  },
+  {
+    "id": "qm-frac",
+    "name": "Fraction equivalence Q-matrix",
+    "description": "One binary attribute, fraction equivalence, on the Grade 6 numeracy model.",
+    "status": "draft",
+    "competencyModelId": "cm-frac",
+    "domainAnalysisId": "da-frac",
+    "attributeIds": [
+      "smv-equiv"
+    ],
+    "entries": [
+      {
+        "itemId": "it-equiv",
+        "attributeId": "smv-equiv",
+        "required": true
+      }
+    ]
+  }
+]
