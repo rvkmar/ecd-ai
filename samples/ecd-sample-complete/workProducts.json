@@ -1,0 +1,20 @@
+[
+  {
+    "id": "wp-part-name",
+    "name": "Selected plant-part name",
+    "description": "The name the student chooses for the plant part a diagram calls out.",
+    "type": "selected_response"
+  },
+  {
+    "id": "wp-part-function",
+    "name": "Selected plant-part function",
+    "description": "The job the student chooses for a named plant part.",
+    "type": "selected_response"
+  },
+  {
+    "id": "wp-equiv",
+    "name": "Selected equivalent fraction",
+    "description": "The fraction the student chooses as naming the same amount as the stem.",
+    "type": "selected_response"
+  }
+]

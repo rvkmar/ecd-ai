@@ -63,25 +63,48 @@ router.get("/:id", (req, res) => {
   res.json(row);
 });
 
-router.post("/", canAuthor, (req, res) => {
-  const db = loadDB();
+// Same record the single POST writes. forceDraft is how the zip importer
+// drops a confirmed status when the original id is not kept, or when that
+// status fails the existing validator. POST itself does not force a draft.
+export function createRubricRecord(
+  payload = {},
+  db,
+  req,
+  { assignedId, forceDraft = false } = {}
+) {
   const now = new Date().toISOString();
-  const writes = pickWrites(req.body);
+  const writes = pickWrites(payload);
   const record = {
     ...writes,
-    status: writes.status || "draft",
-    id: genId(),
+    status: forceDraft ? "draft" : writes.status || "draft",
+    id: assignedId || genId(),
     ...authorTenancy(req),
     createdAt: now,
     updatedAt: now,
   };
 
-  if (rejectIfInvalid(res, record, db)) return;
+  const { valid, errors } = validateEntity("rubrics", record, db);
+  if (!valid) {
+    return {
+      ok: false,
+      error: errors[0] || "Rubric validation failed",
+      details: errors,
+    };
+  }
 
   db.rubrics = db.rubrics || [];
   db.rubrics.push(record);
+  return { ok: true, record };
+}
+
+router.post("/", canAuthor, (req, res) => {
+  const db = loadDB();
+  const result = createRubricRecord(req.body, db, req);
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error, details: result.details });
+  }
   saveDB(db);
-  res.status(201).json(record);
+  res.status(201).json(result.record);
 });
 
 router.put("/:id", canAuthor, (req, res) => {

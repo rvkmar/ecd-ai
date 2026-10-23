@@ -1,0 +1,52 @@
+[
+  {
+    "id": "rub-function",
+    "name": "Plant function judgement",
+    "description": "Scores whether the chosen job of a named plant part is the work that part does.",
+    "status": "confirmed",
+    "dimensions": [
+      {
+        "id": "function-match",
+        "name": "Function match",
+        "levels": [
+          {
+            "value": 0,
+            "label": "Wrong job",
+            "exemplar": "The student says a leaf takes up water."
+          },
+          {
+            "value": 1,
+            "label": "Right job",
+            "exemplar": "The student says a leaf makes food for the plant."
+          }
+        ],
+        "activatesAt": 1
+      }
+    ]
+  },
+  {
+    "id": "rub-equiv",
+    "name": "Fraction equivalence judgement",
+    "description": "Scores whether the chosen fraction names the same amount as the stem.",
+    "status": "draft",
+    "dimensions": [
+      {
+        "id": "same-amount",
+        "name": "Same amount",
+        "levels": [
+          {
+            "value": 0,
+            "label": "Different amount",
+            "exemplar": "The student picks 2/3 for a stem of 2/4."
+          },
+          {
+            "value": 1,
+            "label": "Same amount",
+            "exemplar": "The student picks 1/2 for a stem of 2/4."
+          }
+        ],
+        "activatesAt": 1
+      }
+    ]
+  }
+]

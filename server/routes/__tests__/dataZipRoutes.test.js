@@ -332,6 +332,8 @@ describe("GET /api/data/zip", () => {
     expect(names).toContain("policies.json");
     expect(names).toContain("templates.json");
     expect(names).toContain("taskModelVariables.json");
+    expect(names).toContain("workProducts.json");
+    expect(names).toContain("rubrics.json");
     expect(names).toContain("presentationModels.json");
     const policies = JSON.parse(
       files.find((file) => file.name === "policies.json").data.toString()

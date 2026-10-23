@@ -15,6 +15,7 @@
     },
     "interaction": {
       "type": "mcq",
+      "workProductId": "wp-part-name",
       "responseComponents": [
         {
           "id": "opt_a",
@@ -78,6 +79,7 @@
     },
     "interaction": {
       "type": "mcq",
+      "workProductId": "wp-part-name",
       "responseComponents": [
         {
           "id": "opt_a",
@@ -141,6 +143,7 @@
     },
     "interaction": {
       "type": "mcq",
+      "workProductId": "wp-part-function",
       "responseComponents": [
         {
           "id": "opt_a",
@@ -204,6 +207,7 @@
     },
     "interaction": {
       "type": "mcq",
+      "workProductId": "wp-equiv",
       "responseComponents": [
         {
           "id": "opt_a",

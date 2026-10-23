@@ -209,7 +209,7 @@ export default function ZipBundlePanel() {
         <p className="text-sm text-muted-foreground mt-1">
           One JSON file per entity (policies.json, curricularPolicies.json, domainAnalyses.json,
           competencyModels.json, competencies.json, evidenceModels.json, taskModelVariables.json,
-          taskModels.json, items.json, qMatrixModels.json, assemblyModels.json,
+          workProducts.json, rubrics.json, taskModels.json, items.json, qMatrixModels.json, assemblyModels.json,
           designPatterns.json, presentationModels.json, templates.json). A file may be a bare
           array or a one-key wrapper. Preview checks every row, then Import writes the rows that
           passed. A bad row does not cancel the rest. Files that are not an entity are skipped.

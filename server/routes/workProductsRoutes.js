@@ -69,23 +69,40 @@ router.get("/:id", (req, res) => {
   res.json(row);
 });
 
-router.post("/", canAuthor, (req, res) => {
-  const db = loadDB();
+// Same record the single POST writes. The zip importer calls this so a
+// Work Product is not assembled a second way. There is no status field.
+export function createWorkProductRecord(payload = {}, db, req, { assignedId } = {}) {
   const now = new Date().toISOString();
   const record = {
-    ...pickWrites(req.body),
-    id: genId(),
+    ...pickWrites(payload),
+    id: assignedId || genId(),
     ...authorTenancy(req),
     createdAt: now,
     updatedAt: now,
   };
 
-  if (rejectIfInvalid(res, record, db)) return;
+  const { valid, errors } = validateEntity("workProducts", record, db);
+  if (!valid) {
+    return {
+      ok: false,
+      error: errors[0] || "Work Product validation failed",
+      details: errors,
+    };
+  }
 
   db.workProducts = db.workProducts || [];
   db.workProducts.push(record);
+  return { ok: true, record };
+}
+
+router.post("/", canAuthor, (req, res) => {
+  const db = loadDB();
+  const result = createWorkProductRecord(req.body, db, req);
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error, details: result.details });
+  }
   saveDB(db);
-  res.status(201).json(record);
+  res.status(201).json(result.record);
 });
 
 router.put("/:id", canAuthor, (req, res) => {

@@ -20,6 +20,9 @@
 //     retried as a draft and the row records a warning.
 // When keepOriginalIds is off (the default), every row gets a new id and
 // the builders' usual draft status. Links are still rewritten.
+// Work products have no status field. Their builder never writes one.
+// A rubric stays confirmed only when the original id is kept and the
+// existing rubric validator accepts that status. Otherwise it is draft.
 
 import { randomBytes } from "crypto";
 import { unzipSafe, zipFiles, ZipError } from "../utils/safeZip.js";
@@ -28,6 +31,8 @@ import { createCurricularPolicyRecord } from "../routes/curricularPoliciesRoutes
 import { createPolicyRecord } from "../routes/policiesRoutes.js";
 import { createDomainAnalysisRecord } from "../routes/domainAnalysesRoutes.js";
 import { createTaskModelVariableRecord } from "../routes/taskModelVariablesRoutes.js";
+import { createWorkProductRecord } from "../routes/workProductsRoutes.js";
+import { createRubricRecord } from "../routes/rubricsRoutes.js";
 import { importCompetencyModelRow } from "../routes/competencyModels.js";
 import { createCompetencyRecord } from "../routes/competencyModels.js";
 import { createDesignPatternRecord } from "../routes/designPatternsRoutes.js";
@@ -47,6 +52,8 @@ const IMPORT_ORDER = [
   "policies",
   "domainAnalyses",
   "taskModelVariables",
+  "workProducts",
+  "rubrics",
   "competencyModels",
   "competencies",
   "designPatterns",
@@ -75,6 +82,8 @@ const ID_PREFIX = {
   policies: "p",
   domainAnalyses: "da",
   taskModelVariables: "tmv",
+  workProducts: "wp",
+  rubrics: "rub",
   competencyModels: "cm",
   competencies: "c",
   designPatterns: "dp",
@@ -109,6 +118,9 @@ const REF_PATHS = {
     ["warrants[].competencyId", "competencies"],
     ["seededFrom.designPatternId", "designPatterns"],
     ["statisticalModels[].structureConfig.qMatrixId", "qMatrixModels"],
+    ["evaluationProcedures[].workProductId", "workProducts"],
+    ["evaluationProcedures[].rubricId", "rubrics"],
+    ["evaluationProcedures[].phases[].rubricId", "rubrics"],
   ],
   taskModels: [
     ["evidenceModelIds[]", "evidenceModels"],
@@ -120,7 +132,10 @@ const REF_PATHS = {
     ["seededFrom.designPatternId", "designPatterns"],
     ["parentModelId", "taskModels"],
   ],
-  items: [["taskModelId", "taskModels"]],
+  items: [
+    ["taskModelId", "taskModels"],
+    ["interaction.workProductId", "workProducts"],
+  ],
   qMatrixModels: [
     ["competencyModelId", "competencyModels"],
     ["domainAnalysisId", "domainAnalyses"],
@@ -356,8 +371,6 @@ function emptyDbCollections(db) {
   for (const collection of IMPORT_ORDER) {
     if (!Array.isArray(db[collection])) db[collection] = [];
   }
-  if (!Array.isArray(db.workProducts)) db.workProducts = [];
-  if (!Array.isArray(db.rubrics)) db.rubrics = [];
 }
 
 function planRows(rows, collection, db, keepOriginalIds, catalog) {
@@ -381,7 +394,7 @@ function planRows(rows, collection, db, keepOriginalIds, catalog) {
   });
 }
 
-function finishRow(plan, result, extraWarnings = []) {
+function finishRow(plan, result, extraWarnings = [], options = {}) {
   if (!result?.ok) {
     const flat = flattenError(result);
     return {
@@ -396,7 +409,9 @@ function finishRow(plan, result, extraWarnings = []) {
   const warnings = [...extraWarnings];
   if (plan.allocation?.collision) {
     warnings.push(
-      `Id '${plan.sourceId}' is already used; assigned ${result.record.id} and left the row as a draft.`
+      options.noStatus
+        ? `Id '${plan.sourceId}' is already used; assigned ${result.record.id}.`
+        : `Id '${plan.sourceId}' is already used; assigned ${result.record.id} and left the row as a draft.`
     );
   }
   return {
@@ -477,7 +492,11 @@ function importSimple(plans, collection, ctx, invoke) {
     } else if (outcome.result.record?.id) {
       ctx.provenance.set(`${collection}:${outcome.result.record.id}`, plan.sources);
     }
-    results.push(finishRow(plan, outcome.result, outcome.warnings));
+    results.push(
+      finishRow(plan, outcome.result, outcome.warnings, {
+        noStatus: collection === "workProducts",
+      })
+    );
   }
 
   results.sort((a, b) => a.index - b.index);
@@ -730,6 +749,17 @@ export function importZipIntoDb(db, buffer, options = {}) {
     } else if (collection === "taskModelVariables") {
       results = importSimple(plans, collection, ctx, (row, opts) =>
         createTaskModelVariableRecord(row, db, req, { assignedId: opts.assignedId })
+      );
+    } else if (collection === "workProducts") {
+      results = importSimple(plans, collection, ctx, (row, opts) =>
+        createWorkProductRecord(row, db, req, { assignedId: opts.assignedId })
+      );
+    } else if (collection === "rubrics") {
+      results = importSimple(plans, collection, ctx, (row, opts) =>
+        createRubricRecord(row, db, req, {
+          assignedId: opts.assignedId,
+          forceDraft: opts.forceDraft,
+        })
       );
     } else if (collection === "designPatterns") {
       results = importSimple(plans, collection, ctx, (row, opts) =>
