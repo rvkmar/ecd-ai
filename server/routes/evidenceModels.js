@@ -202,6 +202,30 @@ router.get("/:id", (req, res) => {
    persists once, so bulk import writes the file once per batch instead
    of once per row.
 ===================================================== */
+export function bindQMatrixReferences(statisticalModels, db) {
+  return (statisticalModels || []).map((sm) => {
+    const cfg =
+      sm?.structureConfig && typeof sm.structureConfig === "object"
+        ? { ...sm.structureConfig }
+        : sm?.structureConfig;
+    if (
+      cfg &&
+      !cfg.qMatrixId &&
+      cfg.qMatrixName &&
+      (sm.type === "dina" || sm.type === "gdina")
+    ) {
+      const needle = String(cfg.qMatrixName).trim().toLowerCase();
+      const matches = (db.qMatrixModels || []).filter(
+        (q) => (q.name || "").trim().toLowerCase() === needle
+      );
+      if (matches.length === 1) {
+        cfg.qMatrixId = matches[0].id;
+      }
+    }
+    return cfg ? { ...sm, structureConfig: cfg } : sm;
+  });
+}
+
 export function createEvidenceModelRecord(payload = {}, db, idSuffix = "", options = {}) {
   // Cross-layer existence check. `competencyId` is the preferred, unambiguous
   // reference. A bulk-upload row that doesn't know the internal id yet (it's
@@ -322,29 +346,11 @@ export function createEvidenceModelRecord(payload = {}, db, idSuffix = "", optio
   // Resolve structureConfig.qMatrixName → qMatrixId when a unique Q-matrix
   // exists (Force→DINA bulk path). If the Q-matrix is not uploaded yet,
   // keep qMatrixName and omit qMatrixId so draft dina models remain valid.
-  const statisticalModels = (payload.statisticalModels || []).map((sm) => {
-    const cfg = sm?.structureConfig && typeof sm.structureConfig === "object"
-      ? { ...sm.structureConfig }
-      : sm?.structureConfig;
-    if (
-      cfg &&
-      !cfg.qMatrixId &&
-      cfg.qMatrixName &&
-      (sm.type === "dina" || sm.type === "gdina")
-    ) {
-      const needle = String(cfg.qMatrixName).trim().toLowerCase();
-      const matches = (db.qMatrixModels || []).filter(
-        (q) => (q.name || "").trim().toLowerCase() === needle
-      );
-      if (matches.length === 1) {
-        cfg.qMatrixId = matches[0].id;
-      }
-    }
-    return cfg ? { ...sm, structureConfig: cfg } : sm;
-  });
+  const statisticalModels = bindQMatrixReferences(payload.statisticalModels || [], db);
 
+  const preserve = options.preserveLifecycle === true;
   const newModel = {
-    id: `${genId()}${idSuffix}`,
+    id: options.assignedId || `${genId()}${idSuffix}`,
     name: payload.name || "",
     description: payload.description || "",
     // Authoring / governance notes (coherence advisories, CAF rationale).
@@ -372,13 +378,34 @@ export function createEvidenceModelRecord(payload = {}, db, idSuffix = "", optio
       ? payload.difReviewChecklist
       : [],
     calibrationPlan: payload.calibrationPlan || null,
-    status: "draft",
-    locked: false,
-    versionNumber: 1,
-    parentModelId: null,
+    status: preserve && payload.status ? payload.status : "draft",
+    locked: preserve && typeof payload.locked === "boolean" ? payload.locked : false,
+    versionNumber:
+      preserve && Number.isFinite(payload.versionNumber) ? payload.versionNumber : 1,
+    parentModelId:
+      options.keepParentLink || preserve ? payload.parentModelId || null : null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+
+  // Single and bulk creates do not schema-check a forced draft. Keeping a
+  // lifecycle is opt-in and must pass the same validator, with draft
+  // parents still allowed. Failure inserts nothing so the caller can
+  // retry as a draft.
+  if (preserve) {
+    const check = validateEntity("evidenceModels", newModel, db, {
+      strict: newModel.status === "confirmed",
+      allowDraftParents: true,
+    });
+    if (!check.valid) {
+      return {
+        ok: false,
+        status: 400,
+        error: "Schema validation failed",
+        details: check.errors,
+      };
+    }
+  }
 
   db.evidenceModels = db.evidenceModels || [];
   db.evidenceModels.push(newModel);

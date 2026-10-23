@@ -191,7 +191,7 @@ function resolveUniqueByName(list, name, label, nameKey = "name") {
   return { record: matches[0] };
 }
 
-function createAssemblyModelRecord(payload = {}, db, idSuffix = "") {
+export function createAssemblyModelRecord(payload = {}, db, idSuffix = "", options = {}) {
   const now = new Date().toISOString();
   let competencyModelId = payload.competencyModelId;
 
@@ -258,8 +258,9 @@ function createAssemblyModelRecord(payload = {}, db, idSuffix = "") {
     selectionAlgorithm = { policyId: resolved.record.id };
   }
 
+  const preserve = options.preserveLifecycle === true;
   const record = {
-    id: `${genId()}${idSuffix}`,
+    id: options.assignedId || `${genId()}${idSuffix}`,
     name: payload.name || "",
     description: payload.description || "",
     competencyModelId,
@@ -268,12 +269,15 @@ function createAssemblyModelRecord(payload = {}, db, idSuffix = "") {
     targetsBySMV,
     stoppingRules: payload.stoppingRules || {},
     selectionAlgorithm,
-    status: "draft",
-    locked: false,
+    status: preserve && payload.status ? payload.status : "draft",
+    locked: preserve && typeof payload.locked === "boolean" ? payload.locked : false,
     versionNumber: payload.versionNumber ?? 1,
     createdAt: now,
     updatedAt: now,
   };
+  if ((preserve || options.keepParentLink) && payload.parentModelId) {
+    record.parentModelId = payload.parentModelId;
+  }
 
   const { valid, errors } = validateEntity("assemblyModels", record, db);
   if (!valid) {

@@ -39,7 +39,7 @@ function requireAdmin(req, res, next) {
 // creating several policies within the same millisecond doesn't collide
 // on `p${Date.now()}`.
 // ------------------------------
-function createPolicyRecord(payload = {}, db, idSuffix = "") {
+export function createPolicyRecord(payload = {}, db, idSuffix = "", options = {}) {
   const { name, description, type, config } = payload;
 
   if (!name || !type) {
@@ -47,7 +47,7 @@ function createPolicyRecord(payload = {}, db, idSuffix = "") {
   }
 
   const newPolicy = {
-    id: `p${Date.now()}${idSuffix}`,
+    id: options.assignedId || `p${Date.now()}${idSuffix}`,
     name,
     description: description || "",
     type, // must match enum in schema.js: "fixed" | "IRT" | "BayesianNetwork"

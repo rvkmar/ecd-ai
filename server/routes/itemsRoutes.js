@@ -289,7 +289,7 @@ router.get("/:id/simulate", (req, res) => {
 // Shared create logic for POST / and POST /bulk. Mutates `db` but does
 // not save -- the caller persists once, so a bulk import writes the file
 // once per batch instead of once per row.
-function createItemRecord(payload = {}, db, creatorId = "system", options = {}) {
+export function createItemRecord(payload = {}, db, creatorId = "system", options = {}) {
   // Set only by POST /bulk -- see the note on validateEntity's
   // `allowDraftParents` option in src/utils/schema.js. It lets an imported
   // item bind to a Task Model that is still a draft, so a whole authored
@@ -357,8 +357,9 @@ function createItemRecord(payload = {}, db, creatorId = "system", options = {}) 
     }
   }
 
+  const preserve = options.preserveLifecycle === true;
   const newItem = {
-    id: genId(),
+    id: options.assignedId || genId(),
     // Optional display name used by Q-matrix bulk remapping (itemName).
     name: payload.name || null,
 
@@ -404,10 +405,11 @@ function createItemRecord(payload = {}, db, creatorId = "system", options = {}) 
       maxReactivations: payload.exposureControl?.maxReactivations || 0,
     },
 
-    status: "draft",
-    locked: false,
-    versionNumber: 1,
-    parentItemId: null,
+    status: preserve && payload.status ? payload.status : "draft",
+    locked: preserve && typeof payload.locked === "boolean" ? payload.locked : false,
+    versionNumber: preserve && Number.isFinite(payload.versionNumber) ? payload.versionNumber : 1,
+    parentItemId:
+      options.keepParentLink || preserve ? payload.parentItemId || null : null,
 
     creator: creatorId,
     modifier: null,

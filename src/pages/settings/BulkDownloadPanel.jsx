@@ -8,6 +8,7 @@
 
 import React from "react";
 import BulkDownloadCard from "./BulkDownloadCard";
+import { ZipExportButton } from "./ZipBundlePanel";
 
 export default function BulkDownloadPanel() {
   return (
@@ -18,8 +19,19 @@ export default function BulkDownloadPanel() {
           Export users, selection policies, curricular policies, domain analyses, Student Models, evidence
           models, task models, items, or design patterns as a JSON file. Each file is a JSON
           array shaped like the one the matching Upload card accepts, so an export can be
-          edited and imported again -- here or on another deployment.
+          edited and imported again -- here or on another deployment. Export all as zip writes the
+          same one-file-per-entity layout the zip uploader reads.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-border p-4 space-y-2">
+        <div className="font-medium">All entities</div>
+        <p className="text-xs text-muted-foreground">
+          One zip with policies.json, curricularPolicies.json, competencyModels.json,
+          competencies.json, and the other ECD collections. Empty collections are included as
+          empty arrays. Re-import with “Keep original ids” if those ids are still free.
+        </p>
+        <ZipExportButton />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
