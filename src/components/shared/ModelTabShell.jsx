@@ -4,7 +4,7 @@
 // Task model builders (Dashboard, then Structure, then Manage). Those
 // three keep their own buttons so their label tests stay on their own
 // source. Design Pattern, Domain Analysis, Templates, Assembly Models,
-// and Diagnostic Design call this shell.
+// Diagnostic Design, Presentation Models, and Work Products call this shell.
 
 import React from "react";
 import { Button } from "@/components/ui/button";

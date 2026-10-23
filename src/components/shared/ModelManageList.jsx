@@ -1,10 +1,15 @@
 // List console shared by Manage Design Pattern, Manage Domain Analysis,
 // Manage Templates, Manage Assembly Models, Manage Diagnostic Designs,
-// and Manage Presentation Models.
+// Manage Presentation Models, and Manage Work Products.
 // The header, filters, and expandable cards follow TaskModelBuilderPanel
 // and TaskModelList: title and description on the left, a black
-// "+ New …" button on the right, then status and search, then one card
-// per record. Competency, Evidence, and Task keep their own panels.
+// "+ New" button on the right, then search, a status or type filter, and
+// readiness, then one card per record. Competency, Evidence, and Task
+// keep their own panels.
+//
+// Work Products have no lifecycle status. Pass `facet` to replace the
+// status filter, and `renderBadge` to replace the lifecycle badge.
+// Other callers leave both unset.
 
 import React, { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
@@ -51,6 +56,8 @@ export default function ModelManageList({
   ],
   statusOf = (record) => record.status || "draft",
   readinessOf = null,
+  facet = null,
+  renderBadge = null,
   searchLabel = "Search",
   searchPlaceholder = "Search…",
   searchText = (record) => record.name || "",
@@ -61,6 +68,7 @@ export default function ModelManageList({
   const [expandedId, setExpandedId] = useState(null);
   const [filters, setFilters] = useState({
     status: "all",
+    facet: "all",
     readiness: "all",
     search: "",
   });
@@ -69,15 +77,20 @@ export default function ModelManageList({
 
   const filtered = useMemo(() => {
     const query = filters.search.trim().toLowerCase();
+    const facetValue = facet?.valueOf || ((record) => record.type || "");
     return ordered.filter((record) => {
-      if (filters.status !== "all" && statusOf(record) !== filters.status) return false;
+      if (facet) {
+        if (filters.facet !== "all" && facetValue(record) !== filters.facet) return false;
+      } else if (filters.status !== "all" && statusOf(record) !== filters.status) {
+        return false;
+      }
       if (readinessOf && filters.readiness !== "all" && readinessOf(record) !== filters.readiness) {
         return false;
       }
       if (query && !String(searchText(record) || "").toLowerCase().includes(query)) return false;
       return true;
     });
-  }, [ordered, filters, statusOf, readinessOf, searchText]);
+  }, [ordered, filters, statusOf, readinessOf, searchText, facet]);
 
   return (
     <div className="space-y-6 p-6">
@@ -108,19 +121,35 @@ export default function ModelManageList({
           aria-label={searchLabel}
           className={controlClass}
         />
-        <select
-          value={filters.status}
-          onChange={(event) => setFilters({ ...filters, status: event.target.value })}
-          className={controlClass}
-          aria-label="Filter by lifecycle status"
-        >
-          <option value="all">All statuses</option>
-          {statusOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        {facet ? (
+          <select
+            value={filters.facet}
+            onChange={(event) => setFilters({ ...filters, facet: event.target.value })}
+            className={controlClass}
+            aria-label={facet.ariaLabel || "Filter by type"}
+          >
+            <option value="all">{facet.allLabel || "All types"}</option>
+            {(facet.options || []).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <select
+            value={filters.status}
+            onChange={(event) => setFilters({ ...filters, status: event.target.value })}
+            className={controlClass}
+            aria-label="Filter by lifecycle status"
+          >
+            <option value="all">All statuses</option>
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
         {readinessOf ? (
           <select
             value={filters.readiness}
@@ -164,7 +193,11 @@ export default function ModelManageList({
                 </h3>
                 {renderMeta ? renderMeta(record) : null}
               </div>
-              <LifecycleStatusBadge status={statusOf(record)} className="shrink-0" />
+              {facet ? (
+                renderBadge ? renderBadge(record) : null
+              ) : (
+                <LifecycleStatusBadge status={statusOf(record)} className="shrink-0" />
+              )}
             </button>
             {expanded ? (
               <div className="space-y-4 border-t border-slate-100 px-6 py-5 text-sm">
