@@ -1,14 +1,27 @@
 // src/components/rubrics/RubricBuilder.jsx
 //
 // D122 library: rubrics with dimensions, levels, and exemplars.
-// Replaces the abandoned RubricManager.jsx.backup (deleted deliberately —
-// it bound a rubric to one observation; reusable rubrics bind via EM
-// evaluationProcedures.rubricId instead).
+// Evidence models bind via evaluationProcedures.rubricId and via
+// phases[].rubricId. Design patterns list the same id under
+// potentialRubrics.
+//
+// The default export is the three-tab shell (Dashboard, Rubric
+// Structure, Manage Rubrics). RubricLibraryView is the create and edit
+// form. Manage opens that form for New, Edit, and Duplicate.
+// ?tab=rubrics still selects this Libraries leaf. focus or id on the
+// query opens Manage on that record.
+//
+// There is no clone route. Duplicate prefills a new draft whose name is
+// unique case-insensitively. Confirm still posts to /:id/confirm. A
+// confirmed rubric still needs at least one exemplar. Names stay unique.
+// Delete stays disabled while the rubric is in use.
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
+import Modal from "@/components/ui/Modal";
 import { apiErrorMessage } from "@/api/apiClient";
 import {
   useRubrics,
@@ -18,14 +31,31 @@ import {
   useDeleteRubric,
 } from "@/api/queries/rubrics";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
+import { useDesignPatterns } from "@/api/queries/designPatterns";
+import ModelManageList, {
+  manageOpenButtonClass,
+  manageQuietButtonClass,
+  manageDangerButtonClass,
+  manageSecondaryButtonClass,
+} from "@/components/shared/ModelManageList";
+import ModelTabShell from "@/components/shared/ModelTabShell";
 import { RUBRIC_SUBJECTS, generateRubricDraft } from "./rubricStarter";
+import RubricDashboard from "./RubricDashboard";
+import RubricTable from "./RubricTable";
+import {
+  isRubricInUse,
+  nameList,
+  readinessText,
+  recordLabel,
+  rubricDeleteBlockedMessage,
+  rubricReadinessValue,
+  shapeSummary,
+  uniqueRubricCopyName,
+  usageCounts,
+  usageSummary,
+} from "./rubricUsage";
 
-export function consumersForRubric(evidenceModels, rubricId) {
-  if (!rubricId) return [];
-  return (evidenceModels || []).filter((em) =>
-    (em?.evaluationProcedures || []).some((p) => p?.rubricId === rubricId)
-  );
-}
+export { consumersForRubric, isRubricInUse } from "./rubricUsage";
 
 const LOW_HIGH = [
   { value: 0, label: "Low", descriptor: "", exemplar: "" },
@@ -119,33 +149,71 @@ function buildPayload(form, status = "draft") {
   };
 }
 
+function recordFocus(searchParams) {
+  return searchParams.get("focus") || searchParams.get("id") || "";
+}
+
+function mergeForm(seed) {
+  const base = emptyForm();
+  if (!seed) return base;
+  return {
+    ...base,
+    ...seed,
+    dimensions: seed.dimensions?.length ? seed.dimensions : base.dimensions,
+  };
+}
+
+/** Presentational form. Tests drive it without API hooks. */
 export function RubricLibraryView({
   rubrics = [],
   evidenceModels = [],
+  designPatterns = [],
   onCreate,
   onUpdate,
   onConfirm,
-  onDelete,
   createPending = false,
   updatePending = false,
   confirmPending = false,
-  deletePending = false,
+  onDismiss = null,
+  initialForm = null,
+  focusId = null,
 }) {
-  const [form, setForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(() => {
+    if (initialForm) return mergeForm(initialForm);
+    if (focusId) {
+      const row = rubrics.find((item) => item.id === focusId);
+      if (row) return formFromRow(row);
+    }
+    return emptyForm();
+  });
+  const [editingId, setEditingId] = useState(() => {
+    if (initialForm || !focusId) return null;
+    return rubrics.some((row) => row.id === focusId) ? focusId : null;
+  });
   const [subjectId, setSubjectId] = useState("");
   const [topicId, setTopicId] = useState("");
+  const appliedFocus = useRef(editingId);
   const topics = RUBRIC_SUBJECTS.find((subject) => subject.id === subjectId)?.topics || [];
 
+  useEffect(() => {
+    if (!focusId || appliedFocus.current === focusId) return;
+    const row = rubrics.find((item) => item.id === focusId);
+    if (!row) return;
+    appliedFocus.current = focusId;
+    setEditingId(row.id);
+    setForm(formFromRow(row));
+  }, [focusId, rubrics]);
+
   const editing = useMemo(
-    () => (editingId ? rubrics.find((v) => v.id === editingId) : null),
+    () => (editingId ? rubrics.find((row) => row.id === editingId) : null),
     [editingId, rubrics]
   );
 
-  function startEdit(row) {
-    setEditingId(row.id);
-    setForm(formFromRow(row));
-  }
+  const context = useMemo(
+    () => ({ evidenceModels, designPatterns }),
+    [evidenceModels, designPatterns]
+  );
+  const usage = editing ? usageCounts(editing, context) : null;
 
   function cancelEdit() {
     setEditingId(null);
@@ -165,49 +233,90 @@ export function RubricLibraryView({
     }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
     const payload = buildPayload(form, editing?.status || "draft");
-    if (editingId) {
-      await onUpdate?.({ id: editingId, payload });
-      cancelEdit();
-    } else {
-      await onCreate?.(payload);
-      setForm(emptyForm());
+    try {
+      if (editingId) {
+        await onUpdate?.({ id: editingId, payload });
+      } else {
+        await onCreate?.(payload);
+      }
+      if (onDismiss) onDismiss();
+      else if (editingId) cancelEdit();
+      else setForm(emptyForm());
+    } catch {
+      // The container already toasted the server error.
+    }
+  }
+
+  async function handleConfirm() {
+    if (!editingId || !onConfirm) return;
+    const payload = buildPayload(form, editing?.status || "draft");
+    try {
+      if (onUpdate) await onUpdate({ id: editingId, payload });
+      await onConfirm(editingId);
+      if (onDismiss) onDismiss();
+      else cancelEdit();
+    } catch {
+      // The container already toasted the server error.
     }
   }
 
   function updateDim(idx, patch) {
-    setForm((f) => ({
-      ...f,
-      dimensions: f.dimensions.map((d, i) => (i === idx ? { ...d, ...patch } : d)),
+    setForm((current) => ({
+      ...current,
+      dimensions: current.dimensions.map((dimension, index) =>
+        index === idx ? { ...dimension, ...patch } : dimension
+      ),
     }));
   }
 
   function updateLevel(dimIdx, lvlIdx, patch) {
-    setForm((f) => ({
-      ...f,
-      dimensions: f.dimensions.map((d, i) => {
-        if (i !== dimIdx) return d;
+    setForm((current) => ({
+      ...current,
+      dimensions: current.dimensions.map((dimension, index) => {
+        if (index !== dimIdx) return dimension;
         return {
-          ...d,
-          levels: d.levels.map((l, j) => (j === lvlIdx ? { ...l, ...patch } : l)),
+          ...dimension,
+          levels: dimension.levels.map((level, levelIndex) =>
+            levelIndex === lvlIdx ? { ...level, ...patch } : level
+          ),
         };
       }),
     }));
   }
 
+  const embedded = Boolean(onDismiss);
+
   return (
-    <div className="space-y-6 p-4">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Rubrics</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Choose a subject and a topic to write a first grid: criteria down the
-          side, four levels across, with a sentence in every cell. Edit the
-          cells, then save the draft. Subject and topic are not stored. Bind
-          the confirmed rubric on an Evidence Model via rubricId.
-        </p>
-      </div>
+    <div className={embedded ? "space-y-6 p-6" : "space-y-6 p-4"}>
+      {embedded ? (
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900">
+              {editing?.name || form.name.trim() || "New Rubric"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Criteria down the side, levels across. Confirm posts the saved
+              draft. A confirmed rubric needs at least one exemplar.
+            </p>
+          </div>
+          <button type="button" onClick={onDismiss} className={manageSecondaryButtonClass}>
+            Back to list
+          </button>
+        </div>
+      ) : (
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Rubrics</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Choose a subject and a topic to write a first grid: criteria down the
+            side, four levels across, with a sentence in every cell. Edit the
+            cells, then save the draft. Subject and topic are not stored. Bind
+            the confirmed rubric on an Evidence Model via rubricId.
+          </p>
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -217,17 +326,28 @@ export function RubricLibraryView({
           {editingId ? `Edit ${editing?.name || editingId}` : "New rubric"}
         </h3>
 
-        {editingId && (
+        {editingId && usage && (
           <div
-            className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
             data-testid="rubric-consumers-before-edit"
           >
-            <span className="font-medium">Citing Evidence Models: </span>
-            {(() => {
-              const consumers = consumersForRubric(evidenceModels, editingId);
-              if (!consumers.length) return "none.";
-              return consumers.map((em) => em.name || em.id).join("; ");
-            })()}
+            <p>
+              <span className="font-medium">Evidence models (evaluation procedure): </span>
+              {nameList(usage.procedures)}
+            </p>
+            <p>
+              <span className="font-medium">Evidence models (phase): </span>
+              {nameList(usage.phases)}
+            </p>
+            <p>
+              <span className="font-medium">Design patterns: </span>
+              {nameList(usage.designPatterns)}
+            </p>
+            <p className="mt-1">
+              {isRubricInUse(editing, context)
+                ? "Delete stays off while an evidence model or a design pattern cites this rubric."
+                : "Nothing cites this rubric."}
+            </p>
           </div>
         )}
 
@@ -277,7 +397,7 @@ export function RubricLibraryView({
             <input
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
               value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
               required
             />
           </label>
@@ -287,7 +407,9 @@ export function RubricLibraryView({
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
               rows={2}
               value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, description: event.target.value }))
+              }
             />
           </label>
         </div>
@@ -306,18 +428,21 @@ export function RubricLibraryView({
               </tr>
             </thead>
             <tbody>
-              {form.dimensions.map((dim, di) => (
-                <tr key={dim.id} className="border-t border-slate-200 align-top dark:border-slate-700">
+              {form.dimensions.map((dimension, dimensionIndex) => (
+                <tr
+                  key={dimension.id}
+                  className="border-t border-slate-200 align-top dark:border-slate-700"
+                >
                   <th scope="row" className="px-3 py-2 font-normal">
                     <input
                       className="w-40 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950"
-                      value={dim.name}
-                      aria-label={`Criterion ${di + 1}`}
-                      onChange={(event) => updateDim(di, { name: event.target.value })}
+                      value={dimension.name}
+                      aria-label={`Criterion ${dimensionIndex + 1}`}
+                      onChange={(event) => updateDim(dimensionIndex, { name: event.target.value })}
                     />
                   </th>
-                  {levelHeaders(form.dimensions).map((header, li) => {
-                    const level = dim.levels[li];
+                  {levelHeaders(form.dimensions).map((header, levelIndex) => {
+                    const level = dimension.levels[levelIndex];
                     if (!level) {
                       return <td key={header.label} className="px-3 py-2" />;
                     }
@@ -326,10 +451,10 @@ export function RubricLibraryView({
                       <td key={header.label} className="px-3 py-2">
                         <textarea
                           className="min-h-24 w-52 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950"
-                          aria-label={`${dim.name} ${level.label}`}
+                          aria-label={`${dimension.name} ${level.label}`}
                           value={text}
                           onChange={(event) =>
-                            updateLevel(di, li, {
+                            updateLevel(dimensionIndex, levelIndex, {
                               descriptor: event.target.value,
                               exemplar: event.target.value,
                             })
@@ -363,144 +488,313 @@ export function RubricLibraryView({
           <Button type="submit" disabled={createPending || updatePending}>
             {editingId ? "Save" : "Create draft"}
           </Button>
-          {editingId && (
-            <Button type="button" variant="outline" onClick={cancelEdit}>
+          {editingId && editing?.status !== "confirmed" && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={confirmPending || updatePending}
+              onClick={handleConfirm}
+            >
+              Confirm
+            </Button>
+          )}
+          {(editingId || onDismiss) && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => (onDismiss ? onDismiss() : cancelEdit())}
+            >
               Cancel
             </Button>
           )}
         </div>
       </form>
-
-      <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-100 dark:bg-slate-800">
-            <tr>
-              <th className="px-3 py-2 font-medium">Name</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Used by</th>
-              <th className="px-3 py-2 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rubrics.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-3 py-4 text-slate-500">
-                  No rubrics yet.
-                </td>
-              </tr>
-            )}
-            {rubrics.map((row) => {
-              const consumers = consumersForRubric(evidenceModels, row.id);
-              return (
-                <tr key={row.id} className="border-t border-slate-200 dark:border-slate-700">
-                  <td className="px-3 py-2">{row.name}</td>
-                  <td className="px-3 py-2">{row.status}</td>
-                  <td className="px-3 py-2">
-                    {consumers.length ? `${consumers.length} EM(s)` : "—"}
-                  </td>
-                  <td className="space-x-2 px-3 py-2">
-                    <Button type="button" size="sm" variant="outline" onClick={() => startEdit(row)}>
-                      Edit
-                    </Button>
-                    {row.status !== "confirmed" && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={confirmPending}
-                        onClick={() => onConfirm?.(row.id)}
-                      >
-                        Confirm
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={deletePending}
-                      onClick={() => {
-                        if (consumers.length) {
-                          toast.error(
-                            `Cannot delete: cited by ${consumers.length} Evidence Model(s).`
-                          );
-                          return;
-                        }
-                        onDelete?.(row.id);
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }
 
-export default function RubricBuilder() {
+function RubricManage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusId = recordFocus(searchParams);
+  const [screen, setScreen] = useState(focusId ? "edit" : "list");
+  const [seedForm, setSeedForm] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+
   const { data: rubrics = [], isLoading, error } = useRubrics();
   const { data: evidenceModels = [] } = useEvidenceModels();
+  const { data: designPatterns = [] } = useDesignPatterns();
   const createMut = useCreateRubric();
   const updateMut = useUpdateRubric();
   const confirmMut = useConfirmRubric();
   const deleteMut = useDeleteRubric();
 
-  if (isLoading) {
-    return <p className="p-4 text-sm text-slate-500">Loading rubrics…</p>;
+  const context = useMemo(
+    () => ({ evidenceModels, designPatterns }),
+    [evidenceModels, designPatterns]
+  );
+
+  useEffect(() => {
+    if (focusId) setScreen("edit");
+  }, [focusId]);
+
+  function clearFocus() {
+    if (!searchParams.get("focus") && !searchParams.get("id")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("focus");
+    next.delete("id");
+    setSearchParams(next, { replace: true });
   }
+
+  function backToList() {
+    clearFocus();
+    setSeedForm(null);
+    setScreen("list");
+  }
+
+  function openCreate() {
+    clearFocus();
+    setSeedForm(null);
+    setScreen("create");
+  }
+
+  function openEdit(row) {
+    const next = new URLSearchParams(searchParams);
+    next.delete("id");
+    next.set("focus", row.id);
+    setSearchParams(next);
+    setSeedForm(null);
+    setScreen("edit");
+  }
+
+  function openDuplicate(row) {
+    clearFocus();
+    const seeded = formFromRow(row);
+    seeded.name = uniqueRubricCopyName(row.name, rubrics);
+    setSeedForm(seeded);
+    setScreen("create");
+  }
+
+  function askDelete(row) {
+    if (isRubricInUse(row, context)) {
+      toast.error(rubricDeleteBlockedMessage(usageSummary(row, context)));
+      return;
+    }
+    setPendingDelete(row);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <h2 className="mb-4 text-2xl font-semibold">Manage Rubrics</h2>
+        <p className="text-sm text-slate-500">Loading rubrics...</p>
+      </div>
+    );
+  }
+
   if (error) {
     return (
-      <p className="p-4 text-sm text-red-600">
-        {apiErrorMessage(error, "Failed to load rubrics")}
-      </p>
+      <div className="p-6">
+        <h2 className="mb-4 text-2xl font-semibold">Manage Rubrics</h2>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {apiErrorMessage(error, "Failed to load rubrics")}
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "create" || screen === "edit") {
+    return (
+      <RubricLibraryView
+        key={
+          screen === "edit"
+            ? `edit-${focusId || "record"}`
+            : `create-${seedForm?.name || "blank"}`
+        }
+        rubrics={rubrics}
+        evidenceModels={evidenceModels}
+        designPatterns={designPatterns}
+        focusId={screen === "edit" ? focusId : null}
+        initialForm={screen === "create" ? seedForm : null}
+        onDismiss={backToList}
+        createPending={createMut.isPending}
+        updatePending={updateMut.isPending}
+        confirmPending={confirmMut.isPending}
+        onCreate={async (payload) => {
+          try {
+            const created = await createMut.mutateAsync(payload);
+            toast.success("Rubric draft created");
+            return created;
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Create failed"));
+            throw err;
+          }
+        }}
+        onUpdate={async ({ id, payload }) => {
+          try {
+            await updateMut.mutateAsync({ id, payload });
+            toast.success("Rubric updated");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Update failed"));
+            throw err;
+          }
+        }}
+        onConfirm={async (id) => {
+          try {
+            await confirmMut.mutateAsync(id);
+            toast.success("Rubric confirmed");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Confirm failed"));
+            throw err;
+          }
+        }}
+      />
     );
   }
 
   return (
-    <RubricLibraryView
-      rubrics={rubrics}
-      evidenceModels={evidenceModels}
-      createPending={createMut.isPending}
-      updatePending={updateMut.isPending}
-      confirmPending={confirmMut.isPending}
-      deletePending={deleteMut.isPending}
-      onCreate={async (payload) => {
-        try {
-          await createMut.mutateAsync(payload);
-          toast.success("Rubric draft created");
-        } catch (err) {
-          toast.error(apiErrorMessage(err, "Create failed"));
-          throw err;
+    <>
+      <ModelManageList
+        title="Manage Rubrics"
+        description="Draft or confirmed scoring rubrics. Confirm posts the saved record. A confirmed rubric needs at least one exemplar. Names stay unique."
+        newLabel="New Rubric"
+        onCreate={openCreate}
+        records={rubrics}
+        emptyMessage="No Rubrics defined yet."
+        filteredEmptyMessage="No Rubrics match the current filters."
+        searchLabel="Search rubrics"
+        searchPlaceholder="Search rubrics..."
+        searchText={(row) => {
+          const counts = usageCounts(row, context);
+          const criterionText = (row.dimensions || []).flatMap((dimension) => [
+            dimension?.name,
+            ...(dimension?.levels || []).map((level) =>
+              level && typeof level === "object" ? level.label : level
+            ),
+          ]);
+          return [
+            row.name,
+            row.description,
+            row.status,
+            readinessText(row),
+            ...criterionText,
+            ...counts.evidenceModels.map((model) => recordLabel(model)),
+            ...counts.designPatterns.map((pattern) => recordLabel(pattern)),
+          ]
+            .filter(Boolean)
+            .join(" ");
+        }}
+        readinessOf={rubricReadinessValue}
+        renderMeta={(row) => {
+          const ready = rubricReadinessValue(row) === "ready";
+          return (
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide ${
+                  ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {ready ? "Ready" : "Not ready"}
+              </span>
+              <span>{shapeSummary(row)}</span>
+              <span>{usageSummary(row, context)}</span>
+            </div>
+          );
+        }}
+        renderDetails={(row) => {
+          const counts = usageCounts(row, context);
+          return (
+            <>
+              <p className="leading-relaxed text-slate-600">
+                {String(row.description || "").trim() || "No description yet."}
+              </p>
+              <p className="leading-relaxed text-slate-600">
+                Shape: {shapeSummary(row)}. {readinessText(row)}.
+              </p>
+              <p className="leading-relaxed text-slate-600">
+                Evidence models on an evaluation procedure: {nameList(counts.procedures)}.
+                Evidence models on a phase: {nameList(counts.phases)}. Design patterns:{" "}
+                {nameList(counts.designPatterns)}.
+              </p>
+            </>
+          );
+        }}
+        renderActions={(row) => {
+          const inUse = isRubricInUse(row, context);
+          return (
+            <>
+              <button type="button" onClick={() => openEdit(row)} className={manageOpenButtonClass}>
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => openDuplicate(row)}
+                className={manageQuietButtonClass}
+                title="Open the create form with this rubric copied as a draft"
+              >
+                Duplicate
+              </button>
+              <button
+                type="button"
+                onClick={() => askDelete(row)}
+                disabled={deleteMut.isPending || inUse}
+                className={manageDangerButtonClass}
+                title={inUse ? "Remove citations before deleting" : "Delete this rubric"}
+              >
+                Delete
+              </button>
+            </>
+          );
+        }}
+      />
+      <Modal
+        isOpen={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          if (isRubricInUse(pendingDelete, context)) {
+            toast.error(rubricDeleteBlockedMessage(usageSummary(pendingDelete, context)));
+            setPendingDelete(null);
+            return;
+          }
+          try {
+            await deleteMut.mutateAsync(pendingDelete.id);
+            toast.success("Rubric deleted");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Delete failed"));
+          }
+          setPendingDelete(null);
+        }}
+        title="Delete Rubric"
+        message={
+          pendingDelete
+            ? `Delete "${pendingDelete.name || pendingDelete.id}"? This cannot be undone.`
+            : ""
         }
-      }}
-      onUpdate={async ({ id, payload }) => {
-        try {
-          await updateMut.mutateAsync({ id, payload });
-          toast.success("Rubric updated");
-        } catch (err) {
-          toast.error(apiErrorMessage(err, "Update failed"));
-          throw err;
-        }
-      }}
-      onConfirm={async (id) => {
-        try {
-          await confirmMut.mutateAsync(id);
-          toast.success("Rubric confirmed");
-        } catch (err) {
-          toast.error(apiErrorMessage(err, "Confirm failed"));
-        }
-      }}
-      onDelete={async (id) => {
-        try {
-          await deleteMut.mutateAsync(id);
-          toast.success("Rubric deleted");
-        } catch (err) {
-          toast.error(apiErrorMessage(err, "Delete failed"));
-        }
-      }}
+        confirmLabel="Delete"
+        confirmClass="bg-red-600 hover:bg-red-700 text-white"
+      />
+    </>
+  );
+}
+
+export default function RubricBuilder() {
+  const [searchParams] = useSearchParams();
+  const focusId = recordFocus(searchParams);
+  const [mode, setMode] = useState(focusId ? "manage" : "dashboard");
+
+  useEffect(() => {
+    if (focusId) setMode("manage");
+  }, [focusId]);
+
+  return (
+    <ModelTabShell
+      mode={mode}
+      onModeChange={setMode}
+      tabs={[
+        { id: "dashboard", label: "Dashboard", panel: <RubricDashboard /> },
+        { id: "structure", label: "Rubric Structure", panel: <RubricTable /> },
+        { id: "manage", label: "Manage Rubrics", panel: <RubricManage /> },
+      ]}
     />
   );
 }
