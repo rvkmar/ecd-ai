@@ -1,7 +1,7 @@
 // List console shared by Manage Design Pattern, Manage Domain Analysis,
 // Manage Templates, Manage Assembly Models, Manage Diagnostic Designs,
-// Manage Presentation Models, Manage Work Products, and Manage Task
-// Model Variables.
+// Manage Presentation Models, Manage Work Products, Manage Rubrics, and
+// Manage Task Model Variables.
 // The header, filters, and expandable cards follow TaskModelBuilderPanel
 // and TaskModelList: title and description on the left, a black
 // "+ New" button on the right, then search, a status or type filter, and
