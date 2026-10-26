@@ -60,6 +60,36 @@ describe("D122 /api/rubrics", () => {
     expect(confirmed.body.status).toBe("confirmed");
   });
 
+  it("saves and confirms a rubric with four levels", async () => {
+    const expressApp = await app();
+    const levels = [0, 1, 2, 3].map((value) => ({
+      value,
+      label: `Band ${value}`,
+      descriptor: value === 3 ? "Top band." : "",
+      exemplar: value === 3 ? "Top band." : "",
+    }));
+    const created = await request(expressApp)
+      .post("/api/rubrics/")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send({
+        name: "Four level accuracy",
+        dimensions: [{ id: "accuracy", name: "Accuracy", levels, activatesAt: 2 }],
+      });
+    expect(created.status).toBe(201);
+    expect(created.body.dimensions[0].levels).toHaveLength(4);
+    expect(created.body.dimensions[0].levels.map((level) => level.value)).toEqual([
+      0, 1, 2, 3,
+    ]);
+
+    const confirmed = await request(expressApp)
+      .post(`/api/rubrics/${created.body.id}/confirm`)
+      .set("Authorization", `Bearer ${tokenFor("admin")}`);
+    expect(confirmed.status).toBe(200);
+    expect(confirmed.body.status).toBe("confirmed");
+    expect(confirmed.body.dimensions[0].levels).toHaveLength(4);
+    expect(confirmed.body.dimensions[0].levels[3].exemplar).toBe("Top band.");
+  });
+
   it("refuses confirm without exemplars", async () => {
     const expressApp = await app();
     const created = await request(expressApp)

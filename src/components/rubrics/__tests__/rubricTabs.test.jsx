@@ -203,6 +203,54 @@ describe("Rubric three-tab shell", () => {
     expect(remove).not.toHaveBeenCalledWith("rub-function");
   });
 
+  it("duplicates every level of a four-level rubric", async () => {
+    const user = userEvent.setup({ delay: null });
+    const create = vi.fn().mockResolvedValue({ id: "rub-new" });
+    useCreateRubric.mockReturnValue({ mutateAsync: create, isPending: false });
+    const wide = {
+      id: "rub-wide",
+      name: "Four band judgement",
+      description: "Four bands.",
+      status: "confirmed",
+      dimensions: [
+        {
+          id: "bands",
+          name: "Bands",
+          activatesAt: 2,
+          levels: [0, 1, 2, 3].map((value) => ({
+            value,
+            label: `Band ${value}`,
+            descriptor: `Sentence ${value}`,
+            exemplar: `Sentence ${value}`,
+          })),
+        },
+      ],
+    };
+    useRubrics.mockReturnValue(query([wide]));
+    renderBuilder();
+    await user.click(screen.getByRole("button", { name: "Manage Rubrics" }));
+    await user.click(screen.getByRole("button", { name: /Four band judgement/ }));
+    await user.click(screen.getByRole("button", { name: "Duplicate" }));
+
+    expect(screen.getByLabelText(/^Name$/i)).toHaveValue("Four band judgement (copy)");
+    expect(screen.getByLabelText("Level 4 label")).toHaveValue("Band 3");
+    expect(screen.getByLabelText("Bands Band 3")).toHaveValue("Sentence 3");
+    await user.click(screen.getByRole("button", { name: "Create draft" }));
+
+    const payload = create.mock.calls[0][0];
+    expect(payload.status).toBe("draft");
+    expect(payload.id).toBeUndefined();
+    expect(payload.dimensions[0].levels).toHaveLength(4);
+    expect(payload.dimensions[0].levels.map((level) => level.label)).toEqual([
+      "Band 0",
+      "Band 1",
+      "Band 2",
+      "Band 3",
+    ]);
+    expect(payload.dimensions[0].levels[3].exemplar).toBe("Sentence 3");
+    expect(payload.dimensions[0].activatesAt).toBe(2);
+  });
+
   it("keeps Delete disabled for a phase citation and a design-pattern citation", async () => {
     const user = userEvent.setup({ delay: null });
     renderBuilder();

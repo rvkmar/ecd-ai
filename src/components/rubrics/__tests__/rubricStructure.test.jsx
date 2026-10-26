@@ -179,4 +179,47 @@ describe("Rubric structure", () => {
     expect(groupCount(thin, "Evidence models")).toBe("0");
     expect(groupCount(thin, "Design patterns")).toBe("0");
   });
+
+  it("shows all four level labels in the table and Ingredients View", async () => {
+    const user = userEvent.setup({ delay: null });
+    const wide = {
+      id: "rub-wide",
+      name: "Four band judgement",
+      description: "Scores four bands.",
+      status: "draft",
+      dimensions: [
+        {
+          id: "bands",
+          name: "Bands",
+          activatesAt: 2,
+          levels: [0, 1, 2, 3].map((value) => ({
+            value,
+            label: `Band ${value}`,
+            descriptor: `Sentence ${value}`,
+            exemplar: value === 3 ? `Sentence ${value}` : "",
+          })),
+        },
+      ],
+    };
+    useRubrics.mockReturnValue(query([wide]));
+    render(<RubricTable />);
+
+    expect(rowById("rub-wide").slice(0, 6)).toEqual([
+      "rub-wide",
+      "Four band judgement",
+      "draft",
+      "Ready",
+      "1",
+      "4",
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "Ingredients View" }));
+    const card = screen.getByRole("heading", { name: "Four band judgement" }).closest(".rounded-2xl");
+    expect(within(card).getByText("Draft • Ready • 1 criterion • 4 levels")).toBeInTheDocument();
+    await user.click(within(card).getByRole("heading", { name: "Four band judgement" }));
+    await user.click(within(card).getByRole("button", { name: /^Criteria\s+1/ }));
+    expect(within(card).getByText("Bands")).toBeInTheDocument();
+    expect(within(card).getByText(/Band 0, Band 1, Band 2, Band 3/)).toBeInTheDocument();
+    expect(groupCount(card, "Exemplars")).toBe("1");
+  });
 });

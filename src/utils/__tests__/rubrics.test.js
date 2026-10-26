@@ -9,6 +9,7 @@ import {
   evidenceModelsConsumingRubric,
 } from "../schema.js";
 import { artifactFromRubric, exemplarCount } from "../rubricDelivery.js";
+import { rubricReadiness } from "../rubricReadiness.js";
 
 function rubric(overrides = {}) {
   return {
@@ -70,6 +71,27 @@ describe("rubrics — well-formed record", () => {
   it("has no CAF operational field required", () => {
     expect(schema.rubrics.status).toBe("string");
     expect(schema.rubrics.locked).toBeUndefined();
+  });
+
+  it("accepts four or more levels and does not cap the count", () => {
+    const levels = Array.from({ length: 11 }, (_, value) => ({
+      value,
+      label: `L${value}`,
+      descriptor: value === 10 ? "Top band." : "",
+      exemplar: value === 10 ? "Top band." : "",
+    }));
+    const record = rubric({
+      status: "confirmed",
+      dimensions: [
+        { id: "accuracy", name: "Accuracy", levels, activatesAt: 10 },
+      ],
+    });
+    const { valid, errors } = validateEntity("rubrics", record, { rubrics: [] });
+    expect(errors).toEqual([]);
+    expect(valid).toBe(true);
+    expect(rubricReadiness(record)).toEqual({ ready: true, errors: [] });
+    expect(artifactFromRubric(record).dimensions[0].levels).toHaveLength(11);
+    expect(exemplarCount(record)).toBe(1);
   });
 
   it("projects to a delivery artifact", () => {
