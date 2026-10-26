@@ -1,12 +1,27 @@
 // src/components/taskModelVariables/TaskModelVariableBuilder.jsx
 //
-// D117 library + D118 residuals: consumers visible before edit/delete;
-// vocabulary valueSet levels are read-only with an explicit note.
+// Library of shared Task Model Variables. The default export is the
+// three-tab shell (Dashboard, Task Model Variable Structure, Manage Task
+// Model Variables). TaskModelVariableLibraryView is the create and edit
+// form. Manage opens that form for New, Edit, and Duplicate.
+//
+// ?tab=taskmodelvariables still selects this Libraries leaf. focus or id
+// on the query opens Manage on that record. There is no clone route, so
+// Duplicate prefills a new record whose name is unique case-insensitively.
+//
+// Guards that stay: a vocabulary value set locks once set; the type
+// select stays disabled while editing; save is checked on the server
+// against task models that list the variable; Delete stays disabled
+// while a task model or a design pattern cites the record. The used-by
+// list is on the edit form.
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
+import Modal from "@/components/ui/Modal";
+import WorkedExample from "@/components/authoring/WorkedExample";
 import { apiErrorMessage } from "@/api/apiClient";
 import {
   useTaskModelVariables,
@@ -15,22 +30,48 @@ import {
   useDeleteTaskModelVariable,
 } from "@/api/queries/taskModelVariables";
 import { useTaskModels } from "@/api/queries/taskModels";
+import { useDesignPatterns } from "@/api/queries/designPatterns";
 import {
   TMV_TYPES,
   TMV_VALUE_SET_KEYS,
-  tmvTypeLabel,
   taskModelVariableValueIds,
 } from "@/utils/ecdVocabulary";
-import WorkedExample from "@/components/authoring/WorkedExample";
+import ModelManageList, {
+  manageOpenButtonClass,
+  manageQuietButtonClass,
+  manageDangerButtonClass,
+  manageSecondaryButtonClass,
+} from "@/components/shared/ModelManageList";
+import ModelTabShell from "@/components/shared/ModelTabShell";
+import TaskModelVariableDashboard from "./TaskModelVariableDashboard";
+import TaskModelVariableTable from "./TaskModelVariableTable";
+import {
+  consumersForVariable,
+  designPatternsUsingVariable,
+  isVariableInUse,
+  levelsSummary,
+  nameList,
+  readinessText,
+  recordLabel,
+  uniqueTaskModelVariableCopyName,
+  usageCounts,
+  usageSummary,
+  variableDeleteBlockedMessage,
+  variableReadinessValue,
+  variableTypeText,
+} from "./taskModelVariableUsage";
 
-export function consumersForVariable(taskModels, variableId) {
-  if (!variableId) return [];
-  return (taskModels || []).filter(
-    (tm) =>
-      Array.isArray(tm?.taskModelVariableIds) &&
-      tm.taskModelVariableIds.includes(variableId)
-  );
-}
+export { consumersForVariable, isVariableInUse } from "./taskModelVariableUsage";
+
+const inputClass =
+  "mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950";
+
+const TYPE_FACET = {
+  ariaLabel: "Filter by type",
+  allLabel: "All types",
+  options: TMV_TYPES.map((type) => ({ value: type.value, label: type.label })),
+  valueOf: (record) => record.type || "",
+};
 
 const emptyForm = () => ({
   name: "",
@@ -50,7 +91,7 @@ function formFromVariable(row) {
     valueSet: row.valueSet || "",
     possibleValuesText: Array.isArray(row.possibleValues)
       ? row.possibleValues
-          .map((p) => (typeof p === "string" ? p : p?.value || ""))
+          .map((entry) => (typeof entry === "string" ? entry : entry?.value || ""))
           .filter(Boolean)
           .join(", ")
       : "",
@@ -75,29 +116,85 @@ function buildPayload(form) {
   } else {
     payload.possibleValues = form.possibleValuesText
       .split(/[\n,]/)
-      .map((s) => s.trim())
+      .map((part) => part.trim())
       .filter(Boolean)
       .map((value) => ({ value, label: value }));
   }
   return payload;
 }
 
-/** Presentational library — Storybook and tests drive this without API hooks. */
+function recordFocus(searchParams) {
+  return searchParams.get("focus") || searchParams.get("id") || "";
+}
+
+function taskModelConsumerText(taskModels, variableId) {
+  const consumers = consumersForVariable(taskModels, variableId);
+  if (!consumers.length) return "none. Safe to edit levels.";
+  return consumers
+    .map((model) => `${model.name || model.id}${model.status ? ` (${model.status})` : ""}`)
+    .join("; ");
+}
+
+function TaskModelVariableExample() {
+  return (
+    <WorkedExample
+      title="Diagram familiarity"
+      lines={[
+        "Type: categorical.",
+        "Values: familiar, unfamiliar.",
+        "Whether the plant in the diagram is one the student has already studied.",
+      ]}
+      citedBy="a Task Model, in taskModelVariableIds. A Design Pattern may list it as a variable feature"
+    />
+  );
+}
+
+function TypeBadge({ record }) {
+  return (
+    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+      {variableTypeText(record.type)}
+    </span>
+  );
+}
+
+/** Presentational form. Storybook and tests drive it without API hooks. */
 export function TaskModelVariableLibraryView({
   variables = [],
   taskModels = [],
+  designPatterns = [],
   onCreate,
   onUpdate,
-  onDelete,
   createPending = false,
   updatePending = false,
-  deletePending = false,
+  onDismiss = null,
+  initialForm = null,
+  focusId = null,
 }) {
-  const [form, setForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(() => {
+    if (initialForm) return { ...emptyForm(), ...initialForm };
+    if (focusId) {
+      const row = variables.find((item) => item.id === focusId);
+      if (row) return formFromVariable(row);
+    }
+    return emptyForm();
+  });
+  const [editingId, setEditingId] = useState(() => {
+    if (initialForm || !focusId) return null;
+    return variables.some((row) => row.id === focusId) ? focusId : null;
+  });
+  const appliedFocus = useRef(editingId);
+
+  useEffect(() => {
+    if (!focusId || appliedFocus.current === focusId) return;
+    const row = variables.find((item) => item.id === focusId);
+    if (!row) return;
+    appliedFocus.current = focusId;
+    setEditingId(row.id);
+    setForm(formFromVariable(row));
+  }, [focusId, variables]);
 
   const editing = useMemo(
-    () => (editingId ? variables.find((v) => v.id === editingId) : null),
+    () => (editingId ? variables.find((row) => row.id === editingId) : null),
     [editingId, variables]
   );
 
@@ -106,75 +203,69 @@ export function TaskModelVariableLibraryView({
     form.type === "categorical" || form.type === "ordinal" ? !usesValueSet : false;
   const editingValueSetLocked = Boolean(editing?.valueSet);
 
-  function startEdit(row) {
-    setEditingId(row.id);
-    setForm(formFromVariable(row));
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setForm(emptyForm());
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
     const payload = buildPayload(form);
-    if (editingId) {
-      // Never re-point valueSet / type from the edit form when vocabulary-backed.
-      if (editingValueSetLocked) {
-        payload.type = editing.type;
-        payload.valueSet = editing.valueSet;
-        delete payload.possibleValues;
+    if (editingId && editingValueSetLocked) {
+      payload.type = editing.type;
+      payload.valueSet = editing.valueSet;
+      delete payload.possibleValues;
+    }
+    try {
+      if (editingId) {
+        await onUpdate?.({ id: editingId, payload });
+      } else {
+        await onCreate?.(payload);
       }
-      await onUpdate?.({ id: editingId, payload });
-      cancelEdit();
-    } else {
-      await onCreate?.(payload);
-      setForm(emptyForm());
+      if (onDismiss) onDismiss();
+      else if (editingId) cancelEdit();
+      else setForm(emptyForm());
+    } catch {
+      // The container already toasted the server error.
     }
   }
 
-  function handleDelete(row) {
-    const consumers = consumersForVariable(taskModels, row.id);
-    if (consumers.length) {
-      const names = consumers
-        .map((tm) => tm.name || tm.id)
-        .slice(0, 8)
-        .join(", ");
-      toast.error(
-        `Cannot delete: used by ${consumers.length} Task Model(s) — ${names}${
-          consumers.length > 8 ? "…" : ""
-        }. Unbind them first.`
-      );
-      return;
-    }
-    onDelete?.(row.id);
-  }
+  const embedded = Boolean(onDismiss);
+  const editingPatterns = editingId
+    ? designPatternsUsingVariable(designPatterns, editingId)
+    : [];
 
   return (
-    <div className="space-y-6 p-4">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-          Task Model Variables
-        </h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Shared design features (PADI Fig. 11). Define a variable once; bind
-          it on any number of Task Models. Levels stay in vocabulary when a
-          value set is named — not copied. No CAF lifecycle on these records.
-        </p>
-      </div>
-
-      {variables.length === 0 && (
-        <WorkedExample
-          title="Diagram familiarity"
-          lines={[
-            "Type: categorical.",
-            "Values: familiar, unfamiliar.",
-            "Whether the plant in the diagram is one the student has already studied.",
-          ]}
-          citedBy="a Task Model, in taskModelVariableIds. A Design Pattern may list it as a variable feature"
-        />
+    <div className={embedded ? "space-y-6 p-6" : "space-y-6 p-4"}>
+      {embedded ? (
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900">
+              {editing?.name || form.name.trim() || "New Task Model Variable"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              A shared design feature. Bind it on any number of Task Models.
+              Levels stay in the vocabulary when a value set is named.
+            </p>
+          </div>
+          <button type="button" onClick={onDismiss} className={manageSecondaryButtonClass}>
+            Back to list
+          </button>
+        </div>
+      ) : (
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            Task Model Variables
+          </h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Shared design features (PADI Fig. 11). Define a variable once; bind
+            it on any number of Task Models. Levels stay in vocabulary when a
+            value set is named. No CAF lifecycle on these records.
+          </p>
+        </div>
       )}
+
+      {variables.length === 0 && <TaskModelVariableExample />}
 
       <form
         onSubmit={handleSubmit}
@@ -189,14 +280,15 @@ export function TaskModelVariableLibraryView({
             className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
             data-testid="tmv-consumers-before-edit"
           >
-            <span className="font-medium">Consuming Task Models: </span>
-            {(() => {
-              const consumers = consumersForVariable(taskModels, editingId);
-              if (!consumers.length) return "none — safe to edit levels.";
-              return consumers
-                .map((tm) => `${tm.name || tm.id}${tm.status ? ` (${tm.status})` : ""}`)
-                .join("; ");
-            })()}
+            <p>
+              <span className="font-medium">Consuming Task Models: </span>
+              {taskModelConsumerText(taskModels, editingId)}
+            </p>
+            <p>
+              <span className="font-medium">Design patterns: </span>
+              {nameList(editingPatterns)}
+            </p>
+            <p className="mt-1">Saving is checked against the Task Models that use this variable.</p>
           </div>
         )}
 
@@ -204,30 +296,30 @@ export function TaskModelVariableLibraryView({
           <label className="block text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-300">Name</span>
             <input
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+              className={inputClass}
               value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
               required
             />
           </label>
           <label className="block text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-300">Type</span>
             <select
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+              className={inputClass}
               value={form.type}
               disabled={Boolean(editingId)}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  type: e.target.value,
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  type: event.target.value,
                   valueSet:
-                    e.target.value === "categorical" ? f.valueSet || "bloomLevel" : "",
+                    event.target.value === "categorical" ? current.valueSet || "bloomLevel" : "",
                 }))
               }
             >
-              {TMV_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
+              {TMV_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
                 </option>
               ))}
             </select>
@@ -235,13 +327,13 @@ export function TaskModelVariableLibraryView({
         </div>
 
         <label className="block text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-300">
-            Description
-          </span>
+          <span className="font-medium text-slate-700 dark:text-slate-300">Description</span>
           <input
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+            className={inputClass}
             value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, description: event.target.value }))
+            }
           />
         </label>
 
@@ -251,10 +343,10 @@ export function TaskModelVariableLibraryView({
               Value set (vocabulary)
             </span>
             <select
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+              className={inputClass}
               value={form.valueSet}
               disabled={Boolean(editingId)}
-              onChange={(e) => setForm((f) => ({ ...f, valueSet: e.target.value }))}
+              onChange={(event) => setForm((current) => ({ ...current, valueSet: event.target.value }))}
             >
               <option value="">Author-supplied levels</option>
               {TMV_VALUE_SET_KEYS.map((key) => (
@@ -290,11 +382,11 @@ export function TaskModelVariableLibraryView({
               Possible values (comma or newline)
             </span>
             <textarea
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+              className={inputClass}
               rows={3}
               value={form.possibleValuesText}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, possibleValuesText: e.target.value }))
+              onChange={(event) =>
+                setForm((current) => ({ ...current, possibleValuesText: event.target.value }))
               }
               required={!editingId}
             />
@@ -304,26 +396,22 @@ export function TaskModelVariableLibraryView({
         {form.type === "numeric" && (
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block text-sm">
-              <span className="font-medium text-slate-700 dark:text-slate-300">
-                Range min
-              </span>
+              <span className="font-medium text-slate-700 dark:text-slate-300">Range min</span>
               <input
                 type="number"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+                className={inputClass}
                 value={form.rangeMin}
-                onChange={(e) => setForm((f) => ({ ...f, rangeMin: e.target.value }))}
+                onChange={(event) => setForm((current) => ({ ...current, rangeMin: event.target.value }))}
                 required
               />
             </label>
             <label className="block text-sm">
-              <span className="font-medium text-slate-700 dark:text-slate-300">
-                Range max
-              </span>
+              <span className="font-medium text-slate-700 dark:text-slate-300">Range max</span>
               <input
                 type="number"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-600 dark:bg-slate-950"
+                className={inputClass}
                 value={form.rangeMax}
-                onChange={(e) => setForm((f) => ({ ...f, rangeMax: e.target.value }))}
+                onChange={(event) => setForm((current) => ({ ...current, rangeMax: event.target.value }))}
                 required
               />
             </label>
@@ -331,10 +419,7 @@ export function TaskModelVariableLibraryView({
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Button
-            type="submit"
-            disabled={editingId ? updatePending : createPending}
-          >
+          <Button type="submit" disabled={editingId ? updatePending : createPending}>
             {editingId
               ? updatePending
                 ? "Saving…"
@@ -343,141 +428,303 @@ export function TaskModelVariableLibraryView({
                 ? "Creating…"
                 : "Create Task Model Variable"}
           </Button>
-          {editingId && (
-            <Button type="button" variant="outline" onClick={cancelEdit}>
+          {(editingId || onDismiss) && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => (onDismiss ? onDismiss() : cancelEdit())}
+            >
               Cancel
             </Button>
           )}
         </div>
       </form>
 
-      {variables.length === 0 ? (
+      {!embedded && variables.length === 0 ? (
         <p className="text-sm text-slate-500">No Task Model Variables yet.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 text-left text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                <th className="px-4 py-2">Name</th>
-                <th className="px-4 py-2">Type</th>
-                <th className="px-4 py-2">Levels</th>
-                <th className="px-4 py-2">Used by</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {variables.map((row) => {
-                const levels = taskModelVariableValueIds(row);
-                const consumers = consumersForVariable(taskModels, row.id);
-                return (
-                  <tr
-                    key={row.id}
-                    className="border-t border-slate-100 dark:border-slate-800"
-                    data-testid={`tmv-row-${row.id}`}
-                  >
-                    <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">
-                      {row.name}
-                      <div className="text-xs text-slate-400">{row.id}</div>
-                    </td>
-                    <td className="px-4 py-2">{tmvTypeLabel(row.type)}</td>
-                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">
-                      {row.valueSet
-                        ? `valueSet: ${row.valueSet}`
-                        : row.type === "numeric"
-                          ? `${row.range?.min} – ${row.range?.max}`
-                          : levels.join(", ") || "—"}
-                    </td>
-                    <td
-                      className="px-4 py-2 text-slate-600 dark:text-slate-300"
-                      data-testid={`tmv-consumers-${row.id}`}
-                    >
-                      {consumers.length === 0
-                        ? "—"
-                        : consumers.map((tm) => tm.name || tm.id).join(", ")}
-                    </td>
-                    <td className="px-4 py-2 text-right whitespace-nowrap">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => startEdit(row)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700"
-                        disabled={deletePending}
-                        onClick={() => handleDelete(row)}
-                      >
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
 
-export default function TaskModelVariableBuilder() {
-  const { data: rows = [], isLoading } = useTaskModelVariables();
+function TaskModelVariableManage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusId = recordFocus(searchParams);
+  const [screen, setScreen] = useState(focusId ? "edit" : "list");
+  const [seedForm, setSeedForm] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+
+  const { data: variables = [], isLoading, error } = useTaskModelVariables();
   const { data: taskModels = [] } = useTaskModels();
-  const createMutation = useCreateTaskModelVariable();
-  const updateMutation = useUpdateTaskModelVariable();
-  const deleteMutation = useDeleteTaskModelVariable();
+  const { data: designPatterns = [] } = useDesignPatterns();
+  const createMut = useCreateTaskModelVariable();
+  const updateMut = useUpdateTaskModelVariable();
+  const deleteMut = useDeleteTaskModelVariable();
 
-  async function handleCreate(payload) {
-    try {
-      await createMutation.mutateAsync(payload);
-      toast.success("Task Model Variable created.");
-    } catch (err) {
-      toast.error(apiErrorMessage(err, "Create failed."));
-      throw err;
-    }
+  const context = useMemo(
+    () => ({ taskModels, designPatterns }),
+    [taskModels, designPatterns]
+  );
+
+  useEffect(() => {
+    if (focusId) setScreen("edit");
+  }, [focusId]);
+
+  function clearFocus() {
+    if (!searchParams.get("focus") && !searchParams.get("id")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("focus");
+    next.delete("id");
+    setSearchParams(next, { replace: true });
   }
 
-  async function handleUpdate({ id, payload }) {
-    try {
-      await updateMutation.mutateAsync({ id, payload });
-      toast.success("Task Model Variable updated.");
-    } catch (err) {
-      toast.error(apiErrorMessage(err, "Update failed."));
-      throw err;
-    }
+  function backToList() {
+    clearFocus();
+    setSeedForm(null);
+    setScreen("list");
   }
 
-  async function handleDelete(id) {
-    try {
-      await deleteMutation.mutateAsync(id);
-      toast.success("Task Model Variable deleted.");
-    } catch (err) {
-      toast.error(apiErrorMessage(err, "Delete failed."));
+  function openCreate() {
+    clearFocus();
+    setSeedForm(null);
+    setScreen("create");
+  }
+
+  function openEdit(row) {
+    const next = new URLSearchParams(searchParams);
+    next.delete("id");
+    next.set("focus", row.id);
+    setSearchParams(next);
+    setSeedForm(null);
+    setScreen("edit");
+  }
+
+  function openDuplicate(row) {
+    clearFocus();
+    setSeedForm({
+      ...formFromVariable(row),
+      name: uniqueTaskModelVariableCopyName(row.name, variables),
+    });
+    setScreen("create");
+  }
+
+  function askDelete(row) {
+    if (isVariableInUse(row, context)) {
+      toast.error(variableDeleteBlockedMessage(row, context));
+      return;
     }
+    setPendingDelete(row);
   }
 
   if (isLoading) {
     return (
-      <p className="text-sm text-slate-500">Loading Task Model Variables…</p>
+      <div className="p-6">
+        <h2 className="mb-4 text-2xl font-semibold">Manage Task Model Variables</h2>
+        <p className="text-sm text-slate-500">Loading task model variables...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <h2 className="mb-4 text-2xl font-semibold">Manage Task Model Variables</h2>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {apiErrorMessage(error, "Failed to load Task Model Variables")}
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "create" || screen === "edit") {
+    return (
+      <TaskModelVariableLibraryView
+        key={
+          screen === "edit"
+            ? `edit-${focusId || "record"}`
+            : `create-${seedForm?.name || "blank"}`
+        }
+        variables={variables}
+        taskModels={taskModels}
+        designPatterns={designPatterns}
+        focusId={screen === "edit" ? focusId : null}
+        initialForm={screen === "create" ? seedForm : null}
+        onDismiss={backToList}
+        createPending={createMut.isPending}
+        updatePending={updateMut.isPending}
+        onCreate={async (payload) => {
+          try {
+            const created = await createMut.mutateAsync(payload);
+            toast.success("Task Model Variable created.");
+            return created;
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Create failed."));
+            throw err;
+          }
+        }}
+        onUpdate={async ({ id, payload }) => {
+          try {
+            await updateMut.mutateAsync({ id, payload });
+            toast.success("Task Model Variable updated.");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Update failed."));
+            throw err;
+          }
+        }}
+      />
     );
   }
 
   return (
-    <TaskModelVariableLibraryView
-      variables={rows}
-      taskModels={taskModels}
-      onCreate={handleCreate}
-      onUpdate={handleUpdate}
-      onDelete={handleDelete}
-      createPending={createMutation.isPending}
-      updatePending={updateMutation.isPending}
-      deletePending={deleteMutation.isPending}
+    <>
+      {variables.length === 0 ? (
+        <div className="px-6 pt-6">
+          <TaskModelVariableExample />
+        </div>
+      ) : null}
+      <ModelManageList
+        title="Manage Task Model Variables"
+        description="Shared design features. A variable is defined once and bound on Task Models. Design patterns can list it as a variable feature. These records have no lifecycle status."
+        newLabel="New Task Model Variable"
+        onCreate={openCreate}
+        records={variables}
+        emptyMessage="No Task Model Variables defined yet."
+        filteredEmptyMessage="No Task Model Variables match the current filters."
+        facet={TYPE_FACET}
+        renderBadge={(row) => <TypeBadge record={row} />}
+        searchLabel="Search task model variables"
+        searchPlaceholder="Search task model variables..."
+        searchText={(row) => {
+          const counts = usageCounts(row, context);
+          return [
+            row.name,
+            row.description,
+            variableTypeText(row.type),
+            row.valueSet,
+            ...counts.taskModels.map((model) => recordLabel(model)),
+            ...counts.designPatterns.map((pattern) => recordLabel(pattern)),
+          ]
+            .filter(Boolean)
+            .join(" ");
+        }}
+        readinessOf={variableReadinessValue}
+        renderMeta={(row) => {
+          const ready = variableReadinessValue(row) === "ready";
+          return (
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide ${
+                  ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {ready ? "Ready" : "Not ready"}
+              </span>
+              <span>{usageSummary(row, context)}</span>
+            </div>
+          );
+        }}
+        renderDetails={(row) => {
+          const counts = usageCounts(row, context);
+          return (
+            <>
+              <p className="leading-relaxed text-slate-600">
+                {String(row.description || "").trim() || "No description yet."}
+              </p>
+              <p className="leading-relaxed text-slate-600">
+                Task models: {nameList(counts.taskModels)}. Design patterns:{" "}
+                {nameList(counts.designPatterns)}.
+              </p>
+              <p className="leading-relaxed text-slate-600">
+                {levelsSummary(row)}. {readinessText(row)}.
+              </p>
+            </>
+          );
+        }}
+        renderActions={(row) => {
+          const inUse = isVariableInUse(row, context);
+          return (
+            <>
+              <button type="button" onClick={() => openEdit(row)} className={manageOpenButtonClass}>
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => openDuplicate(row)}
+                className={manageQuietButtonClass}
+                title="Open the create form with this variable copied"
+              >
+                Duplicate
+              </button>
+              <button
+                type="button"
+                onClick={() => askDelete(row)}
+                disabled={deleteMut.isPending || inUse}
+                className={manageDangerButtonClass}
+                title={
+                  inUse
+                    ? "Unbind task models and design patterns before deleting"
+                    : "Delete this task model variable"
+                }
+              >
+                Delete
+              </button>
+            </>
+          );
+        }}
+      />
+      <Modal
+        isOpen={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          if (isVariableInUse(pendingDelete, context)) {
+            toast.error(variableDeleteBlockedMessage(pendingDelete, context));
+            setPendingDelete(null);
+            return;
+          }
+          try {
+            await deleteMut.mutateAsync(pendingDelete.id);
+            toast.success("Task Model Variable deleted.");
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Delete failed."));
+          }
+          setPendingDelete(null);
+        }}
+        title="Delete Task Model Variable"
+        message={
+          pendingDelete
+            ? `Delete "${pendingDelete.name || pendingDelete.id}"? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        confirmClass="bg-red-600 hover:bg-red-700 text-white"
+      />
+    </>
+  );
+}
+
+export default function TaskModelVariableBuilder() {
+  const [searchParams] = useSearchParams();
+  const focusId = recordFocus(searchParams);
+  const [mode, setMode] = useState(focusId ? "manage" : "dashboard");
+
+  useEffect(() => {
+    if (focusId) setMode("manage");
+  }, [focusId]);
+
+  return (
+    <ModelTabShell
+      mode={mode}
+      onModeChange={setMode}
+      tabs={[
+        { id: "dashboard", label: "Dashboard", panel: <TaskModelVariableDashboard /> },
+        {
+          id: "structure",
+          label: "Task Model Variable Structure",
+          panel: <TaskModelVariableTable />,
+        },
+        { id: "manage", label: "Manage Task Model Variables", panel: <TaskModelVariableManage /> },
+      ]}
     />
   );
 }

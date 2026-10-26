@@ -1,15 +1,16 @@
 // List console shared by Manage Design Pattern, Manage Domain Analysis,
 // Manage Templates, Manage Assembly Models, Manage Diagnostic Designs,
-// Manage Presentation Models, and Manage Work Products.
+// Manage Presentation Models, Manage Work Products, and Manage Task
+// Model Variables.
 // The header, filters, and expandable cards follow TaskModelBuilderPanel
 // and TaskModelList: title and description on the left, a black
 // "+ New" button on the right, then search, a status or type filter, and
 // readiness, then one card per record. Competency, Evidence, and Task
 // keep their own panels.
 //
-// Work Products have no lifecycle status. Pass `facet` to replace the
-// status filter, and `renderBadge` to replace the lifecycle badge.
-// Other callers leave both unset.
+// Work Products and Task Model Variables have no lifecycle status. Pass
+// `facet` to replace the status filter, and `renderBadge` to replace the
+// lifecycle badge. Other callers leave both unset.
 
 import React, { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
