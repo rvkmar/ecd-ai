@@ -1,8 +1,10 @@
 // D117 create + D118 consumers-before-edit / valueSet read-only.
+// The library view is the create and edit form. The three-tab shell
+// covers Dashboard, Structure, and Manage.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import toast from "react-hot-toast";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("react-hot-toast", () => ({
   default: { success: vi.fn(), error: vi.fn() },
@@ -19,6 +21,10 @@ vi.mock("@/api/queries/taskModels", () => ({
   useTaskModels: vi.fn(),
 }));
 
+vi.mock("@/api/queries/designPatterns", () => ({
+  useDesignPatterns: vi.fn(),
+}));
+
 import {
   useTaskModelVariables,
   useCreateTaskModelVariable,
@@ -26,9 +32,11 @@ import {
   useDeleteTaskModelVariable,
 } from "@/api/queries/taskModelVariables";
 import { useTaskModels } from "@/api/queries/taskModels";
+import { useDesignPatterns } from "@/api/queries/designPatterns";
 import TaskModelVariableBuilder, {
   TaskModelVariableLibraryView,
   consumersForVariable,
+  isVariableInUse,
 } from "../TaskModelVariableBuilder";
 
 const BLOOM_VAR = {
@@ -54,6 +62,14 @@ const TASK_MODELS = [
   { id: "tm3", name: "Unrelated", taskModelVariableIds: [] },
 ];
 
+const PATTERNS = [
+  {
+    id: "dp1",
+    name: "Name a plant part",
+    variableFeatures: [{ label: "Bloom depth", taskModelVariableId: "tmv-bloom" }],
+  },
+];
+
 describe("consumersForVariable", () => {
   it("returns Task Models that list the variable id", () => {
     expect(consumersForVariable(TASK_MODELS, "tmv-bloom").map((t) => t.id)).toEqual([
@@ -63,19 +79,28 @@ describe("consumersForVariable", () => {
   });
 });
 
-describe("TaskModelVariableLibraryView (D118)", () => {
-  it("shows consumers on the row before edit", () => {
-    render(
-      <TaskModelVariableLibraryView
-        variables={[BLOOM_VAR]}
-        taskModels={TASK_MODELS}
-      />
-    );
-    expect(screen.getByTestId("tmv-consumers-tmv-bloom")).toHaveTextContent(
-      "Fractions Form A, Fractions Form B"
+describe("isVariableInUse", () => {
+  it("is true for a task model citation or a design pattern citation", () => {
+    expect(isVariableInUse(BLOOM_VAR, { taskModels: TASK_MODELS, designPatterns: [] })).toBe(true);
+    expect(
+      isVariableInUse(
+        { id: "tmv-only-pattern", name: "Only a pattern" },
+        { taskModels: [], designPatterns: PATTERNS }
+      )
+    ).toBe(false);
+    expect(
+      isVariableInUse(BLOOM_VAR, {
+        taskModels: [],
+        designPatterns: PATTERNS,
+      })
+    ).toBe(true);
+    expect(isVariableInUse({ id: "tmv-free", name: "Free" }, { taskModels: [], designPatterns: [] })).toBe(
+      false
     );
   });
+});
 
+describe("TaskModelVariableLibraryView (D118)", () => {
   it("lists consumers and locks vocabulary levels when editing a valueSet variable", async () => {
     const user = userEvent.setup();
     const onUpdate = vi.fn().mockResolvedValue({});
@@ -83,27 +108,23 @@ describe("TaskModelVariableLibraryView (D118)", () => {
       <TaskModelVariableLibraryView
         variables={[BLOOM_VAR]}
         taskModels={TASK_MODELS}
+        designPatterns={PATTERNS}
+        focusId="tmv-bloom"
         onUpdate={onUpdate}
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Edit" }));
-
+    expect(screen.getByTestId("tmv-consumers-before-edit")).toHaveTextContent("Fractions Form A");
+    expect(screen.getByTestId("tmv-consumers-before-edit")).toHaveTextContent("Fractions Form B");
+    expect(screen.getByTestId("tmv-consumers-before-edit")).toHaveTextContent("Name a plant part");
     expect(screen.getByTestId("tmv-consumers-before-edit")).toHaveTextContent(
-      "Fractions Form A"
+      "Saving is checked against the Task Models"
     );
-    expect(screen.getByTestId("tmv-consumers-before-edit")).toHaveTextContent(
-      "Fractions Form B"
-    );
-    expect(screen.getByTestId("tmv-valueset-readonly")).toHaveTextContent(
-      "read-only"
-    );
-    expect(screen.getByTestId("tmv-valueset-readonly")).toHaveTextContent(
-      "ecdVocabulary.js"
-    );
-    expect(screen.getByTestId("tmv-valueset-readonly")).toHaveTextContent(
-      "analyze"
-    );
+    expect(screen.getByLabelText(/^Type$/i)).toBeDisabled();
+    expect(screen.queryByLabelText(/Value set/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId("tmv-valueset-readonly")).toHaveTextContent("read-only");
+    expect(screen.getByTestId("tmv-valueset-readonly")).toHaveTextContent("ecdVocabulary.js");
+    expect(screen.getByTestId("tmv-valueset-readonly")).toHaveTextContent("analyze");
 
     await user.clear(screen.getByLabelText(/^Name$/i));
     await user.type(screen.getByLabelText(/^Name$/i), "Bloom depth (renamed)");
@@ -119,24 +140,6 @@ describe("TaskModelVariableLibraryView (D118)", () => {
     });
     expect(onUpdate.mock.calls[0][0].payload.possibleValues).toBeUndefined();
   });
-
-  it("refuses delete when consumers exist and names them", async () => {
-    const user = userEvent.setup();
-    const onDelete = vi.fn();
-    render(
-      <TaskModelVariableLibraryView
-        variables={[BLOOM_VAR]}
-        taskModels={TASK_MODELS}
-        onDelete={onDelete}
-      />
-    );
-
-    await user.click(screen.getByRole("button", { name: "Delete" }));
-    expect(onDelete).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith(
-      expect.stringContaining("Fractions Form A")
-    );
-  });
 });
 
 describe("TaskModelVariableBuilder (D117 create)", () => {
@@ -145,8 +148,9 @@ describe("TaskModelVariableBuilder (D117 create)", () => {
   beforeEach(() => {
     mutateAsync.mockReset();
     mutateAsync.mockResolvedValue({ id: "tmv1", name: "Bloom depth" });
-    useTaskModelVariables.mockReturnValue({ data: [], isLoading: false });
-    useTaskModels.mockReturnValue({ data: [] });
+    useTaskModelVariables.mockReturnValue({ data: [], isLoading: false, error: null });
+    useTaskModels.mockReturnValue({ data: [], isLoading: false, error: null });
+    useDesignPatterns.mockReturnValue({ data: [], isLoading: false, error: null });
     useCreateTaskModelVariable.mockReturnValue({
       mutateAsync,
       isPending: false,
@@ -163,12 +167,16 @@ describe("TaskModelVariableBuilder (D117 create)", () => {
 
   it("posts a categorical valueSet record (no status field)", async () => {
     const user = userEvent.setup();
-    render(<TaskModelVariableBuilder />);
-
-    await user.type(screen.getByLabelText(/^Name$/i), "Bloom depth");
-    await user.click(
-      screen.getByRole("button", { name: "Create Task Model Variable" })
+    render(
+      <MemoryRouter>
+        <TaskModelVariableBuilder />
+      </MemoryRouter>
     );
+
+    await user.click(screen.getByRole("button", { name: "Manage Task Model Variables" }));
+    await user.click(screen.getByRole("button", { name: "New Task Model Variable" }));
+    await user.type(screen.getByLabelText(/^Name$/i), "Bloom depth");
+    await user.click(screen.getByRole("button", { name: "Create Task Model Variable" }));
 
     expect(mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({

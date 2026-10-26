@@ -52,15 +52,24 @@ const taskModels = [
   },
 ];
 
-/** Default list: consumers column populated for Bloom. */
+const designPatterns = [
+  {
+    id: "dp1",
+    name: "Name a plant part",
+    variableFeatures: [{ label: "Bloom depth", taskModelVariableId: "tmv-bloom" }],
+  },
+];
+
+/** Edit form: consumers are visible, and the vocabulary value set is locked. */
 export const WithConsumers = {
   render: () => (
     <TaskModelVariableLibraryView
       variables={variables}
       taskModels={taskModels}
+      designPatterns={designPatterns}
+      focusId="tmv-bloom"
       onCreate={async () => {}}
       onUpdate={async () => {}}
-      onDelete={() => {}}
     />
   ),
 };
