@@ -27,35 +27,38 @@ Nothing else caps the grid at two:
 | Starter and readiness | Write a first draft still fills four levels. Readiness accepts a longer list | **DONE** |
 | Zip | Import and export keep four levels. A confirmed rubric stays confirmed when the original id is kept | **DONE** |
 | Upper bound | The Add level button stops at 10. A rubric that already has more than 10 is shown and saved whole. The server has no level-count cap | **DONE** |
+| Shell from #100 | Dashboard, Rubric Structure, and Manage Rubrics stay. Add level and Remove sit on the Manage form | **DONE** |
+| Duplicate | Manage Duplicate copies every level into a new draft. It does not keep only the first two | **DONE** |
+| Structure | The levels column is the widest criterion. Ingredients View lists every level label on the criterion | **DONE** |
 
 ## What was delivered
 
-The criteria table headers are editable. Each column has a label, a score, and Remove. Add level sits next to Add criterion.
+The criteria table headers are editable. Each column has a label, a score, and Remove. Add level sits next to Add criterion on the Manage form (New, Edit, and Duplicate).
 
 Add criterion copies the current columns, including ones just added, and leaves the new cells empty. The cell editor still writes the same sentence into `descriptor` and `exemplar`.
 
 The form maximum is 10 new columns from the button. It is not a validator change. `validateEntity` still accepts a longer list, which is how an imported rubric with 11 levels round-trips through Edit and Save.
 
-Rubrics have no Duplicate action and no Structure tab. Work Products and Task Model Variables gained those shells in earlier off-calendar passes. This pass did not add them. The criteria-by-levels shape is the edit grid. Zip import and export store `dimensions` unchanged, so any level count in `rubrics.json` is kept.
+This branch started before PR #100. That shell is on main as `6c467f2`. The merge keeps Dashboard, Rubric Structure, and Manage Rubrics, and puts the level controls on `RubricLibraryView`. Duplicate calls `formFromRow`, so the copy includes every level, then saves as a new draft. Structure counts levels with `levelCount` (the widest dimension). Ingredients View joins every level label on the criterion. A four-level rubric shows 4 in the table and all four names under Criteria. Zip import and export still store `dimensions` unchanged.
 
 ## Verification
 
 ```
 NODE_OPTIONS=--max-old-space-size=4096 npx vitest run
-  2403 passed | 9 skipped (2412)
-  Test Files 274 passed
+  2417 passed | 9 skipped (2426)
+  Test Files 277 passed
   exit 0
 
 npm run build
-  green (1.26s). Largest JS chunk recharts 425.06 kB (gzip 117.21 kB).
+  green (1.24s). Largest JS chunk recharts 425.06 kB (gzip 117.21 kB).
   EvidenceModelBuilder 373.92 kB (gzip 82.87 kB).
-  RubricBuilder 18.76 kB (gzip 5.65 kB).
+  RubricBuilder 37.30 kB (gzip 10.74 kB).
 
 npm audit --audit-level=high
   clean. npm audit reported 0 vulnerabilities. No dependency was added.
 ```
 
-Previous close on this tree was Task Model Variables parity, **2389 passed / 9 skipped**. Delta: **+14 tests / +3 files** (`rubricLevels.test.js`, `rubricGrid.test.jsx`, `rubricLevelZip.test.js`). `rubrics.test.js` and `d122Rubrics.test.js` were extended in place. Skips unchanged.
+The suite is main after PR #100, plus the level-column tests. Two tests were added on the merge: Duplicate keeps four levels (`rubricTabs.test.jsx`), and Structure / Ingredients lists four level names (`rubricStructure.test.jsx`). Skips unchanged.
 
 This VM ran the suite on Node 22. CI installs Node 24. `npm ci` printed an engine warning and still installed.
 
@@ -67,15 +70,15 @@ Settings, Data, Upload. Keep original ids checked. The file was `samples/ecd-sam
 
 Preview: 44 created, 0 failed, and "Nothing has been written yet." Rubrics: 2 created, 0 failed. Import finished with the same totals.
 
-Libraries, Rubrics. Edit on Plant function judgement (`rub-function`, confirmed). Before Add level the grid had two columns: Wrong job at score 0, and Right job at score 1. Function match showed the sample sentences (a leaf takes up water; a leaf makes food).
+Libraries, Rubrics opens on Dashboard. Manage Rubrics, then Edit on Plant function judgement (`rub-function`, confirmed). The grid started at Wrong job (score 0) and Right job (score 1).
 
 Add level twice. The grid then had Wrong job 0, Right job 1, Level 3 at score 2, and Level 4 at score 3. The Level 3 cell was filled with "The student names a related job but not the main one." Save showed the toast "Rubric updated".
 
-Reload, then Edit again. The same four columns and that sentence were still there. The stored row stayed `rub-function`, status confirmed, `activatesAt` 1. Level 4 was saved empty. The original two exemplars were still on Wrong job and Right job.
+Rubric Structure, Ingredients View. Plant function judgement read "Confirmed • Ready • 1 criterion • 4 levels". Criteria listed Function match with Wrong job, Right job, Level 3, and Level 4. Table View showed 4 in the Levels column.
 
 ## Half-applied work
 
-None on this grid. There is still no rubric Duplicate action and no Rubric Structure / Ingredients view. A duplicate of a criterion, via Add criterion, copies every current level rather than only the first two.
+None. The three-tab shell from PR #100 is intact. Duplicate copies every level. Structure and Ingredients View show every level, not only the first two.
 
 ## Compression debt
 

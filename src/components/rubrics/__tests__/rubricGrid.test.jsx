@@ -130,8 +130,7 @@ describe("RubricLibraryView level columns", () => {
         },
       ],
     };
-    render(<RubricLibraryView rubrics={[row]} onUpdate={onUpdate} />);
-    await user.click(screen.getByRole("button", { name: "Edit" }));
+    render(<RubricLibraryView rubrics={[row]} onUpdate={onUpdate} focusId={row.id} />);
 
     expect(screen.getByRole("columnheader", { name: "Beginning" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Exemplary" })).toBeInTheDocument();
@@ -177,8 +176,7 @@ describe("RubricLibraryView level columns", () => {
         },
       ],
     };
-    render(<RubricLibraryView rubrics={[row]} onUpdate={onUpdate} />);
-    await user.click(screen.getByRole("button", { name: "Edit" }));
+    render(<RubricLibraryView rubrics={[row]} onUpdate={onUpdate} focusId={row.id} />);
 
     expect(screen.getByLabelText("Level 11 label")).toHaveValue("Band 10");
     expect(screen.getByRole("button", { name: "Add level" })).toBeDisabled();
