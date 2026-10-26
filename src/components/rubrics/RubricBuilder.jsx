@@ -5,10 +5,11 @@
 // it bound a rubric to one observation; reusable rubrics bind via EM
 // evaluationProcedures.rubricId instead).
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
+import Modal from "@/components/ui/Modal";
 import { apiErrorMessage } from "@/api/apiClient";
 import {
   useRubrics,
@@ -19,6 +20,17 @@ import {
 } from "@/api/queries/rubrics";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { RUBRIC_SUBJECTS, generateRubricDraft } from "./rubricStarter";
+import {
+  MAX_RUBRIC_LEVELS,
+  MIN_RUBRIC_LEVELS,
+  addLevelColumn,
+  alignDimensions,
+  columnCount,
+  columnHasText,
+  commitLevelScore,
+  patchLevelColumn,
+  removeLevelColumn,
+} from "./rubricLevels";
 
 export function consumersForRubric(evidenceModels, rubricId) {
   if (!rubricId) return [];
@@ -66,7 +78,7 @@ const emptyForm = () => ({
 });
 
 function formFromRow(row) {
-  return {
+  const mapped = {
     name: row.name || "",
     description: row.description || "",
     dimensions: Array.isArray(row.dimensions) && row.dimensions.length
@@ -93,6 +105,7 @@ function formFromRow(row) {
         }))
       : [blankDimension()],
   };
+  return { ...mapped, dimensions: alignDimensions(mapped.dimensions) };
 }
 
 function buildPayload(form, status = "draft") {
@@ -135,7 +148,10 @@ export function RubricLibraryView({
   const [editingId, setEditingId] = useState(null);
   const [subjectId, setSubjectId] = useState("");
   const [topicId, setTopicId] = useState("");
+  const [removeIndex, setRemoveIndex] = useState(null);
+  const scoreBeforeEdit = useRef({});
   const topics = RUBRIC_SUBJECTS.find((subject) => subject.id === subjectId)?.topics || [];
+  const levelCount = columnCount(form.dimensions);
 
   const editing = useMemo(
     () => (editingId ? rubrics.find((v) => v.id === editingId) : null),
@@ -152,6 +168,7 @@ export function RubricLibraryView({
     setForm(emptyForm());
     setSubjectId("");
     setTopicId("");
+    setRemoveIndex(null);
   }
 
   function writeDraft() {
@@ -197,15 +214,38 @@ export function RubricLibraryView({
     }));
   }
 
+  function requestRemoveLevel(index) {
+    if (levelCount <= MIN_RUBRIC_LEVELS) return;
+    if (columnHasText(form.dimensions, index)) {
+      setRemoveIndex(index);
+      return;
+    }
+    setForm((current) => ({
+      ...current,
+      dimensions: removeLevelColumn(current.dimensions, index),
+    }));
+  }
+
+  function confirmRemoveLevel() {
+    if (removeIndex == null) return;
+    const index = removeIndex;
+    setForm((current) => ({
+      ...current,
+      dimensions: removeLevelColumn(current.dimensions, index),
+    }));
+    setRemoveIndex(null);
+  }
+
   return (
     <div className="space-y-6 p-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Rubrics</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Choose a subject and a topic to write a first grid: criteria down the
-          side, four levels across, with a sentence in every cell. Edit the
-          cells, then save the draft. Subject and topic are not stored. Bind
-          the confirmed rubric on an Evidence Model via rubricId.
+          side, four levels across, with a sentence in every cell. Add level
+          adds another column. Edit the cells, then save the draft. Subject
+          and topic are not stored. Bind the confirmed rubric on an Evidence
+          Model via rubricId.
         </p>
       </div>
 
@@ -298,9 +338,83 @@ export function RubricLibraryView({
             <thead className="bg-slate-100 dark:bg-slate-800">
               <tr>
                 <th className="px-3 py-2 font-medium">Criterion</th>
-                {levelHeaders(form.dimensions).map((level) => (
-                  <th key={level.label} className="px-3 py-2 font-medium">
-                    {level.label}
+                {levelHeaders(form.dimensions).map((level, li) => (
+                  <th
+                    key={`level-${li}`}
+                    scope="col"
+                    aria-label={level.label || `Level ${li + 1}`}
+                    className="px-3 py-2 align-top font-medium"
+                  >
+                    <label className="block text-xs font-normal text-slate-500">
+                      Label
+                      <input
+                        className="mt-1 w-36 rounded border border-slate-300 px-2 py-1 text-sm font-medium text-slate-900 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+                        aria-label={`Level ${li + 1} label`}
+                        value={level.label}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            dimensions: patchLevelColumn(current.dimensions, li, {
+                              label: event.target.value,
+                            }),
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="mt-2 block text-xs font-normal text-slate-500">
+                      Score
+                      <input
+                        type="number"
+                        step="1"
+                        className="mt-1 w-20 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950"
+                        aria-label={`Level ${li + 1} score`}
+                        value={level.value}
+                        onFocus={() => {
+                          scoreBeforeEdit.current[li] = level.value;
+                        }}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            dimensions: patchLevelColumn(current.dimensions, li, {
+                              value: event.target.value,
+                            }),
+                          }))
+                        }
+                        onBlur={(event) => {
+                          const fallback = Object.prototype.hasOwnProperty.call(
+                            scoreBeforeEdit.current,
+                            li
+                          )
+                            ? scoreBeforeEdit.current[li]
+                            : level.value;
+                          setForm((current) => ({
+                            ...current,
+                            dimensions: commitLevelScore(
+                              current.dimensions,
+                              li,
+                              event.target.value,
+                              fallback
+                            ),
+                          }));
+                        }}
+                      />
+                    </label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-2"
+                      disabled={levelCount <= MIN_RUBRIC_LEVELS}
+                      aria-label={`Remove level ${li + 1}`}
+                      title={
+                        levelCount <= MIN_RUBRIC_LEVELS
+                          ? "A rubric keeps at least two levels."
+                          : "Remove this level"
+                      }
+                      onClick={() => requestRemoveLevel(li)}
+                    >
+                      Remove
+                    </Button>
                   </th>
                 ))}
               </tr>
@@ -319,14 +433,14 @@ export function RubricLibraryView({
                   {levelHeaders(form.dimensions).map((header, li) => {
                     const level = dim.levels[li];
                     if (!level) {
-                      return <td key={header.label} className="px-3 py-2" />;
+                      return <td key={`${dim.id}-${li}`} className="px-3 py-2" />;
                     }
                     const text = level.descriptor || level.exemplar || "";
                     return (
-                      <td key={header.label} className="px-3 py-2">
+                      <td key={`${dim.id}-${li}`} className="px-3 py-2">
                         <textarea
                           className="min-h-24 w-52 rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-950"
-                          aria-label={`${dim.name} ${level.label}`}
+                          aria-label={`${dim.name} ${header.label || level.label}`}
                           value={text}
                           onChange={(event) =>
                             updateLevel(di, li, {
@@ -360,6 +474,24 @@ export function RubricLibraryView({
           >
             Add criterion
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={levelCount >= MAX_RUBRIC_LEVELS}
+            title={
+              levelCount >= MAX_RUBRIC_LEVELS
+                ? "A rubric form can add up to 10 levels. Extra imported levels stay on the rubric."
+                : "Add a performance level"
+            }
+            onClick={() =>
+              setForm((current) => ({
+                ...current,
+                dimensions: addLevelColumn(current.dimensions),
+              }))
+            }
+          >
+            Add level
+          </Button>
           <Button type="submit" disabled={createPending || updatePending}>
             {editingId ? "Save" : "Create draft"}
           </Button>
@@ -370,6 +502,16 @@ export function RubricLibraryView({
           )}
         </div>
       </form>
+
+      <Modal
+        isOpen={removeIndex != null}
+        onClose={() => setRemoveIndex(null)}
+        onConfirm={confirmRemoveLevel}
+        title="Remove this level?"
+        message="This level has descriptors. Removing it deletes that text from every criterion."
+        confirmLabel="Remove level"
+        confirmClass="bg-red-600 hover:bg-red-700 text-white"
+      />
 
       <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
         <table className="min-w-full text-left text-sm">
