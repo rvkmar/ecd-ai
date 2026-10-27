@@ -75,10 +75,18 @@ export function useSeedDesignPattern() {
   const { auth } = useAuth() || {};
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, competencyId, selections }) =>
+    mutationFn: ({ id, competencyId, competencyModelId, smvId, selections }) =>
       apiFetch(
         `/api/designPatterns/${id}/seed`,
-        { method: "POST", body: JSON.stringify({ competencyId, selections }) },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            competencyId,
+            competencyModelId,
+            smvId,
+            selections,
+          }),
+        },
         auth
       ),
     onSuccess: (_data, { id }) => {

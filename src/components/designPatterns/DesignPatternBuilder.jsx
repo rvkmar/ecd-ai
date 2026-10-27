@@ -53,7 +53,7 @@ import {
   useDeleteDesignPattern,
   useSeedDesignPattern,
 } from "@/api/queries/designPatterns";
-import { useCompetencies } from "@/api/queries/competencies";
+import { useCompetencies, useCompetencyModels } from "@/api/queries/competencies";
 import { useWorkProducts } from "@/api/queries/workProducts";
 import { useRubrics } from "@/api/queries/rubrics";
 import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
@@ -61,6 +61,11 @@ import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { useTaskModels } from "@/api/queries/taskModels";
 import { useTemplates, useUpdateTemplate } from "@/api/queries/templates";
 import { designPatternReadiness } from "@/utils/designPatternReadiness";
+import {
+  copyKsaLinks,
+  focalKsaUnlinkedWarnings,
+  suggestSeedFromFocalKsas,
+} from "@/utils/ksaStudentModelLink";
 import { DESIGN_PATTERN_PADI_ATTRIBUTES } from "@/utils/schema";
 import PatternNeighbourhood from "./PatternNeighbourhood.jsx";
 import ModelTabShell from "@/components/shared/ModelTabShell";
@@ -156,14 +161,15 @@ function labelledEntries(entries) {
     .filter((entry) => entry.label);
 }
 
-function additionalKsaEntries(entries) {
+function ksaEntries(entries, { relationship = false } = {}) {
   return (entries || [])
     .map((entry) => {
       const label = String(entry?.label || "").trim();
-      const relationship = String(entry?.relationship || "").trim();
-      if (!label && !relationship) return null;
-      const row = { label };
-      if (relationship) row.relationship = relationship;
+      const relation = relationship ? String(entry?.relationship || "").trim() : "";
+      const links = copyKsaLinks(entry);
+      if (!label && !relation && Object.keys(links).length === 0) return null;
+      const row = { label, ...links };
+      if (relation) row.relationship = relation;
       return row;
     })
     .filter(Boolean);
@@ -215,10 +221,18 @@ export function formFromRow(row) {
     name: row.name || "",
     summary: row.summary || "",
     rationale: row.rationale || "",
-    focalKsas: (row.focalKsas || []).map((entry) => ({ label: entry.label || "" })),
+    focalKsas: (row.focalKsas || []).map((entry) => ({
+      label: entry.label || "",
+      competencyId: entry.competencyId || "",
+      competencyModelId: entry.competencyModelId || "",
+      smvId: entry.smvId || "",
+    })),
     additionalKsas: (row.additionalKsas || []).map((entry) => ({
       label: entry.label || "",
       relationship: entry.relationship || "",
+      competencyId: entry.competencyId || "",
+      competencyModelId: entry.competencyModelId || "",
+      smvId: entry.smvId || "",
     })),
     potentialObservations: (row.potentialObservations || []).map((entry) => ({
       label: entry.label || "",
@@ -257,8 +271,8 @@ export function designPatternPayload(form) {
     name: form.name.trim(),
     summary: form.summary.trim(),
     rationale: form.rationale.trim(),
-    focalKsas: labelledEntries(form.focalKsas),
-    additionalKsas: additionalKsaEntries(form.additionalKsas),
+    focalKsas: ksaEntries(form.focalKsas),
+    additionalKsas: ksaEntries(form.additionalKsas, { relationship: true }),
     potentialObservations: observationEntries(form.potentialObservations),
     potentialWorkProducts: libraryEntries(form.potentialWorkProducts, "workProductId"),
     potentialRubrics: libraryEntries(form.potentialRubrics, "rubricId"),
@@ -423,23 +437,107 @@ function LabelList({ legend, hint, hintId, values, onChange, example }) {
   );
 }
 
-function AdditionalKsaList({ values, onChange, overlaps }) {
+export const KSA_LINK_GUIDANCE =
+  "Link a competency, a student model variable, or both. Leave both unset to keep the label only. Confirm warns when a focal KSA is unlinked. It does not block.";
+
+function smvOptionKey(modelId, smvId) {
+  return `${modelId}::${smvId}`;
+}
+
+function parseSmvOptionKey(value) {
+  const index = String(value || "").indexOf("::");
+  if (index < 0) return { competencyModelId: "", smvId: "" };
+  return {
+    competencyModelId: value.slice(0, index),
+    smvId: value.slice(index + 2),
+  };
+}
+
+function smvOptions(competencyModels) {
+  const options = [];
+  for (const model of competencyModels || []) {
+    for (const smv of model?.smVariables || []) {
+      if (!model?.id || !smv?.id) continue;
+      options.push({
+        key: smvOptionKey(model.id, smv.id),
+        competencyModelId: model.id,
+        smvId: smv.id,
+        label: `${model.name || model.id}: ${smv.label || smv.id}`,
+      });
+    }
+  }
+  return options;
+}
+
+function KsaLinkFields({ legend, index, entry, competencies, competencyModels, onChange }) {
+  const options = smvOptions(competencyModels);
+  const selectedKey =
+    entry.competencyModelId && entry.smvId
+      ? smvOptionKey(entry.competencyModelId, entry.smvId)
+      : "";
+  const competencyKnown = (competencies || []).some((row) => row.id === entry.competencyId);
+  const smvKnown = options.some((option) => option.key === selectedKey);
   return (
-    <div className="space-y-3">
-      <fieldset className="space-y-2">
-        <legend className="text-sm text-slate-700">Additional KSAs</legend>
-        <p id="dp-additional-guidance" className={hintClass}>
-          {DESIGN_PATTERN_NARRATIVE_GUIDANCE.additionalKsas}
-        </p>
-        {listIsBlank(values) ? (
-          <FieldExample text={DESIGN_PATTERN_EXAMPLES.additionalKsas} />
+    <div className="grid gap-2 sm:grid-cols-2">
+      <select
+        className={inputClass}
+        aria-label={`${legend} ${index + 1} competency`}
+        value={entry.competencyId || ""}
+        onChange={(event) => onChange({ ...entry, competencyId: event.target.value })}
+      >
+        <option value="">Not linked</option>
+        {entry.competencyId && !competencyKnown ? (
+          <option value={entry.competencyId}>{entry.competencyId} (not found)</option>
         ) : null}
-        {values.map((entry, index) => (
-          <div key={`additional-${index}`} className="flex gap-2">
+        {(competencies || []).map((row) => (
+          <option key={row.id} value={row.id}>
+            {row.name || row.id}
+          </option>
+        ))}
+      </select>
+      <select
+        className={inputClass}
+        aria-label={`${legend} ${index + 1} student model variable`}
+        value={selectedKey}
+        onChange={(event) => {
+          const next = parseSmvOptionKey(event.target.value);
+          onChange({
+            ...entry,
+            competencyModelId: next.competencyModelId,
+            smvId: next.smvId,
+          });
+        }}
+      >
+        <option value="">Not linked</option>
+        {selectedKey && !smvKnown ? (
+          <option value={selectedKey}>{selectedKey} (not found)</option>
+        ) : null}
+        {options.map((option) => (
+          <option key={option.key} value={option.key}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function FocalKsaList({ values, onChange, competencies, competencyModels, warnings }) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm text-slate-700">Focal KSAs</legend>
+      <p id="dp-focal-guidance" className={hintClass}>
+        {DESIGN_PATTERN_NARRATIVE_GUIDANCE.focalKsas}
+      </p>
+      <p className={hintClass}>{KSA_LINK_GUIDANCE}</p>
+      {listIsBlank(values) ? <FieldExample text={DESIGN_PATTERN_EXAMPLES.focalKsas} /> : null}
+      {values.map((entry, index) => (
+        <div key={`focal-${index}`} className="space-y-2 rounded-md border border-slate-200 p-2">
+          <div className="flex gap-2">
             <input
               className={inputClass}
-              aria-label={`Additional KSAs ${index + 1}`}
-              aria-describedby="dp-additional-guidance"
+              aria-label={`Focal KSAs ${index + 1}`}
+              aria-describedby="dp-focal-guidance"
               value={entry.label}
               onChange={(event) => {
                 const next = values.slice();
@@ -447,23 +545,6 @@ function AdditionalKsaList({ values, onChange, overlaps }) {
                 onChange(next);
               }}
             />
-            <select
-              className={inputClass}
-              aria-label={`Additional KSAs ${index + 1} relationship`}
-              value={entry.relationship || ""}
-              onChange={(event) => {
-                const next = values.slice();
-                next[index] = { ...entry, relationship: event.target.value };
-                onChange(next);
-              }}
-            >
-              <option value="">Choose a relationship</option>
-              {ADDITIONAL_KSA_RELATIONSHIPS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
             <Button
               type="button"
               variant="outline"
@@ -472,11 +553,127 @@ function AdditionalKsaList({ values, onChange, overlaps }) {
               Remove
             </Button>
           </div>
+          <KsaLinkFields
+            legend="Focal KSAs"
+            index={index}
+            entry={entry}
+            competencies={competencies}
+            competencyModels={competencyModels}
+            onChange={(nextEntry) => {
+              const next = values.slice();
+              next[index] = nextEntry;
+              onChange(next);
+            }}
+          />
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() =>
+          onChange([
+            ...values,
+            { label: "", competencyId: "", competencyModelId: "", smvId: "" },
+          ])
+        }
+      >
+        Add Focal KSAs
+      </Button>
+      {(warnings || []).map((warning) => (
+        <p key={warning} role="note" className="text-xs text-amber-800">
+          {warning}
+        </p>
+      ))}
+    </fieldset>
+  );
+}
+
+function AdditionalKsaList({
+  values,
+  onChange,
+  overlaps,
+  competencies,
+  competencyModels,
+}) {
+  return (
+    <div className="space-y-3">
+      <fieldset className="space-y-2">
+        <legend className="text-sm text-slate-700">Additional KSAs</legend>
+        <p id="dp-additional-guidance" className={hintClass}>
+          {DESIGN_PATTERN_NARRATIVE_GUIDANCE.additionalKsas}
+        </p>
+        <p className={hintClass}>{KSA_LINK_GUIDANCE}</p>
+        {listIsBlank(values) ? (
+          <FieldExample text={DESIGN_PATTERN_EXAMPLES.additionalKsas} />
+        ) : null}
+        {values.map((entry, index) => (
+          <div key={`additional-${index}`} className="space-y-2 rounded-md border border-slate-200 p-2">
+            <div className="flex gap-2">
+              <input
+                className={inputClass}
+                aria-label={`Additional KSAs ${index + 1}`}
+                aria-describedby="dp-additional-guidance"
+                value={entry.label}
+                onChange={(event) => {
+                  const next = values.slice();
+                  next[index] = { ...entry, label: event.target.value };
+                  onChange(next);
+                }}
+              />
+              <select
+                className={inputClass}
+                aria-label={`Additional KSAs ${index + 1} relationship`}
+                value={entry.relationship || ""}
+                onChange={(event) => {
+                  const next = values.slice();
+                  next[index] = { ...entry, relationship: event.target.value };
+                  onChange(next);
+                }}
+              >
+                <option value="">Choose a relationship</option>
+                {ADDITIONAL_KSA_RELATIONSHIPS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onChange(values.filter((_, i) => i !== index))}
+              >
+                Remove
+              </Button>
+            </div>
+            <KsaLinkFields
+              legend="Additional KSAs"
+              index={index}
+              entry={entry}
+              competencies={competencies}
+              competencyModels={competencyModels}
+              onChange={(nextEntry) => {
+                const next = values.slice();
+                next[index] = nextEntry;
+                onChange(next);
+              }}
+            />
+          </div>
         ))}
         <Button
           type="button"
           variant="outline"
-          onClick={() => onChange([...values, { label: "", relationship: "" }])}
+          onClick={() =>
+            onChange([
+              ...values,
+              {
+                label: "",
+                relationship: "",
+                competencyId: "",
+                competencyModelId: "",
+                smvId: "",
+              },
+            ])
+          }
         >
           Add Additional KSAs
         </Button>
@@ -645,10 +842,27 @@ export function templatesForPattern(templates = [], patternId) {
   return templates.filter((row) => row.designPatternId === patternId);
 }
 
-function SeedFromPattern({ pattern, competencies = [], onSeed, pending = false }) {
-  const [competencyId, setCompetencyId] = useState("");
+function initialSeedChoice(pattern) {
+  const suggestion = suggestSeedFromFocalKsas(pattern);
+  return {
+    competencyId: suggestion.competencyIds.length === 1 ? suggestion.competencyIds[0] : "",
+    smvKey: suggestion.smvs.length === 1 ? suggestion.smvs[0].key : "",
+  };
+}
+
+function SeedFromPattern({
+  pattern,
+  competencies = [],
+  competencyModels = [],
+  onSeed,
+  pending = false,
+}) {
+  const [choice, setChoice] = useState(() => initialSeedChoice(pattern));
   const [picked, setPicked] = useState({});
   const [seedError, setSeedError] = useState("");
+  const suggestion = suggestSeedFromFocalKsas(pattern);
+  const competencyId = choice.competencyId;
+  const parsedSmv = parseSmvOptionKey(choice.smvKey);
 
   function toggle(field, index) {
     setPicked((current) => {
@@ -664,7 +878,13 @@ function SeedFromPattern({ pattern, competencies = [], onSeed, pending = false }
     const selections = {};
     for (const field of SEED_FIELDS) selections[field] = picked[field] || [];
     try {
-      await onSeed({ id: pattern.id, competencyId, selections });
+      await onSeed({
+        id: pattern.id,
+        competencyId,
+        competencyModelId: parsedSmv.competencyModelId,
+        smvId: parsedSmv.smvId,
+        selections,
+      });
       setPicked({});
     } catch (err) {
       setSeedError(apiErrorMessage(err, "Seed failed"));
@@ -678,20 +898,46 @@ function SeedFromPattern({ pattern, competencies = [], onSeed, pending = false }
         Pick the menu rows to copy. Unchecked rows stay on the back-link.
         This writes a draft Evidence Model and a draft Task Model. Confirm
         still requires the claim, warrants, and evidence rules this pattern
-        does not supply.
+        does not supply. A linked focal KSA pre-fills the competency and
+        the student model variable. You can choose different ones.
       </p>
+      {suggestion.competencyIds.length > 1 ? (
+        <p className="mt-2 text-xs text-amber-800" role="note">
+          Focal KSAs cite more than one competency. Choose which competency to seed.
+        </p>
+      ) : null}
       <label className="mt-3 block text-sm" htmlFor="dp-seed-competency">
         <span className="mb-1 block text-slate-700">Competency</span>
         <select
           id="dp-seed-competency"
           className={inputClass}
           value={competencyId}
-          onChange={(event) => setCompetencyId(event.target.value)}
+          onChange={(event) =>
+            setChoice((current) => ({ ...current, competencyId: event.target.value }))
+          }
         >
           <option value="">Select a competency</option>
           {competencies.map((row) => (
             <option key={row.id} value={row.id}>
               {row.name || row.id}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="mt-3 block text-sm" htmlFor="dp-seed-smv">
+        <span className="mb-1 block text-slate-700">Student model variable</span>
+        <select
+          id="dp-seed-smv"
+          className={inputClass}
+          value={choice.smvKey}
+          onChange={(event) =>
+            setChoice((current) => ({ ...current, smvKey: event.target.value }))
+          }
+        >
+          <option value="">Not linked</option>
+          {smvOptions(competencyModels).map((option) => (
+            <option key={option.key} value={option.key}>
+              {option.label}
             </option>
           ))}
         </select>
@@ -817,6 +1063,7 @@ export function DesignPatternLibraryView({
   onDelete,
   onLinkTemplate,
   competencies = [],
+  competencyModels = [],
   onSeed,
   seedPending = false,
   descendantReport = null,
@@ -1030,12 +1277,11 @@ export function DesignPatternLibraryView({
         );
       case "focalKsas":
         return (
-          <LabelList
-            legend="Focal KSAs"
-            hint={DESIGN_PATTERN_NARRATIVE_GUIDANCE.focalKsas}
-            hintId="dp-focal-guidance"
-            example={DESIGN_PATTERN_EXAMPLES.focalKsas}
+          <FocalKsaList
             values={form.focalKsas}
+            competencies={competencies}
+            competencyModels={competencyModels}
+            warnings={focalKsaUnlinkedWarnings(payload)}
             onChange={(focalKsas) => patchForm({ focalKsas })}
           />
         );
@@ -1044,6 +1290,8 @@ export function DesignPatternLibraryView({
           <AdditionalKsaList
             values={form.additionalKsas}
             overlaps={focalOverlaps}
+            competencies={competencies}
+            competencyModels={competencyModels}
             onChange={(additionalKsas) => patchForm({ additionalKsas })}
           />
         );
@@ -1155,10 +1403,21 @@ export function DesignPatternLibraryView({
                 Save a draft before linking a template or seeding models.
               </p>
             )}
+            {(confirmCheck.warnings || []).length > 0 ? (
+              <div className="space-y-1">
+                {confirmCheck.warnings.map((warning) => (
+                  <p key={warning} role="note" className="text-xs text-amber-800">
+                    {warning}
+                  </p>
+                ))}
+              </div>
+            ) : null}
             {editing?.status === "confirmed" && onSeed ? (
               <SeedFromPattern
+                key={`${editing.id}:${suggestSeedFromFocalKsas(editing).competencyIds.join(",")}:${suggestSeedFromFocalKsas(editing).smvs.map((row) => row.key).join(",")}`}
                 pattern={editing}
                 competencies={competencies}
+                competencyModels={competencyModels}
                 onSeed={async (seedPayload) => {
                   const seeded = await onSeed(seedPayload);
                   setDescendantTick((tick) => tick + 1);
@@ -1449,6 +1708,7 @@ function DesignPatternManage() {
   const { data: domainAnalyses = [] } = useDomainAnalyses();
   const { data: templates = [] } = useTemplates();
   const { data: competencies = [] } = useCompetencies();
+  const { data: competencyModels = [] } = useCompetencyModels();
   const seedMut = useSeedDesignPattern();
   const updateTemplate = useUpdateTemplate();
   const { data: workProducts = [] } = useWorkProducts();
@@ -1528,6 +1788,7 @@ function DesignPatternManage() {
       domainAnalyses={domainAnalyses}
       templates={templates}
       competencies={competencies}
+      competencyModels={competencyModels}
       seedPending={seedMut.isPending}
       onLoadDescendants={(id) =>
         apiFetch(`/api/designPatterns/${id}/descendants`, {}, auth)

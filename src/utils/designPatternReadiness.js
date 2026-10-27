@@ -15,6 +15,7 @@
 // snapshot — missing ids fail here; unknown ids fail on the server.
 
 import { designPatternMenuErrors, designPatternRelationErrors } from "./schema.js";
+import { focalKsaUnlinkedWarnings } from "./ksaStudentModelLink.js";
 
 export const DESIGN_PATTERN_STATUS_MIRROR = ["draft", "confirmed"];
 
@@ -67,5 +68,9 @@ export function designPatternReadiness(record = {}, options = {}) {
   errors.push(...designPatternMenuErrors(record, null, { claimComplete }));
   errors.push(...designPatternRelationErrors(record, null));
 
-  return { ready: errors.length === 0, errors };
+  // Unlinked focal KSAs are a warning. Confirm still succeeds: the
+  // existing confirm rules do not require a student-model citation.
+  const warnings = focalKsaUnlinkedWarnings(record);
+
+  return { ready: errors.length === 0, errors, warnings };
 }

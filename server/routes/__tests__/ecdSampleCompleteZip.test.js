@@ -195,6 +195,14 @@ describe("ecd-sample-complete.zip", () => {
     expect(fractionProc.rubricId).toBe(fractionRubric.id);
     expect(fractionProc.phases[0].rubricId).toBe(fractionRubric.id);
 
+    const plantCompetency = db.competencies.find((row) => row.name === "Names the part");
+    const plantModel = db.competencyModels.find((row) => row.name === "Plant part naming");
+    expect(pattern.focalKsas[0].competencyId).toBe(plantCompetency.id);
+    expect(pattern.focalKsas[0].competencyModelId).toBe(plantModel.id);
+    expect(pattern.focalKsas[0].smvId).toBe("smv-names-part");
+    expect(plantModel.smVariables.some((row) => row.id === "smv-names-part")).toBe(true);
+    expect(pattern.focalKsas[0].label).toBe("Plant-part vocabulary");
+
     expect(pattern.potentialWorkProducts[0].workProductId).toBe(partName.id);
     expect(pattern.potentialWorkProducts[0].workProductType).toBe("selected_response");
     expect(parent.potentialWorkProducts[0].workProductId).toBe(partFunction.id);

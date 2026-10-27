@@ -9,6 +9,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useDesignPatterns } from "@/api/queries/designPatterns";
+import { useCompetencies, useCompetencyModels } from "@/api/queries/competencies";
 import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
 import { useTemplates } from "@/api/queries/templates";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
@@ -16,10 +17,17 @@ import { useTaskModels } from "@/api/queries/taskModels";
 import { apiErrorMessage } from "@/api/apiClient";
 import ModelIngredientsCard from "@/components/shared/ModelIngredientsCard";
 import { designPatternReadiness } from "@/utils/designPatternReadiness";
+import { focalKsaLinkNote, ksaLinkText } from "@/utils/ksaStudentModelLink";
 import { formFromRow, templatesForPattern } from "./DesignPatternBuilder";
 
 function readinessLabel(record) {
   return designPatternReadiness(record, { strict: true }).ready ? "Ready" : "Not ready";
+}
+
+function readinessDetail(record) {
+  const label = readinessLabel(record);
+  const note = focalKsaLinkNote(record);
+  return note ? `${label} ${note}` : label;
 }
 
 function domainLabel(record, analysesById) {
@@ -60,11 +68,18 @@ export function ingredientGroupsForPattern(record, context) {
   );
 
   return [
-    { key: "focalKsas", label: "Focal KSAs", items: labelledItems(form.focalKsas) },
+    {
+      key: "focalKsas",
+      label: "Focal KSAs",
+      items: labelledItems(form.focalKsas, (entry) => ksaLinkText(entry, context)),
+    },
     {
       key: "additionalKsas",
       label: "Additional KSAs",
-      items: labelledItems(form.additionalKsas, (entry) => entry.relationship),
+      items: labelledItems(form.additionalKsas, (entry) => {
+        const link = ksaLinkText(entry, context);
+        return [entry.relationship, link].filter(Boolean).join("; ");
+      }),
     },
     {
       key: "potentialObservations",
@@ -139,7 +154,7 @@ function sortValue(record, key, context) {
     case "status":
       return record.status || "draft";
     case "readiness":
-      return readinessLabel(record);
+      return readinessDetail(record);
     case "domainAnalysis":
       return domainLabel(record, context.analysesById);
     case "templates":
@@ -167,12 +182,16 @@ const COLUMNS = [
 
 export default function DesignPatternTable() {
   const patternsQuery = useDesignPatterns();
+  const competenciesQuery = useCompetencies();
+  const modelsQuery = useCompetencyModels();
   const analysesQuery = useDomainAnalyses();
   const templatesQuery = useTemplates();
   const evidenceQuery = useEvidenceModels();
   const taskQuery = useTaskModels();
 
   const patterns = patternsQuery.data || [];
+  const competencies = competenciesQuery.data || [];
+  const competencyModels = modelsQuery.data || [];
   const domainAnalyses = analysesQuery.data || [];
   const templates = templatesQuery.data || [];
   const evidenceModels = evidenceQuery.data || [];
@@ -180,6 +199,8 @@ export default function DesignPatternTable() {
 
   const loading = [
     patternsQuery,
+    competenciesQuery,
+    modelsQuery,
     analysesQuery,
     templatesQuery,
     evidenceQuery,
@@ -188,6 +209,8 @@ export default function DesignPatternTable() {
 
   const queryError =
     patternsQuery.error ||
+    competenciesQuery.error ||
+    modelsQuery.error ||
     analysesQuery.error ||
     templatesQuery.error ||
     evidenceQuery.error ||
@@ -218,8 +241,24 @@ export default function DesignPatternTable() {
   }, [patterns]);
 
   const context = useMemo(
-    () => ({ analysesById, patternsById, templates, evidenceModels, taskModels }),
-    [analysesById, patternsById, templates, evidenceModels, taskModels]
+    () => ({
+      analysesById,
+      patternsById,
+      templates,
+      evidenceModels,
+      taskModels,
+      competencies,
+      competencyModels,
+    }),
+    [
+      analysesById,
+      patternsById,
+      templates,
+      evidenceModels,
+      taskModels,
+      competencies,
+      competencyModels,
+    ]
   );
 
   const filtered = useMemo(() => {
@@ -342,7 +381,7 @@ export default function DesignPatternTable() {
                     <td className="px-4 py-3 font-medium">{record.id}</td>
                     <td className="px-4 py-3 font-medium">{record.name}</td>
                     <td className="px-4 py-3 capitalize">{record.status || "draft"}</td>
-                    <td className="px-4 py-3">{readinessLabel(record)}</td>
+                    <td className="px-4 py-3">{readinessDetail(record)}</td>
                     <td className="px-4 py-3">{domainLabel(record, analysesById)}</td>
                     <td className="px-4 py-3">{templateCount}</td>
                     <td className="px-4 py-3">{seededCount}</td>

@@ -62,6 +62,7 @@ import {
   WORK_PRODUCT_TYPE_VALUES,
 } from "./ecdVocabulary.js";
 import { ADDITIONAL_KSA_RELATIONSHIP_VALUES } from "./additionalKsaAdvisory.js";
+import { ksaStudentModelLinkErrors } from "./ksaStudentModelLink.js";
 import {
   designFeatureContextFromTaskModel,
   isDesignFeatureValueAllowed,
@@ -929,8 +930,9 @@ export const schema = {
   // no delivery.
   // D134: library menus store object ids (workProductId, rubricId,
   // taskModelVariableId). Observations and characteristic features stay
-  // labelled possibilities — no new collections. Named `designPatterns`
-  // so the singularizer yields `designPattern`.
+  // labelled possibilities. Focal and additional KSAs keep their label
+  // and may also cite a competency and a student model variable.
+  // Named `designPatterns` so the singularizer yields `designPattern`.
   // ------------------------------------------------------------------
   designPatterns: {
     id: 'string',
@@ -1422,7 +1424,6 @@ const DESIGN_PATTERN_MENU_KEYS = DESIGN_PATTERN_PADI_ATTRIBUTES
   .filter((field) => field !== "name" && field !== "summary" && field !== "rationale");
 
 const DESIGN_PATTERN_LABEL_ONLY_MENUS = Object.freeze([
-  "focalKsas",
   "characteristicFeatures",
 ]);
 
@@ -1453,6 +1454,8 @@ function knownObservationIds(db) {
  * Menu entries are labelled objects. Library menus (work products, rubrics,
  * TMVs) must cite a real collection id when a row is present. Observations
  * may copy an existing observable id; characteristic features stay labels.
+ * Focal and additional KSAs keep the label. competencyId and the
+ * competencyModelId + smvId pair are optional, and a present id must exist.
  * Empty menus are allowed. A non-array is already caught by the generic
  * shape check.
  */
@@ -1485,6 +1488,10 @@ export function designPatternMenuErrors(obj = {}, db = null, { claimComplete = f
             `${key}[${i}].relationship is required to confirm. Use required_but_not_measured or potentially_confounding.`
           );
         }
+      }
+
+      if (key === "focalKsas" || key === "additionalKsas") {
+        errors.push(...ksaStudentModelLinkErrors(entry, `${key}[${i}]`, db));
         return;
       }
 
