@@ -34,6 +34,24 @@ router.use(sanitizeRequestInputs);
 // another examinee's id is 403 (D72). Teacher-report remains staff-only.
 const canViewTeacherReports = authorizeRole(["admin", "district", "teacher"]);
 
+function bnLevel(probability) {
+  return probability > 0.7 ? "Strong" : probability > 0.4 ? "Developing" : "Needs Support";
+}
+
+function bnNodeDistribution(session, node) {
+  const posterior = session?.studentModel?.smvPosteriors?.[node];
+  if (
+    posterior &&
+    posterior.modelFamily === "bayesian_network" &&
+    posterior.distribution &&
+    typeof posterior.distribution === "object" &&
+    !Array.isArray(posterior.distribution)
+  ) {
+    return posterior.distribution;
+  }
+  return null;
+}
+
 function personForStudentId(db, studentId) {
   const id = String(studentId || "");
   if (!id) return null;
@@ -162,11 +180,13 @@ router.get("/session/:id", (req, res) => {
 
   if (session.selectionStrategy === "BayesianNetwork" && session.studentModel?.bnPosteriors) {
     for (const [node, prob] of Object.entries(session.studentModel.bnPosteriors)) {
+      const distribution = bnNodeDistribution(session, node);
       report.constructs.push({
         type: "BayesianNetwork",
         node,
         probability: prob,
-        level: prob > 0.7 ? "Strong" : prob > 0.4 ? "Developing" : "Needs Support",
+        level: bnLevel(prob),
+        ...(distribution ? { distribution } : {}),
       });
     }
     report.recommendations.push("Focus on nodes with highest uncertainty.");
@@ -313,7 +333,14 @@ router.get("/session/:id/learner-feedback", (req, res) => {
 
   // BN version
   if (session.selectionStrategy === "BayesianNetwork" && session.studentModel?.bnPosteriors) {
+    feedback.bayesianNetwork = {};
     for (const [node, prob] of Object.entries(session.studentModel.bnPosteriors)) {
+      const distribution = bnNodeDistribution(session, node);
+      feedback.bayesianNetwork[node] = {
+        probability: prob,
+        level: bnLevel(prob),
+        ...(distribution ? { distribution } : {}),
+      };
       if (prob > 0.7) feedback.strengths.push(node);
       else if (prob < 0.4) feedback.focusAreas.push(node);
     }
@@ -470,11 +497,13 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, (req, res) => {
       const entropy = (p) => (p <= 0 || p >= 1)
         ? 0
         : -p * Math.log2(p) - (1 - p) * Math.log2(1 - p);
+      const distribution = bnNodeDistribution(session, node);
 
       report.modelSummary.BayesianNetwork[node] = {
         posterior: prob,
         entropy: entropy(prob),
-        level: prob > 0.7 ? "Strong" : prob > 0.4 ? "Developing" : "Needs Support"
+        level: bnLevel(prob),
+        ...(distribution ? { distribution } : {}),
       };
     }
 

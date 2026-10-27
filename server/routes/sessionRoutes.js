@@ -29,7 +29,9 @@ import {
 import {
   accumulateEvidence,
   applyPosteriorsToSession,
+  refreshBayesianNetworkPosteriors,
 } from "../delivery/evidenceAccumulation.js";
+import { bayesianObservableError, BAYESIAN_NETWORK_FAMILY } from "../delivery/bayesianNetwork.js";
 import {
   chooseSubmitParameterBinding,
   frozenScoringContext,
@@ -539,6 +541,9 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
       calibratedParameterSetId,
       item,
       freeze,
+      statisticalModel: activeStatModel,
+      evidenceModel: evidenceModelRecord,
+      db,
     });
 
     if (binding.error) {
@@ -579,6 +584,17 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     const evidence = identifyEvidence(workProduct, item, db, { taskModelId: task.taskModelId });
     if (evidence.refused) {
       return res.status(409).json({ error: evidence.error });
+    }
+
+    if (family === BAYESIAN_NETWORK_FAMILY) {
+      const networkError = bayesianObservableError({
+        statisticalModel: activeStatModel,
+        observableId: evidence.observableId,
+        parameterSource,
+        parameterSetId,
+        pilotParams,
+      });
+      if (networkError) return res.status(400).json({ error: networkError });
     }
 
     const response = {
@@ -1068,8 +1084,22 @@ router.post("/:id/resume", (req, res) => {
     return res.status(400).json({ error: "Session is not paused" });
   }
 
-  db.sessions[idx].status = SESSION_STATUS.IN_PROGRESS;
-  db.sessions[idx].updatedAt = new Date().toISOString();
+  const session = db.sessions[idx];
+  const draft = structuredClone(session);
+  draft.status = SESSION_STATUS.IN_PROGRESS;
+  draft.updatedAt = new Date().toISOString();
+  try {
+    refreshBayesianNetworkPosteriors(draft, db);
+  } catch {
+    // A refresh failure must not block the status flip.
+  }
+  const check = validateEntity("sessions", draft, db);
+  if (check.valid) {
+    db.sessions[idx] = draft;
+  } else {
+    session.status = SESSION_STATUS.IN_PROGRESS;
+    session.updatedAt = draft.updatedAt;
+  }
   saveDB(db);
   res.json(db.sessions[idx]);
 });

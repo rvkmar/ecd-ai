@@ -29,10 +29,11 @@
 // resolveDinaParameters and the agreement test.
 //
 // WHAT "READS THE LIVE POSTERIOR" MEANS HERE. `session.studentModel
-// .smvPosteriors` -- written by applyPosteriorsToSession() on every submit.
-// NOT `session.studentModel.irtTheta`, which only the legacy R-backend
-// branch ever writes, and not `bnPosteriors`, which nothing writes at all
-// (see F24 below).
+// .smvPosteriors`, written by applyPosteriorsToSession() on every submit.
+// A Bayesian network posterior also writes `bnPosteriors[smvId]` as the
+// probability of the last state. The full distribution is
+// `smvPosteriors[smvId].distribution`. `irtTheta` is still only written
+// by the legacy R-backend branch.
 //
 // ------------------------------------------------------------------
 // THE LEGACY QUESTION PATH IS QUARANTINED, NOT DELETED.
@@ -121,6 +122,15 @@
 // choice. On a roster session that order is the old first unanswered task.
 // G-DINA still cannot be ranked (D60 P1-5): it uses this same fallback.
 //
+// F24 (off calendar). Evidence Accumulation now writes bnPosteriors and
+// the distribution on smvPosteriors for a bayesian_network statistical
+// model. This strategy ranks that family by expected information gain.
+// The belief is the live distribution when its states match, else a
+// carried-forward prior, else the model prior, so the first item can be
+// ranked. DINA still requires a live posterior and does not invent 0.5.
+// jointPrior is not read. G-DINA still cannot be ranked. When nothing
+// can be ranked, the fallback is still pool order plus a warning.
+//
 // ------------------------------------------------------------------
 // WHAT THIS MODULE DELIBERATELY DOES NOT DO
 // ------------------------------------------------------------------
@@ -177,6 +187,12 @@ import {
 import {
   frozenScoringContext,
 } from "./parameterSourceResolution.js";
+import {
+  BAYESIAN_NETWORK_FAMILY,
+  beliefForBayesianSelection,
+  expectedInformationGain,
+  loadBayesianNetworkForSelection,
+} from "./bayesianNetwork.js";
 
 /* Moved here from sessionRoutes.js, where it existed solely to serve the
    selection branch this module replaces. Binary Shannon entropy in bits. */
@@ -1166,6 +1182,68 @@ function selectBayesianNetwork(session, db, warnings) {
     const evidenceModel = (db.evidenceModels || []).find((em) => em.id === entry.evidenceModelId);
     const statisticalModel = evidenceModel?.statisticalModels?.find((sm) => sm.active);
     const family = statisticalModel?.type;
+
+    if (family === BAYESIAN_NETWORK_FAMILY) {
+      const item = (db.items || []).find((it) => it.id === task.itemId);
+      const observableId = item?.observationId || entry.observationId;
+      if (!observableId) {
+        unrankable.push({
+          taskId,
+          reason: `Item '${task.itemId}' has no observable id, so Bayesian network information gain cannot be computed.`,
+        });
+        continue;
+      }
+      const freeze = frozenScoringContext(session, evidenceModel?.id);
+      if (freeze.error) {
+        unrankable.push({ taskId, reason: freeze.error });
+        continue;
+      }
+      const calibratedParameterSetId = statisticalModel.activeParameterSetId || null;
+      const parameterSource = freeze.frozenSource || (calibratedParameterSetId ? "calibrated" : "pilot");
+      const parameterSetId = parameterSource === "calibrated"
+        ? (freeze.frozenParameterSetId || calibratedParameterSetId)
+        : null;
+      const loaded = loadBayesianNetworkForSelection({
+        evidenceModel,
+        statisticalModel,
+        db,
+        parameterSource,
+        parameterSetId,
+      });
+      if (!loaded.ok) {
+        unrankable.push({ taskId, reason: loaded.error });
+        continue;
+      }
+      const row = loaded.network.cpt[observableId];
+      if (!row) {
+        unrankable.push({
+          taskId,
+          reason: `Bayesian model '${statisticalModel.id}' has no conditional probability for observable '${observableId}'.`,
+        });
+        continue;
+      }
+      const belief = beliefForBayesianSelection(session, loaded.network);
+      if (belief.error) {
+        unrankable.push({ taskId, reason: belief.error });
+        continue;
+      }
+      const gain = expectedInformationGain(belief.belief, row);
+      const candidate = {
+        taskId,
+        score: gain,
+        debug: {
+          totalGain: gain,
+          itemId: task.itemId,
+          smvId: loaded.network.smvId,
+          observableId,
+          parameterSource,
+          priorSource: belief.source,
+          source: "composite-library",
+        },
+      };
+      if (!best || candidate.score > best.score) best = candidate;
+      continue;
+    }
 
     if (!statisticalModel || !["dina", "gdina"].includes(family)) {
       unrankable.push({

@@ -25,6 +25,7 @@ import { intendedDifficultyPlacement } from "./intendedDifficulty.js";
 // confirm-time gate and attributeAccumulation.js's scoring-time gate
 // unable to disagree.
 import { dinaParametersAreUsable } from "../../server/delivery/attributeAccumulation.js";
+import { bayesianNetworkAuthoringErrors } from "../../server/delivery/bayesianNetwork.js";
 import { evaluateAssemblySufficiency } from "./assemblySufficiency.js";
 import { assemblyConstraintErrors } from "./assemblyConstraints.js";
 
@@ -697,9 +698,9 @@ export const schema = {
     // Accumulation posterior per Student Model Variable: { smvId, smvType,
     // evidenceModelId, parameterSetId, modelFamily, method, estimate,
     // precision, sem, responsesUsed, responsesExcluded, updatedAt }, keyed
-    // by smvId. `studentModel.irtTheta`/`.bnPosteriors` are a separate,
-    // pre-existing shape belonging to the legacy db.questions adaptive-
-    // selection path -- not reused or extended by the new field.
+    // by smvId. studentModel.irtTheta is the legacy scalar. F24 writes
+    // studentModel.bnPosteriors[smvId] as the probability of the last
+    // state. The full distribution stays on smvPosteriors[smvId].distribution.
     studentModel: 'object',
     selectionStrategy: 'string',
     nextTaskPolicy: 'object',
@@ -2555,11 +2556,8 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         errors.push(`Statistical model ${sm.id} violates single-latent constraint.`);
       }
 
-      if (strict && sm.type === "bayesian_network") {
-        const latentNodes = sm.structureConfig?.latentNodes || [];
-        if (latentNodes.length !== 1) {
-          errors.push(`Bayesian model ${sm.id} must contain exactly one latent node.`);
-        }
+      if (sm.type === "bayesian_network") {
+        errors.push(...bayesianNetworkAuthoringErrors(sm, obj, db, { strict }));
       }
 
       /* DINA / G-DINA — Day 18. A diagnostic classification model is
