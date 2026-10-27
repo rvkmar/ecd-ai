@@ -66,12 +66,15 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
   useEffect(() => {
     if (!observables.length) return;
     const existing = draftModel?.evaluationProcedures || [];
-    const byObs = new Map(existing.map((p) => [p.observableId, p]));
-    let changed = false;
-    const next = observables.map((obs) => {
-      if (byObs.has(obs.id)) return byObs.get(obs.id);
-      changed = true;
-      return {
+    const known = new Set(observables.map((obs) => obs.id));
+    // Keep every procedure that still cites a live observable, including
+    // a second rubric on the same observation. Opening this step used to
+    // collapse those down to one and drop the rest.
+    const kept = existing.filter((proc) => proc?.observableId && known.has(proc.observableId));
+    const covered = new Set(kept.map((proc) => proc.observableId));
+    const added = observables
+      .filter((obs) => !covered.has(obs.id))
+      .map((obs) => ({
         id: `ep_${obs.id}`,
         observableId: obs.id,
         workProductId: `wp_${obs.id}`,
@@ -80,17 +83,18 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
         description: "",
         artifactRef: "",
         artifact: null,
-      };
-    });
-    if (changed || next.length !== existing.length) {
-      updateField("evaluationProcedures", next);
-    }
+      }));
+    if (added.length === 0 && kept.length === existing.length) return;
+    updateField("evaluationProcedures", [...kept, ...added]);
   }, [observables.map((o) => o.id).join("|")]);
 
   function patchProcedure(observableId, patch) {
-    const next = (draftModel?.evaluationProcedures || []).map((p) =>
-      p.observableId === observableId ? { ...p, ...patch } : p
-    );
+    let patched = false;
+    const next = (draftModel?.evaluationProcedures || []).map((p) => {
+      if (patched || p.observableId !== observableId) return p;
+      patched = true;
+      return { ...p, ...patch };
+    });
     updateField("evaluationProcedures", next);
   }
 
@@ -250,6 +254,13 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
                           <option key={m} value={m}>{m}</option>
                         ))}
                       </select>
+                      {evaluationProcedures
+                        .filter((p) => p.observableId === obs.id && p.rubricId)
+                        .map((p) => (
+                          <p key={p.id || p.rubricId} className="mt-1 font-mono text-[11px] text-slate-500">
+                            Rubric {p.rubricId}
+                          </p>
+                        ))}
                     </td>
                     <td className="py-2 pr-3 space-y-1">
                       <input

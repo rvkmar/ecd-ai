@@ -54,11 +54,91 @@ function freshObservableId(index) {
   return `ob${Date.now()}${String(index).padStart(3, "0")}`;
 }
 
+function featureLabel(row) {
+  return String(row?.label || "").trim();
+}
+
+/**
+ * Accepted characteristic features are labels. blueprintConstraints has no
+ * other field for that text, so the label is the constraint. A row with no
+ * label cannot be copied.
+ */
+function characteristicFeatureConstraints(rows, warnings) {
+  const features = [];
+  rows.forEach((row, index) => {
+    const label = featureLabel(row);
+    if (!label) {
+      warnings.push(
+        `Characteristic feature ${index + 1} has no label, so it was not copied into blueprint constraints.`
+      );
+      return;
+    }
+    features.push({ label });
+  });
+  return features.length ? { characteristicFeatures: features } : {};
+}
+
+function freshProcedureId(index) {
+  return `ep${Date.now()}${String(index).padStart(3, "0")}`;
+}
+
+/**
+ * A potential rubric becomes an evaluation procedure only when its rubricId
+ * still names a rubric and an accepted observation can cite it. Each
+ * resolved rubric is attached to every accepted observation. The pattern
+ * does not say which observation a rubric scores.
+ */
+function evaluationProceduresFromRubrics(rows, observables, db, warnings) {
+  const procedures = [];
+  const rubrics = db?.rubrics || [];
+  let sequence = 0;
+
+  rows.forEach((row, index) => {
+    const label = featureLabel(row);
+    const name = label || `Potential rubric ${index + 1}`;
+    const rubricId = row && typeof row === "object" ? String(row.rubricId || "").trim() : "";
+    if (!rubricId) {
+      warnings.push(
+        `Potential rubric "${name}" has a label but no rubric id, so it was not turned into an evaluation procedure.`
+      );
+      return;
+    }
+    const rubric = rubrics.find((item) => item && item.id === rubricId);
+    if (!rubric) {
+      warnings.push(
+        `Potential rubric "${name}" cites rubric "${rubricId}", which no longer exists, so it was not turned into an evaluation procedure.`
+      );
+      return;
+    }
+    if (!observables.length) {
+      warnings.push(
+        `Potential rubric "${name}" cites rubric "${rubricId}", but no observation was selected, so it was not turned into an evaluation procedure.`
+      );
+      return;
+    }
+    const description = label || `Scored with rubric ${rubric.name || rubricId}.`;
+    for (const observable of observables) {
+      procedures.push({
+        id: freshProcedureId(sequence),
+        observableId: observable.id,
+        method: "rubric",
+        rubricId,
+        description,
+      });
+      sequence += 1;
+    }
+  });
+
+  return procedures;
+}
+
 /**
  * Writes two drafts and records the same seededFrom on both.
  * allowDraftParents is used only so the new Task Model may cite the new
- * draft Evidence Model. Characteristic-feature labels are not written into
- * blueprintConstraints. Rubric ids are not turned into evaluation procedures.
+ * draft Evidence Model. Accepted characteristic features are copied onto
+ * blueprintConstraints.characteristicFeatures. Accepted rubric ids that
+ * still exist become evaluation procedures. A row that cannot be copied
+ * is skipped and named in warnings. Both records stay drafts.
  */
 export function seedFromDesignPattern({
   pattern,
@@ -112,13 +192,25 @@ export function seedFromDesignPattern({
     },
   };
 
+  const warnings = [];
+  const evaluationProcedures = evaluationProceduresFromRubrics(
+    split.accepted.potentialRubrics,
+    observables,
+    db,
+    warnings
+  );
+  const blueprintConstraints = characteristicFeatureConstraints(
+    split.accepted.characteristicFeatures,
+    warnings
+  );
+
   const evidence = createEvidenceModelRecord(
     {
       name: `${pattern.name} evidence`,
       competencyId,
       ...(competencyModelId ? { competencyModelId } : {}),
       observables,
-      evaluationProcedures: [],
+      evaluationProcedures,
       seededFrom,
     },
     db
@@ -138,7 +230,7 @@ export function seedFromDesignPattern({
         weight: 0,
       })),
       taskModelVariableIds,
-      blueprintConstraints: {},
+      blueprintConstraints,
       seededFrom: JSON.parse(JSON.stringify(seededFrom)),
     },
     db,
@@ -156,6 +248,7 @@ export function seedFromDesignPattern({
     status: 201,
     evidenceModel: evidence.record,
     taskModel: task.record,
+    warnings,
   };
 }
 

@@ -133,6 +133,9 @@ export default function Step5Blueprint({
 
     const allowedInteractionTypes = blueprint.allowedInteractionTypes || [];
     const allowedScoringMethods = blueprint.allowedScoringMethods || [];
+    const characteristicFeatures = (blueprint.characteristicFeatures || []).filter(
+        (feature) => feature && String(feature.label || "").trim()
+    );
 
     return (
         <div className="space-y-6">
@@ -146,6 +149,19 @@ export default function Step5Blueprint({
                     validation, not merely advisory.
                 </p>
             </div>
+
+            {characteristicFeatures.length > 0 ? (
+                <Section
+                    title="Characteristic features"
+                    description="Copied from the design pattern when this task model was seeded. They stay the same across tasks in the family. Variable features stay on the task model variable list."
+                >
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-slate-800">
+                        {characteristicFeatures.map((feature, index) => (
+                            <li key={`${feature.label}-${index}`}>{feature.label}</li>
+                        ))}
+                    </ul>
+                </Section>
+            ) : null}
 
             {/* Difficulty */}
             <Section

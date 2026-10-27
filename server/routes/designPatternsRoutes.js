@@ -191,6 +191,7 @@ router.post("/:id/seed", canAuthor, (req, res) => {
   res.status(201).json({
     evidenceModel: result.evidenceModel,
     taskModel: result.taskModel,
+    warnings: result.warnings || [],
   });
 });
 
