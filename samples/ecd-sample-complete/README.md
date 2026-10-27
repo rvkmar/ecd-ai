@@ -21,7 +21,7 @@ One zip the Settings zip uploader accepts with no failed rows. It is two short c
 | taskModels.json | 3 | Name the plant part, Name the plant function, Name the fraction |
 | items.json | 4 | Leaf, root, job of the leaf, equivalent to 2/4 |
 | qMatrixModels.json | 2 | Plant part Q-matrix, Fraction equivalence Q-matrix |
-| assemblyModels.json | 2 | Plant assembly on the fixed form, fraction assembly on the Bayesian policy |
+| assemblyModels.json | 2 | Plant assembly on the fixed form, with task-model counts and a per-item cap. Fraction assembly on the Bayesian policy |
 | presentationModels.json | 3 | One linear overlay per task model |
 | deliveryModels.json | 1 | Plant part naming delivery: student model, assembly model, fixed policy, plant presentation, 20 minute administration |
 | templates.json | 3 | One family binding per task |

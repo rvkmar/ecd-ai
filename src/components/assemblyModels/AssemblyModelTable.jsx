@@ -6,6 +6,9 @@ import React, { useMemo, useState } from "react";
 import { useAssemblyModels } from "@/api/queries/assemblyModels";
 import { useCompetencyModels } from "@/api/queries/competencies";
 import { usePolicies } from "@/api/queries/policies";
+import { useTaskModels } from "@/api/queries/taskModels";
+import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
+import { constraintBoundLabel } from "@/utils/assemblyConstraints";
 import { apiErrorMessage } from "@/api/apiClient";
 import ModelIngredientsCard from "@/components/shared/ModelIngredientsCard";
 import { meetsAssemblyConfirmedGates } from "./assemblyModelReadiness";
@@ -60,6 +63,48 @@ function targetSecondary(target) {
     return `accuracy ≥ ${target.requiredClassificationAccuracy}`;
   }
   return "";
+}
+
+function constraintItems(record, context) {
+  const constraints = record?.constraints;
+  if (!constraints || typeof constraints !== "object") return [];
+  const items = [];
+  for (const row of constraints.taskModelCounts || []) {
+    items.push({
+      id: row.taskModelId,
+      primary: citedName(context.taskModels, row.taskModelId) || row.taskModelId || "Task model",
+      secondary: constraintBoundLabel(row),
+    });
+  }
+  for (const row of constraints.contentStandardCounts || []) {
+    items.push({
+      id: row.code,
+      primary: row.code || "Content standard",
+      secondary: `content standard, ${constraintBoundLabel(row)}`,
+    });
+  }
+  for (const row of constraints.taskModelVariableCounts || []) {
+    const name = citedName(context.taskModelVariables, row.taskModelVariableId) || row.taskModelVariableId;
+    items.push({
+      id: `${row.taskModelVariableId}:${row.value}`,
+      primary: `${name} = ${row.value}`,
+      secondary: constraintBoundLabel(row),
+    });
+  }
+  if (constraints.exposure?.maxPerItem != null) {
+    items.push({
+      primary: "Exposure",
+      secondary: `at most ${constraints.exposure.maxPerItem} delivery of each item in the session`,
+    });
+  }
+  for (const group of constraints.enemies || []) {
+    const ids = group.itemIds || [];
+    items.push({
+      primary: "Enemy items",
+      secondary: ids.join(", "),
+    });
+  }
+  return items;
 }
 
 function stoppingRuleItems(record) {
@@ -127,6 +172,11 @@ export function ingredientGroupsForAssembly(record, context) {
       items: bindingItem(context.policies, policyIdOf(record)),
     },
     {
+      key: "constraints",
+      label: "Content constraints",
+      items: constraintItems(record, context),
+    },
+    {
       key: "version",
       label: "Version",
       items: versionItems,
@@ -178,10 +228,14 @@ export default function AssemblyModelTable() {
   const assemblyQuery = useAssemblyModels();
   const competencyQuery = useCompetencyModels();
   const policyQuery = usePolicies();
+  const taskModelQuery = useTaskModels();
+  const variableQuery = useTaskModelVariables();
 
   const assemblyModels = assemblyQuery.data || [];
   const competencyModels = competencyQuery.data || [];
   const policies = policyQuery.data || [];
+  const taskModels = taskModelQuery.data || [];
+  const taskModelVariables = variableQuery.data || [];
 
   const loading = [assemblyQuery, competencyQuery, policyQuery].some((query) => query.isLoading);
   const queryError = assemblyQuery.error || competencyQuery.error || policyQuery.error;
@@ -195,8 +249,8 @@ export default function AssemblyModelTable() {
   const [viewMode, setViewMode] = useState("table");
 
   const context = useMemo(
-    () => ({ competencyModels, policies }),
-    [competencyModels, policies]
+    () => ({ competencyModels, policies, taskModels, taskModelVariables }),
+    [competencyModels, policies, taskModels, taskModelVariables]
   );
 
   const filtered = useMemo(() => {

@@ -158,6 +158,9 @@ const REF_PATHS = {
     ["competencyModelId", "competencyModels"],
     ["parentModelId", "assemblyModels"],
     ["selectionAlgorithm.policyId", "policies"],
+    ["constraints.taskModelCounts[].taskModelId", "taskModels"],
+    ["constraints.taskModelVariableCounts[].taskModelVariableId", "taskModelVariables"],
+    ["constraints.enemies[].itemIds[]", "items"],
   ],
   presentationModels: [
     ["taskModelId", "taskModels"],

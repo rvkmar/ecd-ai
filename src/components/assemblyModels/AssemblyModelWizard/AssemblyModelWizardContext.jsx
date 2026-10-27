@@ -41,6 +41,10 @@ import {
   meetsAssemblyConfirmedGates,
   hasAssemblyStoppingRule,
 } from "../assemblyModelReadiness";
+import {
+  assemblyConstraintErrors,
+  assemblyConstraintsActive,
+} from "@/utils/assemblyConstraints";
 const AssemblyModelWizardContext = createContext(null);
 
 export function useAssemblyModelWizard() {
@@ -87,6 +91,7 @@ function draftFromSeed(seed) {
     selectionAlgorithm: seed.selectionAlgorithm?.policyId
       ? { policyId: seed.selectionAlgorithm.policyId }
       : {},
+    constraints: seed.constraints ? structuredClone(seed.constraints) : undefined,
   };
 }
 
@@ -189,6 +194,12 @@ export function AssemblyModelWizardProvider({
     markDirty();
   }
 
+  function replaceConstraints(next) {
+    if (draft.locked) return;
+    setDraft((d) => ({ ...d, constraints: next }));
+    markDirty();
+  }
+
   /* =====================================================
      STEP VALIDITY -- assemblyModelReadiness (D54 agreement).
   ===================================================== */
@@ -199,9 +210,10 @@ export function AssemblyModelWizardProvider({
     () => ({
       1: Boolean(draft.name && draft.competencyModelId),
       2: Array.isArray(draft.targetsBySMV) && draft.targetsBySMV.length > 0,
-      3: true, // stopping rules are optional until confirm; Review (step 5) is the real gate
-      4: Boolean(draft.selectionAlgorithm?.policyId),
-      5: draft.status === "reviewed" ? meetsConfirmed : meetsReviewed,
+      3: true, // stopping rules are optional until confirm; Review is the real gate
+      4: assemblyConstraintErrors(draft.constraints, null).length === 0,
+      5: Boolean(draft.selectionAlgorithm?.policyId),
+      6: draft.status === "reviewed" ? meetsConfirmed : meetsReviewed,
     }),
     [draft, meetsReviewed, meetsConfirmed]
   );
@@ -237,6 +249,7 @@ export function AssemblyModelWizardProvider({
       targetsBySMV: draft.targetsBySMV,
       stoppingRules: hasStoppingRule ? draft.stoppingRules : undefined,
       selectionAlgorithm: draft.selectionAlgorithm?.policyId ? draft.selectionAlgorithm : undefined,
+      constraints: assemblyConstraintsActive(draft.constraints) ? draft.constraints : null,
     };
 
     try {
@@ -318,6 +331,7 @@ export function AssemblyModelWizardProvider({
     clearTargetForSmv,
     patchStoppingRules,
     setSelectionPolicy,
+    replaceConstraints,
 
     canProceed,
     saveDraft,

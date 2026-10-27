@@ -253,6 +253,52 @@ describe("POST /api/sessions assignment", () => {
     expect(res.body.nextTaskPolicy.policyId).toBe("p-fixed");
   });
 
+  it("rejects a session strategy that disagrees with the assembly model policy", async () => {
+    const db = {
+      sessions: [],
+      students: [],
+      tasks: [{ id: "t1" }],
+      policies: [
+        { id: "p-fixed", type: "fixed", name: "Fixed" },
+        { id: "p-irt", type: "IRT", name: "Adaptive" },
+      ],
+      assemblyModels: [
+        {
+          id: "am1",
+          selectionAlgorithm: { policyId: "p-fixed" },
+        },
+      ],
+      deliveryModels: [
+        {
+          id: "dm1",
+          name: "Sitting",
+          policyId: "p-irt",
+          assemblyModelId: "am1",
+          competencyModelId: "cm1",
+        },
+      ],
+    };
+    loadDB.mockReturnValue(db);
+    const conflict = await request(app)
+      .post("/api/sessions")
+      .send({
+        taskIds: ["t1"],
+        studentId: "stud1",
+        selectionStrategy: "IRT",
+        nextTaskPolicy: { policyId: "p-irt" },
+        deliveryModelId: "dm1",
+      });
+    expect(conflict.status).toBe(400);
+    expect(conflict.body.error).toMatch(/does not match Assembly Model 'am1'/);
+
+    const omitted = await request(app)
+      .post("/api/sessions")
+      .send({ taskIds: ["t1"], studentId: "stud1", deliveryModelId: "dm1" });
+    expect(omitted.status).toBe(201);
+    expect(omitted.body.selectionStrategy).toBe("fixed");
+    expect(omitted.body.nextTaskPolicy.policyId).toBe("p-fixed");
+  });
+
   it("rejects an unknown delivery model and leaves a session without one unchanged", async () => {
     const db = dbWithPolicy();
     loadDB.mockReturnValue(db);

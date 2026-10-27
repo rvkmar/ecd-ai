@@ -26,6 +26,7 @@ import { intendedDifficultyPlacement } from "./intendedDifficulty.js";
 // unable to disagree.
 import { dinaParametersAreUsable } from "../../server/delivery/attributeAccumulation.js";
 import { evaluateAssemblySufficiency } from "./assemblySufficiency.js";
+import { assemblyConstraintErrors } from "./assemblyConstraints.js";
 
 // The shared ECD response vocabulary. Imported rather than restated so the
 // item rules below and the Item Wizard read the SAME compatibility map --
@@ -703,9 +704,15 @@ export const schema = {
     selectionStrategy: 'string',
     nextTaskPolicy: 'object',
     // Optional. When set, activity selection uses this delivery model's
-    // assembly model and selection policy. Absent means the session keeps
-    // the inferred assembly model and its own selectionStrategy.
+    // assembly model. If that assembly model declares a selection policy,
+    // that policy drives selection. Absent means the session keeps the
+    // inferred assembly model and its own selectionStrategy.
     deliveryModelId: 'string',
+    // Written on submit when an assembly model governs the session.
+    // Counts of delivered tasks, SMV targets, and content constraints.
+    // The submit response's assemblyProgress array is a different value:
+    // it is the live SMV rows, spread over this field for that response only.
+    assemblyProgress: 'object',
     // True only when this occasion was asked to carry estimates forward.
     // Absent on legacy sessions, which start from an empty student model.
     carryForward: 'boolean',
@@ -814,6 +821,9 @@ export const schema = {
     targetsBySMV: 'array',
     stoppingRules: 'object',
     selectionAlgorithm: 'object',
+    // Optional content constraints. Absent means delivery is unchanged.
+    // Shape is checked in the assemblyModels block via assemblyConstraintErrors.
+    constraints: 'object',
     status: 'string',
     // Day 21 (Week 5): lifecycle wiring. `locked`/`versionNumber`/
     // `parentModelId` bring this entity's shape in line with every other
@@ -5416,8 +5426,8 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       if (!stopped || typeof stopped !== "object" || Array.isArray(stopped)) {
         errors.push("stopped must be an object.");
       } else {
-        if (stopped.rule !== "maxItems" && stopped.rule !== "targetsMet") {
-          errors.push("stopped.rule must be 'maxItems' or 'targetsMet'.");
+        if (stopped.rule !== "maxItems" && stopped.rule !== "targetsMet" && stopped.rule !== "constraints") {
+          errors.push("stopped.rule must be 'maxItems', 'targetsMet', or 'constraints'.");
         }
         if (typeof stopped.assemblyModelId !== "string" || !stopped.assemblyModelId) {
           errors.push("stopped.assemblyModelId must be a non-empty string.");
@@ -5432,6 +5442,36 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           if (typeof stopped.stoppedAt !== "string" || Number.isNaN(Date.parse(stopped.stoppedAt))) {
             errors.push("stopped.stoppedAt must be an ISO date string when present.");
           }
+        }
+      }
+    }
+
+    if (obj.assemblyProgress !== undefined) {
+      const snap = obj.assemblyProgress;
+      if (!snap || typeof snap !== "object" || Array.isArray(snap)) {
+        errors.push("assemblyProgress must be an object.");
+      } else {
+        if (typeof snap.assemblyModelId !== "string" || !snap.assemblyModelId) {
+          errors.push("assemblyProgress.assemblyModelId must be a non-empty string.");
+        }
+        if (!Number.isInteger(snap.delivered) || snap.delivered < 0) {
+          errors.push("assemblyProgress.delivered must be a non-negative integer.");
+        }
+        if (typeof snap.updatedAt !== "string" || Number.isNaN(Date.parse(snap.updatedAt))) {
+          errors.push("assemblyProgress.updatedAt must be an ISO date string.");
+        }
+        const targets = snap.targets;
+        if (!targets || typeof targets !== "object" || Array.isArray(targets)) {
+          errors.push("assemblyProgress.targets must be an object.");
+        } else {
+          for (const field of ["declared", "scored", "met"]) {
+            if (!Number.isInteger(targets[field]) || targets[field] < 0) {
+              errors.push(`assemblyProgress.targets.${field} must be a non-negative integer.`);
+            }
+          }
+        }
+        if (snap.constraints !== undefined && (typeof snap.constraints !== "object" || snap.constraints === null || Array.isArray(snap.constraints))) {
+          errors.push("assemblyProgress.constraints must be an object when present.");
         }
       }
     }
@@ -6035,6 +6075,10 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       errors.push("selectionAlgorithm.policyId is required.");
     } else if (db && !db.policies?.find(p => p.id === obj.selectionAlgorithm.policyId)) {
       errors.push(`Invalid selectionAlgorithm.policyId: ${obj.selectionAlgorithm.policyId}`);
+    }
+
+    if (obj.constraints !== undefined && obj.constraints !== null) {
+      errors.push(...assemblyConstraintErrors(obj.constraints, db));
     }
   }
 

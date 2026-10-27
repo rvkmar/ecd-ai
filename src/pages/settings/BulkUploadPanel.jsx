@@ -121,7 +121,7 @@ export default function BulkUploadPanel() {
 
         <BulkUploadCard
           title="Assembly Models"
-          description='Array of { name, competencyModelId|competencyModelName, targetsBySMV: [{ smvId|smvName, requiredSEM|requiredClassificationAccuracy }], stoppingRules, selectionAlgorithm: { policyId|policyName } }.'
+          description='Array of { name, competencyModelId|competencyModelName, targetsBySMV: [{ smvId|smvName, requiredSEM|requiredClassificationAccuracy }], stoppingRules, selectionAlgorithm: { policyId|policyName }, constraints? }.'
           endpoint="/api/assemblyModels/bulk"
           invalidateKey={assemblyModelsKey}
           sampleHint="See samples/newtonian_mechanics_assembly.json"

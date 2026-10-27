@@ -293,3 +293,54 @@ describe("assemblyModels — deliberate mutations", () => {
     expect(errors.join(" ")).not.toMatch(/selectionAlgorithm is required and must reference/);
   });
 });
+
+describe("assemblyModels constraints", () => {
+  const withRefs = () =>
+    makeDb({
+      taskModels: [{ id: "tm1" }],
+      taskModelVariables: [{ id: "tmv1" }],
+      items: [{ id: "it1" }, { id: "it2" }],
+      curricularPolicies: [
+        { id: "cp1", curricularGoals: [{ code: "CG-S1", competencies: [{ code: "C-S1.1" }] }] },
+      ],
+    });
+
+  it("accepts an assembly model with no constraints", () => {
+    expect(assemblyErrors(makeAssemblyModel())).toEqual([]);
+    expect(assemblyErrors(makeAssemblyModel({ constraints: null }))).toEqual([]);
+  });
+
+  it("accepts task model, content standard, variable, exposure, and enemy rows", () => {
+    const model = makeAssemblyModel({
+      constraints: {
+        taskModelCounts: [{ taskModelId: "tm1", min: 1, max: 4 }],
+        contentStandardCounts: [{ code: "C-S1.1", min: 1 }],
+        taskModelVariableCounts: [{ taskModelVariableId: "tmv1", value: "remember", max: 2 }],
+        exposure: { maxPerItem: 1 },
+        enemies: [{ itemIds: ["it1", "it2"] }],
+      },
+    });
+    expect(assemblyErrors(model, withRefs())).toEqual([]);
+  });
+
+  it("rejects unknown fields, inverted bounds, dangling ids, and a short enemy group", () => {
+    const model = makeAssemblyModel({
+      constraints: {
+        blueprint: true,
+        taskModelCounts: [{ taskModelId: "missing", min: 5, max: 1 }],
+        contentStandardCounts: [{ code: "NOPE", max: 1 }],
+        taskModelVariableCounts: [{ taskModelVariableId: "tmv1", value: "", min: 1 }],
+        exposure: { maxUses: 2 },
+        enemies: [{ itemIds: ["it1"] }],
+      },
+    });
+    const text = assemblyErrors(model, withRefs()).join(" ");
+    expect(text).toMatch(/unknown field 'blueprint'/);
+    expect(text).toMatch(/does not match a task model/);
+    expect(text).toMatch(/min cannot exceed max/);
+    expect(text).toMatch(/not a curricular goal or competency code/);
+    expect(text).toMatch(/value must be a non-empty string/);
+    expect(text).toMatch(/unknown field 'maxUses'/);
+    expect(text).toMatch(/at least two distinct items/);
+  });
+});

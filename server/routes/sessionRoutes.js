@@ -40,7 +40,8 @@ import { recordSubmitOutcome } from "../utils/submitStats.js";
 // D56: Activity Selection. /next-task's whole strategy block used to live
 // inline below; it now lives in one module that reads the composite library
 // and the live posteriors instead of db.questions. See that file's header.
-import { selectNextActivity } from "../delivery/activitySelection.js";
+import { selectNextActivity, resolveAssemblyModelForSession, selectionPolicyForDelivery } from "../delivery/activitySelection.js";
+import { persistableAssemblyProgress } from "../delivery/assemblyConstraints.js";
 import {
   commitFinishedSession,
   seedSessionStudentModel,
@@ -101,14 +102,28 @@ function rejectUnassignedStudent(req, res, session, db) {
   return false;
 }
 
+function storeAssemblyProgress(session, db, smvProgress) {
+  const resolution = resolveAssemblyModelForSession(session, db);
+  if (!resolution?.assemblyModel) return;
+  session.assemblyProgress = persistableAssemblyProgress(
+    session,
+    resolution.assemblyModel,
+    db,
+    smvProgress
+  );
+}
+
 // ------------------------------
 // POST /api/sessions
 // ------------------------------
 // body: { taskIds, studentId?, studentIds?, cohortId?, selectionStrategy?, nextTaskPolicy?, deliveryModelId? }
 // One session per assignee so each examinee has their own responses.
 // Status starts as `ready`. Staff Play persists `in_progress`.
-// deliveryModelId, when set, supplies the selection policy. The body's
-// selectionStrategy and nextTaskPolicy are not consulted in that case.
+// deliveryModelId, when set, reaches an assembly model. If that assembly
+// model declares a selection policy, that policy is stored. An explicit
+// selectionStrategy or nextTaskPolicy.policyId that disagrees is rejected.
+// If the assembly model does not declare a usable policy, the delivery
+// model's own policy is stored and the body is not consulted.
 router.post("/", (req, res) => {
   const { taskIds, studentId, studentIds, cohortId, selectionStrategy, nextTaskPolicy, deliveryModelId } = req.body;
   const db = loadDB();
@@ -144,7 +159,8 @@ router.post("/", (req, res) => {
   // authored under Home, Selection policies. When several policies
   // share the strategy, the session must name one. A single match is
   // the bootstrap for a store that has not been asked to choose yet.
-  // A delivery model replaces that choice: its policyId is the policy.
+  // A delivery model replaces that choice when its assembly model
+  // declares a policy. Otherwise the delivery model's own policy is used.
   let strategy = selectionStrategy || "fixed";
   let policyConfig = nextTaskPolicy || {};
   let boundDeliveryModelId = null;
@@ -157,14 +173,30 @@ router.post("/", (req, res) => {
         error: `Invalid deliveryModelId: ${deliveryModelId}`,
       });
     }
-    const chosen = availablePolicies.find((p) => p.id === deliveryModel.policyId);
-    if (!chosen) {
-      return res.status(400).json({
-        error: `Delivery model '${deliveryModel.id}' names selection policy '${deliveryModel.policyId || ""}', which is not in /api/policies`,
-      });
+    const resolved = selectionPolicyForDelivery(deliveryModel, db);
+    if (resolved.error) {
+      return res.status(400).json({ error: resolved.error });
     }
-    strategy = chosen.type;
-    policyConfig = { policyId: chosen.id };
+    if (resolved.source === "assemblyModel") {
+      const explicitStrategy =
+        typeof selectionStrategy === "string" && selectionStrategy !== "" ? selectionStrategy : null;
+      const explicitPolicyId =
+        nextTaskPolicy && typeof nextTaskPolicy.policyId === "string" && nextTaskPolicy.policyId !== ""
+          ? nextTaskPolicy.policyId
+          : null;
+      if (explicitStrategy && explicitStrategy !== resolved.policy.type) {
+        return res.status(400).json({
+          error: `Session selectionStrategy '${explicitStrategy}' does not match Assembly Model '${resolved.assemblyModel.id}' policy '${resolved.policy.id}' (type '${resolved.policy.type}'). That assembly model policy is the selection policy for delivery model '${deliveryModel.id}'. Omit selectionStrategy, or send '${resolved.policy.type}'.`,
+        });
+      }
+      if (explicitPolicyId && explicitPolicyId !== resolved.policy.id) {
+        return res.status(400).json({
+          error: `nextTaskPolicy.policyId '${explicitPolicyId}' does not match Assembly Model '${resolved.assemblyModel.id}' policy '${resolved.policy.id}'. That assembly model policy is the selection policy for delivery model '${deliveryModel.id}'.`,
+        });
+      }
+    }
+    strategy = resolved.policy.type;
+    policyConfig = { policyId: resolved.policy.id };
     boundDeliveryModelId = deliveryModel.id;
   } else {
     const ofType = availablePolicies.filter((p) => p.type === strategy);
@@ -668,6 +700,8 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
       response.accumulationNote = `Evidence accumulation failed: ${err.message}`;
     }
 
+    storeAssemblyProgress(session, db, assemblyProgress);
+
     const { valid, errors } = validateEntity("sessions", session, db);
     if (!valid) {
       return res.status(400).json({ error: "Schema validation failed", details: errors });
@@ -680,9 +714,10 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
       itemId,
       responseCount: (session.responses || []).length,
     });
-    // `assemblyProgress` and `accumulationWarnings` are surfaced in the
-    // response only -- see assemblyProgress.js's own module header for why
-    // neither is ever persisted or acted on here.
+    // The response key `assemblyProgress` stays the SMV-row array callers
+    // already read. The stored session.assemblyProgress is the snapshot
+    // written by storeAssemblyProgress, and the spread above is overwritten
+    // here on purpose. accumulationWarnings stay response-only.
     const pendingHumanRatings = pendingHumanRatingsFromSession(session);
     return res.json({
       ...session,
@@ -762,6 +797,8 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
   // itemId path). Calling R from /submit would put R on a session request
   // path -- ADR 0001 forbids that. /irt/estimate is not mounted.
 
+  storeAssemblyProgress(session, db, []);
+
   const { valid, errors } = validateEntity("sessions", session, db);
   if (!valid) {
     return res.status(400).json({ error: "Schema validation failed", details: errors });
@@ -828,6 +865,8 @@ router.post("/:id/human-rating", staffRater, (req, res) => {
   } catch (err) {
     completed.accumulationNote = `Evidence accumulation failed: ${err.message}`;
   }
+
+  storeAssemblyProgress(session, db, assemblyProgress);
 
   const { valid, errors } = validateEntity("sessions", session, db);
   if (!valid) {

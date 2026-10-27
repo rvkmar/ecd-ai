@@ -20,6 +20,7 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
+import { assemblyConstraintsActive } from "../../src/utils/assemblyConstraints.js";
 import { validateAssemblyModelLifecycle } from "../utils/lifecycleValidation.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
 
@@ -155,6 +156,10 @@ router.put("/:id", canAuthor, (req, res) => {
     });
   }
 
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, "constraints") && req.body.constraints == null) {
+    delete updated.constraints;
+  }
+
   db.assemblyModels[idx] = updated;
   saveDB(db);
   res.json(updated);
@@ -269,6 +274,7 @@ export function createAssemblyModelRecord(payload = {}, db, idSuffix = "", optio
     targetsBySMV,
     stoppingRules: payload.stoppingRules || {},
     selectionAlgorithm,
+    ...(payload.constraints != null ? { constraints: payload.constraints } : {}),
     status: preserve && payload.status ? payload.status : "draft",
     locked: preserve && typeof payload.locked === "boolean" ? payload.locked : false,
     versionNumber: payload.versionNumber ?? 1,
@@ -292,6 +298,10 @@ export function createAssemblyModelRecord(payload = {}, db, idSuffix = "", optio
       error: "Assembly model lifecycle validation failed",
       details: lifecycleErrors,
     };
+  }
+
+  if (record.constraints != null && !assemblyConstraintsActive(record.constraints)) {
+    delete record.constraints;
   }
 
   db.assemblyModels = db.assemblyModels || [];

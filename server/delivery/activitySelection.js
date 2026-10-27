@@ -95,13 +95,16 @@
 //   target against a posterior that is not a mastery probability, or a SEM
 //   target on an incomparable scale. null is still not true, and still
 //   never stops a session.
-// * It does not override the session's own `selectionStrategy` with the
-//   Assembly Model's `selectionAlgorithm` pointer. A mismatch between the
-//   two is reported as a warning, unless the session cites a delivery
-//   model. That delivery model's policy and assembly model are
-//   authoritative: no inference, and no advisory warning. A session
-//   with no deliveryModelId keeps the warning. D49a's own open decision
-//   settled the Assembly Model pointer: refuse or advise, never act quietly.
+// * A session with no deliveryModelId keeps its own selectionStrategy.
+//   The Assembly Model pointer is a warning when the two disagree, and
+//   it does not change the strategy. A session that cites a delivery
+//   model uses the assembly model that delivery model names. When that
+//   assembly model declares a usable selection policy, that policy
+//   drives selection. The stored session strategy and the delivery
+//   model's own policyId do not. Session create rejects an explicit
+//   strategy or policy id that disagrees. If the assembly model does
+//   not declare a usable policy, selection falls back to the delivery
+//   model's policy, which is the G15 rule.
 // * It does not persist anything. Pure computation over a db snapshot plus
 //   the session, matching compositeLibrary/builder.js and every other
 //   module in server/delivery/.
@@ -127,7 +130,15 @@ import {
 } from "./assemblyProgress.js";
 import { dinaParametersAreUsable } from "./attributeAccumulation.js";
 import { attributeIdsForDeliveryItem } from "../../src/utils/qMatrixEntries.js";
+import { assemblyConstraintsActive } from "../../src/utils/assemblyConstraints.js";
 import { activePackageFor } from "../compositeLibrary/activePackage.js";
+import {
+  planConstraintSelection,
+  selectFixedConstrained,
+  targetsMetHeldForConstraints,
+  constraintHoldWarning,
+  maxItemsMinimumWarning,
+} from "./assemblyConstraints.js";
 import {
   frozenScoringContext,
 } from "./parameterSourceResolution.js";
@@ -382,7 +393,7 @@ function resolveDeliveryBinding(session, db) {
  * Assembly Model was guessed at is the quiet failure this project's
  * conventions exist to prevent.
  */
-function resolveAssemblyModelForSession(session, db) {
+export function resolveAssemblyModelForSession(session, db) {
   const bound = resolveDeliveryBinding(session, db);
   if (bound) return bound;
 
@@ -457,6 +468,8 @@ function evaluateStoppingRules(session, assemblyModel, db) {
   const warnings = [];
 
   if (Number.isFinite(stoppingRules.maxItems) && delivered >= stoppingRules.maxItems) {
+    const plan = planConstraintSelection(session, assemblyModel, db, "adaptive");
+    if (plan.unmetMinimums) warnings.push(maxItemsMinimumWarning(assemblyModel.id));
     return {
       stop: {
         rule: "maxItems",
@@ -510,6 +523,17 @@ function evaluateStoppingRules(session, assemblyModel, db) {
   const declared = evaluateDeclaredTargets(assemblyModel, progress);
 
   if (!declared.allScoredAndMet) return { warnings };
+
+  const plan = planConstraintSelection(session, assemblyModel, db, "adaptive");
+  if (targetsMetHeldForConstraints(plan)) {
+    warnings.push(constraintHoldWarning(assemblyModel.id));
+    return { warnings };
+  }
+  if (plan.unmetMinimums) {
+    warnings.push(
+      `Stopping rule targetsMet is met, but Assembly Model '${assemblyModel.id}' minimums were not, and no remaining task can fill them.`
+    );
+  }
 
   return {
     stop: {
@@ -566,17 +590,48 @@ function candidatesFor(session, db) {
  * selectionAlgorithm.policyId when a governing AM exists. Does not override
  * session.selectionStrategy (that remains advisory-only per D56).
  */
+function policyById(db, policyId) {
+  if (!policyId) return null;
+  return (db.policies || []).find((policy) => policy && policy.id === policyId) || null;
+}
+
+/**
+ * Selection policy for a delivery model.
+ * The assembly model's selectionAlgorithm.policyId wins when it names a
+ * policy that exists and has a type. Otherwise the delivery model's
+ * policyId is used. Callers that have an explicit session strategy only
+ * reject a conflict when source is "assemblyModel".
+ */
+export function selectionPolicyForDelivery(deliveryModel, db) {
+  const assemblyModel =
+    (db.assemblyModels || []).find((row) => row && row.id === deliveryModel?.assemblyModelId) || null;
+  const assemblyPolicy = policyById(db, assemblyModel?.selectionAlgorithm?.policyId);
+  if (assemblyPolicy?.type) {
+    return { policy: assemblyPolicy, assemblyModel, source: "assemblyModel" };
+  }
+  const deliveryPolicy = policyById(db, deliveryModel?.policyId);
+  if (deliveryPolicy?.type) {
+    return { policy: deliveryPolicy, assemblyModel, source: "deliveryModel" };
+  }
+  const assemblyId = assemblyModel?.id || deliveryModel?.assemblyModelId || "";
+  return {
+    error: assemblyModel
+      ? `Delivery model '${deliveryModel.id}' assembly model '${assemblyId}' does not declare a usable selection policy, and delivery model policy '${deliveryModel.policyId || ""}' is not in /api/policies.`
+      : `Delivery model '${deliveryModel?.id}' names selection policy '${deliveryModel?.policyId || ""}', which is not in /api/policies.`,
+  };
+}
+
 function resolveGatingPolicy(session, db) {
   if (typeof session?.deliveryModelId === "string" && session.deliveryModelId) {
     const bound = resolveDeliveryBinding(session, db);
-    const policyId = bound?.deliveryModel?.policyId;
-    if (!policyId) return null;
-    return (db.policies || []).find((p) => p.id === policyId) || null;
+    if (bound?.deliveryModel) {
+      const resolved = selectionPolicyForDelivery(bound.deliveryModel, db);
+      if (resolved.policy) return resolved.policy;
+    }
+    return null;
   }
   const { assemblyModel } = resolveAssemblyModelForSession(session, db);
-  const policyId = assemblyModel?.selectionAlgorithm?.policyId;
-  if (!policyId) return null;
-  return (db.policies || []).find((p) => p.id === policyId) || null;
+  return policyById(db, assemblyModel?.selectionAlgorithm?.policyId);
 }
 
 function normalizeSmvKey(value) {
@@ -1107,15 +1162,20 @@ export function selectNextActivity(session, db) {
         }
       }
     } else {
-      const policyId = assemblyResolution.deliveryModel?.policyId;
-      const policy = policyId
-        ? (db.policies || []).find((p) => p.id === policyId)
-        : null;
-      if (policy?.type) {
-        strategy = policy.type;
+      const resolved = selectionPolicyForDelivery(assemblyResolution.deliveryModel, db);
+      if (resolved.policy?.type) {
+        strategy = resolved.policy.type;
+        if (
+          resolved.source === "assemblyModel" &&
+          resolved.policy.type !== session.selectionStrategy
+        ) {
+          warnings.push(
+            `Assembly Model '${assemblyModel.id}' selection policy '${resolved.policy.id}' (type '${resolved.policy.type}') drives this session. The stored selectionStrategy '${session.selectionStrategy}' is not used.`
+          );
+        }
       } else {
         warnings.push(
-          `Delivery Model '${assemblyResolution.deliveryModel?.id}' names selection policy '${policyId || ""}', which is not available. Selection uses the session strategy '${session.selectionStrategy}'.`
+          `Delivery Model '${assemblyResolution.deliveryModel?.id}' has no usable selection policy. Selection uses the session strategy '${session.selectionStrategy}'.`
         );
       }
     }
@@ -1128,16 +1188,37 @@ export function selectNextActivity(session, db) {
     }
   }
 
+  let selectionSession = session;
+  if (
+    assemblyResolution.assemblyModel &&
+    assemblyConstraintsActive(assemblyResolution.assemblyModel.constraints)
+  ) {
+    const plan = planConstraintSelection(session, assemblyResolution.assemblyModel, db, strategy);
+    warnings.push(...plan.warnings);
+    if (plan.stop) {
+      return { stopped: plan.stop, strategy, ...(warnings.length ? { warnings } : {}) };
+    }
+    if (strategy === "fixed") {
+      const fixed = selectFixedConstrained(session, plan.eligibleIds);
+      return warnings.length ? { ...fixed, warnings } : fixed;
+    }
+    selectionSession = {
+      ...session,
+      taskIds: plan.eligibleIds,
+      currentTaskIndex: 0,
+    };
+  }
+
   let result;
   switch (strategy) {
     case "fixed":
-      result = selectFixed(session);
+      result = selectFixed(selectionSession);
       break;
     case "IRT":
-      result = selectIrt(session, db, warnings);
+      result = selectIrt(selectionSession, db, warnings);
       break;
     case "BayesianNetwork":
-      result = selectBayesianNetwork(session, db, warnings);
+      result = selectBayesianNetwork(selectionSession, db, warnings);
       break;
     default:
       // Unknown strategy: `{}`, exactly as the pre-D56 route's final
@@ -1161,6 +1242,7 @@ export const __testing__ = {
   candidatesFor,
   applyPrerequisiteGating,
   resolveGatingPolicy,
+  selectionPolicyForDelivery,
   liveThetaFor,
   selectFixed,
   GOVERNING_ASSEMBLY_MODEL_STATUSES,

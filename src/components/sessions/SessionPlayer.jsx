@@ -14,6 +14,7 @@ import {
 } from "../../utils/sessionPlay";
 import { inferWizardPhase } from "../../utils/sessionWizardTiming";
 import { measurementStopHeading, measurementStopDetails } from "./measurementStop";
+import { assemblyProgressLine } from "../../utils/assemblyConstraints";
 import SessionReport from "./SessionReport";
 import StudentSessionWizard, {
   WIZARD_PHASE,
@@ -1214,6 +1215,11 @@ export default function SessionPlayer({
                   (Policy: {getPolicyName(session.nextTaskPolicy.policyId)})
                 </span>
               )}
+            </div>
+          )}
+          {session?.assemblyProgress?.assemblyModelId && (
+            <div className="text-sm text-gray-600" data-testid="session-assembly-progress">
+              Assembly progress: {assemblyProgressLine(session.assemblyProgress)}
             </div>
           )}
           {session?.stopped && (

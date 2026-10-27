@@ -21,15 +21,17 @@ import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import Step1Identity from "./steps/Step1Identity";
 import Step2Targets from "./steps/Step2Targets";
 import Step3StoppingRules from "./steps/Step3StoppingRules";
-import Step4SelectionAlgorithm from "./steps/Step4SelectionAlgorithm";
-import Step5Review from "./steps/Step5Review";
+import Step4Constraints from "./steps/Step4Constraints";
+import Step5SelectionAlgorithm from "./steps/Step4SelectionAlgorithm";
+import Step6Review from "./steps/Step5Review";
 
 const STEP_CONFIG = [
   { id: 1, label: "Identity" },
   { id: 2, label: "Targets by SMV" },
   { id: 3, label: "Stopping Rules" },
-  { id: 4, label: "Selection Algorithm" },
-  { id: 5, label: "Review" },
+  { id: 4, label: "Content constraints" },
+  { id: 5, label: "Selection Algorithm" },
+  { id: 6, label: "Review" },
 ];
 
 export default function AssemblyModelWizard({ onCancel }) {
@@ -94,9 +96,11 @@ export default function AssemblyModelWizard({ onCancel }) {
       case 3:
         return <Step3StoppingRules />;
       case 4:
-        return <Step4SelectionAlgorithm />;
+        return <Step4Constraints />;
       case 5:
-        return <Step5Review />;
+        return <Step5SelectionAlgorithm />;
+      case 6:
+        return <Step6Review />;
       default:
         return null;
     }

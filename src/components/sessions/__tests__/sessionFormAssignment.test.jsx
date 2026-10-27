@@ -13,6 +13,10 @@ vi.mock("../../../api/queries/deliveryModels", () => ({
   useDeliveryModels: () => ({ data: [], isLoading: false }),
 }));
 
+vi.mock("../../../api/queries/assemblyModels", () => ({
+  useAssemblyModels: () => ({ data: [], isLoading: false }),
+}));
+
 const students = [
   { id: "stu1", name: "Pat", username: "pat1", classId: "6A" },
   { id: "stud1", name: "stud1", username: "stud1", classId: "6A" },

@@ -5,6 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { useAssemblyModels } from "@/api/queries/assemblyModels";
 import { useCompetencyModels } from "@/api/queries/competencies";
 import { usePolicies } from "@/api/queries/policies";
+import { useTaskModels } from "@/api/queries/taskModels";
+import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
 import AssemblyModelTable from "../AssemblyModelTable";
 import { assemblyModels, competencyModels, policies } from "./assemblyTabFixture";
 
@@ -16,6 +18,12 @@ vi.mock("@/api/queries/competencies", () => ({
 }));
 vi.mock("@/api/queries/policies", () => ({
   usePolicies: vi.fn(),
+}));
+vi.mock("@/api/queries/taskModels", () => ({
+  useTaskModels: vi.fn(),
+}));
+vi.mock("@/api/queries/taskModelVariables", () => ({
+  useTaskModelVariables: vi.fn(),
 }));
 
 function query(data) {
@@ -39,6 +47,8 @@ describe("Assembly structure", () => {
     useAssemblyModels.mockReturnValue(query(assemblyModels));
     useCompetencyModels.mockReturnValue(query(competencyModels));
     usePolicies.mockReturnValue(query(policies));
+    useTaskModels.mockReturnValue(query([{ id: "tm-plant", name: "Name the plant part" }]));
+    useTaskModelVariables.mockReturnValue(query([]));
   });
 
   it("lists the student model, targets, stopping rules, policy, and lock", () => {
@@ -131,10 +141,15 @@ describe("Assembly structure", () => {
     expect(groupCount(card, "SMV targets")).toBe("1");
     expect(groupCount(card, "Stopping rules")).toBe("3");
     expect(groupCount(card, "Selection policy")).toBe("1");
+    expect(groupCount(card, "Content constraints")).toBe("2");
     expect(groupCount(card, "Version")).toBe("1");
     await user.click(within(card).getByRole("button", { name: /SMV targets/ }));
     expect(within(card).getByText("Names the part")).toBeInTheDocument();
     expect(within(card).getByText(/accuracy ≥ 0.8/)).toBeInTheDocument();
+    await user.click(within(card).getByRole("button", { name: /Content constraints/ }));
+    expect(within(card).getByText("Name the plant part")).toBeInTheDocument();
+    expect(within(card).getByText(/min 1, max 8/)).toBeInTheDocument();
+    expect(within(card).getByText(/at most 1 delivery of each item/)).toBeInTheDocument();
 
     expect(within(thin).getByText("Not linked • Not ready")).toBeInTheDocument();
     expect(groupCount(thin, "Description")).toBe("0");

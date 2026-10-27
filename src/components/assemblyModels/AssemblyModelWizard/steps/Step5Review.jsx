@@ -12,6 +12,7 @@ import {
   meetsAssemblyReviewedGates,
   hasAssemblyStoppingRule,
 } from "../../assemblyModelReadiness";
+import { assemblyConstraintsActive } from "@/utils/assemblyConstraints";
 
 function ReadinessRow({ ok, label }) {
   return (
@@ -83,6 +84,7 @@ export default function Step5Review() {
           {(draft.targetsBySMV || []).length} SMV target(s) · stopping rule
           {hasStoppingRule ? " declared" : " not yet declared"} · selection
           policy {hasPolicy ? "bound" : "not yet bound"}
+          {assemblyConstraintsActive(draft.constraints) ? " · content constraints set" : " · no content constraints"}
         </p>
       </div>
 
