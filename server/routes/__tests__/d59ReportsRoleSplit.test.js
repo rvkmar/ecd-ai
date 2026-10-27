@@ -136,6 +136,24 @@ describe("learner and generic session reports carry the same measurement fields"
     expect(res.body.summary.message).toBe(STOPPED.reason);
   });
 
+  it("lists a delivered task that was not in the original roster", async () => {
+    dbState.current.tasks = [
+      { id: "t1", taskModelId: "tm1", generatedObservationIds: ["o1"], generatedEvidenceIds: [] },
+      { id: "t-extra", taskModelId: "tm2", generatedObservationIds: ["o-extra"], generatedEvidenceIds: ["e-extra"] },
+    ];
+    dbState.current.sessions = [{
+      ...SESSION,
+      taskIds: ["t1"],
+      responses: [{ taskId: "t-extra", scoredValue: 1 }],
+    }];
+    const res = await request(app())
+      .get("/api/reports/session/s-d59")
+      .set("Authorization", `Bearer ${tokenFor("student")}`);
+    expect(res.status).toBe(200);
+    expect(res.body.captured.map((row) => row.taskId)).toEqual(["t1", "t-extra"]);
+    expect(res.body.responses[0].taskId).toBe("t-extra");
+  });
+
   it("lets a student read the generic session report with stop + profile", async () => {
     const res = await request(app())
       .get("/api/reports/session/s-d59")

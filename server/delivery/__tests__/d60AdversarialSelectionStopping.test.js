@@ -16,7 +16,7 @@
 // Characterisation (deferred P1/P2 — pin today's behaviour so a later
 // unit cannot "fix" them by accident without noticing):
 //   unmeasured-attribute items stay unrankable; G-DINA falls back to
-//   first-unanswered; IRT still ranks nearest difficulty, not max info.
+//   pool order; IRT still ranks nearest difficulty, not max info.
 
 import { describe, it, expect } from "vitest";
 import { selectNextActivity, __testing__ } from "../activitySelection.js";
@@ -477,7 +477,7 @@ describe("D60: dual-attribute — stopping closed, selection hole remains", () =
     ]);
   });
 
-  it("once only the unmeasured-attribute item remains, first-unanswered fallback presents it", () => {
+  it("once only the unmeasured-attribute item remains, pool-order fallback presents it", () => {
     const s = diagnosticSession({
       taskIds: ["tA", "tB"],
       responses: [diagnosticResponse("tA", "itemA", "oA")],
@@ -486,7 +486,8 @@ describe("D60: dual-attribute — stopping closed, selection hole remains", () =
 
     expect(result.stopped).toBeUndefined();
     expect(result.taskId).toBe("tB");
-    expect(result.debug.fallback).toBe("first-unanswered");
+    expect(result.debug.fallback).toBe("pool-order");
+    expect(result.warnings[0]).toContain("pool order");
   });
 });
 
@@ -499,7 +500,7 @@ describe("D60 characterisation: G-DINA BayesianNetwork is sequential", () => {
     // resolveDinaParameters requires family === "dina" AND slip/guess.
     // A G-DINA probability table is never usable there, so every
     // candidate is unrankable. F24-shaped: strategy name says
-    // BayesianNetwork; the choice is first-unanswered. Held — real
+    // BayesianNetwork; the choice is pool order. Held. Real
     // G-DINA information gain is its own unit.
     const db = dinaDb();
     db.evidenceModels[0].statisticalModels[0] = {
@@ -541,8 +542,8 @@ describe("D60 characterisation: G-DINA BayesianNetwork is sequential", () => {
     const result = selectNextActivity(s, db);
 
     expect(result.taskId).toBe("tA");
-    expect(result.debug.fallback).toBe("first-unanswered");
-    expect(result.warnings[0]).toMatch(/fell back to the first unanswered task/);
+    expect(result.debug.fallback).toBe("pool-order");
+    expect(result.warnings[0]).toContain("pool order");
     expect(result.debug.unrankable[0].reason).toMatch(/no usable 'gdina' parameters/);
   });
 });

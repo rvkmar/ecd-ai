@@ -4,6 +4,7 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB } from "../../src/utils/db-server.js";
 import { sessionMeasurementReport } from "../delivery/sessionReportMeasurement.js";
+import { taskIdsIncludingDelivered } from "../delivery/activitySelection.js";
 import { studentForbiddenFromSession } from "../../src/utils/sessionPlay.js";
 import { assertCallerMayAccessDistrict } from "../utils/tenancyScope.js";
 import { TenancyError } from "../utils/tenancyContext.js";
@@ -136,7 +137,7 @@ router.get("/session/:id", (req, res) => {
   };
 
   // 🔹 Captured evidence/observations (from Task Instances)
-  for (const tid of session.taskIds || []) {
+  for (const tid of taskIdsIncludingDelivered(session)) {
     const task = db.tasks.find(t => t.id === tid);
     if (!task) continue;
 
@@ -591,7 +592,7 @@ router.get("/teacher/class/:classId", canViewTeacherReports, (req, res) => {
     }
 
     // collect captured evidence
-    for (const tid of session.taskIds || []) {
+    for (const tid of taskIdsIncludingDelivered(session)) {
       const task = taskMap[tid];
       if (task) {
         capturedSummary.push({
@@ -813,7 +814,7 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, (req, res) =>
       }
 
       // collect captured evidence
-      for (const tid of session.taskIds || []) {
+      for (const tid of taskIdsIncludingDelivered(session)) {
         const task = taskMap[tid];
         if (task) {
           capturedSummary.push({
@@ -1111,7 +1112,7 @@ router.get("/dashboard", async (req, res) => {
         if (vals.length === 0) return 0;
         return percentFromMean(vals.reduce((a, b) => a + b, 0) / vals.length);
       })(),
-      tasks: s.taskIds?.length || 0,
+      tasks: taskIdsIncludingDelivered(s).length,
       date: s.finishedAt
         ? new Date(s.finishedAt).toISOString().slice(0, 10)
         : "-",
