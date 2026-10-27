@@ -3,6 +3,7 @@
   
   import { loadDB, saveDB } from "../../src/utils/db-server.js";
   import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
+  import { commitFinishedSession } from "../../src/utils/studentModelRecord.js";
   
   /**
    * Sweep through sessions and auto-finish those past their deadlines.
@@ -76,6 +77,7 @@
           }
         }
   
+        commitFinishedSession(db, session, { now: session.finishedAt });
         changed.push(session.id);
       }
     }

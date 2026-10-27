@@ -74,7 +74,8 @@ export function administrationSummary(admin = {}) {
       : admin.allowedReview === false
         ? "review off"
         : "review unset";
-  return `${minutes}, ${attempts}, ${review}, ${feedbackLabel(admin.feedbackMode)}`;
+  const carry = admin.carryForward === true ? "carry forward on" : "carry forward off";
+  return `${minutes}, ${attempts}, ${review}, ${feedbackLabel(admin.feedbackMode)}, ${carry}`;
 }
 
 export function uniqueDeliveryCopyName(name, records) {
@@ -166,6 +167,10 @@ export function ingredientGroups(record, lists) {
           }`,
         },
         { id: "feedback", primary: `Feedback: ${feedbackLabel(admin.feedbackMode)}` },
+        {
+          id: "carry",
+          primary: `Carry estimates forward: ${admin.carryForward === true ? "on" : "off"}`,
+        },
       ],
     },
     {

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/auth/AuthProvider";
 import { apiFetch, apiErrorMessage } from "@/api/apiClient";
 import SessionReport from "./SessionReport";
+import StudentModelRecordPanel from "@/components/reports/StudentModelRecordPanel";
 import { normalizeSessionStatus } from "@/utils/sessionStatus";
 
 function statusLabel(session) {
@@ -68,6 +69,7 @@ export default function StudentSessionReports() {
 
   return (
     <div className="space-y-4">
+      <StudentModelRecordPanel self />
       <div>
         <h2 className="text-xl font-semibold text-slate-900">My performance</h2>
         <p className="mt-1 text-sm text-slate-600">

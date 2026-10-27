@@ -70,6 +70,7 @@ import {
 import { exemplarCount, levelValues } from "./rubricDelivery.js";
 import { jointPriorErrors } from "./jointPrior.js";
 import { deliveryModelBindingErrors } from "./deliveryModelReadiness.js";
+import { studentModelRecordErrors } from "./studentModelRecord.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 
 // Canonical session status spellings -- see src/utils/sessionStatus.js for
@@ -654,6 +655,28 @@ export const schema = {
     updatedAt: 'date',
   },
 
+  // Runtime scoring record. Not design data, so it is not in the zip
+  // import. One row per student and competency model. Written when a
+  // session finishes. Named studentModelRecords so the singularizer
+  // yields studentModelRecord.
+  studentModelRecords: {
+    id: 'string',
+    studentId: 'string',
+    displayName: 'string',
+    identityAliases: 'array',
+    competencyModelId: 'string',
+    competencyModelName: 'string',
+    parameterSetId: 'string',
+    statisticalModelIds: 'array',
+    smvPosteriors: 'object',
+    history: 'array',
+    provenance: 'object',
+    districtId: 'string',
+    schoolId: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
   sessions: {
     id: 'string',
     studentId: 'string',
@@ -681,6 +704,9 @@ export const schema = {
     // assembly model and selection policy. Absent means the session keeps
     // the inferred assembly model and its own selectionStrategy.
     deliveryModelId: 'string',
+    // True only when this occasion was asked to carry estimates forward.
+    // Absent on legacy sessions, which start from an empty student model.
+    carryForward: 'boolean',
     status: 'string',
     isCompleted: 'boolean',
     startedAt: 'date',
@@ -6561,6 +6587,10 @@ export function validateEntity(collection, obj, db = null, options = {}) {
     errors.push(
       ...deliveryModelBindingErrors(obj, db, { requireReadyParents })
     );
+  }
+
+  if (collection === "studentModelRecords") {
+    errors.push(...studentModelRecordErrors(obj, db));
   }
 
   if (collection === "templates") {

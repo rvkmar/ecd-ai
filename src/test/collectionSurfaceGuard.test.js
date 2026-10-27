@@ -282,6 +282,24 @@ describe("presentationModels (D113) specifically", () => {
   });
 });
 
+describe("studentModelRecords", () => {
+  it("has a route file, is mounted, and is gated", () => {
+    const file = "studentModelRecordsRoutes.js";
+    const full = path.join(ROUTES_DIR, file);
+    expect(fs.existsSync(full), `${file} should exist`).toBe(true);
+    const src = liveCode(fs.readFileSync(full, "utf8"));
+    expect(src, `${file} should apply authenticateToken in LIVE code`).toMatch(
+      HAS_ROUTER_GATE
+    );
+    expect(src, `${file} should import authorizeRole for its read gate`).toContain(
+      "authorizeRole"
+    );
+    expect(INDEX, "studentModelRecords should be mounted in server/index.js").toContain(
+      `app.use("/api/studentModelRecords"`
+    );
+  });
+});
+
 describe("deliveryModels", () => {
   it("has a route file, is mounted, and is gated", () => {
     const file = "deliveryModelsRoutes.js";

@@ -61,6 +61,12 @@ function administrationErrors(admin, required) {
     );
   }
 
+  if (admin.carryForward != null && admin.carryForward !== "") {
+    if (typeof admin.carryForward !== "boolean") {
+      errors.push("administration.carryForward must be a boolean when present.");
+    }
+  }
+
   return errors;
 }
 

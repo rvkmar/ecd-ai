@@ -59,6 +59,7 @@ function emptyAdministration() {
     attempts: "1",
     allowedReview: true,
     feedbackMode: "none",
+    carryForward: false,
   };
 }
 
@@ -91,6 +92,7 @@ function formFromRow(row) {
       attempts: admin.attempts == null ? "1" : String(admin.attempts),
       allowedReview: admin.allowedReview !== false,
       feedbackMode: admin.feedbackMode || "none",
+      carryForward: admin.carryForward === true,
     },
   };
 }
@@ -109,6 +111,7 @@ function buildPayload(form) {
       attempts: Number(form.administration.attempts),
       allowedReview: Boolean(form.administration.allowedReview),
       feedbackMode: form.administration.feedbackMode || "none",
+      carryForward: form.administration.carryForward === true,
     },
   };
 }
@@ -326,6 +329,15 @@ export function DeliveryModelForm({
               onChange={(event) => patchAdmin({ allowedReview: event.target.checked })}
             />
             <span className="font-medium">Allowed review</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm md:col-span-2">
+            <input
+              type="checkbox"
+              aria-label="Carry estimates forward"
+              checked={form.administration.carryForward === true}
+              onChange={(event) => patchAdmin({ carryForward: event.target.checked })}
+            />
+            <span className="font-medium">Carry estimates forward</span>
           </label>
           <label className="block text-sm">
             <span className="font-medium">Feedback mode</span>

@@ -101,6 +101,29 @@ function sampleDb() {
       { id: "job-c", scope: { districtId: "tn-chennai" } },
       { id: "job-open", scope: {} },
     ],
+    studentModelRecords: [
+      {
+        id: "smr-c",
+        studentId: "stu-c",
+        identityAliases: ["stu-c", "stud1"],
+        districtId: "tn-chennai",
+        schoolId: "sch-1",
+      },
+      {
+        id: "smr-c2",
+        studentId: "stu-c2",
+        identityAliases: ["stu-c2"],
+        districtId: "tn-chennai",
+        schoolId: "sch-2",
+      },
+      {
+        id: "smr-m",
+        studentId: "stu-m",
+        identityAliases: ["stu-m", "stud-madurai"],
+        districtId: "tn-madurai",
+        schoolId: "sch-m",
+      },
+    ],
   };
 }
 
@@ -126,6 +149,7 @@ describe("D97 tenancyScope storage helpers", () => {
     expect(scoped.analysisArtefacts.map((a) => a.id)).toEqual(["art-c"]);
     expect(scoped.calibrationJobs.map((j) => j.id)).toEqual(["job-c"]);
     expect(scoped.sessions.map((s) => s.id)).toEqual(["sess-c"]);
+    expect(scoped.studentModelRecords.map((row) => row.id).sort()).toEqual(["smr-c", "smr-c2"]);
     expect(scoped.tasks.map((t) => t.id)).toEqual(["task-c"]);
     expect(scoped.announcements.map((a) => a.id)).toEqual(["ann-c"]);
     // Global content chain stays unscoped
@@ -144,12 +168,14 @@ describe("D97 tenancyScope storage helpers", () => {
     const scoped = applyTenancyToDb(sampleDb(), studentCtx);
     expect(scoped.users.map((u) => u.username)).toEqual(["stud1"]);
     expect(scoped.sessions.map((s) => s.id)).toEqual(["sess-c"]);
+    expect(scoped.studentModelRecords.map((row) => row.id)).toEqual(["smr-c"]);
     expect(scoped.students).toEqual([]);
   });
 
   it("teacher with schoolId prefers school rows; without schoolId falls back to district", () => {
     const withSchool = applyTenancyToDb(sampleDb(), teacherSchoolCtx);
     expect(withSchool.students.map((s) => s.id)).toEqual(["stu-c"]);
+    expect(withSchool.studentModelRecords.map((row) => row.id)).toEqual(["smr-c"]);
 
     const fallback = applyTenancyToDb(sampleDb(), teacherDistrictFallbackCtx);
     expect(fallback.students.map((s) => s.id).sort()).toEqual(["stu-c", "stu-c2"]);

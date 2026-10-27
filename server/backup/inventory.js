@@ -70,6 +70,12 @@ export const BACKUP_INVENTORY = Object.freeze([
     reason: "Included — examinee responses cannot be rebuilt.",
   },
   {
+    id: "studentModelRecords",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included. Per-student scoring record carried across finished sessions. Runtime data, not design data, so it is not in the zip.",
+  },
+  {
     id: "announcements",
     store: "ecd-json",
     pathInArchive: "ecd/db.json",

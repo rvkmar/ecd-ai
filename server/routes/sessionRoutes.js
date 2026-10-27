@@ -42,6 +42,10 @@ import { recordSubmitOutcome } from "../utils/submitStats.js";
 // and the live posteriors instead of db.questions. See that file's header.
 import { selectNextActivity } from "../delivery/activitySelection.js";
 import {
+  commitFinishedSession,
+  seedSessionStudentModel,
+} from "../../src/utils/studentModelRecord.js";
+import {
   selectPresentationModelIdForTaskModel,
   resolvePresentationModel,
 } from "../delivery/presentationModelResolution.js";
@@ -222,6 +226,13 @@ router.post("/", (req, res) => {
       startedAt: now,
       updatedAt: now,
     };
+
+    // Carry-forward is off unless the delivery model's administration
+    // says so, or the request sets carryForward. Legacy creates stay empty.
+    seedSessionStudentModel(newSession, db, {
+      carryForward: req.body.carryForward === true,
+      now,
+    });
 
     const { valid, errors } = validateEntity("sessions", newSession, db);
     if (!valid) {
@@ -1083,6 +1094,11 @@ router.post("/:id/finish", (req, res) => {
     close: true,
     atIso: now,
   });
+
+  // The occasion is finished, so the persistent scoring record takes
+  // this session's estimates. A session with no posterior does not
+  // erase an earlier record.
+  commitFinishedSession(db, session, { now });
 
   saveDB(db);
   res.json(session);
