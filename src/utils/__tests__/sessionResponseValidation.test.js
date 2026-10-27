@@ -301,7 +301,7 @@ describe("sessions.stopped — D58 persisted measurement stop", () => {
       { ...makeSession([]), stopped: { ...validStop, rule: "coverage" } },
       makeDb()
     );
-    expect(errors.join(" ")).toMatch(/stopped\.rule must be 'maxItems' or 'targetsMet'/);
+    expect(errors.join(" ")).toMatch(/stopped\.rule must be 'maxItems', 'targetsMet', or 'constraints'/);
   });
 
   it("refuses a stop without a reason", () => {

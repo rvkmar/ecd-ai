@@ -19,7 +19,7 @@ function addCode(set, value) {
   if (typeof value === "string" && value.trim() !== "") set.add(value);
 }
 
-export function contentStandardCodesForTask(task, db) {
+function contentStandardCodesForTask(task, db) {
   const codes = new Set();
   const item = itemForTask(task, db);
   for (const code of item?.metadata?.contentStandardCodes || []) addCode(codes, code);
@@ -39,7 +39,7 @@ export function contentStandardCodesForTask(task, db) {
   return codes;
 }
 
-export function tmvValuesForTask(task, db) {
+function tmvValuesForTask(task, db) {
   const assigned = {};
   const taskModel = (db.taskModels || []).find((row) => row && row.id === task?.taskModelId);
   for (const setting of taskModel?.taskModelVariableSettings || []) {
@@ -78,13 +78,6 @@ function deliveredFeatures(session, db) {
 
 function countMatching(features, predicate) {
   return features.reduce((sum, feature) => sum + (predicate(feature) ? 1 : 0), 0);
-}
-
-function boundsLabel(row) {
-  const parts = [];
-  if (row.min != null) parts.push(`min ${row.min}`);
-  if (row.max != null) parts.push(`max ${row.max}`);
-  return parts.join(", ");
 }
 
 function exceedsMax(delivered, row) {
@@ -305,17 +298,3 @@ export function persistableAssemblyProgress(session, assemblyModel, db, smvProgr
   return snapshot;
 }
 
-export function constraintSummaryText(summary) {
-  if (!summary) return "";
-  const bits = [];
-  for (const row of summary.taskModelCounts || []) {
-    bits.push(`${row.taskModelId} ${boundsLabel(row)}`);
-  }
-  for (const row of summary.contentStandardCounts || []) {
-    bits.push(`${row.code} ${boundsLabel(row)}`);
-  }
-  for (const row of summary.taskModelVariableCounts || []) {
-    bits.push(`${row.taskModelVariableId}=${row.value} ${boundsLabel(row)}`);
-  }
-  return bits.join("; ");
-}
