@@ -681,17 +681,19 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
     ]);
   });
 
-  it("with no diagnostic data at all it degrades to first-unanswered and SAYS SO", () => {
-    // This is the pre-D56 behaviour in every case (F24). Preserving it is
-    // deliberate; presenting it as a computed choice is what changed.
+  it("with no diagnostic data at all it degrades to pool order and SAYS SO", () => {
+    // On a roster session, pool order is the seed, so the task is the one
+    // the old first-unanswered rule returned. The warning says this was
+    // not an information-gain ranking.
     const s = session({ taskIds: ["tA", "tB"], selectionStrategy: "BayesianNetwork" });
 
     const result = selectNextActivity(s, dinaDb());
 
     expect(result.taskId).toBe("tA");
-    expect(result.debug.fallback).toBe("first-unanswered");
+    expect(result.debug.fallback).toBe("pool-order");
     expect(result.debug.totalGain).toBeNull();
-    expect(result.warnings[0]).toContain("fell back to the first unanswered task");
+    expect(result.warnings[0]).toContain("pool order");
+    expect(result.warnings[0]).toContain("not an information-gain ranking");
   });
 
   it("an item requiring no attributes is not rankable", () => {
@@ -706,7 +708,8 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
 
     const result = selectNextActivity(s, db);
 
-    expect(result.debug.fallback).toBe("first-unanswered");
+    expect(result.debug.fallback).toBe("pool-order");
+    expect(result.warnings[0]).toContain("pool order");
     expect(result.debug.unrankable[0].reason).toContain("no required attributes");
   });
 
@@ -1345,8 +1348,7 @@ describe("selectNextActivity is pure", () => {
   });
 });
 
-describe("assembly model content constraints", () => {
-  function constrainedDb(constraints, stoppingRules = { maxItems: 99 }) {
+function constrainedDb(constraints, stoppingRules = { maxItems: 99 }) {
     return irtDb({
       taskModels: [
         { id: "tm1", versionNumber: 1, evidenceModelIds: ["em1"], taskModelVariableSettings: [{ taskModelVariableId: "tmv-bloom", variation: "fixed", fixedValue: "remember" }] },
@@ -1392,8 +1394,9 @@ describe("assembly model content constraints", () => {
         }),
       ],
     });
-  }
+}
 
+describe("assembly model content constraints", () => {
   it("skips a task model that is already at its maximum and keeps a fixed form otherwise unchanged", () => {
     const db = constrainedDb({ taskModelCounts: [{ taskModelId: "tm1", max: 1 }] });
     const open = selectNextActivity(session({ taskIds: ["t1", "t2", "t3"] }), db);
@@ -1496,5 +1499,378 @@ describe("assembly model content constraints", () => {
       db
     );
     expect(result.taskId).toBe("t3");
+  });
+});
+
+/* ------------------------------------------------------------------
+   G20. Package pool for a session that cites a delivery model.
+   session.taskIds is the seed: order and tie-break, not an allow-list.
+   A session with no delivery model stays on the roster.
+------------------------------------------------------------------ */
+
+function deliver(db, policyId) {
+  const policy = (db.policies || []).find((row) => row.id === policyId);
+  db.assemblyModels[0].selectionAlgorithm = { policyId };
+  db.assemblyModels[0].stoppingRules = { maxItems: 99 };
+  db.deliveryModels = [{
+    id: "dm1",
+    assemblyModelId: db.assemblyModels[0].id,
+    policyId,
+    competencyModelId: db.assemblyModels[0].competencyModelId,
+  }];
+  if (!policy) db.policies.push({ id: policyId, type: policyId === "p-fixed" ? "fixed" : policyId === "p-bn" ? "BayesianNetwork" : "IRT" });
+  return db;
+}
+
+function theta(estimate) {
+  return { smvPosteriors: { "smv-theta": smvPosterior({ estimate }) } };
+}
+
+describe("G20 package pool", () => {
+  it("ranks a closer item from another active package when it is not in the seed", () => {
+    const db = deliver(constrainedDb({}), "p-irt");
+    const result = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "fixed",
+        taskIds: ["t1"],
+        studentModel: theta(0.9),
+      }),
+      db
+    );
+    expect(result.taskId).toBe("t2");
+    expect(result.strategy).toBe("IRT");
+    expect(result.debug.source).toBe("composite-library");
+  });
+
+  it("keeps the seed task when the difficulty tie would otherwise follow task id", () => {
+    const db = deliver(irtDb({
+      assemblyModels: [assemblyModel({ stoppingRules: { maxItems: 99 } })],
+    }), "p-irt");
+    const result = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "IRT",
+        taskIds: ["t2"],
+        studentModel: theta(0),
+      }),
+      db
+    );
+    expect(result.taskId).toBe("t2");
+    expect(result.debug.diff).toBe(1);
+  });
+
+  it("does not leave the roster when the session has no delivery model", () => {
+    const db = irtDb();
+    const result = selectNextActivity(
+      session({
+        selectionStrategy: "IRT",
+        taskIds: ["t1"],
+        studentModel: theta(0.9),
+      }),
+      db
+    );
+    expect(result.taskId).toBe("t1");
+  });
+
+  it("fixed order stays on the seed even when a delivery model is cited", () => {
+    const db = deliver(irtDb({
+      assemblyModels: [assemblyModel({ stoppingRules: { maxItems: 99 } })],
+    }), "p-fixed");
+    const result = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "IRT",
+        taskIds: ["t1"],
+        studentModel: theta(0.9),
+      }),
+      db
+    );
+    expect(result.strategy).toBe("fixed");
+    expect(result.taskId).toBe("t1");
+    expect(__testing__.taskIsInSessionDelivery(
+      session({ deliveryModelId: "dm1", selectionStrategy: "IRT", taskIds: ["t1"] }),
+      db,
+      "t2"
+    )).toBe(false);
+  });
+
+  it("ignores an active package that belongs to another competency model", () => {
+    const db = deliver(irtDb({
+      assemblyModels: [assemblyModel({ stoppingRules: { maxItems: 99 } })],
+    }), "p-irt");
+    db.competencyModels.push({ id: "cm-other", versionNumber: 1, smVariables: [] });
+    db.competencies.push({ id: "c-other", modelId: "cm-other" });
+    db.evidenceModels.push({ id: "em-other", competencyId: "c-other", versionNumber: 1 });
+    db.taskModels.push({ id: "tm-other", versionNumber: 1, evidenceModelIds: ["em-other"] });
+    db.items.push({
+      id: "item-other",
+      taskModelId: "tm-other",
+      observationId: "o2",
+      evidenceModelId: "em1",
+      status: "operational",
+    });
+    db.tasks.push({ id: "t-other", taskModelId: "tm-other", itemId: "item-other" });
+    db.compositeLibrary.push({
+      id: "cl-other",
+      taskModelId: "tm-other",
+      taskModelVersion: 1,
+      active: true,
+      items: [{ itemId: "item-other", observationId: "o2", evidenceModelId: "em1", evidenceModelVersion: 1 }],
+    });
+
+    const result = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "IRT",
+        taskIds: ["t1"],
+        studentModel: theta(0.9),
+      }),
+      db
+    );
+    expect(result.taskId).toBe("t2");
+  });
+
+  it("does not select a suspended item from the package pool", () => {
+    const db = deliver(irtDb({
+      assemblyModels: [assemblyModel({ stoppingRules: { maxItems: 99 } })],
+    }), "p-irt");
+    db.items[1].status = "suspended";
+    const result = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "IRT",
+        taskIds: ["t1"],
+        studentModel: theta(0.9),
+      }),
+      db
+    );
+    expect(result.taskId).toBe("t1");
+  });
+
+  it("does not let a global usageCount retire an item inside this session", () => {
+    const db = deliver(irtDb({
+      assemblyModels: [assemblyModel({ stoppingRules: { maxItems: 99 } })],
+    }), "p-irt");
+    db.items[1].exposureControl = { usageCount: 100, maxUsageBeforeRetire: 1 };
+    const result = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "IRT",
+        taskIds: ["t1"],
+        studentModel: theta(0.9),
+      }),
+      db
+    );
+    expect(result.taskId).toBe("t2");
+    expect(db.items[1].exposureControl.usageCount).toBe(100);
+  });
+
+  it("uses a legal task from another package when the seed is blocked by enemies or exposure", () => {
+    const enemies = deliver(constrainedDb({ enemies: [{ itemIds: ["item1", "item2"] }] }), "p-irt");
+    const enemyChoice = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "IRT",
+        taskIds: ["t1", "t2"],
+        responses: [{ taskId: "t1" }],
+      }),
+      enemies
+    );
+    expect(enemyChoice.stopped).toBeUndefined();
+    expect(enemyChoice.taskId).toBe("t3");
+
+    const exposure = deliver(constrainedDb({ exposure: { maxPerItem: 1 } }), "p-irt");
+    exposure.tasks = [
+      { id: "t1", taskModelId: "tm1", itemId: "item1" },
+      { id: "t2", taskModelId: "tm1", itemId: "item1" },
+      { id: "t3", taskModelId: "tm2", itemId: "item3" },
+    ];
+    const exposureChoice = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "IRT",
+        taskIds: ["t1", "t2"],
+        responses: [{ taskId: "t1" }],
+      }),
+      exposure
+    );
+    expect(exposureChoice.stopped).toBeUndefined();
+    expect(exposureChoice.taskId).toBe("t3");
+  });
+
+  it("fills an open minimum from a package task that was not seeded", () => {
+    const db = deliver(constrainedDb({
+      taskModelCounts: [{ taskModelId: "tm2", min: 1 }],
+      contentStandardCounts: [{ code: "CG-S1", min: 1 }],
+    }), "p-irt");
+    const result = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "IRT",
+        taskIds: ["t1"],
+      }),
+      db
+    );
+    expect(result.taskId).toBe("t3");
+    expect(result.stopped).toBeUndefined();
+  });
+
+  it("BayesianNetwork ranks the wider pool, and the fallback is pool order", () => {
+    const db = dinaDb({
+      assemblyModels: [assemblyModel({
+        competencyModelId: "cm1",
+        stoppingRules: { maxItems: 99 },
+        targetsBySMV: [],
+      })],
+    });
+    db.policies = [{ id: "p-bn", type: "BayesianNetwork" }];
+    deliver(db, "p-bn");
+    db.items.push({
+      id: "itemC",
+      taskModelId: "tmD",
+      observationId: "oC",
+      evidenceModelId: "emD",
+      psychometrics: { dinaParams: { slip: 0.1, guess: 0.2 } },
+    });
+    db.tasks.push({ id: "tC", taskModelId: "tmD", itemId: "itemC" });
+    db.compositeLibrary[0].items.push({
+      itemId: "itemC",
+      observationId: "oC",
+      evidenceModelId: "emD",
+      evidenceModelVersion: 1,
+    });
+
+    const ranked = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "fixed",
+        taskIds: ["tA"],
+        studentModel: {
+          smvPosteriors: {
+            attrA: smvPosterior({ smvId: "attrA", evidenceModelId: "emD", method: "map", modelFamily: "dina", estimate: 0.97 }),
+            attrB: smvPosterior({ smvId: "attrB", evidenceModelId: "emD", method: "map", modelFamily: "dina", estimate: 0.5 }),
+          },
+        },
+      }),
+      db
+    );
+    expect(ranked.taskId).toBe("tB");
+    expect(ranked.debug.fallback).toBeUndefined();
+
+    const seededFallback = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "BayesianNetwork",
+        taskIds: ["tB"],
+      }),
+      db
+    );
+    expect(seededFallback.taskId).toBe("tB");
+    expect(seededFallback.debug.fallback).toBe("pool-order");
+    expect(seededFallback.warnings[0]).toContain("not an information-gain ranking");
+
+    const idOrder = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "BayesianNetwork",
+        taskIds: ["tB"],
+        responses: [{ taskId: "tB" }],
+      }),
+      db
+    );
+    expect(idOrder.taskId).toBe("tA");
+    expect(idOrder.debug.fallback).toBe("pool-order");
+  });
+
+  it("stays on the seed and warns when the assembly model has no active package", () => {
+    const db = dinaDb({
+      compositeLibrary: [],
+      assemblyModels: [assemblyModel({
+        competencyModelId: "cm1",
+        stoppingRules: { maxItems: 99 },
+        targetsBySMV: [],
+      })],
+    });
+    db.policies = [{ id: "p-bn", type: "BayesianNetwork" }];
+    deliver(db, "p-bn");
+    const result = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "BayesianNetwork",
+        taskIds: ["tA", "tB"],
+      }),
+      db
+    );
+    expect(result.taskId).toBe("tA");
+    expect(result.debug.fallback).toBe("pool-order");
+    expect(result.warnings.join(" ")).toContain("stays on the session seed");
+  });
+
+  it("does not rank a legacy question once a package pool exists", () => {
+    const db = deliver(irtDb({
+      assemblyModels: [assemblyModel({ stoppingRules: { maxItems: 99 } })],
+      tasks: [
+        { id: "t-q", taskModelId: "tm1", itemId: null, questionId: "q1" },
+        { id: "t1", taskModelId: "tm1", itemId: "item1", questionId: null },
+        { id: "t2", taskModelId: "tm1", itemId: "item2", questionId: null },
+      ],
+      questions: [{ id: "q1", metadata: { b: 0.9 } }],
+    }), "p-irt");
+    const result = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "IRT",
+        taskIds: ["t-q"],
+        studentModel: { irtTheta: 0.9, ...theta(0.9) },
+      }),
+      db
+    );
+    expect(result.taskId).toBe("t2");
+    expect(result.debug.source).toBe("composite-library");
+    expect(result.warnings.join(" ")).toContain("t-q");
+    expect(result.warnings.join(" ")).not.toContain("legacy question");
+  });
+
+  it("still ranks a legacy question on a roster session", () => {
+    const db = irtDb({
+      tasks: [
+        { id: "t1", taskModelId: "tm1", itemId: null, questionId: "q1" },
+        { id: "t2", taskModelId: "tm1", itemId: null, questionId: "q2" },
+      ],
+      questions: [
+        { id: "q1", metadata: { b: -1 } },
+        { id: "q2", metadata: { b: 1 } },
+      ],
+    });
+    const result = selectNextActivity(
+      session({
+        selectionStrategy: "IRT",
+        studentModel: { irtTheta: 0.9 },
+      }),
+      db
+    );
+    expect(result.taskId).toBe("t2");
+    expect(result.debug.source).toBe("legacy-question");
+  });
+
+  it("records delivered task ids that were not in the seed", () => {
+    expect(__testing__.taskIdsIncludingDelivered({
+      taskIds: ["t1"],
+      responses: [{ taskId: "t1" }, { taskId: "t9" }, { taskId: "t9" }],
+    })).toEqual(["t1", "t9"]);
+
+    const db = deliver(irtDb({
+      assemblyModels: [assemblyModel({ stoppingRules: { maxItems: 99 } })],
+    }), "p-irt");
+    const seeded = session({ deliveryModelId: "dm1", taskIds: ["t1"], selectionStrategy: "IRT" });
+    expect(__testing__.taskIsInSessionDelivery(seeded, db, "t2")).toBe(true);
+    expect(__testing__.taskIsInSessionDelivery(seeded, db, "missing")).toBe(false);
+    expect(__testing__.taskIsInSessionDelivery(session({ taskIds: ["t1"], selectionStrategy: "IRT" }), db, "t2")).toBe(false);
+
+    const stored = { taskIds: ["t1"] };
+    __testing__.noteDeliveredTask(stored, "t2");
+    __testing__.noteDeliveredTask(stored, "t1");
+    expect(stored.taskIds).toEqual(["t1", "t2"]);
   });
 });

@@ -945,3 +945,113 @@ describe("GET /:id/next-task — persist the measurement stop (D58)", () => {
     expect(next.body.taskId).toBeUndefined();
   });
 });
+
+describe("POST /:id/submit — a delivery-model task outside the seed", () => {
+  it("selects, accepts, and records a task that was not in taskIds", async () => {
+    const item2 = {
+      ...operationalItem,
+      id: "item2",
+      observationId: "o2",
+      psychometrics: { statisticalModelType: "irt", irtParams: { a: 1, b: 1 } },
+    };
+    const item1 = {
+      ...operationalItem,
+      psychometrics: { statisticalModelType: "irt", irtParams: { a: 1, b: -1 } },
+    };
+    const em = {
+      ...operationalEvidenceModel,
+      competencyId: "c1",
+      competencyModelVersion: 1,
+      observables: [
+        operationalEvidenceModel.observables[0],
+        { ...operationalEvidenceModel.observables[0], id: "o2" },
+      ],
+      statisticalModels: [{
+        ...operationalEvidenceModel.statisticalModels[0],
+        parameterSets: [{
+          ...operationalEvidenceModel.statisticalModels[0].parameterSets[0],
+          parameters: { o1: { a: 1, b: -1 }, o2: { a: 1, b: 1 } },
+        }],
+      }],
+    };
+    const db = makeDb({
+      items: [item1, item2],
+      evidenceModels: [em],
+      taskModels: [{
+        ...operationalTaskModel,
+        expectedObservations: [
+          { observationId: "o1", evidenceModelId: "em1", required: true, weight: 1 },
+          { observationId: "o2", evidenceModelId: "em1", required: true, weight: 1 },
+        ],
+      }],
+      tasks: [
+        makeTask({ itemId: "item1" }),
+        makeTask({ id: "t2", itemId: "item2" }),
+      ],
+      sessions: [makeSession({
+        taskIds: ["t1"],
+        deliveryModelId: "dm1",
+        selectionStrategy: "IRT",
+        studentModel: {
+          smvPosteriors: {
+            smv1: {
+              smvId: "smv1",
+              evidenceModelId: "em1",
+              modelFamily: "irt",
+              method: "eap",
+              parameterSource: "calibrated",
+              parameterSetId: "ps1",
+              estimate: 0.9,
+              precision: 0.5,
+              responsesUsed: 0,
+              responsesExcluded: 0,
+              updatedAt: "2026-01-01T00:00:00.000Z",
+            },
+          },
+        },
+      })],
+      competencies: [{ id: "c1", modelId: "cm1" }],
+      competencyModels: [{ id: "cm1", versionNumber: 1, smVariables: [] }],
+      policies: [{ id: "p-irt", type: "IRT" }],
+      assemblyModels: [{
+        id: "am1",
+        competencyModelId: "cm1",
+        status: "confirmed",
+        selectionAlgorithm: { policyId: "p-irt" },
+        stoppingRules: { maxItems: 99 },
+        targetsBySMV: [],
+      }],
+      deliveryModels: [{ id: "dm1", assemblyModelId: "am1", policyId: "p-irt" }],
+    });
+    const app = buildApp(db);
+
+    const next = await request(app).get("/api/sessions/s1/next-task");
+    expect(next.status).toBe(200);
+    expect(next.body.taskId).toBe("t2");
+    expect(db.items[1].exposureControl.usageCount).toBe(0);
+
+    const refused = await request(app)
+      .post("/api/sessions/s1/submit")
+      .send({ taskId: "not-a-task", itemId: "item2", rawAnswer: "opt_a" });
+    expect(refused.status).toBe(400);
+
+    const res = await request(app)
+      .post("/api/sessions/s1/submit")
+      .send({ taskId: "t2", itemId: "item2", rawAnswer: "opt_a" });
+    expect(res.status).toBe(200);
+    expect(res.body.taskIds).toEqual(["t1", "t2"]);
+    expect(res.body.responses[0].taskId).toBe("t2");
+    expect(db.items[1].exposureControl.usageCount).toBe(1);
+    expect(db.items[0].exposureControl.usageCount).toBe(0);
+
+    const paused = await request(app).post("/api/sessions/s1/pause");
+    expect(paused.body.status).toBe("paused");
+    const resumed = await request(app).post("/api/sessions/s1/resume");
+    expect(resumed.status).toBe(200);
+    expect(resumed.body.status).toBe("in_progress");
+    expect(resumed.body.taskIds).toEqual(["t1", "t2"]);
+
+    const again = await request(app).get("/api/sessions/s1/next-task");
+    expect(again.body.taskId).toBe("t1");
+  });
+});

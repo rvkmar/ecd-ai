@@ -92,8 +92,11 @@ function belowMin(delivered, row) {
  * Counts and eligibility for one assembly model's constraints.
  * `strategy` is "fixed" or anything else. Fixed only looks forward from
  * currentTaskIndex and does not revisit an earlier task.
+ * `candidateIds`, when an array, replaces the roster. The walk starts at
+ * the beginning of that list. Null means the session seed, which is the
+ * pre-G20 roster path.
  */
-export function planConstraintSelection(session, assemblyModel, db, strategy) {
+export function planConstraintSelection(session, assemblyModel, db, strategy, candidateIds) {
   const constraints = assemblyModel?.constraints;
   if (!assemblyConstraintsActive(constraints)) {
     return { active: false, warnings: [], stop: null, eligibleIds: null, unmetMinimums: false, summary: null };
@@ -105,9 +108,11 @@ export function planConstraintSelection(session, assemblyModel, db, strategy) {
   const unmetMinimums = hasUnmetMinimum(summary);
 
   // Fixed order only looks forward from currentTaskIndex. Every other
-  // strategy may use any unanswered roster task.
-  const taskIds = session?.taskIds || [];
-  const start = strategy === "fixed" ? Math.max(0, session?.currentTaskIndex || 0) : 0;
+  // strategy may use any unanswered roster task. An explicit candidate
+  // list is already the adaptive pool, in pool order, and is not sliced.
+  const usingPool = Array.isArray(candidateIds);
+  const taskIds = usingPool ? candidateIds : (session?.taskIds || []);
+  const start = usingPool ? 0 : strategy === "fixed" ? Math.max(0, session?.currentTaskIndex || 0) : 0;
   const candidates = [];
   for (let index = start; index < taskIds.length; index += 1) {
     const taskId = taskIds[index];
