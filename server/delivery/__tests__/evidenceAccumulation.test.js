@@ -647,16 +647,15 @@ describe("accumulateEvidence — refuses rather than guessing", () => {
     // Day 36 note: this test used to pin "gdina", which is now implemented
     // (see attributeAccumulation.test.js). Rather than delete the test --
     // the property it guards is the whole point of the dispatch -- it now
-    // pins the family that IS still unimplemented. `bayesian_network` is a
-    // real entry in schema.js's allowed statisticalModels types with no
-    // accumulation branch behind it.
+    // pins a family that is still unimplemented. bayesian_network now has
+    // its own branch (see bayesianNetwork.test.js).
     const db = makeDb();
-    db.evidenceModels[0].statisticalModels[0].type = "bayesian_network";
+    db.evidenceModels[0].statisticalModels[0].type = "factor_model";
 
     const { posteriors } = accumulateEvidence(sessionWith([makeResponse()]), db);
 
     expect(posteriors[0].supported).toBe(false);
-    expect(posteriors[0].reason).toMatch(/'bayesian_network' model family is not implemented yet/);
+    expect(posteriors[0].reason).toMatch(/'factor_model' model family is not implemented yet/);
     expect(posteriors[0]).not.toHaveProperty("estimate");
     expect(posteriors[0]).not.toHaveProperty("precision");
   });

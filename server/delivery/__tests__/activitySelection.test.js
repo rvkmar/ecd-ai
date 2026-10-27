@@ -708,11 +708,9 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
     ]);
   });
 
-  it("with no diagnostic data at all it degrades to first-unanswered and SAYS SO", () => {
+  it("with no diagnostic data at all it degrades to pool order and SAYS SO", () => {
 
-    // This is the pre-D56 behaviour in every case (F24). Preserving it is
-
-    // deliberate; presenting it as a computed choice is what changed.
+    // Nothing here can be ranked. Pool order is the seed, then task id.
 
     const s = session({ taskIds: ["tA", "tB"], selectionStrategy: "BayesianNetwork" });
 
@@ -720,11 +718,11 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
 
     expect(result.taskId).toBe("tA");
 
-    expect(result.debug.fallback).toBe("first-unanswered");
+    expect(result.debug.fallback).toBe("pool-order");
 
     expect(result.debug.totalGain).toBeNull();
 
-    expect(result.warnings[0]).toContain("fell back to the first unanswered task");
+    expect(result.warnings[0]).toContain("pool order");
 
   });
 
@@ -740,7 +738,7 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
 
     const result = selectNextActivity(s, db);
 
-    expect(result.debug.fallback).toBe("first-unanswered");
+    expect(result.debug.fallback).toBe("pool-order");
 
     expect(result.debug.unrankable[0].reason).toContain("no required attributes");
   });

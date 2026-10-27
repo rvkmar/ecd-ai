@@ -209,6 +209,12 @@ describe("ecd-sample-complete.zip", () => {
     expect(functionProc.phases[0].rubricId).toBe(functionRubric.id);
 
     const fractionEvidence = db.evidenceModels.find((row) => row.name === "Fraction evidence");
+    const fractionBn = fractionEvidence.statisticalModels.find((row) => row.id === "sm-frac-bn");
+    expect(fractionBn.type).toBe("bayesian_network");
+    expect(fractionBn.active).toBe(false);
+    expect(fractionBn.structureConfig.smvId).toBe("smv-equiv");
+    expect(fractionBn.structureConfig.cpt["obs-equiv"].levels.mastered).toBe(0.8);
+    expect(fractionEvidence.statisticalModels.find((row) => row.active).type).toBe("irt");
     const fractionProc = fractionEvidence.evaluationProcedures[0];
     expect(fractionProc.method).toBe("rubric");
     expect(fractionProc.workProductId).toBe(equivProduct.id);

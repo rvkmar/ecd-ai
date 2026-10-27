@@ -17,7 +17,7 @@ One zip the Settings zip uploader accepts with no failed rows. It is two short c
 | competencyModels.json | 2 | Plant part naming (two binary attributes), Grade 6 fractions (one) |
 | competencies.json | 3 | Names the part, Names the function, Fraction equivalence |
 | designPatterns.json | 3 | Explain a labelled diagram, Name a plant part (kind-of that pattern), Explain a fraction |
-| evidenceModels.json | 3 | Part naming (IRT), Part function (DINA, bound to the plant Q-matrix by name), Fraction evidence |
+| evidenceModels.json | 3 | Part naming (IRT), Part function (DINA, bound to the plant Q-matrix by name), Fraction evidence. Fraction evidence also carries an inactive Bayesian network (sm-frac-bn) over smv-equiv, with a conditional probability for obs-equiv. The active model stays IRT. |
 | taskModels.json | 3 | Name the plant part, Name the plant function, Name the fraction |
 | items.json | 4 | Leaf, root, job of the leaf, equivalent to 2/4 |
 | qMatrixModels.json | 2 | Plant part Q-matrix, Fraction equivalence Q-matrix |

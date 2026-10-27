@@ -506,12 +506,7 @@ export default function BNConfigPanel({
 
                 <span>
 
-                    The current architecture supports a single latent
-                    claim node. Observable evidence variables are
-                    conditionally dependent on this node. Conditional
-                    probability tables (CPTs) must be calibrated
-                    after the evidence model is finalized using
-                    empirical response data.
+                    Delivery scores one latent student model variable, the observables that depend on it, and a conditional probability table. A second latent node, an edge between observables, or a continuous student model variable is refused.
 
                 </span>
 

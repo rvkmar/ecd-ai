@@ -43,6 +43,7 @@
 
 import { SM_VARIABLE_TYPE_VALUES } from "../../src/utils/ecdVocabulary.js";
 import { accumulateAttributeMastery } from "./attributeAccumulation.js";
+import { accumulateBayesianNetwork, BAYESIAN_NETWORK_FAMILY } from "./bayesianNetwork.js";
 import { decideJointContinuousUpdate, estimateJointContinuousPosterior } from "./jointContinuousAccumulation.js";
 import { activePackageFor, packageEntryFor } from "../compositeLibrary/activePackage.js";
 
@@ -92,6 +93,11 @@ const RAW_SCORE_SMV_TYPES = ["continuous", "binary", "ordinal"];
    refuse-don't-guess, log-space joint) but none of its quadrature
    machinery. */
 export const DIAGNOSTIC_MODEL_FAMILIES = ["dina", "gdina"];
+
+/* One discrete latent, conditionally independent observables. The math
+   lives in bayesianNetwork.js. jointPrior is not an input: that field is
+   the D129 continuous covariance, and a Bayesian network does not read it. */
+export { BAYESIAN_NETWORK_FAMILY };
 
 /* QUADRATURE GRID SIZING -- Day 31, hardened after an adversarial pass.
 
@@ -901,14 +907,31 @@ export function accumulateEvidence(session, db, options = {}) {
 
     const family = statisticalModel.type;
 
+    if (family === BAYESIAN_NETWORK_FAMILY) {
+      posteriors.push(
+        accumulateBayesianNetwork({
+          evidenceModelId,
+          parameterSetId,
+          parameterSource,
+          evidenceModel,
+          statisticalModel,
+          group,
+          db,
+          session,
+          warnings,
+          scoreResponse,
+        })
+      );
+      continue;
+    }
+
     if (
       !CONTINUOUS_MODEL_FAMILIES.includes(family) &&
       !RAW_SCORE_MODEL_FAMILIES.includes(family) &&
       !DIAGNOSTIC_MODEL_FAMILIES.includes(family)
     ) {
-      /* The per-family dispatch the build reference calls for. Bayesian-
-         network updating is still ahead; until it exists, saying so is the
-         only honest output. */
+      /* Any family this file cannot compute correctly is a refusal, not a
+         number. bayesian_network is handled above. */
       posteriors.push({
         evidenceModelId,
         parameterSetId,
@@ -1309,11 +1332,12 @@ export function applyPosteriorsToSession(session, accumulationResult, options = 
        keep the earlier measurement. */
     if (posterior.invalidatePersisted && posterior.smvId) {
       delete session.studentModel.smvPosteriors[posterior.smvId];
+      if (session.studentModel.bnPosteriors) delete session.studentModel.bnPosteriors[posterior.smvId];
       continue;
     }
     if (!posterior.supported) continue;
 
-    session.studentModel.smvPosteriors[posterior.smvId] = {
+    const stored = {
       smvId: posterior.smvId,
       smvType: posterior.smvType,
       evidenceModelId: posterior.evidenceModelId,
@@ -1335,9 +1359,40 @@ export function applyPosteriorsToSession(session, accumulationResult, options = 
       refined: posterior.refined === true,
       updatedAt,
     };
+    if (posterior.distribution && typeof posterior.distribution === "object") {
+      stored.distribution = posterior.distribution;
+      stored.states = posterior.states;
+      stored.positiveState = posterior.positiveState;
+      stored.priorSource = posterior.priorSource;
+    }
+    if (posterior.competencyModelId) stored.competencyModelId = posterior.competencyModelId;
+    session.studentModel.smvPosteriors[posterior.smvId] = stored;
+
+    if (posterior.modelFamily === BAYESIAN_NETWORK_FAMILY) {
+      if (!session.studentModel.bnPosteriors || typeof session.studentModel.bnPosteriors !== "object" || Array.isArray(session.studentModel.bnPosteriors)) {
+        session.studentModel.bnPosteriors = {};
+      }
+      session.studentModel.bnPosteriors[posterior.smvId] = posterior.estimate;
+    }
   }
 
   return session;
+}
+
+/**
+ * Recompute Bayesian network posteriors from the responses already stored
+ * on a session. Other families are left as they were: this does not call
+ * applyPosteriorsToSession for an IRT, CTT, or DINA posterior, so a resume
+ * does not refresh those updatedAt stamps.
+ */
+export function refreshBayesianNetworkPosteriors(session, db, options = {}) {
+  const accumulation = accumulateEvidence(session, db);
+  const posteriors = (accumulation.posteriors || []).filter(
+    (posterior) => posterior.modelFamily === BAYESIAN_NETWORK_FAMILY && (posterior.supported || posterior.invalidatePersisted)
+  );
+  if (posteriors.length === 0) return accumulation;
+  applyPosteriorsToSession(session, { posteriors, warnings: accumulation.warnings }, options);
+  return accumulation;
 }
 
 /**

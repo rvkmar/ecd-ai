@@ -35,7 +35,15 @@ vi.mock("../../../api/apiClient", () => ({
         studentName: "Pat",
         selectionStrategy: "BayesianNetwork",
         responses: [],
-        modelSummary: {},
+        modelSummary: {
+          BayesianNetwork: {
+            "smv-equiv": {
+              posterior: 0.8,
+              level: "Strong",
+              distribution: { not_mastered: 0.2, mastered: 0.8 },
+            },
+          },
+        },
         recommendations: { individualLevel: [], groupLevel: [] },
         stopped,
         attributeProfile,
@@ -51,6 +59,13 @@ vi.mock("../../../api/apiClient", () => ({
         encouragement: "Great effort! Keep practicing.",
         stopped,
         attributeProfile,
+        bayesianNetwork: {
+          "smv-equiv": {
+            probability: 0.8,
+            level: "Strong",
+            distribution: { not_mastered: 0.2, mastered: 0.8 },
+          },
+        },
       });
     }
     return Promise.resolve({
@@ -119,6 +134,21 @@ describe("SessionReport — classification and stop on report surfaces", () => {
     expect(await screen.findByText("Why this session ended")).toBeInTheDocument();
     expect(screen.getByText("Attribute profile")).toBeInTheDocument();
     expect(screen.getByText("attrA")).toBeInTheDocument();
+  });
+
+  it("lists Bayesian network posteriors for the learner and the teacher", async () => {
+    authState.role = "teacher";
+    render(<SessionReport sessionId="s-d59" />);
+    const learner = await screen.findByTestId("bn-posteriors");
+    expect(within(learner).getByText("smv-equiv")).toBeInTheDocument();
+    expect(learner.textContent).toContain("80%");
+    expect(learner.textContent).toContain("not_mastered 20%");
+    expect(learner.textContent).toContain("mastered 80%");
+
+    await userEvent.click(screen.getByText("Teacher Report"));
+    const teacher = screen.getByTestId("bn-posteriors");
+    expect(within(teacher).getByText("smv-equiv")).toBeInTheDocument();
+    expect(teacher.textContent).toContain("Strong");
   });
 
   it("keeps Close when every report endpoint fails", async () => {

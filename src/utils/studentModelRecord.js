@@ -233,10 +233,20 @@ export function seedSessionStudentModel(session, db, options = {}) {
     session.studentModel = {};
   }
   const smvPosteriors = { ...(session.studentModel.smvPosteriors || {}) };
+  const priors = { ...(session.studentModel.carriedForward?.priors || {}) };
   for (const record of records) {
     for (const [smvId, posterior] of Object.entries(record.smvPosteriors || {})) {
       if (smvPosteriors[smvId]) continue;
       smvPosteriors[smvId] = clone(posterior);
+      if (
+        posterior?.modelFamily === "bayesian_network" &&
+        posterior.distribution &&
+        typeof posterior.distribution === "object" &&
+        !Array.isArray(posterior.distribution) &&
+        !priors[smvId]
+      ) {
+        priors[smvId] = clone(posterior.distribution);
+      }
     }
   }
   session.studentModel.smvPosteriors = smvPosteriors;
@@ -244,6 +254,7 @@ export function seedSessionStudentModel(session, db, options = {}) {
     at: options.now || new Date().toISOString(),
     recordIds: records.map((row) => row.id),
     competencyModelIds: uniqueSorted(records.map((row) => row.competencyModelId)),
+    ...(Object.keys(priors).length > 0 ? { priors } : {}),
   };
   return session;
 }

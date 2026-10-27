@@ -184,6 +184,31 @@
         },
         "parameterSets": [],
         "activeParameterSetId": null
+      },
+      {
+        "id": "sm-frac-bn",
+        "type": "bayesian_network",
+        "active": false,
+        "structureConfig": {
+          "latentNodes": ["smv-equiv"],
+          "smvId": "smv-equiv",
+          "observableIds": ["obs-equiv"],
+          "edges": [{ "from": "smv-equiv", "to": "obs-equiv" }],
+          "cpt": {
+            "obs-equiv": {
+              "levels": {
+                "not_mastered": 0.25,
+                "mastered": 0.8
+              }
+            }
+          },
+          "prior": {
+            "not_mastered": 0.5,
+            "mastered": 0.5
+          }
+        },
+        "parameterSets": [],
+        "activeParameterSetId": null
       }
     ],
     "evaluationProcedures": [

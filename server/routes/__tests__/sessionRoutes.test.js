@@ -1050,6 +1050,7 @@ describe("POST /:id/submit — a delivery-model task outside the seed", () => {
     expect(resumed.status).toBe(200);
     expect(resumed.body.status).toBe("in_progress");
     expect(resumed.body.taskIds).toEqual(["t1", "t2"]);
+    expect(resumed.body.studentModel.smvPosteriors.smv1.updatedAt).toBe("2026-01-01T00:00:00.000Z");
 
     const again = await request(app).get("/api/sessions/s1/next-task");
     expect(again.body.taskId).toBe("t1");

@@ -21,6 +21,7 @@ import {
   itemParametersAreUsable,
 } from "./evidenceAccumulation.js";
 import { dinaParametersAreUsable } from "./attributeAccumulation.js";
+import { snapshotBayesianPilot, BAYESIAN_NETWORK_FAMILY } from "./bayesianNetwork.js";
 
 export function frozenScoringContext(session, evidenceModelId) {
   const relevant = (session?.responses || []).filter(
@@ -93,6 +94,9 @@ export function chooseSubmitParameterBinding({
   calibratedParameterSetId,
   item,
   freeze = { frozenSource: null, frozenParameterSetId: null },
+  statisticalModel = null,
+  evidenceModel = null,
+  db = null,
 }) {
   if (freeze?.error) return { error: freeze.error };
 
@@ -124,6 +128,16 @@ export function chooseSubmitParameterBinding({
       };
     }
     return { parameterSource: "pilot", parameterSetId: null, pilotParams };
+  }
+
+  if (family === BAYESIAN_NETWORK_FAMILY) {
+    const pinned = snapshotBayesianPilot(statisticalModel, evidenceModel, db);
+    if (!pinned.pilotParams) {
+      return {
+        error: pinned.error || `Evidence model '${item?.evidenceModelId}' has no usable Bayesian network conditional probability table for item '${item?.id}'.`,
+      };
+    }
+    return { parameterSource: "pilot", parameterSetId: null, pilotParams: pinned.pilotParams };
   }
 
   if (wantPilot && family === "dina") {

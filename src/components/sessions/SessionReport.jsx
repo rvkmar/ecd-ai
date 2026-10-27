@@ -7,6 +7,39 @@ import { measurementStopHeading, measurementStopDetails } from "./measurementSto
 import { assemblyProgressLine } from "../../utils/assemblyConstraints";
 import AttributeProfileList from "./AttributeProfileList";
 
+function formatProbability(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "unknown";
+  return `${Math.round(value * 1000) / 10}%`;
+}
+
+function BnPosteriorList({ nodes }) {
+  const entries = Object.entries(nodes || {}).filter(([, row]) => row && typeof row === "object");
+  if (entries.length === 0) return null;
+  return (
+    <div data-testid="bn-posteriors">
+      <h4 className="font-semibold">Bayesian network</h4>
+      <ul className="list-disc ml-5 text-sm">
+        {entries.map(([node, row]) => {
+          const distribution = row.distribution && typeof row.distribution === "object"
+            ? Object.entries(row.distribution)
+              .map(([state, probability]) => `${state} ${formatProbability(probability)}`)
+              .join(", ")
+            : "";
+          return (
+            <li key={node}>
+              <span className="font-medium">{node}</span>
+              {": "}
+              {formatProbability(row.probability ?? row.posterior)}
+              {row.level ? ` (${row.level})` : ""}
+              {distribution ? <span className="text-gray-600"> {distribution}</span> : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 // SessionReport.jsx
 // Props:
 // - sessionId: string (required)
@@ -193,6 +226,8 @@ export default function SessionReport({ sessionId, onClose }) {
             </div>
           )}
 
+          <BnPosteriorList nodes={learnerFeedback.bayesianNetwork} />
+
           {learnerFeedback.strengths?.length > 0 && (
             <div>
               <h4 className="font-semibold">Strengths</h4>
@@ -273,6 +308,8 @@ export default function SessionReport({ sessionId, onClose }) {
               ))}
             </ul>
           </div>
+
+          <BnPosteriorList nodes={teacherReport.modelSummary?.BayesianNetwork} />
 
           <div>
             <h4 className="font-semibold">Model Summary</h4>
