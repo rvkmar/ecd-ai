@@ -62,11 +62,11 @@ Confirm succeeded. Review & confirm, Seed draft models, shows the same competenc
 
 ## Remote
 
-`git push` of `cursor/ksa-smv-links-f932` was refused: GitHub returned 403, "Permission to rvkmar/ecd-ai.git denied to cursor[bot]". The installation token reports `push: false`. The draft pull request against `main` was not opened. The commits are local on that branch.
+Draft pull request #105 against `main`: https://github.com/rvkmar/ecd-ai/pull/105. Branch `cursor/ksa-smv-links-f932`. An earlier push returned 403 for `cursor[bot]`. A later push of the same branch succeeded.
 
 ## Half-applied work
 
-None in the product. The branch is not on the remote.
+None.
 
 ## Compression debt
 
