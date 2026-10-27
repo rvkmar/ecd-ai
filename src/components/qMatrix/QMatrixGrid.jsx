@@ -115,9 +115,13 @@ export default function QMatrixGrid({
     cellRefs.current.get(`${r}:${c}`)?.focus();
   }
 
+  function rowName(item) {
+    return item.label || item.id;
+  }
+
   function announceCell(item, attr, checked) {
     setAnnouncement(
-      `${item.id} ${checked ? "requires" : "no longer requires"} ${attr.label}`
+      `${rowName(item)} ${checked ? "requires" : "no longer requires"} ${attr.label}`
     );
   }
 
@@ -195,7 +199,7 @@ export default function QMatrixGrid({
   }
 
   if (items.length === 0) {
-    return <p className="mt-2 text-caption text-slate-500">No items added yet.</p>;
+    return <p className="mt-2 text-caption text-slate-500">No rows added yet.</p>;
   }
 
   const requiredCount = (itemId) =>
@@ -210,7 +214,7 @@ export default function QMatrixGrid({
       >
         <table
           role="grid"
-          aria-label="Q-matrix: items by required attributes"
+          aria-label="Q-matrix: targets by required attributes"
           aria-readonly={readOnly || undefined}
           className="min-w-full border-collapse text-caption"
         >
@@ -220,7 +224,7 @@ export default function QMatrixGrid({
                 scope="col"
                 className="sticky left-0 bg-slate-50 px-3 py-2 text-left font-medium text-slate-600"
               >
-                Item
+                Target
               </th>
               {attributes.map((attr) => {
                 const advisory = advisoryAttrIds.has(attr.id);
@@ -262,12 +266,18 @@ export default function QMatrixGrid({
                     scope="row"
                     className="sticky left-0 whitespace-nowrap border-t border-slate-100 bg-white px-3 py-2 text-left font-medium text-slate-700"
                   >
-                    {item.id}
+                    {rowName(item)}
+                    {item.caption && (
+                      <span className="ml-1.5 text-2xs text-slate-400">
+                        {item.caption}
+                      </span>
+                    )}
                     {item.metadata?.subject && (
                       <span className="ml-1.5 text-2xs text-slate-400">
                         {item.metadata.subject}
                       </span>
                     )}
+                    {item.headerExtra}
                     {rowInvalid && (
                       <span className="sr-only"> — requires no attributes</span>
                     )}
@@ -313,7 +323,7 @@ export default function QMatrixGrid({
                               ? applyRange(item, attr, r, c)
                               : toggleSingle(item, attr, r, c)
                           }
-                          aria-label={`${item.id} requires ${attr.label}`}
+                          aria-label={`${rowName(item)} requires ${attr.label}`}
                           aria-invalid={rowInvalid || undefined}
                         />
                       </td>
@@ -332,7 +342,7 @@ export default function QMatrixGrid({
                         type="button"
                         onClick={() => onRemoveItem?.(item.id)}
                         className="text-slate-400 hover:text-red-600"
-                        aria-label={`Remove ${item.id} from Q-matrix`}
+                        aria-label={`Remove ${rowName(item)} from Q-matrix`}
                       >
                         <X size={14} />
                       </button>

@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 export interface ComboboxOption {
   value: string
   label: string
+  group?: string
 }
 
 export interface ComboboxProps {
@@ -55,6 +56,19 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
   ) => {
     const [open, setOpen] = React.useState(false)
     const selected = options.find((option) => option.value === value)
+    const grouped = React.useMemo(() => {
+      const order: { heading?: string; options: ComboboxOption[] }[] = []
+      const index = new Map<string, number>()
+      for (const option of options) {
+        const heading = option.group || ""
+        if (!index.has(heading)) {
+          index.set(heading, order.length)
+          order.push({ heading: heading || undefined, options: [] })
+        }
+        order[index.get(heading)!].options.push(option)
+      }
+      return order
+    }, [options])
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
@@ -78,26 +92,28 @@ const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
             <CommandInput placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
             <CommandList>
               <CommandEmpty>{emptyText}</CommandEmpty>
-              <CommandGroup>
-                {options.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    value={option.label}
-                    onSelect={() => {
-                      onValueChange?.(option.value === value ? "" : option.value)
-                      setOpen(false)
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === option.value ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {option.label}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+              {grouped.map((group) => (
+                <CommandGroup key={group.heading || "ungrouped"} heading={group.heading}>
+                  {group.options.map((option) => (
+                    <CommandItem
+                      key={option.value}
+                      value={option.group ? `${option.group} ${option.label}` : option.label}
+                      onSelect={() => {
+                        onValueChange?.(option.value === value ? "" : option.value)
+                        setOpen(false)
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === option.value ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {option.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ))}
             </CommandList>
           </Command>
         </PopoverContent>

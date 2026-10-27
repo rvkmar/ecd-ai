@@ -69,10 +69,12 @@ export function computeQMatrixValidity({
   includedItems.forEach((item) => {
     const attrs = attrsByItem.get(item.id);
     if (!attrs || attrs.size === 0) {
+      const name = item.label || item.id;
+      const noun = item.rowKind === "observable" ? "Observable" : "Item";
       errors.push({
         code: "empty-row",
         itemId: item.id,
-        message: `Item '${item.id}' requires no attributes. Every item in the Q-matrix must require at least one attribute.`,
+        message: `${noun} '${name}' requires no attributes. Every row in the Q-matrix must require at least one attribute.`,
       });
     }
   });

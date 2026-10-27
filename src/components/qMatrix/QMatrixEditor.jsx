@@ -27,6 +27,11 @@ import { Combobox } from "@/components/ui/combobox";
 import WizardStepContainer from "@/components/wizard/WizardStepContainer";
 import QMatrixGrid from "./QMatrixGrid";
 import { computeQMatrixValidity } from "./QMatrixValidity";
+import {
+  entryForRow,
+  qMatrixRowKey,
+  rowsFromEntries,
+} from "@/utils/qMatrixEntries";
 
 import { apiErrorMessage } from "@/api/apiClient";
 import { useCompetencyModels, useCompetencies } from "@/api/queries/competencies";
@@ -59,10 +64,6 @@ const emptyDraft = () => ({
   status: "draft",
   locked: false,
 });
-
-function itemIdsFrom(entries) {
-  return Array.from(new Set((entries || []).map((entry) => entry.itemId).filter(Boolean)));
-}
 
 // Duplicate has no clone route. The create form opens with these fields
 // copied and no id, so the next save is a new draft. Status, lock, and
@@ -107,7 +108,7 @@ export default function QMatrixEditor({
   const { data: competencies = [] } = useCompetencies();
 
   const [draft, setDraft] = useState(() => draftFromSeed(initialDraft, domainAnalysisId));
-  const [includedItemIds, setIncludedItemIds] = useState(() => itemIdsFrom(initialDraft?.entries));
+  const [includedRows, setIncludedRows] = useState(() => rowsFromEntries(initialDraft?.entries));
   const [isDirty, setIsDirty] = useState(false);
 
   // `draft.id` is also mirrored into this ref, updated synchronously
@@ -125,7 +126,7 @@ export default function QMatrixEditor({
     if (isEditing && existing) {
       setDraft(existing);
       draftIdRef.current = existing.id;
-      setIncludedItemIds(Array.from(new Set((existing.entries || []).map((e) => e.itemId))));
+      setIncludedRows(rowsFromEntries(existing.entries));
       setIsDirty(false);
     }
   }, [isEditing, existing]);
@@ -183,20 +184,75 @@ export default function QMatrixEditor({
     });
   }, [items, evidenceModels, competencies, draft.competencyModelId]);
 
-  const includedItems = includedItemIds
-    .map((id) => items.find((it) => it.id === id))
-    .filter(Boolean);
+  const includedItemIds = includedRows
+    .filter((row) => row.kind === "item")
+    .map((row) => row.itemId);
+
+  const scopedObservables = useMemo(() => {
+    if (!draft.competencyModelId) return [];
+    const compById = new Map(competencies.map((c) => [c.id, c]));
+    const rows = [];
+    for (const model of evidenceModels) {
+      const competency = compById.get(model.competencyId);
+      if (competency?.modelId !== draft.competencyModelId) continue;
+      for (const observable of model.observables || []) {
+        if (!observable?.id) continue;
+        const value = `${model.id}::${observable.id}`;
+        rows.push({
+          value,
+          observableId: observable.id,
+          evidenceModelId: model.id,
+          evidenceModelName: model.name || model.id,
+          statement: observable.statement || observable.id,
+          group: model.name || model.id,
+          label: observable.statement || observable.id,
+        });
+      }
+    }
+    return rows;
+  }, [evidenceModels, competencies, draft.competencyModelId]);
 
   const availableToAdd = scopedItems.filter((it) => !includedItemIds.includes(it.id));
+  const availableObservables = scopedObservables.filter((candidate) => {
+    const key = `observable:${candidate.evidenceModelId}:${candidate.observableId}:`;
+    return !includedRows.some((row) => row.key === key);
+  });
+
+  const displayEntries = useMemo(
+    () =>
+      (draft.entries || []).map((entry) => ({
+        itemId: qMatrixRowKey(entry),
+        attributeId: entry.attributeId,
+      })),
+    [draft.entries]
+  );
+
+  const validityRows = useMemo(
+    () =>
+      includedRows.map((row) => {
+        if (row.kind === "item") return { id: row.itemId };
+        const observable = scopedObservables.find(
+          (candidate) =>
+            candidate.observableId === row.observableId &&
+            candidate.evidenceModelId === row.evidenceModelId
+        );
+        return {
+          id: row.key,
+          label: observable?.statement || row.observableId,
+          rowKind: "observable",
+        };
+      }),
+    [includedRows, scopedObservables]
+  );
 
   const validity = useMemo(
     () =>
       computeQMatrixValidity({
         attributeIds: draft.attributeIds,
-        includedItems,
-        entries: draft.entries,
+        includedItems: validityRows,
+        entries: displayEntries,
       }),
-    [draft.attributeIds, includedItems, draft.entries]
+    [draft.attributeIds, validityRows, displayEntries]
   );
 
   /* `readOnly` is the DISTRICT view (UI spec §2.1 names /district/q-matrices
@@ -237,25 +293,67 @@ export default function QMatrixEditor({
 
   function addItem(itemId) {
     if (locked || !itemId || includedItemIds.includes(itemId)) return;
-    setIncludedItemIds((ids) => [...ids, itemId]);
+    setIncludedRows((rows) => [
+      ...rows,
+      { kind: "item", itemId, observableId: "", evidenceModelId: "", key: itemId },
+    ]);
     setIsDirty(true);
   }
 
-  function removeItem(itemId) {
-    if (locked) return;
-    setIncludedItemIds((ids) => ids.filter((id) => id !== itemId));
-    patchDraft({ entries: draft.entries.filter((e) => e.itemId !== itemId) });
+  function addObservable(value) {
+    if (locked || !value) return;
+    const candidate = scopedObservables.find((row) => row.value === value);
+    if (!candidate) return;
+    const spec = {
+      kind: "observable",
+      itemId: "",
+      observableId: candidate.observableId,
+      evidenceModelId: candidate.evidenceModelId,
+    };
+    spec.key = qMatrixRowKey(spec);
+    if (includedRows.some((row) => row.key === spec.key)) return;
+    setIncludedRows((rows) => [...rows, spec]);
+    setIsDirty(true);
   }
 
-  function toggleCell(itemId, attributeId) {
+  function setObservableItem(rowKey, itemId) {
     if (locked) return;
+    const current = includedRows.find((row) => row.key === rowKey);
+    if (!current || current.kind !== "observable") return;
+    const next = { ...current, itemId: itemId || "" };
+    next.key = qMatrixRowKey(next);
+    if (next.key !== rowKey && includedRows.some((row) => row.key === next.key)) return;
+    setIncludedRows((rows) => rows.map((row) => (row.key === rowKey ? next : row)));
+    patchDraft({
+      entries: draft.entries.map((entry) => {
+        if (qMatrixRowKey(entry) !== rowKey) return entry;
+        const stored = { ...entry };
+        if (itemId) stored.itemId = itemId;
+        else delete stored.itemId;
+        return stored;
+      }),
+    });
+  }
+
+  function removeItem(rowKey) {
+    if (locked) return;
+    setIncludedRows((rows) => rows.filter((row) => row.key !== rowKey));
+    patchDraft({ entries: draft.entries.filter((entry) => qMatrixRowKey(entry) !== rowKey) });
+  }
+
+  function toggleCell(rowKey, attributeId) {
+    if (locked) return;
+    const row = includedRows.find((candidate) => candidate.key === rowKey);
+    if (!row) return;
     const exists = draft.entries.some(
-      (e) => e.itemId === itemId && e.attributeId === attributeId
+      (entry) => qMatrixRowKey(entry) === rowKey && entry.attributeId === attributeId
     );
     patchDraft({
       entries: exists
-        ? draft.entries.filter((e) => !(e.itemId === itemId && e.attributeId === attributeId))
-        : [...draft.entries, { itemId, attributeId }],
+        ? draft.entries.filter(
+            (entry) => !(qMatrixRowKey(entry) === rowKey && entry.attributeId === attributeId)
+          )
+        : [...draft.entries, entryForRow(row, attributeId)],
     });
   }
 
@@ -271,15 +369,59 @@ export default function QMatrixEditor({
 
     const inRange = new Set(cells.map((c) => `${c.itemId}::${c.attributeId}`));
     const kept = draft.entries.filter(
-      (e) => !inRange.has(`${e.itemId}::${e.attributeId}`)
+      (entry) => !inRange.has(`${qMatrixRowKey(entry)}::${entry.attributeId}`)
     );
 
     patchDraft({
       entries: nextChecked
-        ? [...kept, ...cells.map((c) => ({ itemId: c.itemId, attributeId: c.attributeId }))]
+        ? [
+            ...kept,
+            ...cells.map((cell) => {
+              const row = includedRows.find((candidate) => candidate.key === cell.itemId);
+              return row
+                ? entryForRow(row, cell.attributeId)
+                : { itemId: cell.itemId, attributeId: cell.attributeId };
+            }),
+          ]
         : kept,
     });
   }
+
+  const gridRows = includedRows.map((row) => {
+    if (row.kind === "item") {
+      const item = items.find((it) => it.id === row.itemId);
+      return item || { id: row.key };
+    }
+    const observable = scopedObservables.find(
+      (candidate) =>
+        candidate.observableId === row.observableId &&
+        candidate.evidenceModelId === row.evidenceModelId
+    );
+    const statement = observable?.statement || row.observableId;
+    const matchingItems = scopedItems.filter((item) => item.observationId === row.observableId);
+    return {
+      id: row.key,
+      label: statement,
+      caption: observable?.evidenceModelName || row.evidenceModelId || "Observable",
+      rowKind: "observable",
+      headerExtra: (
+        <select
+          aria-label={`Item for ${statement}`}
+          className="ml-2 max-w-[14rem] rounded border border-slate-200 bg-white px-1 py-0.5 text-2xs text-slate-700"
+          value={row.itemId || ""}
+          disabled={locked}
+          onChange={(event) => setObservableItem(row.key, event.target.value)}
+        >
+          <option value="">Any item</option>
+          {matchingItems.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name || item.id}
+            </option>
+          ))}
+        </select>
+      ),
+    };
+  });
 
   // Save (draft -> reviewed) requires reviewed-level completeness, AND zero
   // D52 blocking errors (currently just "empty-row"). This second part
@@ -414,7 +556,7 @@ export default function QMatrixEditor({
               onValueChange={(value) => {
                 if (locked) return;
                 const model = competencyModels.find((m) => m.id === value);
-                setIncludedItemIds([]);
+                setIncludedRows([]);
                 patchDraft({
                   competencyModelId: value,
                   competencyModelVersion: model?.versionNumber,
@@ -479,16 +621,31 @@ export default function QMatrixEditor({
 
             {draft.attributeIds.length > 0 && (
               <div>
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="text-sm font-semibold text-slate-800">Items</h3>
-                  {!locked && availableToAdd.length > 0 && (
-                    <Combobox
-                      options={availableToAdd.map((it) => ({ value: it.id, label: it.id }))}
-                      value=""
-                      onValueChange={addItem}
-                      placeholder="+ Add item…"
-                      className="w-56"
-                    />
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <h3 className="text-sm font-semibold text-slate-800">Rows</h3>
+                  {!locked && (
+                    <div className="flex flex-wrap gap-2">
+                      {availableToAdd.length > 0 && (
+                        <Combobox
+                          options={availableToAdd.map((it) => ({ value: it.id, label: it.name || it.id }))}
+                          value=""
+                          onValueChange={addItem}
+                          placeholder="+ Add item…"
+                          className="w-56"
+                        />
+                      )}
+                      {availableObservables.length > 0 && (
+                        <Combobox
+                          options={availableObservables}
+                          value=""
+                          onValueChange={addObservable}
+                          placeholder="+ Add observable…"
+                          searchPlaceholder="Search observables…"
+                          emptyText="No observable found."
+                          className="w-72"
+                        />
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -496,8 +653,8 @@ export default function QMatrixEditor({
                   attributes={draft.attributeIds
                     .map((id) => availableAttributes.find((a) => a.id === id))
                     .filter(Boolean)}
-                  items={includedItems}
-                  entries={draft.entries}
+                  items={gridRows}
+                  entries={displayEntries}
                   onToggleCell={toggleCell}
                   onSetCells={setCells}
                   onRemoveItem={removeItem}

@@ -126,6 +126,7 @@ import {
   GOVERNING_ASSEMBLY_MODEL_STATUSES,
 } from "./assemblyProgress.js";
 import { dinaParametersAreUsable } from "./attributeAccumulation.js";
+import { attributeIdsForDeliveryItem } from "../../src/utils/qMatrixEntries.js";
 import { activePackageFor } from "../compositeLibrary/activePackage.js";
 import {
   frozenScoringContext,
@@ -942,9 +943,12 @@ function selectBayesianNetwork(session, db, warnings) {
       continue;
     }
 
-    const requiredAttributeIds = (qMatrix.entries || [])
-      .filter((e) => e.itemId === task.itemId)
-      .map((e) => e.attributeId);
+    const item = (db.items || []).find((it) => it.id === task.itemId);
+    const requiredAttributeIds = attributeIdsForDeliveryItem(qMatrix.entries, {
+      itemId: task.itemId,
+      observableId: item?.observationId,
+      evidenceModelId: evidenceModel?.id,
+    });
 
     if (requiredAttributeIds.length === 0) {
       // attributeAccumulation.js excludes these from scoring for the same
@@ -957,7 +961,6 @@ function selectBayesianNetwork(session, db, warnings) {
       continue;
     }
 
-    const item = (db.items || []).find((it) => it.id === task.itemId);
     const freeze = frozenScoringContext(session, evidenceModel?.id);
     const resolved = resolveDinaParameters(task.itemId, item, statisticalModel, family, freeze);
 

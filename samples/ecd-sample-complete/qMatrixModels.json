@@ -25,6 +25,12 @@
         "itemId": "it-function",
         "attributeId": "smv-names-function",
         "required": true
+      },
+      {
+        "observableId": "obs-plant-function",
+        "evidenceModelId": "em-function",
+        "attributeId": "smv-names-function",
+        "required": true
       }
     ]
   },

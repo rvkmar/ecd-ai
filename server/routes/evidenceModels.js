@@ -9,6 +9,10 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
+import {
+  qMatrixCitesObservableOnModel,
+  qMatrixEntriesCitingEvidenceModel,
+} from "../../src/utils/qMatrixEntries.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
 import { logger } from "../utils/logger.js";
 
@@ -506,6 +510,24 @@ router.put("/:id", canAuthor, (req, res) => {
     locked: false,
     updatedAt: new Date().toISOString()
   };
+
+  if (Array.isArray(req.body?.observables)) {
+    const nextIds = new Set(
+      req.body.observables.map((row) => (typeof row?.id === "string" ? row.id.trim() : "")).filter(Boolean)
+    );
+    const removed = (existing.observables || [])
+      .map((row) => (typeof row?.id === "string" ? row.id.trim() : ""))
+      .filter((id) => id && !nextIds.has(id));
+    const cited = removed.filter((id) =>
+      qMatrixCitesObservableOnModel(db.qMatrixModels, existing.id, id)
+    );
+    if (cited.length > 0) {
+      return res.status(409).json({
+        error: "Cannot remove an observable referenced by a Q-matrix.",
+        details: cited,
+      });
+    }
+  }
 
   /* ---------------------------------------------------
     Draft saves validate NON-strict.
@@ -1221,6 +1243,12 @@ router.delete("/:id", canAuthor, (req, res) => {
   if (!model) return res.status(404).json({ error: "Model not found" });
   if (model.locked) {
     return res.status(409).json({ error: "Confirmed models cannot be deleted." });
+  }
+
+  if (qMatrixEntriesCitingEvidenceModel(db.qMatrixModels, model).length > 0) {
+    return res.status(409).json({
+      error: "Cannot delete evidence model referenced by a Q-matrix.",
+    });
   }
 
   db.evidenceModels = db.evidenceModels.filter(m => m.id !== model.id);

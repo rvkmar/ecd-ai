@@ -63,6 +63,7 @@ import {
 } from "./ecdVocabulary.js";
 import { ADDITIONAL_KSA_RELATIONSHIP_VALUES } from "./additionalKsaAdvisory.js";
 import { ksaStudentModelLinkErrors } from "./ksaStudentModelLink.js";
+import { qMatrixEntryErrors } from "./qMatrixEntries.js";
 import {
   designFeatureContextFromTaskModel,
   isDesignFeatureValueAllowed,
@@ -842,7 +843,10 @@ export const schema = {
   // each be a `binary`-type entry in the bound competency model's
   // `smVariables[]` (see ecdVocabulary.js SM_VARIABLE_TYPES) -- a Q-matrix
   // over a continuous SMV is a category error, not a stricter variant.
-  // `entries[]` are the sparse cells: which items require which attributes.
+  // `entries[]` are the sparse cells. A cell cites itemId, observableId, or
+  // both. observableId is an id on evidenceModels.observables. Name
+  // evidenceModelId when that observable id is not unique. Item-only cells
+  // stay valid.
   //
   // Named `qMatrixModels`, not `qMatrices`, so it survives dbAdapter.js's
   // naive trailing-"s" singularizer (`qMatrices` -> `qMatrice`, wrong;
@@ -6104,34 +6108,13 @@ export function validateEntity(collection, obj, db = null, options = {}) {
     if (obj.entries !== undefined && !Array.isArray(obj.entries)) {
       errors.push("entries should be array");
     } else if (Array.isArray(obj.entries)) {
-      const seenPairs = new Set();
-
-      obj.entries.forEach((entry, i) => {
-        const tag = `entries[${i}]`;
-
-        if (!entry || typeof entry !== "object" || !entry.itemId || !entry.attributeId) {
-          errors.push(`${tag} requires both itemId and attributeId.`);
-          return;
-        }
-
-        const pairKey = `${entry.itemId}::${entry.attributeId}`;
-        if (seenPairs.has(pairKey)) {
-          errors.push(`${tag} duplicates the (itemId, attributeId) pair for '${entry.itemId}' / '${entry.attributeId}'.`);
-        }
-        seenPairs.add(pairKey);
-
-        if (!declaredAttributeIds.has(entry.attributeId)) {
-          errors.push(`${tag} references attributeId '${entry.attributeId}', which is not declared in attributeIds.`);
-        }
-
-        if (db && !db.items?.find(it => it.id === entry.itemId)) {
-          errors.push(`${tag} references unknown itemId '${entry.itemId}'.`);
-        }
-
-        if (entry.required !== undefined && typeof entry.required !== "boolean") {
-          errors.push(`${tag}.required should be boolean`);
-        }
-      });
+      errors.push(
+        ...qMatrixEntryErrors(obj.entries, {
+          db,
+          competencyModelId: obj.competencyModelId,
+          declaredAttributeIds,
+        })
+      );
     }
   }
 
