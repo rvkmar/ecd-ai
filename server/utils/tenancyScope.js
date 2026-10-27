@@ -9,6 +9,7 @@ export const TENANT_SCOPED_COLLECTIONS = Object.freeze([
   "users",
   "students",
   "sessions",
+  "studentModelRecords",
   "tasks",
   "announcements",
   "analysisArtefacts",
@@ -72,6 +73,8 @@ function rowDistrictId(collection, row, db) {
       return row.districtId ? String(row.districtId) : null;
     case "sessions":
       return sessionDistrictId(row, db);
+    case "studentModelRecords":
+      return row.districtId ? String(row.districtId) : null;
     default:
       return null;
   }
@@ -104,6 +107,10 @@ function selfMatch(collection, row, username) {
   if (collection === "students")
     return String(row.id) === u || String(row.username || "") === u;
   if (collection === "sessions") return assigneeIds(row).includes(u);
+  if (collection === "studentModelRecords") {
+    if (String(row.studentId) === u) return true;
+    return (row.identityAliases || []).some((alias) => String(alias) === u);
+  }
   if (collection === "announcements") return String(row.createdBy || "") === u;
   if (collection === "tasks")
     return String(row.createdBy || "") === u || String(row.ownerUsername || "") === u;

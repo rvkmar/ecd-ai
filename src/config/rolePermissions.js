@@ -61,6 +61,8 @@ export const rolePermissions = {
       // recordAuditEvent. Cross-tenant by nature — D105 viewer must keep
       // this admin-scoped.
       "auditLog",
+      // Runtime scoring record. Read-only. Written when a session finishes.
+      "studentModelRecords",
       "announcements",
     ],
     canEdit: [
@@ -152,6 +154,7 @@ export const rolePermissions = {
       "deliveryModels",
       "calibrationJobs",
       "analysisArtefacts",
+      "studentModelRecords",
       "announcements",
     ],
     canEdit: [
@@ -185,6 +188,7 @@ export const rolePermissions = {
       "sessions",
       "reports",
       "teacherReports",
+      "studentModelRecords",
       "announcements",
     ],
     canEdit: [
@@ -212,7 +216,7 @@ export const rolePermissions = {
   // the teacher-report payload (server: authorizeRole on those routes).
   student: {
     label: "Student",
-    canView: ["sessions", "reports", "announcements"],
+    canView: ["sessions", "reports", "studentModelRecords", "announcements"],
     canEdit: [],
     canCreate: [],
     canDelete: [],

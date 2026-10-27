@@ -48,6 +48,9 @@ vi.mock("@/components/itemBank/ItemBankAdmin", () => ({
 vi.mock("@/components/reports/AnalyticsReports", () => ({
   default: () => <div>Reports dashboard</div>,
 }));
+vi.mock("@/components/reports/StudentModelRecordPanel", () => ({
+  default: () => <div>Student model record</div>,
+}));
 vi.mock("@/components/psychometrics/PsychometricsDashboard", () => ({
   default: () => <div>Psychometrics shell</div>,
 }));
@@ -256,6 +259,7 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     await user.click(screen.getByRole("tab", { name: "Results" }));
     expect(screen.getByRole("tab", { name: "Psychometrics" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Reports" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Student model" })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Psychometrics" }));
     await waitFor(() => expect(screen.getByText("Psychometrics shell")).toBeInTheDocument());
 

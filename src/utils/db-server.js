@@ -49,6 +49,7 @@ function defaultDB() {
     evidenceModels: [],
     tasks: [],
     sessions: [],
+    studentModelRecords: [],
     competencyModels: [],
     competencies: [],   // ✅ added
     taskModels: [],

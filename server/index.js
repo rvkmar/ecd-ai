@@ -27,6 +27,7 @@ import designPatternsRoutes from "./routes/designPatternsRoutes.js";
 import domainAnalysesRoutes from "./routes/domainAnalysesRoutes.js";
 import reportsRoutes from "./routes/reportsRoutes.js";
 import studentsRoutes from "./routes/studentsRoutes.js";
+import studentModelRecordsRoutes from "./routes/studentModelRecordsRoutes.js";
 import policiesRoutes from "./routes/policiesRoutes.js";
 import curricularPoliciesRoutes from "./routes/curricularPoliciesRoutes.js";
 import calibrationRoutes from "./routes/calibrationRoutes.js";
@@ -123,6 +124,7 @@ app.use("/api/designPatterns", designPatternsRoutes);
 app.use("/api/domainAnalyses", domainAnalysesRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/students", studentsRoutes);
+app.use("/api/studentModelRecords", studentModelRecordsRoutes);
 app.use("/api/policies", policiesRoutes);
 // Curriculum documents (NCF-style curricular goals) — separate from the
 // adaptive item-selection policies mounted immediately above.

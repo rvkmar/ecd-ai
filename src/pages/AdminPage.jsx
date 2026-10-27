@@ -38,6 +38,9 @@ const DeliveryModelBuilder = lazyPanel(() =>
 const AnalyticsReports = lazyPanel(() =>
   import("@/components/reports/AnalyticsReports")
 );
+const StudentModelRecordPanel = lazyPanel(() =>
+  import("@/components/reports/StudentModelRecordPanel")
+);
 const PsychometricsDashboard = lazyPanel(() =>
   import("@/components/psychometrics/PsychometricsDashboard")
 );
@@ -200,6 +203,7 @@ export default function AdminPage() {
           tabs: [
             { id: "psychometrics", label: "Psychometrics", content: <PsychometricsDashboard /> },
             { id: "reports", label: "Reports", content: <AnalyticsReports /> },
+            { id: "student-model", label: "Student model", content: <StudentModelRecordPanel /> },
           ],
         },
       ]}

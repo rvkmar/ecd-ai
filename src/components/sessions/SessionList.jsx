@@ -163,6 +163,15 @@ export default function SessionList({
                   Delivery model: <strong>{s.deliveryModelId}</strong>
                 </div>
               )}
+              {s.studentModel?.carriedForward && (
+                <div data-testid={`session-carried-${s.id}`}>
+                  Estimates carried forward
+                  {Array.isArray(s.studentModel.carriedForward.competencyModelIds) &&
+                  s.studentModel.carriedForward.competencyModelIds.length > 0
+                    ? ` (${s.studentModel.carriedForward.competencyModelIds.join(", ")})`
+                    : ""}
+                </div>
+              )}
               <div>
                 Strategy: <strong>{s.selectionStrategy || "fixed"}</strong>
                 {s.nextTaskPolicy?.policyId && (

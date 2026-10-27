@@ -8,6 +8,7 @@
  import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
  import { autoFinishDueSessions } from "../utils/autoFinish.js";
  import { loadDB, saveDB } from "../../src/utils/db-server.js";
+ import { commitFinishedSession } from "../../src/utils/studentModelRecord.js";
 
  const router = express.Router();
  router.use(authenticateToken);
@@ -59,6 +60,7 @@
    }
  
    db.sessions[idx] = session;
+   commitFinishedSession(db, session, { now: session.finishedAt });
    saveDB(db);
  
    res.json({ success: true, id });

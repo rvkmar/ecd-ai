@@ -48,6 +48,8 @@ import { createPresentationModelRecord } from "../routes/presentationModelsRoute
 import { createTemplateRecord } from "../routes/templatesRoutes.js";
 import { createDeliveryModelRecord } from "../routes/deliveryModelsRoutes.js";
 
+// Design collections only. studentModelRecords is runtime scoring state
+// (written when a session finishes) and is not imported or exported here.
 const IMPORT_ORDER = [
   "curricularPolicies",
   "policies",

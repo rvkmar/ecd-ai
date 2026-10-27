@@ -39,6 +39,24 @@ function model(overrides = {}) {
 }
 
 describe("deliveryModels", () => {
+  it("accepts administration.carryForward only as a boolean", () => {
+    const ok = validateEntity(
+      "deliveryModels",
+      model({ administration: { ...model().administration, carryForward: true } }),
+      parents(),
+      { strict: false }
+    );
+    expect(ok.valid).toBe(true);
+    const bad = validateEntity(
+      "deliveryModels",
+      model({ administration: { ...model().administration, carryForward: "yes" } }),
+      parents(),
+      { strict: false }
+    );
+    expect(bad.valid).toBe(false);
+    expect(bad.errors.join(" ")).toMatch(/carryForward/);
+  });
+
   it("accepts a draft that cites draft parents", () => {
     const db = parents({
       competencyModels: [{ id: "cm1", status: "draft" }],

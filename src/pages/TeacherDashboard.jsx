@@ -18,6 +18,9 @@ const SessionBuilder = lazyPanel(() =>
 const AnalyticsReports = lazyPanel(() =>
   import("../components/reports/AnalyticsReports")
 );
+const StudentModelRecordPanel = lazyPanel(() =>
+  import("@/components/reports/StudentModelRecordPanel")
+);
 const EvidenceAccumulationInspector = lazyPanel(() =>
   import("@/components/delivery/EvidenceAccumulationInspector")
 );
@@ -59,6 +62,7 @@ export default function TeacherDashboard() {
             { id: "human-rating", label: "Human rating", content: <HumanRatingQueue /> },
             { id: "accumulation", label: "Evidence Accumulation (inspect)", content: <EvidenceAccumulationInspector /> },
             { id: "reports", label: "Reports", content: <AnalyticsReports /> },
+            { id: "student-model", label: "Student model", content: <StudentModelRecordPanel /> },
           ],
         },
       ]}

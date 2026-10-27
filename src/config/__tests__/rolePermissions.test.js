@@ -179,6 +179,17 @@ describe("taskModelVariables (D116 library RBAC)", () => {
   });
 });
 
+describe("studentModelRecords", () => {
+  it("is readable by every role and is not authored", () => {
+    for (const role of ["admin", "district", "teacher", "student"]) {
+      expect(can(role, "view", "studentModelRecords")).toBe(true);
+      expect(can(role, "edit", "studentModelRecords")).toBeFalsy();
+      expect(can(role, "delete", "studentModelRecords")).toBeFalsy();
+      expect(can(role, "create", "studentModelRecords")).toBeFalsy();
+    }
+  });
+});
+
 describe("deliveryModels", () => {
   it("admin can view, edit, and delete delivery models", () => {
     expect(can("admin", "view", "deliveryModels")).toBe(true);

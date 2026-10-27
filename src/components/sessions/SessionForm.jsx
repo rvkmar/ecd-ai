@@ -43,6 +43,7 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
   const { data: deliveryModels = [] } = useDeliveryModels();
   const [policyId, setPolicyId] = useState(model.nextTaskPolicy?.policyId || "");
   const [deliveryModelId, setDeliveryModelId] = useState(model.deliveryModelId || "");
+  const [carryForward, setCarryForward] = useState(model.carryForward === true);
   const [busy, setBusy] = useState(false);
   const ACTIVITY_STRATEGIES = [
     {
@@ -150,6 +151,7 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
     const policy = policies.find((row) => row.id === chosen.policyId);
     if (policy?.type) setSelectionStrategy(policy.type);
     if (chosen.policyId) setPolicyId(chosen.policyId);
+    if (chosen.administration?.carryForward === true) setCarryForward(true);
   };
 
   const handleSubmit = (e) => {
@@ -169,6 +171,7 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
       return notify("Choose the selection policy for this strategy");
     }
 
+    const selectedDelivery = deliveryModels.find((row) => row.id === deliveryModelId);
     const payload = {
       id: model.id,
       studentId: assignees[0] || "",
@@ -178,6 +181,9 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
       selectionStrategy,
       nextTaskPolicy: chosen ? { policyId: chosen } : {},
       ...(deliveryModelId ? { deliveryModelId } : {}),
+      ...(carryForward || selectedDelivery?.administration?.carryForward === true
+        ? { carryForward: true }
+        : {}),
     };
 
     setBusy(true);
@@ -200,6 +206,9 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
     if (t.taskModelId) parts.push(`M: ${t.taskModelId}`);
     return parts.join(" • ") || t.id;
   };
+
+  const selectedDeliveryCarry =
+    deliveryModels.find((row) => row.id === deliveryModelId)?.administration?.carryForward === true;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -368,6 +377,16 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
         <p className="mt-1 text-xs text-gray-500">
           When a delivery model is selected, the session uses its assembly model and selection policy.
         </p>
+        <label className="mt-2 flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            aria-label="Carry estimates forward"
+            checked={carryForward || selectedDeliveryCarry}
+            disabled={selectedDeliveryCarry}
+            onChange={(event) => setCarryForward(event.target.checked)}
+          />
+          <span>Carry estimates forward from this student's scoring record</span>
+        </label>
       </div>
 
       <div>
