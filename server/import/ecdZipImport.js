@@ -28,6 +28,7 @@ import { randomBytes } from "crypto";
 import { unzipSafe, zipFiles, ZipError } from "../utils/safeZip.js";
 import {
   DESIGN_PATTERN_KSA_REF_PATHS,
+  SEEDED_RUBRIC_REF_PATHS,
   createIdCatalog,
   sourceKeysFromRow,
 } from "./idCatalog.js";
@@ -128,6 +129,7 @@ const REF_PATHS = {
     ["competencyId", "competencies"],
     ["warrants[].competencyId", "competencies"],
     ["seededFrom.designPatternId", "designPatterns"],
+    ...SEEDED_RUBRIC_REF_PATHS,
     ["statisticalModels[].structureConfig.qMatrixId", "qMatrixModels"],
     ["evaluationProcedures[].workProductId", "workProducts"],
     ["evaluationProcedures[].rubricId", "rubrics"],
@@ -141,6 +143,7 @@ const REF_PATHS = {
     ["taskModelVariableSettings[].taskModelVariableId", "taskModelVariables"],
     ["subTaskIds[]", "taskModels"],
     ["seededFrom.designPatternId", "designPatterns"],
+    ...SEEDED_RUBRIC_REF_PATHS,
     ["parentModelId", "taskModels"],
   ],
   items: [

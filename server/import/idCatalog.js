@@ -35,6 +35,14 @@ export const DESIGN_PATTERN_KSA_REF_PATHS = Object.freeze([
   ["additionalKsas[].competencyModelId", "competencyModels"],
 ]);
 
+// Rubric ids stored on the seed snapshot. The live citation is
+// evidenceModels.evaluationProcedures[].rubricId, which is already remapped.
+// Characteristic-feature labels are not collection ids.
+export const SEEDED_RUBRIC_REF_PATHS = Object.freeze([
+  ["seededFrom.accepted.potentialRubrics[].rubricId", "rubrics"],
+  ["seededFrom.declined.potentialRubrics[].rubricId", "rubrics"],
+]);
+
 export function createIdCatalog() {
   const entries = [];
 

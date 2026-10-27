@@ -75,4 +75,35 @@ describe("D137 seed control", () => {
     await openDesignPatternStep(user, "Review & confirm");
     expect(screen.queryByRole("button", { name: "Seed draft models" })).not.toBeInTheDocument();
   });
+
+  it("shows a seeding warning for a row that could not be copied", async () => {
+    const user = userEvent.setup();
+    const onSeed = vi.fn().mockResolvedValue({
+      evidenceModel: { name: "Explain a diagram evidence" },
+      taskModel: { name: "Explain a diagram task" },
+      warnings: [
+        'Potential rubric "Label only" has a label but no rubric id, so it was not turned into an evaluation procedure.',
+      ],
+    });
+    render(
+      <DesignPatternLibraryView
+        patterns={[pattern]}
+        competencies={[{ id: "c1", name: "Explain" }]}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+        onConfirm={vi.fn()}
+        onDelete={vi.fn()}
+        onSeed={onSeed}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await openDesignPatternStep(user, "Review & confirm");
+    await user.selectOptions(screen.getByLabelText("Competency"), "c1");
+    await user.click(screen.getByRole("button", { name: "Seed draft models" }));
+
+    expect(await screen.findByRole("status", { name: "Seed warnings" })).toHaveTextContent(
+      "no rubric id"
+    );
+  });
 });

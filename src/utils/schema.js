@@ -398,7 +398,9 @@ export const schema = {
     authoringNotes: 'string',
     studentModelCoherenceNotes: 'string',
     // D137. Rows accepted and declined from one confirmed design pattern.
-    // Confirm does not read this. A rubric id here is not an evaluation procedure.
+    // Confirm does not read this. An accepted rubric id that still exists
+    // is also an evaluation procedure. A rubric id that does not resolve
+    // stays only in this snapshot.
     seededFrom: 'object',
     status: 'string',
     locked: 'boolean',
@@ -473,6 +475,9 @@ export const schema = {
       },
       allowedInteractionTypes: 'array',
       allowedScoringMethods: 'array',
+      // Accepted design-pattern characteristic features. Labels, not
+      // collection ids. Absent when the task model was not seeded from them.
+      characteristicFeatures: [{ label: 'string' }],
     },
 
     /* ---------------------------------------------
@@ -535,7 +540,8 @@ export const schema = {
     taskModelVariableIds: 'array',
     taskModelVariableSettings: 'array',
     // D137. Same seed record as the Evidence Model drafted with it.
-    // Characteristic-feature labels stay here. They are not blueprintConstraints.
+    // Accepted characteristic-feature labels are also copied onto
+    // blueprintConstraints.characteristicFeatures. Declined rows stay only here.
     seededFrom: 'object',
 
     /* ---------------------------------------------
@@ -4969,6 +4975,27 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         !Array.isArray(bc.allowedScoringMethods)
       ) {
         errors.push("blueprintConstraints.allowedScoringMethods must be an array.");
+      }
+
+      if (
+        bc.characteristicFeatures !== undefined &&
+        !Array.isArray(bc.characteristicFeatures)
+      ) {
+        errors.push("blueprintConstraints.characteristicFeatures must be an array.");
+      } else if (Array.isArray(bc.characteristicFeatures)) {
+        bc.characteristicFeatures.forEach((entry, index) => {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+            errors.push(
+              `blueprintConstraints.characteristicFeatures[${index}] must be an object with a label.`
+            );
+            return;
+          }
+          if (!String(entry.label || "").trim()) {
+            errors.push(
+              `blueprintConstraints.characteristicFeatures[${index}].label is required.`
+            );
+          }
+        });
       }
 
       // D119: blueprint cognitiveDemand enums via TMV valueSet registry path.

@@ -185,6 +185,136 @@ describe("D137 seed from a confirmed design pattern", () => {
     expect(overridden.body.evidenceModel.seededFrom.studentModel).toEqual({ competencyId: "c1" });
   });
 
+  it("copies characteristic features and real rubrics, and names rows it cannot map", async () => {
+    dbState.current.rubrics = [{ id: "rb1", name: "Explanation rubric", status: "draft" }];
+    const pattern = dbState.current.designPatterns[0];
+    pattern.potentialObservations = [
+      { label: "Names the claim" },
+      { label: "Traces the arrow" },
+    ];
+    pattern.potentialRubrics = [
+      { label: "Explanation rubric", rubricId: "rb1" },
+      { label: "Missing rubric", rubricId: "rb-gone" },
+      { label: "Label only" },
+    ];
+    pattern.characteristicFeatures = [
+      { label: "Diagram is labelled" },
+      { label: "   " },
+      { label: "Uses a familiar plant" },
+    ];
+    pattern.variableFeatures = [
+      { label: "Complexity", taskModelVariableId: "tmv1" },
+      { label: "No variable" },
+    ];
+
+    const expressApp = await app();
+    const admin = tokenFor("admin");
+    const seeded = await request(expressApp)
+      .post("/api/designPatterns/dp1/seed")
+      .set("Authorization", `Bearer ${admin}`)
+      .send({
+        competencyId: "c1",
+        selections: {
+          potentialObservations: [0, 1],
+          potentialRubrics: [0, 1, 2],
+          characteristicFeatures: [0, 1, 2],
+          variableFeatures: [0],
+        },
+      });
+
+    expect(seeded.status).toBe(201);
+    const evidence = seeded.body.evidenceModel;
+    const task = seeded.body.taskModel;
+    expect(evidence.status).toBe("draft");
+    expect(task.status).toBe("draft");
+    expect(task.taskModelVariableIds).toEqual(["tmv1"]);
+    expect(task.blueprintConstraints.characteristicFeatures).toEqual([
+      { label: "Diagram is labelled" },
+      { label: "Uses a familiar plant" },
+    ]);
+    expect(JSON.stringify(task.blueprintConstraints)).not.toContain("No variable");
+    expect(evidence.evaluationProcedures).toHaveLength(2);
+    expect(evidence.evaluationProcedures.map((proc) => proc.rubricId)).toEqual(["rb1", "rb1"]);
+    expect(evidence.evaluationProcedures.map((proc) => proc.method)).toEqual(["rubric", "rubric"]);
+    expect(evidence.evaluationProcedures.map((proc) => proc.observableId)).toEqual([
+      evidence.observables[0].id,
+      evidence.observables[1].id,
+    ]);
+    expect(evidence.evaluationProcedures[0].id).not.toBe(evidence.evaluationProcedures[1].id);
+    const warnings = seeded.body.warnings.join(" ");
+    expect(warnings).toMatch(/Characteristic feature 2 has no label/);
+    expect(warnings).toMatch(/Missing rubric/);
+    expect(warnings).toMatch(/no longer exists/);
+    expect(warnings).toMatch(/Label only/);
+    expect(warnings).toMatch(/no rubric id/);
+    expect(warnings).not.toMatch(/Diagram is labelled/);
+    expect(warnings).not.toMatch(/Complexity/);
+    expect(evidence.seededFrom.declined.variableFeatures.map((row) => row.label)).toEqual([
+      "No variable",
+    ]);
+
+    const saved = await request(expressApp)
+      .put(`/api/evidenceModels/${evidence.id}`)
+      .set("Authorization", `Bearer ${admin}`)
+      .send(evidence);
+    expect(saved.status).toBe(200);
+    expect(saved.body.status).toBe("draft");
+    expect(saved.body.evaluationProcedures.map((proc) => proc.rubricId)).toEqual(["rb1", "rb1"]);
+
+    const reviewed = await request(expressApp)
+      .patch(`/api/evidenceModels/${evidence.id}/lifecycle`)
+      .set("Authorization", `Bearer ${admin}`)
+      .send({ nextStatus: "reviewed" });
+    expect(reviewed.status).toBe(200);
+    const confirmEvidence = await request(expressApp)
+      .post(`/api/evidenceModels/${evidence.id}/confirm`)
+      .set("Authorization", `Bearer ${admin}`);
+    expect(confirmEvidence.status).toBe(400);
+    expect((confirmEvidence.body.errors || []).join(" ")).toMatch(/claimStatement/i);
+  });
+
+  it("warns instead of inventing a procedure when no observation was selected", async () => {
+    dbState.current.rubrics = [{ id: "rb1", name: "Explanation rubric", status: "draft" }];
+    const expressApp = await app();
+    const admin = tokenFor("admin");
+    const seeded = await request(expressApp)
+      .post("/api/designPatterns/dp1/seed")
+      .set("Authorization", `Bearer ${admin}`)
+      .send({
+        competencyId: "c1",
+        selections: {
+          potentialRubrics: [0],
+          characteristicFeatures: [0],
+        },
+      });
+
+    expect(seeded.status).toBe(201);
+    expect(seeded.body.evidenceModel.evaluationProcedures).toEqual([]);
+    expect(seeded.body.evidenceModel.status).toBe("draft");
+    expect(seeded.body.taskModel.blueprintConstraints.characteristicFeatures).toEqual([
+      { label: "Diagram is labelled" },
+    ]);
+    expect(seeded.body.taskModel.taskModelVariableIds).toEqual([]);
+    expect(seeded.body.warnings.join(" ")).toMatch(/no observation was selected/);
+  });
+
+  it("still refuses a chosen variable feature that has no task model variable id", async () => {
+    dbState.current.designPatterns[0].variableFeatures = [{ label: "No variable" }];
+    const expressApp = await app();
+    const admin = tokenFor("admin");
+    const refused = await request(expressApp)
+      .post("/api/designPatterns/dp1/seed")
+      .set("Authorization", `Bearer ${admin}`)
+      .send({
+        competencyId: "c1",
+        selections: { variableFeatures: [0], potentialObservations: [0] },
+      });
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toMatch(/no taskModelVariableId/);
+    expect(dbState.current.evidenceModels).toHaveLength(0);
+    expect(dbState.current.taskModels).toHaveLength(0);
+  });
+
   it("refuses a draft pattern", async () => {
     const expressApp = await app();
     const admin = tokenFor("admin");

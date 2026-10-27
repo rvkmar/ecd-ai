@@ -860,6 +860,7 @@ function SeedFromPattern({
   const [choice, setChoice] = useState(() => initialSeedChoice(pattern));
   const [picked, setPicked] = useState({});
   const [seedError, setSeedError] = useState("");
+  const [seedWarnings, setSeedWarnings] = useState([]);
   const suggestion = suggestSeedFromFocalKsas(pattern);
   const competencyId = choice.competencyId;
   const parsedSmv = parseSmvOptionKey(choice.smvKey);
@@ -875,10 +876,11 @@ function SeedFromPattern({
 
   async function handleSeed() {
     setSeedError("");
+    setSeedWarnings([]);
     const selections = {};
     for (const field of SEED_FIELDS) selections[field] = picked[field] || [];
     try {
-      await onSeed({
+      const seeded = await onSeed({
         id: pattern.id,
         competencyId,
         competencyModelId: parsedSmv.competencyModelId,
@@ -886,6 +888,7 @@ function SeedFromPattern({
         selections,
       });
       setPicked({});
+      setSeedWarnings(Array.isArray(seeded?.warnings) ? seeded.warnings : []);
     } catch (err) {
       setSeedError(apiErrorMessage(err, "Seed failed"));
     }
@@ -896,10 +899,14 @@ function SeedFromPattern({
       <h4 className="text-sm font-medium text-slate-800">Seed draft models</h4>
       <p className={hintClass}>
         Pick the menu rows to copy. Unchecked rows stay on the back-link.
-        This writes a draft Evidence Model and a draft Task Model. Confirm
-        still requires the claim, warrants, and evidence rules this pattern
-        does not supply. A linked focal KSA pre-fills the competency and
-        the student model variable. You can choose different ones.
+        This writes a draft Evidence Model and a draft Task Model. Checked
+        characteristic features are copied onto the task blueprint. Checked
+        rubrics become evaluation procedures when the rubric still exists
+        and an observation was selected. A row that cannot be copied is
+        named below. Confirm still requires the claim, warrants, and
+        evidence rules this pattern does not supply. A linked focal KSA
+        pre-fills the competency and the student model variable. You can
+        choose different ones.
       </p>
       {suggestion.competencyIds.length > 1 ? (
         <p className="mt-2 text-xs text-amber-800" role="note">
@@ -972,6 +979,15 @@ function SeedFromPattern({
           </fieldset>
         );
       })}
+      {seedWarnings.length > 0 ? (
+        <ul className="mt-2 space-y-1" role="status" aria-label="Seed warnings">
+          {seedWarnings.map((warning, index) => (
+            <li key={`${index}-${warning}`} className="text-sm text-amber-800">
+              {warning}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {seedError ? (
         <p className="mt-2 text-sm text-red-600" role="alert">
           {seedError}
@@ -1844,8 +1860,11 @@ function DesignPatternManage() {
       onSeed={async (payload) => {
         try {
           const seeded = await seedMut.mutateAsync(payload);
+          const warningCount = Array.isArray(seeded?.warnings) ? seeded.warnings.length : 0;
           toast.success(
-            `Drafts created: ${seeded.evidenceModel?.name || "evidence model"} and ${seeded.taskModel?.name || "task model"}`
+            warningCount
+              ? `Drafts created. ${warningCount} row${warningCount === 1 ? "" : "s"} could not be copied.`
+              : `Drafts created: ${seeded.evidenceModel?.name || "evidence model"} and ${seeded.taskModel?.name || "task model"}`
           );
           return seeded;
         } catch (err) {
