@@ -32,6 +32,9 @@ const CalibrationConsole = lazyPanel(() =>
 const AssemblyModelBuilder = lazyPanel(() =>
   import("@/components/assemblyModels/AssemblyModelBuilder")
 );
+const DeliveryModelBuilder = lazyPanel(() =>
+  import("@/components/deliveryModels/DeliveryModelBuilder")
+);
 const AnalyticsReports = lazyPanel(() =>
   import("@/components/reports/AnalyticsReports")
 );
@@ -144,6 +147,11 @@ export default function AdminPage() {
               content: <TemplateBuilder />,
             },
             { id: "assembly", label: "Assembly Model", content: <AssemblyModelBuilder /> },
+            {
+              id: "deliverymodels",
+              label: "Delivery Model",
+              content: <DeliveryModelBuilder />,
+            },
             { id: "qmatrix", label: "Diagnostic design", content: <QMatrixModelBuilder /> },
           ],
         },

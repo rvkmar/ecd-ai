@@ -49,6 +49,7 @@ export const rolePermissions = {
       "qMatrixModels",
       "assemblyModels",
       "presentationModels",
+      "deliveryModels",
       "compositeLibrary",
       // D62: calibration job queue. Admin authors; district may view
       // (a calibration run is a system-level measurement decision).
@@ -87,6 +88,7 @@ export const rolePermissions = {
       "qMatrixModels",
       "assemblyModels",
       "presentationModels",
+      "deliveryModels",
       "calibrationJobs"
     ],
     canApprove: ["questions", "items"], // promote from review → confirmed
@@ -110,6 +112,7 @@ export const rolePermissions = {
       "qMatrixModels",
       "assemblyModels",
       "presentationModels",
+      "deliveryModels",
       "calibrationJobs",
       "announcements",
     ],
@@ -146,6 +149,7 @@ export const rolePermissions = {
       "qMatrixModels",
       "assemblyModels",
       "presentationModels",
+      "deliveryModels",
       "calibrationJobs",
       "analysisArtefacts",
       "announcements",

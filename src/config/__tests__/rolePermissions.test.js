@@ -179,6 +179,25 @@ describe("taskModelVariables (D116 library RBAC)", () => {
   });
 });
 
+describe("deliveryModels", () => {
+  it("admin can view, edit, and delete delivery models", () => {
+    expect(can("admin", "view", "deliveryModels")).toBe(true);
+    expect(can("admin", "edit", "deliveryModels")).toBe(true);
+    expect(can("admin", "delete", "deliveryModels")).toBe(true);
+  });
+
+  it("district can view and cannot write them", () => {
+    expect(can("district", "view", "deliveryModels")).toBe(true);
+    expect(can("district", "edit", "deliveryModels")).toBeFalsy();
+    expect(can("district", "delete", "deliveryModels")).toBeFalsy();
+  });
+
+  it("teacher and student cannot see the entity", () => {
+    expect(can("teacher", "view", "deliveryModels")).toBe(false);
+    expect(can("student", "view", "deliveryModels")).toBe(false);
+  });
+});
+
 describe("unknown input", () => {
   it("returns false for a role that doesn't exist", () => {
     expect(can("superuser", "view", "sessions")).toBe(false);

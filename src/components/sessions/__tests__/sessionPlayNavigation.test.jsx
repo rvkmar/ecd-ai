@@ -22,6 +22,10 @@ vi.mock("../../../api/queries/policies", () => ({
   usePolicies: () => ({ data: [], isLoading: false }),
 }));
 
+vi.mock("../../../api/queries/deliveryModels", () => ({
+  useDeliveryModels: () => ({ data: [], isLoading: false }),
+}));
+
 const STORAGE_KEY = "ecd_auth_v1";
 
 function base64url(obj) {

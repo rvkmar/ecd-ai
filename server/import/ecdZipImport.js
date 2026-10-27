@@ -46,6 +46,7 @@ import { createQMatrixRecord } from "../routes/qMatrixModelsRoutes.js";
 import { createAssemblyModelRecord } from "../routes/assemblyModelsRoutes.js";
 import { createPresentationModelRecord } from "../routes/presentationModelsRoutes.js";
 import { createTemplateRecord } from "../routes/templatesRoutes.js";
+import { createDeliveryModelRecord } from "../routes/deliveryModelsRoutes.js";
 
 const IMPORT_ORDER = [
   "curricularPolicies",
@@ -63,6 +64,7 @@ const IMPORT_ORDER = [
   "qMatrixModels",
   "assemblyModels",
   "presentationModels",
+  "deliveryModels",
   "templates",
 ];
 
@@ -93,6 +95,7 @@ const ID_PREFIX = {
   qMatrixModels: "qm",
   assemblyModels: "am",
   presentationModels: "pm",
+  deliveryModels: "dm",
   templates: "tpl",
 };
 
@@ -150,6 +153,12 @@ const REF_PATHS = {
   presentationModels: [
     ["taskModelId", "taskModels"],
     ["parentModelId", "presentationModels"],
+  ],
+  deliveryModels: [
+    ["competencyModelId", "competencyModels"],
+    ["assemblyModelId", "assemblyModels"],
+    ["policyId", "policies"],
+    ["presentationModelId", "presentationModels"],
   ],
   templates: [
     ["competencyModelId", "competencyModels"],
@@ -811,6 +820,13 @@ export function importZipIntoDb(db, buffer, options = {}) {
         createPresentationModelRecord(row, db, {
           assignedId: opts.assignedId,
           preserveLifecycle: opts.preserveLifecycle,
+        })
+      );
+    } else if (collection === "deliveryModels") {
+      results = importSimple(plans, collection, ctx, (row, opts) =>
+        createDeliveryModelRecord(row, db, req, {
+          assignedId: opts.assignedId,
+          forceDraft: opts.forceDraft,
         })
       );
     } else if (collection === "templates") {

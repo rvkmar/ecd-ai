@@ -29,6 +29,7 @@ const EXPECTED = {
   qMatrixModels: 2,
   assemblyModels: 2,
   presentationModels: 3,
+  deliveryModels: 1,
   templates: 3,
 };
 
@@ -50,6 +51,7 @@ function emptyDb() {
     qMatrixModels: [],
     assemblyModels: [],
     presentationModels: [],
+    deliveryModels: [],
   };
 }
 
@@ -114,6 +116,28 @@ describe("ecd-sample-complete.zip", () => {
     const item = db.items.find((row) => row.name === "Equivalent to 2/4");
     const fractionTask = db.taskModels.find((row) => row.name === "Name the fraction");
     expect(item.taskModelId).toBe(fractionTask.id);
+
+    const delivery = db.deliveryModels.find((row) => row.name === "Plant part naming delivery");
+    const plantAssembly = db.assemblyModels.find((row) => row.name === "Plant part naming assembly");
+    const plantStudent = db.competencyModels.find((row) => row.name === "Plant part naming");
+    const fixedPolicy = db.policies.find((row) => row.name === "Fixed Form - Grade 6 Numeracy Benchmark");
+    const plantPresentation = db.presentationModels.find((row) => row.name === "Plant part presentation");
+    expect(delivery.assemblyModelId).toBe(plantAssembly.id);
+    expect(delivery.competencyModelId).toBe(plantStudent.id);
+    expect(delivery.policyId).toBe(fixedPolicy.id);
+    expect(delivery.presentationModelId).toBe(plantPresentation.id);
+    expect(delivery.administration.timeLimitMinutes).toBe(20);
+    expect(delivery.administration.feedbackMode).toBe("immediate");
+    expect(delivery.status).toBe("draft");
+    if (keepOriginalIds) {
+      expect(delivery.id).toBe("dm-plant");
+    } else {
+      expect(delivery.id).not.toBe("dm-plant");
+      expect(delivery.assemblyModelId).not.toBe("am-plant");
+      expect(delivery.competencyModelId).not.toBe("cm-plant");
+      expect(delivery.policyId).not.toBe("p-fixed");
+      expect(delivery.presentationModelId).not.toBe("pm-plant");
+    }
 
     const template = db.templates.find((row) => row.name === "Plant part template");
     const presentation = db.presentationModels.find((row) => row.id === template.presentationModelId);

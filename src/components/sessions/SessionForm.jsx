@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { usePolicies } from "../../api/queries/policies";
+import { useDeliveryModels } from "../../api/queries/deliveryModels";
 import {
   Select,
   SelectContent,
@@ -39,7 +40,9 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
   // src/api/queries/policies.js) instead of its own fetch — Phase 2
   // data-layer migration.
   const { data: policies = [] } = usePolicies();
+  const { data: deliveryModels = [] } = useDeliveryModels();
   const [policyId, setPolicyId] = useState(model.nextTaskPolicy?.policyId || "");
+  const [deliveryModelId, setDeliveryModelId] = useState(model.deliveryModelId || "");
   const [busy, setBusy] = useState(false);
   const ACTIVITY_STRATEGIES = [
     {
@@ -88,6 +91,7 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
     setSelectedTasks(model.taskIds || []);
     setSelectionStrategy(model.selectionStrategy || "fixed");
     setPolicyId(model.nextTaskPolicy?.policyId || "");
+    setDeliveryModelId(model.deliveryModelId || "");
   }, [model]);
 
   const toggleStudent = (id) => {
@@ -131,11 +135,22 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
   };
 
   useEffect(() => {
+    if (deliveryModelId) return;
     const matches = policies.filter((p) => p.type === selectionStrategy);
     if (matches.length === 1) {
       setPolicyId((current) => current || matches[0].id);
     }
-  }, [policies, selectionStrategy]);
+  }, [policies, selectionStrategy, deliveryModelId]);
+
+  const handleDeliveryModelChange = (value) => {
+    setDeliveryModelId(value);
+    if (!value) return;
+    const chosen = deliveryModels.find((row) => row.id === value);
+    if (!chosen) return;
+    const policy = policies.find((row) => row.id === chosen.policyId);
+    if (policy?.type) setSelectionStrategy(policy.type);
+    if (chosen.policyId) setPolicyId(chosen.policyId);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -162,6 +177,7 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
       taskIds: selectedTasks,
       selectionStrategy,
       nextTaskPolicy: chosen ? { policyId: chosen } : {},
+      ...(deliveryModelId ? { deliveryModelId } : {}),
     };
 
     setBusy(true);
@@ -332,9 +348,32 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
       </div>
 
       <div>
+        <label className="block font-medium mb-1" htmlFor="delivery-model-select">
+          Delivery model
+        </label>
+        <select
+          id="delivery-model-select"
+          aria-label="Delivery model"
+          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+          value={deliveryModelId}
+          onChange={(event) => handleDeliveryModelChange(event.target.value)}
+        >
+          <option value="">None. Choose a strategy and policy below.</option>
+          {deliveryModels.map((row) => (
+            <option key={row.id} value={row.id}>
+              {row.name || row.id} ({row.status || "draft"})
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-gray-500">
+          When a delivery model is selected, the session uses its assembly model and selection policy.
+        </p>
+      </div>
+
+      <div>
         <label className="block font-medium mb-1">Activity Selection Strategy</label>
 
-        <Select value={selectionStrategy} onValueChange={handleStrategyChange}>
+        <Select value={selectionStrategy} onValueChange={handleStrategyChange} disabled={Boolean(deliveryModelId)}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select activity selection strategy" />
           </SelectTrigger>
@@ -362,7 +401,7 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
 
       <div>
         <label className="block font-medium mb-1">Select Assessment Policy</label>
-        <Select value={policyId} onValueChange={setPolicyId}>
+        <Select value={policyId} onValueChange={setPolicyId} disabled={Boolean(deliveryModelId)}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select a policy defined by Admin" />
           </SelectTrigger>

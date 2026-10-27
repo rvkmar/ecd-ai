@@ -1,0 +1,18 @@
+[
+  {
+    "id": "dm-plant",
+    "name": "Plant part naming delivery",
+    "description": "One sitting for the plant student model: the plant assembly model, the fixed-form policy, the plant presentation overlay, and a short timed administration.",
+    "status": "draft",
+    "competencyModelId": "cm-plant",
+    "assemblyModelId": "am-plant",
+    "policyId": "p-fixed",
+    "presentationModelId": "pm-plant",
+    "administration": {
+      "timeLimitMinutes": 20,
+      "attempts": 1,
+      "allowedReview": true,
+      "feedbackMode": "immediate"
+    }
+  }
+]

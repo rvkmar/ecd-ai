@@ -97,8 +97,11 @@
 //   never stops a session.
 // * It does not override the session's own `selectionStrategy` with the
 //   Assembly Model's `selectionAlgorithm` pointer. A mismatch between the
-//   two is reported as a warning. D49a's own open decision settled this
-//   shape for this project: refuse or advise, never act quietly.
+//   two is reported as a warning, unless the session cites a delivery
+//   model. That delivery model's policy and assembly model are
+//   authoritative: no inference, and no advisory warning. A session
+//   with no deliveryModelId keeps the warning. D49a's own open decision
+//   settled the Assembly Model pointer: refuse or advise, never act quietly.
 // * It does not persist anything. Pure computation over a db snapshot plus
 //   the session, matching compositeLibrary/builder.js and every other
 //   module in server/delivery/.
@@ -334,18 +337,54 @@ function competencyModelIdsForSession(session, db) {
 }
 
 /**
+ * Delivery model binding, or null when this session does not cite one.
+ * A cited id is never resolved by inference. A missing record or a missing
+ * assembly model is a reason, not a fallthrough to the competency-model scan.
+ */
+function resolveDeliveryBinding(session, db) {
+  const id = session?.deliveryModelId;
+  if (typeof id !== "string" || id === "") return null;
+
+  const deliveryModel = (db.deliveryModels || []).find((row) => row && row.id === id);
+  if (!deliveryModel) {
+    return {
+      code: "DELIVERY_MODEL_MISSING",
+      reason: `Session cites delivery model '${id}', which is not in the store, so no Assembly Model is inferred.`,
+    };
+  }
+
+  const assemblyModel = (db.assemblyModels || []).find(
+    (am) => am && am.id === deliveryModel.assemblyModelId
+  );
+  if (!assemblyModel) {
+    return {
+      code: "ASSEMBLY_UNBOUND",
+      deliveryModel,
+      reason: `Delivery Model '${deliveryModel.id}' names assembly model '${deliveryModel.assemblyModelId || ""}', which is not in the store, so no other Assembly Model is inferred.`,
+    };
+  }
+
+  return { assemblyModel, deliveryModel, authoritative: true };
+}
+
+/**
  * The Assembly Model governing this session, or null with a reason.
  *
- * A session has no `assemblyModelId` field -- assemblyProgress.js's own
- * header notes its absence ("no session-level binding to resolve the
- * ambiguity by"). Adding one is a schema change with its own route and UI
- * work and is NOT this unit; so this resolves the same way assemblyProgress
- * already does -- by competency model, refusing outright when zero or more
- * than one candidate matches, rather than picking arbitrarily. A session
- * that stops early because the wrong Assembly Model was guessed at is
- * precisely the quiet failure this project's conventions exist to prevent.
+ * When the session cites deliveryModelId, that delivery model's assembly
+ * model is the one that governs. Status is not re-filtered: the delivery
+ * model already named it.
+ *
+ * Otherwise the session has no assemblyModelId field. This resolves the
+ * same way assemblyProgress already does: by competency model, refusing
+ * outright when zero or more than one governing candidate matches, rather
+ * than picking arbitrarily. A session that stops early because the wrong
+ * Assembly Model was guessed at is the quiet failure this project's
+ * conventions exist to prevent.
  */
 function resolveAssemblyModelForSession(session, db) {
+  const bound = resolveDeliveryBinding(session, db);
+  if (bound) return bound;
+
   const competencyModelIds = competencyModelIdsForSession(session, db);
 
   if (competencyModelIds.size === 0) {
@@ -527,6 +566,12 @@ function candidatesFor(session, db) {
  * session.selectionStrategy (that remains advisory-only per D56).
  */
 function resolveGatingPolicy(session, db) {
+  if (typeof session?.deliveryModelId === "string" && session.deliveryModelId) {
+    const bound = resolveDeliveryBinding(session, db);
+    const policyId = bound?.deliveryModel?.policyId;
+    if (!policyId) return null;
+    return (db.policies || []).find((p) => p.id === policyId) || null;
+  }
   const { assemblyModel } = resolveAssemblyModelForSession(session, db);
   const policyId = assemblyModel?.selectionAlgorithm?.policyId;
   if (!policyId) return null;
@@ -1027,28 +1072,47 @@ export function selectNextActivity(session, db) {
   /* Stopping is evaluated BEFORE selection: an Assembly Model that says
      "enough" outranks any strategy's opinion about what to present next. */
   const assemblyResolution = resolveAssemblyModelForSession(session, db);
+  const authoritative = assemblyResolution.authoritative === true;
 
   /* D60 P1: a missing AM is the common case and must stay silent (the
      D56 fixed-path byte-identical contract). A draft-only or ambiguous
      match is the F24 shape -- stopping looks like it might apply, and
-     does not -- so the reason is a warning, not a dropped string. */
-  if (!assemblyResolution.assemblyModel && (assemblyResolution.code === "NONE_GOVERNING" || assemblyResolution.code === "AMBIGUOUS")) {
+     does not -- so the reason is a warning, not a dropped string.
+     A cited delivery model that cannot be resolved is the same kind of
+     warning: the reason is said, and nothing is inferred in its place. */
+  if (!assemblyResolution.assemblyModel && (assemblyResolution.code === "NONE_GOVERNING" || assemblyResolution.code === "AMBIGUOUS" || assemblyResolution.code === "DELIVERY_MODEL_MISSING" || assemblyResolution.code === "ASSEMBLY_UNBOUND")) {
     warnings.push(assemblyResolution.reason);
   }
+
+  let strategy = session.selectionStrategy;
 
   if (assemblyResolution.assemblyModel) {
     const assemblyModel = assemblyResolution.assemblyModel;
 
-    /* The session's own selectionStrategy was validated against db.policies
-       when the session was created, and stays authoritative. The Assembly
-       Model's selectionAlgorithm pointer is a SECOND statement of intent,
-       and the two can disagree. Reported, never silently reconciled. */
-    const policyId = assemblyModel.selectionAlgorithm?.policyId;
-    if (policyId) {
-      const policy = (db.policies || []).find((p) => p.id === policyId);
-      if (policy && policy.type && policy.type !== session.selectionStrategy) {
+    if (!authoritative) {
+      /* The session's own selectionStrategy was validated against db.policies
+         when the session was created, and stays authoritative. The Assembly
+         Model's selectionAlgorithm pointer is a SECOND statement of intent,
+         and the two can disagree. Reported, never silently reconciled. */
+      const policyId = assemblyModel.selectionAlgorithm?.policyId;
+      if (policyId) {
+        const policy = (db.policies || []).find((p) => p.id === policyId);
+        if (policy && policy.type && policy.type !== session.selectionStrategy) {
+          warnings.push(
+            `Assembly Model '${assemblyModel.id}' names selection policy '${policyId}' (type '${policy.type}'), but this session was created with selectionStrategy '${session.selectionStrategy}'. The session's own strategy is used; the Assembly Model's pointer is not applied retroactively.`
+          );
+        }
+      }
+    } else {
+      const policyId = assemblyResolution.deliveryModel?.policyId;
+      const policy = policyId
+        ? (db.policies || []).find((p) => p.id === policyId)
+        : null;
+      if (policy?.type) {
+        strategy = policy.type;
+      } else {
         warnings.push(
-          `Assembly Model '${assemblyModel.id}' names selection policy '${policyId}' (type '${policy.type}'), but this session was created with selectionStrategy '${session.selectionStrategy}'. The session's own strategy is used; the Assembly Model's pointer is not applied retroactively.`
+          `Delivery Model '${assemblyResolution.deliveryModel?.id}' names selection policy '${policyId || ""}', which is not available. Selection uses the session strategy '${session.selectionStrategy}'.`
         );
       }
     }
@@ -1057,12 +1121,12 @@ export function selectNextActivity(session, db) {
     warnings.push(...stopping.warnings);
 
     if (stopping.stop) {
-      return { stopped: stopping.stop, strategy: session.selectionStrategy, ...(warnings.length ? { warnings } : {}) };
+      return { stopped: stopping.stop, strategy, ...(warnings.length ? { warnings } : {}) };
     }
   }
 
   let result;
-  switch (session.selectionStrategy) {
+  switch (strategy) {
     case "fixed":
       result = selectFixed(session);
       break;
@@ -1088,6 +1152,7 @@ export const __testing__ = {
   resolveDinaParameters,
   computeExpectedInformationGain,
   competencyModelIdsForSession,
+  resolveDeliveryBinding,
   resolveAssemblyModelForSession,
   evaluateStoppingRules,
   candidatesFor,

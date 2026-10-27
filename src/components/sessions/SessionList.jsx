@@ -158,6 +158,11 @@ export default function SessionList({
                   <span className="ml-2 text-xs text-gray-500">(Cohort: {s.cohortId})</span>
                 )}
               </div>
+              {s.deliveryModelId && (
+                <div>
+                  Delivery model: <strong>{s.deliveryModelId}</strong>
+                </div>
+              )}
               <div>
                 Strategy: <strong>{s.selectionStrategy || "fixed"}</strong>
                 {s.nextTaskPolicy?.policyId && (

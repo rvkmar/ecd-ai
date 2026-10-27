@@ -1,5 +1,5 @@
 // D73b: Admin chrome is TR9 layers (Models / Implementation / Delivery).
-// District tabs stay peers. No new CAF entity named Delivery Model.
+// District tabs stay peers. Delivery Model sits under Models, after Assembly Model.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -32,6 +32,9 @@ vi.mock("@/components/taskModels/TaskModelBuilder", () => ({
 }));
 vi.mock("@/components/assemblyModels/AssemblyModelBuilder", () => ({
   default: () => <div>Assembly builder</div>,
+}));
+vi.mock("@/components/deliveryModels/DeliveryModelBuilder", () => ({
+  default: () => <div>Delivery model library</div>,
 }));
 vi.mock("@/components/qMatrix/QMatrixModelBuilder", () => ({
   default: () => <div>Q-matrix builder</div>,
@@ -115,6 +118,10 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(src).toMatch(/Student Model/);
     expect(src).toMatch(/AssemblyModelBuilder/);
     expect(models).toMatch(/id: "assembly"/);
+    expect(models).toMatch(/id: "deliverymodels"/);
+    expect(models.indexOf('id: "assembly"')).toBeLessThan(models.indexOf('id: "deliverymodels"'));
+    expect(models).toMatch(/Delivery Model/);
+    expect(delivery).not.toMatch(/id: "deliverymodels"/);
     expect(models).toMatch(/id: "templates"/);
     expect(models).not.toMatch(/id: "workproducts"/);
     expect(models).not.toMatch(/id: "calibration"/);
@@ -135,7 +142,6 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
     expect(app).toMatch(/path="presentation-models"/);
     expect(src).not.toMatch(/TabsTrigger value="competencies"/);
     expect(src).not.toMatch(/>Analytics</);
-    expect(src).not.toMatch(/Delivery Model/);
   });
 
   it("drops District Diagnostic design and Parameter estimation tabs; shares RoleWorkbench layers", () => {
@@ -182,6 +188,7 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
       "Presentation Model",
       "Templates",
       "Assembly Model",
+      "Delivery Model",
       "Diagnostic design",
     ]);
     expect(screen.getByRole("tab", { name: "Libraries" })).toBeInTheDocument();
@@ -208,6 +215,8 @@ describe("AdminPage PADI TR9 information architecture (D73b)", () => {
       () => expect(screen.getByText("Assembly builder")).toBeInTheDocument(),
       { timeout: 8000 }
     );
+    await user.click(screen.getByRole("tab", { name: "Delivery Model" }));
+    await waitFor(() => expect(screen.getByText("Delivery model library")).toBeInTheDocument());
     expect(screen.getByRole("tab", { name: "Templates" })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Templates" }));
     await waitFor(() => expect(screen.getByText("Templates library")).toBeInTheDocument());

@@ -23,9 +23,10 @@ One zip the Settings zip uploader accepts with no failed rows. It is two short c
 | qMatrixModels.json | 2 | Plant part Q-matrix, Fraction equivalence Q-matrix |
 | assemblyModels.json | 2 | Plant assembly on the fixed form, fraction assembly on the Bayesian policy |
 | presentationModels.json | 3 | One linear overlay per task model |
+| deliveryModels.json | 1 | Plant part naming delivery: student model, assembly model, fixed policy, plant presentation, 20 minute administration |
 | templates.json | 3 | One family binding per task |
 
-Ids in the files are stable (`cm-plant`, `em-plant`, `tm-plant`, `wp-part-name`, `rub-function`, and so on). Cross-references use those ids. Work products have no status. Plant function judgement is confirmed in the file and stays confirmed only when "Keep original ids and statuses" is on and the row is valid. With the toggle off it is stored as a draft. Fraction equivalence judgement is a draft. Every other governed row is a draft.
+Ids in the files are stable (`cm-plant`, `em-plant`, `tm-plant`, `wp-part-name`, `rub-function`, `dm-plant`, and so on). Cross-references use those ids. Work products have no status. Plant function judgement is confirmed in the file and stays confirmed only when "Keep original ids and statuses" is on and the row is valid. With the toggle off it is stored as a draft. Fraction equivalence judgement is a draft. Every other governed row is a draft.
 
 Design patterns list these work products and rubrics. Part naming evidence scores the selected plant-part name with a key. Part function evidence and Fraction evidence score with the matching rubric (method rubric), and each procedure's human phase cites that same rubric. The four items bind the work product that matches their stem, on interaction.workProductId.
 

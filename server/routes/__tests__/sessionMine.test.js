@@ -217,6 +217,125 @@ describe("POST /api/sessions assignment", () => {
     expect(res.status).toBe(201);
     expect(res.body.nextTaskPolicy.policyId).toBe("p-fixed-order");
   });
+
+  it("uses the delivery model's policy even when the body names a different strategy", async () => {
+    const db = {
+      sessions: [],
+      students: [],
+      tasks: [{ id: "t1" }],
+      policies: [
+        { id: "p-fixed", type: "fixed", name: "Fixed" },
+        { id: "p-irt", type: "IRT", name: "Adaptive" },
+      ],
+      deliveryModels: [
+        {
+          id: "dm1",
+          name: "Sitting",
+          policyId: "p-fixed",
+          assemblyModelId: "am1",
+          competencyModelId: "cm1",
+        },
+      ],
+    };
+    loadDB.mockReturnValue(db);
+    const res = await request(app)
+      .post("/api/sessions")
+      .send({
+        taskIds: ["t1"],
+        studentId: "stud1",
+        selectionStrategy: "IRT",
+        nextTaskPolicy: { policyId: "p-irt" },
+        deliveryModelId: "dm1",
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.deliveryModelId).toBe("dm1");
+    expect(res.body.selectionStrategy).toBe("fixed");
+    expect(res.body.nextTaskPolicy.policyId).toBe("p-fixed");
+  });
+
+  it("rejects an unknown delivery model and leaves a session without one unchanged", async () => {
+    const db = dbWithPolicy();
+    loadDB.mockReturnValue(db);
+    const missing = await request(app)
+      .post("/api/sessions")
+      .send({ taskIds: ["t1"], studentId: "stud1", deliveryModelId: "dm-missing" });
+    expect(missing.status).toBe(400);
+    expect(missing.body.error).toMatch(/deliveryModelId/);
+
+    const legacy = await request(app)
+      .post("/api/sessions")
+      .send({ taskIds: ["t1"], studentId: "stud1", selectionStrategy: "fixed" });
+    expect(legacy.status).toBe(201);
+    expect(legacy.body.deliveryModelId).toBeUndefined();
+    expect(legacy.body.selectionStrategy).toBe("fixed");
+  });
+});
+
+describe("GET /api/sessions/:id/next-task delivery presentation override", () => {
+  it("prefers the delivery model's presentation model over the live task-model pick", async () => {
+    const db = {
+      sessions: [
+        {
+          id: "s-dm",
+          studentId: "stud1",
+          status: "in_progress",
+          isCompleted: false,
+          taskIds: ["t1"],
+          currentTaskIndex: 0,
+          responses: [],
+          selectionStrategy: "fixed",
+          deliveryModelId: "dm1",
+        },
+      ],
+      tasks: [{ id: "t1", taskModelId: "tm1" }],
+      taskModels: [{ id: "tm1", versionNumber: 1 }],
+      policies: [{ id: "p-fixed", type: "fixed" }],
+      assemblyModels: [
+        { id: "am1", status: "draft", competencyModelId: "cm1", stoppingRules: { maxItems: 99 } },
+      ],
+      deliveryModels: [
+        {
+          id: "dm1",
+          assemblyModelId: "am1",
+          policyId: "p-fixed",
+          presentationModelId: "pm-override",
+        },
+      ],
+      presentationModels: [
+        {
+          id: "pm-live",
+          name: "Live",
+          status: "operational",
+          locked: true,
+          taskModelId: "tm1",
+          taskModelVersion: 1,
+          updatedAt: "2026-02-01T00:00:00.000Z",
+          layout: { navigation: "linear" },
+          conditionalDisplay: {},
+          accessibility: {},
+        },
+        {
+          id: "pm-override",
+          name: "Override",
+          status: "confirmed",
+          locked: true,
+          taskModelId: "tm1",
+          taskModelVersion: 1,
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          layout: { navigation: "reviewable" },
+          conditionalDisplay: { allowReview: true },
+          accessibility: {},
+        },
+      ],
+      compositeLibrary: [],
+    };
+    loadDB.mockReturnValue(db);
+    const res = await request(app).get("/api/sessions/s-dm/next-task");
+    expect(res.status).toBe(200);
+    expect(res.body.taskId).toBe("t1");
+    expect(res.body.presentation.presentationModelId).toBe("pm-override");
+    expect(res.body.presentation.layout.navigation).toBe("reviewable");
+  });
 });
 
 describe("GET /api/sessions/mine is loadable by native Node ESM", () => {

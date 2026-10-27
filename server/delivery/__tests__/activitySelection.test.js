@@ -1121,6 +1121,88 @@ describe("the Assembly Model's selectionAlgorithm pointer advises, it does not o
   });
 });
 
+describe("a cited delivery model is authoritative", () => {
+  function deliveryDb(overrides = {}) {
+    return irtDb({
+      assemblyModels: [
+        assemblyModel({ id: "am-draft", status: "draft", stoppingRules: { maxItems: 1 } }),
+        assemblyModel({ id: "am-live", status: "confirmed", stoppingRules: { maxItems: 99 } }),
+      ],
+      deliveryModels: [
+        {
+          id: "dm1",
+          competencyModelId: "cm1",
+          assemblyModelId: "am-draft",
+          policyId: "p-irt",
+          presentationModelId: null,
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("uses the named assembly model even when another governing model exists", () => {
+    const db = deliveryDb();
+    const resolution = resolveAssemblyModelForSession(
+      session({ deliveryModelId: "dm1", selectionStrategy: "fixed" }),
+      db
+    );
+    expect(resolution.authoritative).toBe(true);
+    expect(resolution.assemblyModel.id).toBe("am-draft");
+  });
+
+  it("selects with the delivery model's policy and does not warn about the assembly pointer", () => {
+    const db = deliveryDb();
+    const result = selectNextActivity(
+      session({ deliveryModelId: "dm1", selectionStrategy: "fixed" }),
+      db
+    );
+    expect(result.strategy).toBe("IRT");
+    expect(result.taskId).toBeTruthy();
+    expect((result.warnings || []).join(" ")).not.toContain("not applied retroactively");
+  });
+
+  it("stops on the named assembly model, not the inferred governing one", () => {
+    const db = deliveryDb();
+    const result = selectNextActivity(
+      session({
+        deliveryModelId: "dm1",
+        selectionStrategy: "fixed",
+        responses: [{ taskId: "t1" }],
+      }),
+      db
+    );
+    expect(result.stopped.rule).toBe("maxItems");
+    expect(result.stopped.assemblyModelId).toBe("am-draft");
+    expect(result.strategy).toBe("IRT");
+  });
+
+  it("does not infer an assembly model when the cited delivery model is missing", () => {
+    const db = deliveryDb();
+    const resolution = resolveAssemblyModelForSession(
+      session({ deliveryModelId: "dm-missing" }),
+      db
+    );
+    expect(resolution.assemblyModel).toBeUndefined();
+    expect(resolution.code).toBe("DELIVERY_MODEL_MISSING");
+    const result = selectNextActivity(session({ deliveryModelId: "dm-missing" }), db);
+    expect(result.stopped).toBeUndefined();
+    expect(result.strategy).toBe("fixed");
+    expect(result.warnings[0]).toContain("dm-missing");
+  });
+
+  it("keeps the advisory warning when no delivery model is cited", () => {
+    const db = irtDb({
+      assemblyModels: [
+        assemblyModel({ stoppingRules: { maxItems: 99 }, selectionAlgorithm: { policyId: "p-irt" } }),
+      ],
+    });
+    const result = selectNextActivity(session({ selectionStrategy: "fixed" }), db);
+    expect(result.strategy).toBe("fixed");
+    expect(result.warnings[0]).toContain("not applied retroactively");
+  });
+});
+
 /* ------------------------------------------------------------------
    7. The quarantined legacy question path
 ------------------------------------------------------------------ */
