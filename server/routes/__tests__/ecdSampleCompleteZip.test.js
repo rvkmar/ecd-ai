@@ -107,6 +107,19 @@ describe("ecd-sample-complete.zip", () => {
     const evidence = db.evidenceModels.find((row) => row.name === "Part function evidence");
     const qMatrix = db.qMatrixModels.find((row) => row.name === "Plant part Q-matrix");
     expect(evidence.statisticalModels[0].structureConfig.qMatrixId).toBe(qMatrix.id);
+    const observableRow = qMatrix.entries.find((entry) => entry.observableId === "obs-plant-function");
+    expect(observableRow.evidenceModelId).toBe(evidence.id);
+    expect(observableRow.attributeId).toBe("smv-names-function");
+    expect(observableRow.itemId).toBeUndefined();
+    const functionItem = db.items.find((row) => row.name === "Job of the leaf");
+    expect(qMatrix.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          itemId: functionItem.id,
+          attributeId: "smv-names-function",
+        }),
+      ])
+    );
 
     const task = db.taskModels.find((row) => row.name === "Name the plant part");
     const partEvidence = db.evidenceModels.find((row) => row.name === "Part naming evidence");

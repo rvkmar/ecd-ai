@@ -6,6 +6,8 @@ import React, { useMemo, useState } from "react";
 import { useQMatrixModels } from "@/api/queries/qMatrixModels";
 import { useCompetencyModels } from "@/api/queries/competencies";
 import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import { useEvidenceModels } from "@/api/queries/evidenceModels";
+import { observableDisplay } from "@/utils/qMatrixEntries";
 import { apiErrorMessage } from "@/api/apiClient";
 import ModelIngredientsCard from "@/components/shared/ModelIngredientsCard";
 import { meetsDiagnosticDesignConfirmedGates } from "./diagnosticDesignReadiness";
@@ -52,7 +54,7 @@ function bindingItem(rows, id, secondary) {
 function itemIngredientItems(record, studentModel) {
   const byItem = new Map();
   for (const entry of record?.entries || []) {
-    if (!entry?.itemId) continue;
+    if (!entry?.itemId || entry?.observableId) continue;
     const labels = byItem.get(entry.itemId) || [];
     labels.push(attributeLabel(studentModel, entry.attributeId));
     byItem.set(entry.itemId, labels);
@@ -64,8 +66,30 @@ function itemIngredientItems(record, studentModel) {
   }));
 }
 
+function observableIngredientItems(record, studentModel, evidenceModels) {
+  const byKey = new Map();
+  for (const entry of record?.entries || []) {
+    if (!entry?.observableId) continue;
+    const key = `${entry.evidenceModelId || ""}::${entry.observableId}::${entry.itemId || ""}`;
+    const current = byKey.get(key) || { entry, labels: [] };
+    current.labels.push(attributeLabel(studentModel, entry.attributeId));
+    byKey.set(key, current);
+  }
+  return [...byKey.values()].map(({ entry, labels }) => {
+    const display = observableDisplay(evidenceModels, entry);
+    const parts = [display.evidenceModelName, entry.itemId ? `item ${entry.itemId}` : "Any item"]
+      .filter(Boolean);
+    return {
+      id: `${entry.evidenceModelId || "observable"}:${entry.observableId}:${entry.itemId || ""}`,
+      primary: display.statement || entry.observableId,
+      secondary: [...parts, labels.filter(Boolean).join(", ")].filter(Boolean).join("; "),
+    };
+  });
+}
+
 export function ingredientGroupsForDesign(record, context) {
   const studentModel = studentModelFor(record, context.competencyModels);
+  const evidenceModels = context.evidenceModels || [];
   const description = String(record.description || "").trim();
   const versionItems = record.versionNumber
     ? [
@@ -103,6 +127,11 @@ export function ingredientGroupsForDesign(record, context) {
       key: "items",
       label: "Items",
       items: itemIngredientItems(record, studentModel),
+    },
+    {
+      key: "observables",
+      label: "Observables",
+      items: observableIngredientItems(record, studentModel, evidenceModels),
     },
     {
       key: "domainAnalysis",
@@ -161,13 +190,18 @@ export default function DiagnosticDesignTable() {
   const designQuery = useQMatrixModels();
   const competencyQuery = useCompetencyModels();
   const analysisQuery = useDomainAnalyses();
+  const evidenceQuery = useEvidenceModels();
 
   const designs = designQuery.data || [];
   const competencyModels = competencyQuery.data || [];
   const domainAnalyses = analysisQuery.data || [];
+  const evidenceModels = evidenceQuery.data || [];
 
-  const loading = [designQuery, competencyQuery, analysisQuery].some((query) => query.isLoading);
-  const queryError = designQuery.error || competencyQuery.error || analysisQuery.error;
+  const loading = [designQuery, competencyQuery, analysisQuery, evidenceQuery].some(
+    (query) => query.isLoading
+  );
+  const queryError =
+    designQuery.error || competencyQuery.error || analysisQuery.error || evidenceQuery.error;
   const error = queryError
     ? apiErrorMessage(queryError, "Failed to fetch diagnostic designs.")
     : null;
@@ -178,8 +212,8 @@ export default function DiagnosticDesignTable() {
   const [viewMode, setViewMode] = useState("table");
 
   const context = useMemo(
-    () => ({ competencyModels, domainAnalyses }),
-    [competencyModels, domainAnalyses]
+    () => ({ competencyModels, domainAnalyses, evidenceModels }),
+    [competencyModels, domainAnalyses, evidenceModels]
   );
 
   const filtered = useMemo(() => {
@@ -198,7 +232,7 @@ export default function DiagnosticDesignTable() {
         citedName(competencyModels, record.competencyModelId),
         citedName(domainAnalyses, record.domainAnalysisId),
         ...attributeNames,
-        ...(record.entries || []).map((entry) => entry.itemId),
+        ...(record.entries || []).flatMap((entry) => [entry.itemId, entry.observableId, entry.evidenceModelId]),
       ]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(needle));

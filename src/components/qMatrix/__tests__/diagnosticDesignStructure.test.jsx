@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { useQMatrixModels } from "@/api/queries/qMatrixModels";
 import { useCompetencyModels } from "@/api/queries/competencies";
 import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import DiagnosticDesignTable from "../DiagnosticDesignTable";
 import { competencyModels, designs, domainAnalyses } from "./diagnosticDesignTabFixture";
 
@@ -16,6 +17,9 @@ vi.mock("@/api/queries/competencies", () => ({
 }));
 vi.mock("@/api/queries/domainAnalyses", () => ({
   useDomainAnalyses: vi.fn(),
+}));
+vi.mock("@/api/queries/evidenceModels", () => ({
+  useEvidenceModels: vi.fn(),
 }));
 
 function query(data) {
@@ -39,6 +43,7 @@ describe("Diagnostic Design structure", () => {
     useQMatrixModels.mockReturnValue(query(designs));
     useCompetencyModels.mockReturnValue(query(competencyModels));
     useDomainAnalyses.mockReturnValue(query(domainAnalyses));
+    useEvidenceModels.mockReturnValue(query([]));
   });
 
   it("lists the student model, attributes, entries, domain analysis, and lock", () => {

@@ -1,3 +1,5 @@
+import { entriesForResponse } from "../../src/utils/qMatrixEntries.js";
+
 // server/delivery/attributeAccumulation.js
 //
 // Day 36 (Week 8): the binary-attribute-mastery branch of Evidence
@@ -30,6 +32,12 @@
 //    different slip/guess; keying them by observable would silently force
 //    them to share. This also matches the DINA literature, where s_j and
 //    g_j are per-item throughout.
+//
+//    G18 adds observable-keyed Q-matrix rows. Those rows choose the
+//    Q-vector for a response that names that observable. They do not move
+//    slip and guess off the item. An item-only matrix still resolves by
+//    itemId, including when the response also carries an observableId that
+//    no row cites.
 //
 // 2. THE PRIOR ASSUMES ATTRIBUTE INDEPENDENCE; THE POSTERIOR DOES NOT.
 //    Competency models declare a prior per binary SMV, one at a time --
@@ -643,31 +651,31 @@ export function accumulateAttributeMastery({
      students fell from 94.9% to 90.3%. DINA is immune because eta is a
      conjunction and so order-free, which is exactly why the DINA/G-DINA
      equivalence test could not catch it. */
-  const requiredIndicesByItem = new Map();
-  const itemsWithUnknownAttribute = new Set();
-
-  for (const entry of qMatrix.entries || []) {
-    if (!entry?.itemId) continue;
-    if (entry.required !== undefined && !entry.required) continue;
-
-    const index = attributeIndexById.get(entry.attributeId);
-
-    /* An entry naming an attribute the Q-matrix never declared. Dropping
-       the cell silently would TRUNCATE the item's Q-vector -- scoring a
-       two-attribute item as though it required only one, which reports a
-       higher mastery probability than the evidence supports (measured:
-       0.818 where the honest answer is 0.733) and compounds across items.
-       The item is excluded below instead. */
-    if (index === undefined) {
-      itemsWithUnknownAttribute.add(entry.itemId);
-      continue;
+  function requiredIndicesFor(response) {
+    const matched = entriesForResponse(qMatrix.entries, {
+      itemId: response?.itemId,
+      observableId: response?.observableId,
+      evidenceModelId: response?.evidenceModelId || evidenceModelId,
+    });
+    const indices = [];
+    const seen = new Set();
+    for (const entry of matched) {
+      if (entry.required !== undefined && !entry.required) continue;
+      const index = attributeIndexById.get(entry.attributeId);
+      /* An entry naming an attribute the Q-matrix never declared. Dropping
+         the cell silently would TRUNCATE the Q-vector -- scoring a
+         two-attribute observation as though it required only one, which
+         reports a higher mastery probability than the evidence supports
+         (measured: 0.818 where the honest answer is 0.733) and compounds
+         across responses. The response is excluded below instead. */
+      if (index === undefined) return { unknown: true, indices: [] };
+      if (seen.has(index)) continue;
+      seen.add(index);
+      indices.push(index);
     }
-
-    if (!requiredIndicesByItem.has(entry.itemId)) requiredIndicesByItem.set(entry.itemId, []);
-    requiredIndicesByItem.get(entry.itemId).push(index);
+    indices.sort((a, b) => a - b);
+    return { unknown: false, indices };
   }
-
-  for (const indices of requiredIndicesByItem.values()) indices.sort((a, b) => a - b);
 
   const scoredResponses = [];
   let excluded = 0;
@@ -683,13 +691,15 @@ export function accumulateAttributeMastery({
       continue;
     }
 
-    if (itemsWithUnknownAttribute.has(r.itemId)) {
+    const resolvedVector = requiredIndicesFor(r);
+
+    if (resolvedVector.unknown) {
       excluded += 1;
       warnings.push(`Q-matrix '${qMatrixId}' places item '${r.itemId}' on an attribute it does not declare in attributeIds; the item's Q-vector cannot be resolved, so that response was excluded rather than scored against a truncated one.`);
       continue;
     }
 
-    const requiredIndices = requiredIndicesByItem.get(r.itemId);
+    const requiredIndices = resolvedVector.indices;
 
     /* An item the Q-matrix does not place requires no attributes, so its
        response function is constant across every profile: it discriminates

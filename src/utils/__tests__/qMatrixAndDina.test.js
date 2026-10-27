@@ -193,25 +193,25 @@ describe("qMatrixModels — deliberate mutations", () => {
   it("rejects an entry missing attributeId", () => {
     const mutated = makeQMatrix({ entries: [{ itemId: "i1" }] });
     const errors = qMatrixErrors(mutated);
-    expect(errors).toEqual(["entries[0] requires both itemId and attributeId."]);
+    expect(errors).toEqual(["entries[0] requires an attributeId."]);
   });
 
-  it("rejects an entry missing itemId", () => {
+  it("rejects an entry missing itemId and observableId", () => {
     const mutated = makeQMatrix({ entries: [{ attributeId: "attr-equivalence" }] });
     const errors = qMatrixErrors(mutated);
-    expect(errors).toEqual(["entries[0] requires both itemId and attributeId."]);
+    expect(errors).toEqual(["entries[0] requires an itemId or an observableId."]);
   });
 
   it("rejects a null entry in entries[] rather than throwing", () => {
     const mutated = makeQMatrix({ entries: [null] });
     const errors = qMatrixErrors(mutated);
-    expect(errors).toEqual(["entries[0] requires both itemId and attributeId."]);
+    expect(errors).toEqual(["entries[0] requires an itemId or an observableId."]);
   });
 
   it("rejects an entry.itemId that is null rather than merely absent", () => {
     const mutated = makeQMatrix({ entries: [{ itemId: null, attributeId: "attr-equivalence" }] });
     const errors = qMatrixErrors(mutated);
-    expect(errors).toEqual(["entries[0] requires both itemId and attributeId."]);
+    expect(errors).toEqual(["entries[0] requires an itemId or an observableId."]);
   });
 
   it("rejects entry.required when it is a non-boolean truthy value", () => {

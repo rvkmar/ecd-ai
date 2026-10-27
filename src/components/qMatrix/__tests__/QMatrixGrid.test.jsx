@@ -12,7 +12,7 @@ const items = [{ id: "i1" }, { id: "i2", metadata: { subject: "Math" } }];
 describe("QMatrixGrid", () => {
   it("renders a message instead of a table when there are no items", () => {
     render(<QMatrixGrid attributes={attributes} items={[]} entries={[]} />);
-    expect(screen.getByText(/no items added yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no rows added yet/i)).toBeInTheDocument();
   });
 
   it("renders one checkbox per item x attribute cell", () => {

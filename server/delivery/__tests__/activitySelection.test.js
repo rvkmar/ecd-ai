@@ -709,6 +709,28 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
     expect(result.debug.fallback).toBe("first-unanswered");
     expect(result.debug.unrankable[0].reason).toContain("no required attributes");
   });
+
+  it("ranks an observable-keyed row from the item's observation", () => {
+    const db = dinaDb();
+    db.qMatrixModels[0].entries = [
+      { observableId: "oA", evidenceModelId: "emD", attributeId: "attrA" },
+      { observableId: "oB", evidenceModelId: "emD", attributeId: "attrB" },
+    ];
+    const s = session({
+      taskIds: ["tA", "tB"],
+      selectionStrategy: "BayesianNetwork",
+      studentModel: {
+        smvPosteriors: {
+          attrA: smvPosterior({ smvId: "attrA", evidenceModelId: "emD", method: "map", modelFamily: "dina", estimate: 0.97 }),
+          attrB: smvPosterior({ smvId: "attrB", evidenceModelId: "emD", method: "map", modelFamily: "dina", estimate: 0.5 }),
+        },
+      },
+    });
+
+    const result = selectNextActivity(s, db);
+    expect(result.taskId).toBe("tB");
+    expect(result.strategy).toBe("BayesianNetwork");
+  });
 });
 
 /* ------------------------------------------------------------------

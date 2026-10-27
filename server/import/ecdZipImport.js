@@ -152,6 +152,7 @@ const REF_PATHS = {
     ["domainAnalysisId", "domainAnalyses"],
     ["parentModelId", "qMatrixModels"],
     ["entries[].itemId", "items"],
+    ["entries[].evidenceModelId", "evidenceModels"],
   ],
   assemblyModels: [
     ["competencyModelId", "competencyModels"],

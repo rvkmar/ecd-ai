@@ -3,6 +3,7 @@
 // Updated lifecycle validation aligned with latest ECD Task Model architecture
 import { canTransition, canTransitionCalibrationJob, CALIBRATION_JOB_STATUS } from "../utils/lifecycleMatrix.js";
 import { isLinkableCompetencyModel, isInstantiableTaskModel } from "../../src/utils/schema.js";
+import { itemIsPlacedInQMatrix } from "../../src/utils/qMatrixEntries.js";
 import {
   CALIBRATION_JOB_KIND_VALUES,
   statisticalModelTypesForJobKind,
@@ -609,16 +610,12 @@ export function validateQMatrixModelLifecycle(qMatrixModel, db = null, options =
         .map((em) => em.id);
 
       if (boundEvidenceModelIds.length > 0) {
-        const placedItemIds = new Set(
-          (qMatrixModel.entries || []).map((e) => e?.itemId).filter(Boolean)
-        );
-
         const unplaced = (db.items || [])
           .filter(
             (it) =>
               boundEvidenceModelIds.includes(it.evidenceModelId) &&
               ["confirmed", "operational"].includes(it.status) &&
-              !placedItemIds.has(it.id)
+              !itemIsPlacedInQMatrix(it, qMatrixModel.entries, it.evidenceModelId)
           )
           .map((it) => it.id);
 

@@ -40,6 +40,7 @@ import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
+import { qMatrixEntriesCitingItem } from "../../src/utils/qMatrixEntries.js";
 import {
   validateEntity,
   isInstantiableTaskModel,
@@ -958,6 +959,12 @@ router.delete("/:id", canAuthor, (req, res) => {
   if (item.locked) {
     return res.status(409).json({
       error: "A confirmed item cannot be deleted. Archive it instead — the responses it collected still have to be interpretable.",
+    });
+  }
+
+  if (qMatrixEntriesCitingItem(db.qMatrixModels, item.id).length > 0) {
+    return res.status(409).json({
+      error: "Cannot delete item referenced by a Q-matrix.",
     });
   }
 

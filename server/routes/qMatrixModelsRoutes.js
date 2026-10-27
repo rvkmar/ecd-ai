@@ -2,7 +2,8 @@
 // ------------------------------------------------------------------
 // Q-matrix models: an attributes x items matrix binding binary Student
 // Model Variables (the columns) to the items that require them (the
-// sparse `entries[]` cells). Required by the `dina`/`gdina` statistical
+// sparse `entries[]` cells). An entry may instead cite an observable,
+// with itemId omitted. Required by the `dina`/`gdina` statistical
 // model types on evidenceModels.
 //
 // WHY THIS FILE EXISTS ONLY NOW (D48): the collection was declared on
@@ -305,16 +306,15 @@ export function createQMatrixRecord(payload = {}, db, idSuffix = "", options = {
 
   const entries = [];
   for (const entry of payload.entries || []) {
-    let itemId = entry.itemId;
+    let itemId = typeof entry.itemId === "string" ? entry.itemId.trim() : "";
     if (!itemId && entry.itemName) {
       const resolved = resolveUniqueByName(db.items, entry.itemName, "item");
       if (resolved.error) return { ok: false, status: 400, error: resolved.error };
       itemId = resolved.record.id;
     }
-    if (!itemId || !entry.attributeId && !entry.attributeName) {
-      // attribute may be name-resolved against attributeNames map
-    }
-    let attributeId = entry.attributeId;
+    const observableId = typeof entry.observableId === "string" ? entry.observableId.trim() : "";
+    const evidenceModelId = typeof entry.evidenceModelId === "string" ? entry.evidenceModelId.trim() : "";
+    let attributeId = typeof entry.attributeId === "string" ? entry.attributeId.trim() : "";
     if (!attributeId && entry.attributeName) {
       const needle = String(entry.attributeName).trim().toLowerCase();
       const idx = (payload.attributeNames || []).findIndex(
@@ -333,18 +333,21 @@ export function createQMatrixRecord(payload = {}, db, idSuffix = "", options = {
         attributeId = smv?.id || comp?.id;
       }
     }
-    if (!itemId || !attributeId) {
+    if ((!itemId && !observableId) || !attributeId) {
       return {
         ok: false,
         status: 400,
-        error: "Each entry requires itemId (or itemName) and attributeId (or attributeName).",
+        error: "Each entry requires an attributeId (or attributeName) and an itemId (or itemName) or an observableId.",
       };
     }
-    entries.push({
-      itemId,
+    const stored = {
       attributeId,
       required: entry.required !== false,
-    });
+    };
+    if (itemId) stored.itemId = itemId;
+    if (observableId) stored.observableId = observableId;
+    if (evidenceModelId) stored.evidenceModelId = evidenceModelId;
+    entries.push(stored);
   }
 
   const preserve = options.preserveLifecycle === true;

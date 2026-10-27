@@ -801,3 +801,52 @@ describe("accumulateEvidence — dina/gdina reach the attribute branch end to en
     expect(second).toEqual(first);
   });
 });
+
+describe("observable-keyed Q-matrix rows", () => {
+  it("uses the observable row and leaves an item-only row out of that response", () => {
+    const { args, warnings } = makeContext({
+      entries: [
+        { itemId: "i1", attributeId: "attr-b" },
+        { observableId: "o-a", evidenceModelId: "em1", attributeId: "attr-a" },
+      ],
+      group: [{
+        itemId: "i1",
+        observableId: "o-a",
+        evidenceModelId: "em1",
+        activated: true,
+        direction: "supports",
+      }],
+    });
+    const posteriors = accumulateAttributeMastery(args);
+    expect(warnings).toEqual([]);
+    const attrA = posteriors.find((row) => row.smvId === "attr-a");
+    const attrB = posteriors.find((row) => row.smvId === "attr-b");
+    // One required attribute, correct response, slip 0.1, guess 0.2, prior 0.5.
+    // That is 9/11. The two-attribute conjunctive case is 11/15, so this
+    // number is also the proof that the item-only row was not added in.
+    expect(attrA.estimate).toBeCloseTo(0.8181818181818181, 10);
+    expect(attrA.responsesUsed).toBe(1);
+    expect(attrB.supported).toBe(false);
+  });
+
+  it("scores two observables from one item against different attributes", () => {
+    const { args } = makeContext({
+      entries: [
+        { observableId: "o-a", evidenceModelId: "em1", attributeId: "attr-a" },
+        { observableId: "o-b", evidenceModelId: "em1", attributeId: "attr-b" },
+      ],
+      group: [
+        { itemId: "i1", observableId: "o-a", evidenceModelId: "em1", activated: true, direction: "supports" },
+        { itemId: "i1", observableId: "o-b", evidenceModelId: "em1", activated: false, direction: "supports" },
+      ],
+    });
+    const posteriors = accumulateAttributeMastery(args);
+    expect(posteriors.every((row) => row.supported)).toBe(true);
+    const attrA = posteriors.find((row) => row.smvId === "attr-a");
+    const attrB = posteriors.find((row) => row.smvId === "attr-b");
+    expect(attrA.responsesUsed).toBe(1);
+    expect(attrB.responsesUsed).toBe(1);
+    expect(attrA.estimate).toBeGreaterThan(0.5);
+    expect(attrB.estimate).toBeLessThan(0.5);
+  });
+});
