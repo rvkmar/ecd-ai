@@ -821,7 +821,10 @@ describe("observable-keyed Q-matrix rows", () => {
     expect(warnings).toEqual([]);
     const attrA = posteriors.find((row) => row.smvId === "attr-a");
     const attrB = posteriors.find((row) => row.smvId === "attr-b");
-    expect(attrA.estimate).toBeCloseTo(0.6923076923076923, 10);
+    // One required attribute, correct response, slip 0.1, guess 0.2, prior 0.5.
+    // That is 9/11. The two-attribute conjunctive case is 11/15, so this
+    // number is also the proof that the item-only row was not added in.
+    expect(attrA.estimate).toBeCloseTo(0.8181818181818181, 10);
     expect(attrA.responsesUsed).toBe(1);
     expect(attrB.supported).toBe(false);
   });

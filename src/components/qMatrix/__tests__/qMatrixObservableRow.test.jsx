@@ -118,7 +118,7 @@ describe("Q-matrix observable row", () => {
     fx.matrix.entries = [{ itemId: "it-function", attributeId: "smv-names-function" }];
     render(<QMatrixEditor qMatrixId="qm1" onCancel={vi.fn()} />);
 
-    await user.click(screen.getByRole("combobox", { name: "+ Add observable…" }));
+    await user.click(screen.getByText("+ Add observable…"));
     expect(screen.getByText("Part function evidence")).toBeInTheDocument();
     await user.click(screen.getByText("The learner selects the function of the named plant part."));
     expect(screen.getByRole("rowheader", { name: /selects the function of the named plant part/i })).toBeInTheDocument();
