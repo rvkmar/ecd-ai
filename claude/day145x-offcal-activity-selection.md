@@ -76,6 +76,10 @@ npm audit --audit-level=high
 
 `samples/ecd-sample-complete.zip`: 45 created, 0 failed, 0 file errors, for both new ids and keep-original-ids. Assembly models: 2 created, 0 failed. Sessions are runtime data and are not in the zip. No zip code changed.
 
+## Remote
+
+Draft pull request #108 against `main`: https://github.com/rvkmar/ecd-ai/pull/108. Branch `cursor/activity-selection-pool-5f19`. Product `cfbacc1`.
+
 ## Browser
 
 No screen changed. SessionPlayer was not edited. It already loads whatever task id `/next-task` returns. After submit, the appended id is on `session.taskIds`, which the existing wizard already lists. The route test covers next-task, submit of an off-seed task, pause, resume, and the following next-task.
