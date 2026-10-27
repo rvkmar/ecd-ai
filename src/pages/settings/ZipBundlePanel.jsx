@@ -22,7 +22,10 @@ const ENTITY_LABELS = {
   qMatrixModels: "Q-matrix models",
   assemblyModels: "Assembly models",
   presentationModels: "Presentation models",
+  deliveryModels: "Delivery models",
   templates: "Templates",
+  workProducts: "Work products",
+  rubrics: "Rubrics",
 };
 
 function ResultLine({ row }) {
@@ -210,7 +213,7 @@ export default function ZipBundlePanel() {
           One JSON file per entity (policies.json, curricularPolicies.json, domainAnalyses.json,
           competencyModels.json, competencies.json, evidenceModels.json, taskModelVariables.json,
           workProducts.json, rubrics.json, taskModels.json, items.json, qMatrixModels.json, assemblyModels.json,
-          designPatterns.json, presentationModels.json, templates.json). A file may be a bare
+          designPatterns.json, presentationModels.json, deliveryModels.json, templates.json). A file may be a bare
           array or a one-key wrapper. Preview checks every row, then Import writes the rows that
           passed. A bad row does not cancel the rest. Files that are not an entity are skipped.
           Helper fields such as _origin and _sources are ignored. New ids and draft status are

@@ -100,11 +100,13 @@ function rejectUnassignedStudent(req, res, session, db) {
 // ------------------------------
 // POST /api/sessions
 // ------------------------------
-// body: { taskIds, studentId?, studentIds?, cohortId?, selectionStrategy?, nextTaskPolicy? }
+// body: { taskIds, studentId?, studentIds?, cohortId?, selectionStrategy?, nextTaskPolicy?, deliveryModelId? }
 // One session per assignee so each examinee has their own responses.
-// Status starts as `ready` — staff Play persists `in_progress`.
+// Status starts as `ready`. Staff Play persists `in_progress`.
+// deliveryModelId, when set, supplies the selection policy. The body's
+// selectionStrategy and nextTaskPolicy are not consulted in that case.
 router.post("/", (req, res) => {
-  const { taskIds, studentId, studentIds, cohortId, selectionStrategy, nextTaskPolicy } = req.body;
+  const { taskIds, studentId, studentIds, cohortId, selectionStrategy, nextTaskPolicy, deliveryModelId } = req.body;
   const db = loadDB();
   // A brand-new store has no collections yet. Reading them as arrays is
   // what lets the first session save instead of throwing on `.find`.
@@ -135,37 +137,58 @@ router.post("/", (req, res) => {
   }
 
   // Fixed Order is a selection policy (type "fixed"), the same record
-  // authored under Home → Selection policies. When several policies
+  // authored under Home, Selection policies. When several policies
   // share the strategy, the session must name one. A single match is
   // the bootstrap for a store that has not been asked to choose yet.
+  // A delivery model replaces that choice: its policyId is the policy.
   let strategy = selectionStrategy || "fixed";
   let policyConfig = nextTaskPolicy || {};
+  let boundDeliveryModelId = null;
   const availablePolicies = db.policies || [];
-  const ofType = availablePolicies.filter((p) => p.type === strategy);
 
-  if (policyConfig.policyId) {
-    const chosen = availablePolicies.find((p) => p.id === policyConfig.policyId);
+  if (deliveryModelId) {
+    const deliveryModel = (db.deliveryModels || []).find((row) => row && row.id === deliveryModelId);
+    if (!deliveryModel) {
+      return res.status(400).json({
+        error: `Invalid deliveryModelId: ${deliveryModelId}`,
+      });
+    }
+    const chosen = availablePolicies.find((p) => p.id === deliveryModel.policyId);
     if (!chosen) {
       return res.status(400).json({
-        error: `Invalid nextTaskPolicy.policyId: ${policyConfig.policyId}. Not found in /api/policies`,
+        error: `Delivery model '${deliveryModel.id}' names selection policy '${deliveryModel.policyId || ""}', which is not in /api/policies`,
       });
     }
-    if (chosen.type !== strategy) {
-      return res.status(400).json({
-        error: `Policy '${chosen.id}' is type '${chosen.type}', which does not match selectionStrategy '${strategy}'.`,
-      });
-    }
+    strategy = chosen.type;
     policyConfig = { policyId: chosen.id };
-  } else if (ofType.length === 1) {
-    policyConfig = { policyId: ofType[0].id };
-  } else if (ofType.length === 0) {
-    return res.status(400).json({
-      error: `Invalid selectionStrategy: ${strategy}. No matching policy found in /api/policies`,
-    });
+    boundDeliveryModelId = deliveryModel.id;
   } else {
-    return res.status(400).json({
-      error: `Choose a ${strategy} policy. More than one is available.`,
-    });
+    const ofType = availablePolicies.filter((p) => p.type === strategy);
+
+    if (policyConfig.policyId) {
+      const chosen = availablePolicies.find((p) => p.id === policyConfig.policyId);
+      if (!chosen) {
+        return res.status(400).json({
+          error: `Invalid nextTaskPolicy.policyId: ${policyConfig.policyId}. Not found in /api/policies`,
+        });
+      }
+      if (chosen.type !== strategy) {
+        return res.status(400).json({
+          error: `Policy '${chosen.id}' is type '${chosen.type}', which does not match selectionStrategy '${strategy}'.`,
+        });
+      }
+      policyConfig = { policyId: chosen.id };
+    } else if (ofType.length === 1) {
+      policyConfig = { policyId: ofType[0].id };
+    } else if (ofType.length === 0) {
+      return res.status(400).json({
+        error: `Invalid selectionStrategy: ${strategy}. No matching policy found in /api/policies`,
+      });
+    } else {
+      return res.status(400).json({
+        error: `Choose a ${strategy} policy. More than one is available.`,
+      });
+    }
   }
 
   const now = new Date().toISOString();
@@ -189,6 +212,7 @@ router.post("/", (req, res) => {
       studentModel: {},
       selectionStrategy: strategy,
       nextTaskPolicy: policyConfig,
+      ...(boundDeliveryModelId ? { deliveryModelId: boundDeliveryModelId } : {}),
 
       // Lifecycle — ready until staff Play. Creating as in_progress made
       // the list show Play and Pause together and sent Play into the
@@ -895,7 +919,15 @@ router.get("/:id/next-task", (req, res) => {
  * would otherwise get taskId from selection but never a presentation
  * overlay (live dual-PM walk / D115).
  */
-function attachPresentationOverlay(decision, _session, _db) {
+function presentationOverrideFromDeliveryModel(session, db) {
+  const id = session?.deliveryModelId;
+  if (typeof id !== "string" || id === "") return null;
+  const deliveryModel = (db.deliveryModels || []).find((row) => row && row.id === id);
+  const pmId = deliveryModel?.presentationModelId;
+  return typeof pmId === "string" && pmId ? pmId : null;
+}
+
+function attachPresentationOverlay(decision, session, _db) {
   if (!decision?.taskId) return null;
   const contentDb = readRawDB();
   const task = (contentDb.tasks || []).find((t) => t.id === decision.taskId);
@@ -912,9 +944,10 @@ function attachPresentationOverlay(decision, _session, _db) {
     typeof taskModelVersion === "number"
       ? selectPresentationModelIdForTaskModel(contentDb, taskModelId, taskModelVersion)
       : null;
+  const deliveryOverride = presentationOverrideFromDeliveryModel(session, contentDb);
 
   const resolved = resolvePresentationModel(contentDb, {
-    presentationModelId: liveId || pkg?.presentationModelId || null,
+    presentationModelId: deliveryOverride || liveId || pkg?.presentationModelId || null,
     taskModelId,
     taskModelVersion: taskModelVersion ?? pkg?.taskModelVersion ?? null,
   });

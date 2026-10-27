@@ -69,6 +69,7 @@ import {
 } from "./taskModelDesignFeatureRegistry.js";
 import { exemplarCount, levelValues } from "./rubricDelivery.js";
 import { jointPriorErrors } from "./jointPrior.js";
+import { deliveryModelBindingErrors } from "./deliveryModelReadiness.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 
 // Canonical session status spellings -- see src/utils/sessionStatus.js for
@@ -676,6 +677,10 @@ export const schema = {
     studentModel: 'object',
     selectionStrategy: 'string',
     nextTaskPolicy: 'object',
+    // Optional. When set, activity selection uses this delivery model's
+    // assembly model and selection policy. Absent means the session keeps
+    // the inferred assembly model and its own selectionStrategy.
+    deliveryModelId: 'string',
     status: 'string',
     isCompleted: 'boolean',
     startedAt: 'date',
@@ -953,6 +958,33 @@ export const schema = {
     knowledgeTaskRelationships: 'array',
     contentStandards: 'object',
     psychologicalPerspective: 'string',
+    status: 'string',
+    districtId: 'string',
+    schoolId: 'string',
+    createdBy: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
+  // deliveryModels. The CAF delivery model: one student model, one
+  // assembly model, one selection policy, an optional presentation
+  // override, and administration rules, bound as a single deliverable
+  // assessment. Sessions cite it by deliveryModelId. status is draft or
+  // confirmed (POST /:id/confirm). There is no operational state: the
+  // cited models carry that, and confirm requires them to be confirmed
+  // or operational where a status exists. A selection policy has none.
+  // Named deliveryModels so the singularizer yields deliveryModel.
+  // ------------------------------------------------------------------
+  deliveryModels: {
+    id: 'string',
+    name: 'string',
+    description: 'string',
+    competencyModelId: 'string',
+    assemblyModelId: 'string',
+    policyId: 'string',
+    presentationModelId: 'string',
+    administration: 'object',
     status: 'string',
     districtId: 'string',
     schoolId: 'string',
@@ -5226,6 +5258,14 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
   if (collection === "sessions") {
 
+    if (obj.deliveryModelId != null && obj.deliveryModelId !== "") {
+      if (typeof obj.deliveryModelId !== "string") {
+        errors.push("deliveryModelId should be string");
+      } else if (db && !(db.deliveryModels || []).some((row) => row && row.id === obj.deliveryModelId)) {
+        errors.push(`Invalid deliveryModelId: ${obj.deliveryModelId}`);
+      }
+    }
+
     /* Day 33 (Week 7): the persisted shape of an accumulated Student Model
        Variable posterior -- server/delivery/evidenceAccumulation.js's
        applyPosteriorsToSession() is the one producer, this is the one
@@ -6515,6 +6555,13 @@ export function validateEntity(collection, obj, db = null, options = {}) {
      TEMPLATES — D126, W26
      Four CAF bindings; confirm requires coherence (esp. PM↔TM).
   ===================================================== */
+
+  if (collection === "deliveryModels") {
+    const requireReadyParents = strict || obj.status === "confirmed";
+    errors.push(
+      ...deliveryModelBindingErrors(obj, db, { requireReadyParents })
+    );
+  }
 
   if (collection === "templates") {
     if (!obj.name || String(obj.name).trim() === "") {
