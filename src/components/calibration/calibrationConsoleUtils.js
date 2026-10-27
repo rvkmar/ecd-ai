@@ -163,6 +163,19 @@ export const NAMED_CALIBRATION_FIXTURES = [
     description:
       "Four seeded examinees with known mastery posteriors. Node aggregates probability-averaged and classification-counted mastery rates (both labelled) plus profile distribution. Uses classifyAttributeProfile (ADR 0004); does not claim population CA. Writes analysisArtefacts only. Scope carries tenant/district/school/cohort fields for W20 shaping.",
   },
+  {
+    id: "planted-mcq-item-analysis",
+    label: "Planted MCQ item analysis",
+    kind: LSAT7_ITEM_ANALYSIS_JOB_KIND,
+    statisticalModelTypes: LSAT7_ITEM_ANALYSIS_STATISTICAL_MODEL_TYPES,
+    buttonLabel: "Enqueue planted MCQ item analysis",
+    choosePrompt: "Choose an evidence model and a CTT, IRT, or Rasch statistical model (provenance bind only).",
+    emptyBind:
+      "No evidence model has a CTT, IRT, or Rasch statistical model to bind. Author one before enqueueing planted MCQ item analysis.",
+    successToast: "Planted MCQ item-analysis job queued.",
+    description:
+      "Constructed 20x4 multiple-choice matrix with known keys. Plants an attractive distractor (Item.attractive option C) and an unused option (Item.unused option D). Not a published table. Writes analysisArtefacts only.",
+  },
 ];
 
 export function namedCalibrationFixture(id) {

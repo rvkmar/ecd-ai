@@ -72,6 +72,49 @@ describe("session item analysis", () => {
     expect(assessed.request.provenance.studentIds).toEqual(assessed.studentIds);
   });
 
+  it("passes selected options and item keys when responses carry rawAnswer", () => {
+    const items = [
+      {
+        id: "item-a",
+        interaction: {
+          responseComponents: [
+            { id: "A", label: "A", isCorrect: true },
+            { id: "B", label: "B", isCorrect: false },
+          ],
+        },
+      },
+      {
+        id: "item-b",
+        interaction: {
+          responseComponents: [
+            { id: "A", label: "A", isCorrect: true },
+            { id: "C", label: "C", isCorrect: false },
+          ],
+        },
+      },
+    ];
+    const sessions = Array.from({ length: 10 }, (_, i) =>
+      session(`s${i}`, `stud-${i}`, [
+        { ...scored("item-a", true), rawAnswer: "A" },
+        { ...scored("item-b", i < 3), rawAnswer: i < 3 ? "A" : "C" },
+      ])
+    );
+    const assessed = assessSessionItemAnalysis({ sessions, items }, "em1");
+    expect(assessed.ok).toBe(true);
+    expect(assessed.request.optionMatrix.data).toHaveLength(10);
+    expect(assessed.request.optionMatrix.data[0]).toEqual(["A", "A"]);
+    expect(assessed.request.optionMatrix.data[9][1]).toBe("C");
+    expect(assessed.request.itemKeys["item-a"].keyedOptionId).toBe("A");
+    expect(assessed.request.itemKeys["item-b"].options).toHaveLength(2);
+  });
+
+  it("omits optionMatrix when no selected option is stored", () => {
+    const assessed = assessSessionItemAnalysis({ sessions: tenStudents(true) }, "em1");
+    expect(assessed.ok).toBe(true);
+    expect(assessed.request.optionMatrix).toBeUndefined();
+    expect(assessed.request.itemKeys).toBeUndefined();
+  });
+
   it("hides session student ids from a non-admin job view", () => {
     const assessed = assessSessionItemAnalysis({ sessions: tenStudents(false) }, "em1");
     const red = redactCalibrationJobForViewer(

@@ -18,7 +18,9 @@ pkgs <- c(
   "TAM",
   "difR",
   "equate",
-  "plink"
+  "plink",
+  "ggplot2",
+  "svglite"
 )
 
 install.packages(pkgs, dependencies = TRUE, Ncpus = max(1L, parallel::detectCores() - 1L))

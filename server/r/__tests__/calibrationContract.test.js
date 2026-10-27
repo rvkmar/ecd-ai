@@ -92,6 +92,54 @@ describe("request envelope", () => {
     expect(body.model.parameters["Item.A"].a).toBe(1);
   });
 
+  it("accepts additive optionMatrix/itemKeys/domains/cutScore (Unit A)", () => {
+    const body = readFix("valid-request.json");
+    body.optionMatrix = {
+      personIds: body.responseMatrix.personIds,
+      itemIds: body.model.itemIds,
+      data: body.responseMatrix.personIds.map(() => body.model.itemIds.map(() => "A")),
+    };
+    body.itemKeys = Object.fromEntries(
+      body.model.itemIds.map((id) => [
+        id,
+        { keyedOptionId: "A", options: [{ id: "A", label: "A", text: "keyed" }] },
+      ])
+    );
+    body.domains = [{ id: "d1", itemIds: body.model.itemIds.slice(0, 2) }];
+    body.cutScore = 2;
+    expect(validateCalibrationRequest(body)).toEqual([]);
+  });
+
+  it("refuses optionMatrix row length mismatch", () => {
+    const body = readFix("valid-request.json");
+    body.optionMatrix = {
+      personIds: body.responseMatrix.personIds,
+      itemIds: body.model.itemIds,
+      data: [[ "A" ]],
+    };
+    expect(validateCalibrationRequest(body).join(" ")).toMatch(/optionMatrix/);
+  });
+
+  it("accepts IRT subtypes GRM/GPCM/PCM", () => {
+    const body = readFix("valid-request.json");
+    body.model.subtype = "GRM";
+    expect(validateCalibrationRequest(body)).toEqual([]);
+    body.model.subtype = "GPCM";
+    expect(validateCalibrationRequest(body)).toEqual([]);
+    body.model.subtype = "PCM";
+    expect(validateCalibrationRequest(body)).toEqual([]);
+  });
+
+  it("accepts the planted MCQ item-analysis fixture", async () => {
+    const { applyNamedCalibrationFixture } = await import("../calibrationFixtures.js");
+    const body = applyNamedCalibrationFixture({ fixture: "planted-mcq-item-analysis" }).request;
+    expect(validateCalibrationRequest(body)).toEqual([]);
+    expect(body.model.family).toBe("item-analysis");
+    expect(body.optionMatrix.data).toHaveLength(20);
+    expect(body.itemKeys["Item.unused"].keyedOptionId).toBe("A");
+    expect(body.cutScore).toBe(2);
+  });
+
   it("accepts the committed lsat7-test-information request (D78)", async () => {
     const { applyNamedCalibrationFixture } = await import("../calibrationFixtures.js");
     const body = applyNamedCalibrationFixture({ fixture: "lsat7-test-information" }).request;

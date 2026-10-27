@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 
 import TestInformationCharts from "./TestInformationCharts";
+import IrtFitTable from "./IrtFitTable";
 import PsychometricExportToolbar from "./PsychometricExportToolbar";
 import { provenanceFromArtefact } from "./provenance";
 import {
@@ -54,6 +55,18 @@ function ReliabilityPanel({ reliability }) {
             {formatRel(reliability.marginalReliability)}
           </dd>
         </div>
+        {typeof reliability.kr21 === "number" ? (
+          <div>
+            <dt className="text-label text-muted-foreground">KR-21</dt>
+            <dd className="font-mono text-sm">{formatRel(reliability.kr21)}</dd>
+          </div>
+        ) : null}
+        {typeof reliability.cronbachAlpha === "number" ? (
+          <div>
+            <dt className="text-label text-muted-foreground">Cronbach alpha</dt>
+            <dd className="font-mono text-sm">{formatRel(reliability.cronbachAlpha)}</dd>
+          </div>
+        ) : null}
       </dl>
       {reliability.reliabilityNote ? (
         <p className="mt-3 text-caption text-muted-foreground">
@@ -197,6 +210,11 @@ export default function TestInformationDashboard() {
             evaluation={evaluation}
           />
           <ReliabilityPanel reliability={reliability} />
+          <IrtFitTable
+            parameters={selected.payload?.parameters}
+            standardErrors={selected.payload?.standardErrors}
+            itemFit={selected.payload?.fitStatistics?.itemFit}
+          />
         </>
       )}
     </div>

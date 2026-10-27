@@ -9,11 +9,13 @@ CALIBRATION_MODEL_FAMILIES <- c(
   "irt", "dina", "gdina", "ctt", "dif", "equating", "item-analysis",
   "test-information", "attribute-profile"
 )
-CALIBRATION_IRT_SUBTYPES <- c("2PL", "3PL", "Rasch")
+CALIBRATION_IRT_SUBTYPES <- c("2PL", "3PL", "Rasch", "GRM", "GPCM", "PCM")
 
 .as_char <- function(x) {
-  if (is.null(x)) return(NA_character_)
-  as.character(x)
+  if (is.null(x) || length(x) == 0) return(NA_character_)
+  val <- unlist(x, use.names = FALSE)
+  if (length(val) == 0) return(NA_character_)
+  as.character(val[[1]])
 }
 
 .null_to_na <- function(x) {
@@ -146,6 +148,8 @@ validate_calibration_request <- function(body) {
   if (isTRUE(diagnostic) && is.null(body$qMatrix)) {
     errors <- c(errors, "qMatrix is required for dina/gdina")
   }
+
+  errors <- c(errors, .validate_optional_analysis_fields(body, model, rm))
   if (!is.null(body$qMatrix)) {
     qm <- body$qMatrix
     if (!is.list(qm) || is.null(qm$attributeIds) || length(qm$attributeIds) < 1) {
@@ -167,6 +171,58 @@ validate_calibration_request <- function(body) {
   }
 
   if (length(errors) == 0) NULL else errors
+}
+
+.ids_match <- function(a, b) {
+  if (is.null(a) || is.null(b)) return(TRUE)
+  a_ids <- vapply(as.list(a), .as_char, character(1))
+  b_ids <- vapply(as.list(b), .as_char, character(1))
+  identical(a_ids, b_ids)
+}
+
+.validate_optional_analysis_fields <- function(body, model, rm) {
+  errors <- character(0)
+  item_ids <- if (!is.null(model) && is.list(model)) model$itemIds else NULL
+  person_ids <- if (!is.null(rm) && is.list(rm)) rm$personIds else NULL
+
+  if (!is.null(body$optionMatrix)) {
+    om <- body$optionMatrix
+    if (!is.list(om)) {
+      errors <- c(errors, "optionMatrix should be object")
+    } else {
+      if (!is.null(om$personIds) && !is.null(person_ids) && !.ids_match(om$personIds, person_ids)) {
+        errors <- c(errors, "optionMatrix.personIds must match responseMatrix.personIds in order")
+      }
+      if (!is.null(om$itemIds) && !is.null(item_ids) && !.ids_match(om$itemIds, item_ids)) {
+        errors <- c(errors, "optionMatrix.itemIds must match model.itemIds in order")
+      }
+      if (is.null(om$data) || length(om$data) == 0) {
+        errors <- c(errors, "optionMatrix.data is required when optionMatrix is present")
+      }
+    }
+  }
+
+  if (!is.null(body$itemKeys) && !is.list(body$itemKeys)) {
+    errors <- c(errors, "itemKeys should be object")
+  }
+
+  if (!is.null(body$domains)) {
+    if (!is.list(body$domains) || is.data.frame(body$domains)) {
+      # a JSON array of objects becomes a list; a single object is also a list
+    }
+    if (!is.list(body$domains)) {
+      errors <- c(errors, "domains should be array")
+    }
+  }
+
+  if (!is.null(body$cutScore)) {
+    cs <- suppressWarnings(as.numeric(unlist(body$cutScore, use.names = FALSE)[[1]]))
+    if (length(cs) == 0 || is.na(cs)) {
+      errors <- c(errors, "cutScore must be a finite number when present")
+    }
+  }
+
+  errors
 }
 
 validate_calibration_response <- function(body) {
@@ -256,6 +312,48 @@ response_matrix_to_df <- function(rm) {
   storage.mode(mat) <- "numeric"
   colnames(mat) <- item_ids
   as.data.frame(mat, stringsAsFactors = FALSE)
+}
+
+option_matrix_to_char <- function(om) {
+  item_ids <- vapply(as.list(om$itemIds), .as_char, character(1))
+  raw <- om$data
+  if (is.data.frame(raw) || is.matrix(raw)) {
+    mat <- as.matrix(raw)
+  } else if (is.list(raw) && length(raw) == length(item_ids) && all(vapply(raw, function(col) {
+    is.atomic(col) && !is.list(col) && length(col) > 1
+  }, logical(1)))) {
+    mat <- do.call(cbind, lapply(raw, as.character))
+  } else if (is.list(raw) && length(raw) > 0) {
+    rows <- lapply(raw, function(row) {
+      cells <- if (is.list(row)) as.list(row) else as.list(unname(row))
+      vapply(cells, function(cell) {
+        if (is.null(cell)) return(NA_character_)
+        if (length(cell) == 0) return(NA_character_)
+        val <- as.character(unlist(cell, use.names = FALSE)[[1]])
+        if (!nzchar(val) || val %in% c("NULL", "null")) NA_character_ else val
+      }, character(1))
+    })
+    lengths <- vapply(rows, length, integer(1))
+    if (length(unique(lengths)) != 1) {
+      stop("optionMatrix.data rows do not share one length")
+    }
+    mat <- do.call(rbind, rows)
+  } else {
+    stop("optionMatrix.data must be a matrix or a list of rows")
+  }
+  if (nrow(mat) == length(item_ids) && ncol(mat) != length(item_ids) && ncol(mat) > 2) {
+    mat <- t(mat)
+  }
+  if (ncol(mat) != length(item_ids)) {
+    stop(sprintf(
+      "optionMatrix.data is %dx%d, expected %d columns (itemIds)",
+      nrow(mat), ncol(mat), length(item_ids)
+    ))
+  }
+  storage.mode(mat) <- "character"
+  colnames(mat) <- item_ids
+  mat[mat %in% c("NULL", "null", "")] <- NA_character_
+  mat
 }
 
 q_matrix_to_matrix <- function(qm) {

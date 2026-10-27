@@ -157,6 +157,109 @@ calibrate_dispatch <- function(req, res, family) {
   .failure(body$jobId, paste0("Unsupported family: ", family), "NotImplemented")
 }
 
+.mirt_itemtype <- function(subtype) {
+  switch(
+    .as_char(subtype),
+    "2PL" = "2PL",
+    "3PL" = "3PL",
+    "Rasch" = "Rasch",
+    "GRM" = "graded",
+    "GPCM" = "gpcm",
+    "PCM" = "Rasch",
+    "2PL"
+  )
+}
+
+.parameters_from_mirt_coefs <- function(coefs, subtype) {
+  parameters <- list()
+  item_ids <- rownames(coefs)
+  b_cols <- grep("^b", colnames(coefs), value = TRUE)
+  for (i in seq_len(nrow(coefs))) {
+    id <- item_ids[[i]]
+    a <- if ("a" %in% colnames(coefs)) unname(coefs[i, "a"]) else if ("a1" %in% colnames(coefs)) unname(coefs[i, "a1"]) else 1
+    c <- if ("g" %in% colnames(coefs)) unname(coefs[i, "g"]) else 0
+    if (length(b_cols) > 1) {
+      thresholds <- as.numeric(unname(coefs[i, b_cols]))
+      parameters[[id]] <- list(
+        a = as.numeric(a),
+        b = as.numeric(thresholds),
+        c = as.numeric(c),
+        model = .as_char(subtype)
+      )
+    } else {
+      b <- if ("b" %in% colnames(coefs)) unname(coefs[i, "b"]) else 0
+      parameters[[id]] <- list(a = as.numeric(a), b = as.numeric(b), c = as.numeric(c))
+    }
+  }
+  parameters
+}
+
+.standard_errors_from_mirt <- function(fit) {
+  raw <- tryCatch(mirt::coef(fit, IRTpars = TRUE, printSE = TRUE), error = function(e) NULL)
+  if (is.null(raw) || !is.list(raw)) return(NULL)
+  out <- list()
+  for (nm in names(raw)) {
+    tab <- raw[[nm]]
+    if (is.null(dim(tab))) next
+    rn <- rownames(tab)
+    if (is.null(rn) || !("SE" %in% rn)) next
+    se_row <- tab["SE", ]
+    cn <- names(se_row)
+    if (is.null(cn)) cn <- colnames(tab)
+    get_se <- function(keys, default = NA_real_) {
+      for (k in keys) {
+        if (k %in% cn) {
+          v <- as.numeric(se_row[[k]])
+          if (is.finite(v)) return(v)
+        }
+      }
+      default
+    }
+    out[[nm]] <- list(
+      a = get_se(c("a", "a1")),
+      b = get_se(c("b", "b1")),
+      c = get_se(c("g", "c"), 0)
+    )
+  }
+  if (!length(out)) NULL else out
+}
+
+.itemfit_from_mirt <- function(fit) {
+  inf <- tryCatch(mirt::itemfit(fit), error = function(e) NULL)
+  if (is.null(inf) || !is.data.frame(inf) || !nrow(inf)) return(NULL)
+  out <- list()
+  ids <- if ("item" %in% names(inf)) as.character(inf$item) else rownames(inf)
+  for (i in seq_len(nrow(inf))) {
+    row <- as.list(inf[i, , drop = TRUE])
+    row$item <- NULL
+    out[[ids[[i]]]] <- lapply(row, function(v) {
+      if (is.numeric(v) && length(v) == 1) as.numeric(v) else v
+    })
+  }
+  out
+}
+
+.person_scores_from_mirt <- function(fit, person_ids) {
+  sc <- tryCatch(
+    mirt::fscores(fit, method = "EAP", full.scores = TRUE, full.scores.SE = TRUE),
+    error = function(e) NULL
+  )
+  if (is.null(sc)) return(NULL)
+  theta <- as.numeric(sc[, 1])
+  se <- if (ncol(sc) >= 2) as.numeric(sc[, 2]) else rep(NA_real_, length(theta))
+  ids <- if (!is.null(person_ids) && length(person_ids) == length(theta)) {
+    vapply(as.list(person_ids), .as_char, character(1))
+  } else {
+    as.character(seq_along(theta))
+  }
+  list(
+    method = "EAP",
+    personIds = as.list(ids),
+    theta = as.numeric(theta),
+    se = as.numeric(se)
+  )
+}
+
 calibrate_irt <- function(body, res) {
   if (!requireNamespace("mirt", quietly = TRUE)) {
     res$status <- 500
@@ -182,7 +285,7 @@ calibrate_irt <- function(body, res) {
     return(.failure(body$jobId, "options.seed must be a finite integer", "SeedError"))
   }
   subtype <- .as_char(body$model$subtype)
-  itemtype <- switch(subtype, "2PL" = "2PL", "3PL" = "3PL", "Rasch" = "Rasch", "2PL")
+  itemtype <- .mirt_itemtype(subtype)
 
   resp_df <- tryCatch(
     response_matrix_to_df(body$responseMatrix),
@@ -195,9 +298,15 @@ calibrate_irt <- function(body, res) {
     res$status <- 400
     return(.failure(body$jobId, "Could not coerce responseMatrix.data", "MatrixError", paste(stderr_lines, collapse = "\n")))
   }
+  if (!is.null(body$itemModels) && is.list(body$itemModels)) {
+    itemtype <- vapply(colnames(resp_df), function(id) {
+      st <- .as_char(body$itemModels[[id]])
+      if (!nzchar(st) || is.na(st)) .mirt_itemtype(subtype) else .mirt_itemtype(st)
+    }, character(1))
+  }
   message(sprintf(
     "calibrate_irt job=%s dim=%dx%d itemtype=%s",
-    .as_char(body$jobId), nrow(resp_df), ncol(resp_df), itemtype
+    .as_char(body$jobId), nrow(resp_df), ncol(resp_df), paste(itemtype, collapse = ",")
   ))
 
   set.seed(seed)
@@ -287,24 +396,10 @@ calibrate_irt <- function(body, res) {
   item_ids <- rownames(coefs)
   if (is.null(item_ids)) item_ids <- colnames(resp_df)
 
-  parameters <- list()
-  for (i in seq_len(nrow(coefs))) {
-    id <- item_ids[[i]]
-    a <- if ("a" %in% colnames(coefs)) unname(coefs[i, "a"]) else if ("a1" %in% colnames(coefs)) unname(coefs[i, "a1"]) else 1
-    b <- if ("b" %in% colnames(coefs)) unname(coefs[i, "b"]) else 0
-    c <- if ("g" %in% colnames(coefs)) unname(coefs[i, "g"]) else 0
-    parameters[[id]] <- list(a = as.numeric(a), b = as.numeric(b), c = as.numeric(c))
-  }
-
-  standard_errors <- NULL
-  se_try <- tryCatch({
-    raw <- capture.output({
-      se_tab <- mirt::coef(fit, IRTpars = TRUE, printSE = TRUE)
-      se_tab
-    })
-    stderr_lines <<- c(stderr_lines, raw)
-    NULL
-  }, error = function(e) NULL)
+  parameters <- .parameters_from_mirt_coefs(coefs, subtype)
+  standard_errors <- .standard_errors_from_mirt(fit)
+  item_fit <- .itemfit_from_mirt(fit)
+  person_scores <- .person_scores_from_mirt(fit, body$responseMatrix$personIds)
 
   fit_stats <- tryCatch({
     m2 <- mirt::M2(fit, type = "C2")
@@ -312,6 +407,29 @@ calibrate_irt <- function(body, res) {
   }, error = function(e) {
     list(global = list(note = conditionMessage(e)))
   })
+  if (is.list(item_fit)) fit_stats$itemFit <- item_fit
+  if (is.list(person_scores)) fit_stats$personScores <- person_scores
+
+  dichotomous_params <- lapply(parameters, function(p) {
+    b <- unlist(p$b, use.names = FALSE)
+    list(
+      a = as.numeric(p$a)[[1]],
+      b = as.numeric(b[[1]]),
+      c = if (is.null(p$c)) 0 else as.numeric(p$c)[[1]]
+    )
+  })
+  plots <- tryCatch(
+    irt_curve_payload(dichotomous_params, person_theta = person_scores$theta),
+    error = function(e) NULL
+  )
+  calibrated_at <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+  report_html <- tryCatch(
+    build_irt_html(
+      .as_char(body$jobId), pkg_ver, nrow(resp_df), calibrated_at,
+      parameters, standard_errors, fit_stats, plots
+    ),
+    error = function(e) NULL
+  )
 
   list(
     contractVersion = CALIBRATION_CONTRACT_VERSION,
@@ -319,13 +437,16 @@ calibrate_irt <- function(body, res) {
     converged = TRUE,
     packageVersion = pkg_ver,
     sampleSize = nrow(resp_df),
-    calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    calibratedAt = calibrated_at,
     parameters = parameters,
     standardErrors = standard_errors,
     fitStatistics = fit_stats,
+    reportHtml = report_html,
     diagnostics = list(
       iterations = tryCatch(mirt::extract.mirt(fit, "iterations"), error = function(e) NA_integer_),
       elapsedSeconds = elapsed,
+      itemtype = itemtype,
+      plots = plots,
       warnings = as.list(warnings_acc)
     )
   )
@@ -690,6 +811,10 @@ calibrate_ctt <- function(body, res) {
   kr20 <- .kr20(resp_mat)
   mean_score <- mean(score)
   sd_score <- stats::sd(score)
+  test_level <- tryCatch(
+    classical_test_level(resp_mat, score, kr20, opts, body$domains, body$cutScore),
+    error = function(e) NULL
+  )
 
   difficulties <- vapply(parameters, function(p) as.numeric(p$difficulty), numeric(1))
   discriminations <- vapply(parameters, function(p) as.numeric(p$discrimination), numeric(1))
@@ -729,12 +854,15 @@ calibrate_ctt <- function(body, res) {
     calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
     parameters = parameters,
     standardErrors = NULL,
-    fitStatistics = list(
-      kr20 = as.numeric(kr20),
-      meanScore = as.numeric(mean_score),
-      sdScore = as.numeric(sd_score),
-      nItems = ncol(resp_mat),
-      nPersons = nrow(resp_mat)
+    fitStatistics = c(
+      list(
+        kr20 = as.numeric(kr20),
+        meanScore = as.numeric(mean_score),
+        sdScore = as.numeric(sd_score),
+        nItems = ncol(resp_mat),
+        nPersons = nrow(resp_mat)
+      ),
+      if (is.list(test_level$reliability)) test_level$reliability else list()
     ),
     diagnostics = list(
       iterations = 1L,
@@ -742,6 +870,7 @@ calibrate_ctt <- function(body, res) {
       method = fit_try$method,
       scoreForDiscrimination = "raw total (rowSums), not an IRT WLE",
       reliability = "KR-20 (Kuder & Richardson 1937); equals Cronbach's alpha for dichotomous complete data",
+      testLevel = test_level,
       warnings = as.list(warnings_acc)
     )
   )
@@ -823,7 +952,8 @@ calibrate_item_analysis <- function(body, res) {
   }
 
   # Remap CTT difficulty/discrimination → artefact pValue/pointBiserial.
-  # distractors = NULL is kept by list() (not deleted) so JSON emits null.
+  # distractors = NULL is kept by list() (not deleted) so JSON emits null
+  # unless an optionMatrix is supplied (planted MCQ / session options).
   parameters <- lapply(ctt_parameters, function(p) {
     list(
       pValue = as.numeric(p$difficulty),
@@ -836,6 +966,33 @@ calibrate_item_analysis <- function(body, res) {
   kr20 <- .kr20(resp_mat)
   mean_score <- mean(score)
   sd_score <- stats::sd(score)
+  test_level <- tryCatch(
+    classical_test_level(resp_mat, score, kr20, opts, body$domains, body$cutScore),
+    error = function(e) NULL
+  )
+  option_mat <- tryCatch({
+    if (is.null(body$optionMatrix)) NULL else option_matrix_to_char(body$optionMatrix)
+  }, error = function(e) {
+    warnings_acc <<- c(warnings_acc, paste("optionMatrix:", conditionMessage(e)))
+    NULL
+  })
+  overlay_level <- if (is.list(test_level)) {
+    test_level
+  } else {
+    list(nQuantiles = 5L, alphaIfDeleted = list())
+  }
+  if (exists("classical_item_overlay", mode = "function")) {
+    overlay <- tryCatch(
+      classical_item_overlay(
+        resp_mat, parameters, option_mat, body$itemKeys, score, overlay_level, opts
+      ),
+      error = function(e) {
+        warnings_acc <<- c(warnings_acc, paste("classical_item_overlay:", conditionMessage(e)))
+        NULL
+      }
+    )
+    if (is.list(overlay) && length(overlay)) parameters <- overlay
+  }
 
   p_values <- vapply(parameters, function(p) as.numeric(p$pValue), numeric(1))
   rpbs <- vapply(parameters, function(p) as.numeric(p$pointBiserial), numeric(1))
@@ -855,10 +1012,20 @@ calibrate_item_analysis <- function(body, res) {
     "classicalCalibration.js is a provisional authoring approximation only and is",
     "not authoritative once R artefacts or parameter sets exist."
   )
-  distractors_note <- paste(
-    "Dichotomous 0/1 matrices (including LSAT7) have no option-level distractors;",
-    "each item sets distractors: null explicitly (not omitted)."
-  )
+  has_distractors <- any(vapply(parameters, function(p) {
+    is.list(p$distractors) && length(p$distractors) > 0
+  }, logical(1)))
+  distractors_note <- if (has_distractors) {
+    paste(
+      "Option-level distractors computed from optionMatrix and itemKeys.",
+      "Dichotomous 0/1 matrices without optionMatrix still emit distractors: null."
+    )
+  } else {
+    paste(
+      "Dichotomous 0/1 matrices (including LSAT7) have no option-level distractors;",
+      "each item sets distractors: null explicitly (not omitted)."
+    )
+  }
 
   if (!converged) {
     res$status <- 200
@@ -884,22 +1051,43 @@ calibrate_item_analysis <- function(body, res) {
     return(out)
   }
 
+  calibrated_at <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+  fit_stats <- list(
+    kr20 = as.numeric(kr20),
+    meanScore = as.numeric(mean_score),
+    sdScore = as.numeric(sd_score),
+    nItems = ncol(resp_mat),
+    nPersons = nrow(resp_mat)
+  )
+  if (is.list(test_level$reliability)) {
+    fit_stats$kr21 <- test_level$reliability$kr21
+    fit_stats$cronbachAlpha <- test_level$reliability$cronbachAlpha
+    fit_stats$guttmanLambda2 <- test_level$reliability$guttmanLambda2
+    fit_stats$spearmanBrownSplitHalf <- test_level$reliability$spearmanBrownSplitHalf
+    fit_stats$sem <- test_level$reliability$sem
+  }
+  report_html <- tryCatch({
+    if (!is.list(test_level)) {
+      NULL
+    } else {
+      build_item_analysis_html(
+        .as_char(body$jobId), pkg_ver, nrow(resp_mat), calibrated_at,
+        test_level, parameters, list(authority = authority_note), NULL
+      )
+    }
+  }, error = function(e) NULL)
+
   list(
     contractVersion = CALIBRATION_CONTRACT_VERSION,
     jobId = .as_char(body$jobId),
     converged = TRUE,
     packageVersion = pkg_ver,
     sampleSize = nrow(resp_mat),
-    calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    calibratedAt = calibrated_at,
     parameters = parameters,
     standardErrors = NULL,
-    fitStatistics = list(
-      kr20 = as.numeric(kr20),
-      meanScore = as.numeric(mean_score),
-      sdScore = as.numeric(sd_score),
-      nItems = ncol(resp_mat),
-      nPersons = nrow(resp_mat)
-    ),
+    fitStatistics = fit_stats,
+    reportHtml = report_html,
     diagnostics = list(
       iterations = 1L,
       elapsedSeconds = elapsed,
@@ -909,6 +1097,7 @@ calibrate_item_analysis <- function(body, res) {
       distractorsNote = distractors_note,
       scoreForDiscrimination = "raw total (rowSums), not an IRT WLE",
       reliability = "KR-20 (Kuder & Richardson 1937); equals Cronbach's alpha for dichotomous complete data",
+      testLevel = test_level,
       warnings = as.list(warnings_acc)
     )
   )
@@ -1209,16 +1398,26 @@ calibrate_test_information <- function(body, res) {
     fit_stats$marginalReliability <- as.numeric(marg_rel)
   }
 
+  calibrated_at <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+  report_html <- tryCatch({
+    html_params <- parameters
+    html_params$conditionalSEM <- vapply(conditional_sem, function(x) {
+      if (is.null(x)) NA_real_ else as.numeric(x)[[1]]
+    }, numeric(1))
+    build_testinfo_html(.as_char(body$jobId), pkg_ver, sample_size, calibrated_at, html_params)
+  }, error = function(e) NULL)
+
   list(
     contractVersion = CALIBRATION_CONTRACT_VERSION,
     jobId = .as_char(body$jobId),
     converged = TRUE,
     packageVersion = pkg_ver,
     sampleSize = sample_size,
-    calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    calibratedAt = calibrated_at,
     parameters = parameters,
     standardErrors = NULL,
     fitStatistics = fit_stats,
+    reportHtml = report_html,
     diagnostics = list(
       iterations = 1L,
       elapsedSeconds = elapsed,

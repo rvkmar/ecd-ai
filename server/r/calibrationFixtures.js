@@ -11,6 +11,7 @@ import { plantedDifCalibrationRequest } from "./plantedDifFixture.js";
 import { knownEquatingCalibrationRequest } from "./knownEquatingFixture.js";
 import { known2plTestinfoCalibrationRequest } from "./known2plTestinfoFixture.js";
 import { knownAttributeProfileCohortRequest } from "./knownAttributeProfileCohortFixture.js";
+import { plantedMcqCalibrationRequest } from "./plantedMcqFixture.js";
 
 export const CALIBRATION_NAMED_FIXTURES = [
   "lsat7",
@@ -22,12 +23,18 @@ export const CALIBRATION_NAMED_FIXTURES = [
   "planted-dif",
   "known-equating",
   "known-attribute-profile-cohort",
+  "planted-mcq-item-analysis",
 ];
 
 function mergeFixtureRequest(body, fromFix) {
   const qMatrix = body.request?.qMatrix || fromFix.qMatrix;
   const groups = body.request?.groups || fromFix.groups;
   const forms = body.request?.forms || fromFix.forms;
+  const optionMatrix = body.request?.optionMatrix || fromFix.optionMatrix;
+  const itemKeys = body.request?.itemKeys || fromFix.itemKeys;
+  const domains = body.request?.domains || fromFix.domains;
+  const cutScore =
+    body.request?.cutScore !== undefined ? body.request.cutScore : fromFix.cutScore;
   return {
     ...body,
     request: {
@@ -39,6 +46,10 @@ function mergeFixtureRequest(body, fromFix) {
       ...(qMatrix ? { qMatrix } : {}),
       ...(groups ? { groups } : {}),
       ...(forms ? { forms } : {}),
+      ...(optionMatrix ? { optionMatrix } : {}),
+      ...(itemKeys ? { itemKeys } : {}),
+      ...(domains ? { domains } : {}),
+      ...(cutScore !== undefined ? { cutScore } : {}),
     },
   };
 }
@@ -110,6 +121,14 @@ export function applyNamedCalibrationFixture(body, db = null) {
         options: { ...fromFix.options, ...(body.request?.options || {}) },
       },
     };
+  }
+  if (body.fixture === "planted-mcq-item-analysis") {
+    return mergeFixtureRequest(
+      body,
+      plantedMcqCalibrationRequest({
+        jobId: body.request?.jobId,
+      })
+    );
   }
   if (body.fixture === "planted-dif") {
     return mergeFixtureRequest(

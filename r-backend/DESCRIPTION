@@ -12,6 +12,8 @@ Imports:
     TAM,
     difR,
     equate,
-    plink
+    plink,
+    ggplot2,
+    svglite
 Encoding: UTF-8
 License: MIT

@@ -23,6 +23,10 @@ export function useAnalysisArtefacts(filters = {}, options = {}) {
   });
 }
 
+export function fetchAnalysisArtefactReport(id, auth) {
+  return apiFetch(`/api/analysisArtefacts/${id}/report`, {}, auth);
+}
+
 export function useAnalysisArtefact(id, options = {}) {
   const { auth } = useAuth() || {};
   return useQuery({

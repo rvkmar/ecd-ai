@@ -80,4 +80,68 @@ describe("ItemAnalysisDashboard (D82)", () => {
       screen.getByText(/Dichotomous 0\/1 LSAT7 has no option-level distractors/)
     ).toBeInTheDocument();
   });
+
+  it("renders score histogram and quantile plot from the richer payload", () => {
+    useAnalysisArtefacts.mockReturnValue({
+      data: [
+        {
+          ...SAMPLE_ARTEFACT,
+          id: "aa-ia-mcq",
+          hasReport: true,
+          payload: {
+            ...SAMPLE_ARTEFACT.payload,
+            fitStatistics: { kr20: 0.71, cronbachAlpha: 0.72 },
+            diagnostics: {
+              ...SAMPLE_ARTEFACT.payload.diagnostics,
+              testLevel: {
+                scoreFrequency: [
+                  { score: 0, n: 2 },
+                  { score: 1, n: 8 },
+                  { score: 2, n: 10 },
+                ],
+              },
+            },
+            parameters: {
+              "Item.attractive": {
+                pValue: 0.4,
+                pointBiserial: 0.35,
+                n: 20,
+                distractors: {
+                  A: {
+                    id: "A",
+                    keyed: true,
+                    n: 8,
+                    proportion: 0.4,
+                    pointBiserial: 0.5,
+                    quantiles: [
+                      { quantile: 1, proportion: 0.1, n: 4 },
+                      { quantile: 5, proportion: 0.8, n: 4 },
+                    ],
+                  },
+                  C: {
+                    id: "C",
+                    keyed: false,
+                    n: 5,
+                    proportion: 0.25,
+                    pointBiserial: 0.22,
+                    quantiles: [
+                      { quantile: 1, proportion: 0.4, n: 4 },
+                      { quantile: 5, proportion: 0.1, n: 4 },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    render(<ItemAnalysisDashboard />);
+    expect(screen.getByTestId("item-analysis-reliability")).toBeInTheDocument();
+    expect(screen.getByTestId("item-analysis-score-histogram")).toBeInTheDocument();
+    expect(screen.getByTestId("item-analysis-quantile-plot")).toBeInTheDocument();
+    expect(screen.getByTestId("open-html-report-item-analysis")).toBeInTheDocument();
+  });
 });

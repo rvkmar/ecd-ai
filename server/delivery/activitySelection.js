@@ -108,14 +108,10 @@
 // * It does not persist anything. Pure computation over a db snapshot plus
 //   the session, matching compositeLibrary/builder.js and every other
 //   module in server/delivery/.
-// * It does not change the CRITERION the IRT strategy optimises. Today's
-//   criterion is "difficulty closest to the current ability estimate", and
-//   that is preserved exactly -- only its INPUTS move (library + live
-//   posterior + live-resolved parameters). Maximum Fisher information is
-//   the better CAT criterion and is the obvious next step, but swapping it
-//   in is a psychometric change whose failure mode is quiet, and it belongs
-//   in a unit that verifies against a published benchmark (D64-D70), not
-//   in a re-pointing unit.
+// * IRT item selection uses maximum Fisher information at the live theta
+//   (3PL-aware, same formula as irtEngine.js / r-backend analytic I(theta)).
+//   The legacy question path still ranks by closest difficulty because those
+//   records often carry only b. R is not on this path (ADR 0001).
 
 import {
   accumulateEvidence,
@@ -833,9 +829,29 @@ function selectFixed(session) {
 }
 
 /**
- * IRT: the candidate whose difficulty sits closest to the live ability
- * estimate. Same criterion as before D56 (see the header's note on Fisher
- * information); new inputs.
+ * 3PL Fisher information matching irtEngine.js / r-backend
+ * .item_information_fisher. Used for CAT item selection; not a scoring path.
+ */
+function itemInformationFisher(theta, params) {
+  const aRaw = Number(params?.a);
+  const b = Number(params?.b);
+  const cRaw = Number(params?.c);
+  const a = Number.isFinite(aRaw) && aRaw > 0 ? aRaw : 1;
+  const c = Number.isFinite(cRaw) ? Math.min(1, Math.max(0, cRaw)) : 0;
+  if (!Number.isFinite(theta) || !Number.isFinite(b)) return 0;
+  const expo = a * (theta - b);
+  const L = 1 / (1 + Math.exp(-expo));
+  const p = c + (1 - c) * L;
+  const pClamp = Math.min(1 - 1e-12, Math.max(1e-12, p));
+  const q = 1 - pClamp;
+  if (Math.abs(1 - c) < 1e-12) return 0;
+  const Lstar = (pClamp - c) / (1 - c);
+  return (a * a) * (q / pClamp) * (Lstar * Lstar);
+}
+
+/**
+ * IRT: the unanswered item with the greatest Fisher information at the
+ * live theta. Legacy question-only candidates still use closest b.
  */
 function selectIrt(session, db, warnings) {
   const all = candidatesFor(session, db);
@@ -911,14 +927,17 @@ function selectIrt(session, db, warnings) {
     const { theta, smvId } = liveThetaFor(entry.evidenceModelId, session);
     const b = resolved.params.b;
     const diff = Math.abs(b - theta);
+    const information = itemInformationFisher(theta, resolved.params);
     const candidate = {
       taskId,
-      score: -diff,
+      score: information,
       debug: {
         theta,
         smvId,
         b,
         diff,
+        information,
+        criterion: "max-fisher",
         itemId: task.itemId,
         source: "composite-library",
         parameterSource: resolved.parameterSource,
@@ -1245,5 +1264,6 @@ export const __testing__ = {
   selectionPolicyForDelivery,
   liveThetaFor,
   selectFixed,
+  itemInformationFisher,
   GOVERNING_ASSEMBLY_MODEL_STATUSES,
 };

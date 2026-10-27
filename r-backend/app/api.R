@@ -15,6 +15,8 @@ mod <- function(name) file.path(app_dir, "modules", name)
 
 source(mod("health.R"), local = FALSE)
 source(mod("contract.R"), local = FALSE)
+source(mod("cttAnalysis.R"), local = FALSE)
+source(mod("reportHtml.R"), local = FALSE)
 source(mod("calibrate.R"), local = FALSE)
 
 # scoring.R is deliberately NOT sourced. A live /score endpoint would put

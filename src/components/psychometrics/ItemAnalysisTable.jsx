@@ -81,6 +81,8 @@ export default function ItemAnalysisTable({ rows = [] }) {
             <TableHead>{sortButton("itemId", "Item")}</TableHead>
             <TableHead>{sortButton("pValue", "p-value")}</TableHead>
             <TableHead>{sortButton("pointBiserial", "Point-biserial")}</TableHead>
+            <TableHead>{sortButton("biserial", "Biserial")}</TableHead>
+            <TableHead>{sortButton("alphaWithout", "α without")}</TableHead>
             <TableHead>{sortButton("n", "n")}</TableHead>
             <TableHead>Distractors</TableHead>
             <TableHead>{sortButton("flagCount", "Flags")}</TableHead>
@@ -92,6 +94,8 @@ export default function ItemAnalysisTable({ rows = [] }) {
               <TableCell className="font-mono text-2xs">{row.itemId}</TableCell>
               <TableCell>{formatNum(row.pValue)}</TableCell>
               <TableCell>{formatNum(row.pointBiserial)}</TableCell>
+              <TableCell>{formatNum(row.biserial)}</TableCell>
+              <TableCell>{formatNum(row.alphaWithout)}</TableCell>
               <TableCell>{row.n ?? "—"}</TableCell>
               <TableCell className="text-caption text-muted-foreground">
                 {row.distractors == null

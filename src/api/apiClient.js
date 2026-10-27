@@ -45,6 +45,7 @@ export function apiFetch(url, options = {}, auth) {
     // attempt to parse it as JSON if there's actually something there.
     if (res.status === 204) return null;
     if (responseType === "blob") return res.blob();
+    if (responseType === "text") return res.text();
 
     const text = await res.text();
     if (!text) return null;

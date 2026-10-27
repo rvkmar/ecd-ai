@@ -28,10 +28,24 @@ function labelFor(id, list, fallbackPrefix) {
   return found?.name || found?.title || `${fallbackPrefix} ${id}`;
 }
 
+function formatStat(n, digits = 3) {
+  if (typeof n !== "number" || !Number.isFinite(n)) return "—";
+  return n.toFixed(digits);
+}
+
+function optionEntries(distractors) {
+  if (!distractors || typeof distractors !== "object") return [];
+  if (Array.isArray(distractors)) {
+    return distractors.map((d, i) => [d.id || String(i), d]);
+  }
+  return Object.entries(distractors);
+}
+
 function DistractorPanel({ rows, diagnostics }) {
-  const withDistractors = rows.filter(
-    (r) => r.distractors != null && r.distractors !== undefined
-  );
+  const withDistractors = rows.filter((r) => {
+    const entries = optionEntries(r.distractors);
+    return entries.length > 0;
+  });
   return (
     <div
       className="rounded-xl border border-border bg-muted/20 p-4 text-sm"
@@ -50,17 +64,66 @@ function DistractorPanel({ rows, diagnostics }) {
           here.
         </p>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <div className="mt-3 space-y-4">
           {withDistractors.map((row) => (
-            <li key={row.itemId}>
+            <div key={row.itemId}>
               <p className="font-mono text-2xs">{row.itemId}</p>
-              <pre className="mt-1 overflow-auto rounded bg-card p-2 text-2xs">
-                {JSON.stringify(row.distractors, null, 2)}
-              </pre>
-            </li>
+              <table className="mt-1 w-full text-caption">
+                <thead>
+                  <tr className="text-left text-muted-foreground">
+                    <th className="pr-3">Option</th>
+                    <th className="pr-3">Role</th>
+                    <th className="pr-3">n</th>
+                    <th className="pr-3">p</th>
+                    <th>rpb</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {optionEntries(row.distractors).map(([oid, d]) => (
+                    <tr key={oid}>
+                      <td className="pr-3 font-mono">{d?.id || oid}</td>
+                      <td className="pr-3">{d?.keyed ? "key" : "distractor"}</td>
+                      <td className="pr-3">{d?.n ?? "—"}</td>
+                      <td className="pr-3">{formatStat(d?.proportion)}</td>
+                      <td>{formatStat(d?.pointBiserial)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
+    </div>
+  );
+}
+
+function ReliabilityPanel({ fitStatistics, testLevel }) {
+  const rel = fitStatistics || {};
+  const testRel = testLevel?.reliability || {};
+  const rows = [
+    ["KR-20", rel.kr20 ?? testRel.kr20],
+    ["KR-21", rel.kr21 ?? testRel.kr21],
+    ["Cronbach alpha", rel.cronbachAlpha ?? testRel.cronbachAlpha],
+    ["Guttman λ2", rel.guttmanLambda2 ?? testRel.guttmanLambda2],
+    ["Spearman-Brown", rel.spearmanBrownSplitHalf ?? testRel.spearmanBrownSplitHalf],
+    ["SEM", rel.sem ?? testRel.sem],
+  ].filter(([, v]) => typeof v === "number" && Number.isFinite(v));
+  if (!rows.length) return null;
+  return (
+    <div
+      className="rounded-xl border border-border bg-card p-4 text-sm shadow-sm"
+      data-testid="item-analysis-reliability"
+    >
+      <h4 className="font-medium">Reliability</h4>
+      <dl className="mt-3 grid gap-2 sm:grid-cols-3">
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt className="text-caption text-muted-foreground">{label}</dt>
+            <dd className="font-mono">{formatStat(value, 4)}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }
@@ -102,6 +165,8 @@ export default function ItemAnalysisDashboard() {
     [selected]
   );
   const provenance = selected ? provenanceFromArtefact(selected) : null;
+  const scoreFrequency = selected?.payload?.diagnostics?.testLevel?.scoreFrequency || [];
+  const quantileRow = rows.find((r) => optionEntries(r.distractors).some(([, d]) => (d?.quantiles || []).length));
 
   const emOptions = useMemo(() => {
     const ids = [...new Set(artefacts.map((a) => a.scope?.evidenceModelId).filter(Boolean))];
@@ -212,7 +277,16 @@ export default function ItemAnalysisDashboard() {
             provenance={provenance}
             artefact={selected}
           />
-          <ItemAnalysisCharts provenance={provenance} rows={rows} />
+          <ReliabilityPanel
+            fitStatistics={selected.payload?.fitStatistics}
+            testLevel={selected.payload?.diagnostics?.testLevel}
+          />
+          <ItemAnalysisCharts
+            provenance={provenance}
+            rows={rows}
+            scoreFrequency={scoreFrequency}
+            quantileRow={quantileRow || null}
+          />
           <ItemAnalysisTable rows={rows} />
           <DistractorPanel
             rows={rows}

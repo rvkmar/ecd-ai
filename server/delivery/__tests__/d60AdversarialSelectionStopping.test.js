@@ -16,7 +16,7 @@
 // Characterisation (deferred P1/P2 — pin today's behaviour so a later
 // unit cannot "fix" them by accident without noticing):
 //   unmeasured-attribute items stay unrankable; G-DINA falls back to
-//   first-unanswered; IRT still ranks nearest difficulty, not max info.
+//   first-unanswered; IRT ranks max Fisher information, not nearest b.
 
 import { describe, it, expect } from "vitest";
 import { selectNextActivity, __testing__ } from "../activitySelection.js";
@@ -547,10 +547,10 @@ describe("D60 characterisation: G-DINA BayesianNetwork is sequential", () => {
   });
 });
 
-describe("D60 characterisation: IRT still ranks nearest difficulty, not max information", () => {
-  it("a low-a item closer to theta beats a high-a item slightly farther away", () => {
-    // Held for the benchmark unit. This test exists so a quiet swap to
-    // Fisher information cannot land inside a "cleanup" without failing.
+describe("D60 characterisation: IRT ranks max Fisher information, not nearest difficulty", () => {
+  it("a high-a item slightly farther from theta beats a low-a item closer to theta", () => {
+    // Closest-b was the D60 pin. Phase 4 CAT upgraded selectIrt to max
+    // Fisher (scoring still stays in Node; ADR 0001 is unchanged).
     const db = irtDb();
     db.evidenceModels[0].statisticalModels[0].parameterSets[0].parameters = {
       o1: { a: 0.4, b: 0.05 },
@@ -574,9 +574,10 @@ describe("D60 characterisation: IRT still ranks nearest difficulty, not max info
       db
     );
 
-    expect(result.taskId).toBe("t1");
-    expect(result.debug.b).toBe(0.05);
-    expect(result.debug.diff).toBeCloseTo(0.05, 10);
+    expect(result.taskId).toBe("t2");
+    expect(result.debug.criterion).toBe("max-fisher");
+    expect(result.debug.b).toBe(0.35);
+    expect(result.debug.information).toBeGreaterThan(0.2);
   });
 });
 

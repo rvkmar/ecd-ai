@@ -7,7 +7,9 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
-import { apiErrorMessage } from "@/api/apiClient";
+import { apiErrorMessage, apiFetch } from "@/api/apiClient";
+import { useAuth } from "@/auth/AuthProvider";
+import IrtFitTable from "@/components/psychometrics/IrtFitTable";
 import {
   useCancelCalibrationJob,
   useIngestCalibrationJob,
@@ -34,6 +36,7 @@ function JsonBlock({ value, empty }) {
 }
 
 export default function CalibrationJobDetail({ job, readOnly = false }) {
+  const { auth } = useAuth() || {};
   const cancel = useCancelCalibrationJob();
   const retry = useRetryCalibrationJob();
   const process = useProcessCalibrationJob();
@@ -262,6 +265,36 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
                 <dd>{formatTimestamp(response.calibratedAt)}</dd>
               </div>
             </dl>
+            {(response.reportHtml || job.hasReport) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                data-testid="open-html-report-job"
+                onClick={async () => {
+                  let html = response.reportHtml;
+                  if (typeof html !== "string" || !html.trim()) {
+                    const body = await apiFetch(
+                      `/api/calibrationJobs/${job.id}/report`,
+                      {},
+                      auth
+                    );
+                    html = body?.html;
+                  }
+                  if (!html) return;
+                  const blob = new Blob([html], { type: "text/html" });
+                  const url = URL.createObjectURL(blob);
+                  window.open(url, "_blank", "noopener,noreferrer");
+                }}
+              >
+                Open HTML report
+              </Button>
+            )}
+            <IrtFitTable
+              parameters={response.parameters}
+              standardErrors={response.standardErrors}
+              itemFit={response.fitStatistics?.itemFit}
+            />
             <div>
               <h4 className="mb-1 text-caption font-medium text-muted-foreground">Parameters</h4>
               <JsonBlock value={response.parameters} empty="No parameters on this response." />

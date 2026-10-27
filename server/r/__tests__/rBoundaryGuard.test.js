@@ -29,6 +29,15 @@ function liveCode(source) {
     .join("\n");
 }
 
+describe("R scoring stays unmounted", () => {
+  it("api.R does not source scoring.R and scoring.R stays neutralized", () => {
+    const api = fs.readFileSync(path.join(ROOT, "r-backend/app/api.R"), "utf8");
+    const scoring = fs.readFileSync(path.join(ROOT, "r-backend/app/modules/scoring.R"), "utf8");
+    expect(api).not.toMatch(/source\(mod\("scoring.R"/);
+    expect(scoring).toMatch(/scoring_api_is_mounted\s*<-\s*FALSE/);
+  });
+});
+
 describe("R is never in a session request path", () => {
   it("no module under server/delivery imports the R client", () => {
     const files = walk(path.join(ROOT, "server/delivery"));

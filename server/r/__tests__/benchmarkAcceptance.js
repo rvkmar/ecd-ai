@@ -260,12 +260,26 @@ export function checkRBackendBenchmarkPackages(healthJson) {
   }
   const packages = healthJson?.packages || {};
   const required = ["mirt", "GDINA", "TAM", "difR", "plink"];
+  // ggplot2/svglite power HTML reports. Missing them must not fail the
+  // Hub gate until rvkmar/r-backend is rebuilt; live HTML tests skip.
   for (const name of required) {
     if (!packages[name]) {
       fail(
         failures,
         `packages.${name} missing — Hub image must include it for live CI`
       );
+    }
+  }
+  return { ok: failures.length === 0, failures };
+}
+
+/** Optional report packages. Live HTML tests use this; D88 Hub gate does not. */
+export function checkRBackendReportPackages(healthJson) {
+  const failures = [];
+  const packages = healthJson?.packages || {};
+  for (const name of ["ggplot2", "svglite"]) {
+    if (!packages[name]) {
+      failures.push(`packages.${name} missing — HTML plots will use inline SVG fallback`);
     }
   }
   return { ok: failures.length === 0, failures };

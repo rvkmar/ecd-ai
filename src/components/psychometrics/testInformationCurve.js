@@ -99,6 +99,8 @@ export function reliabilityFromArtefact(artefact) {
   const diagnostics = artefact?.payload?.diagnostics || {};
   return {
     kr20: typeof fit.kr20 === "number" ? fit.kr20 : null,
+    kr21: typeof fit.kr21 === "number" ? fit.kr21 : null,
+    cronbachAlpha: typeof fit.cronbachAlpha === "number" ? fit.cronbachAlpha : null,
     marginalReliability:
       typeof fit.marginalReliability === "number" ? fit.marginalReliability : null,
     reliabilityNote: diagnostics.reliabilityNote || null,

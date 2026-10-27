@@ -165,6 +165,38 @@ describe("analysisArtefacts HTTP surface (D76)", () => {
     expect(analysisArtefact.packageVersion).toBe("difR 6.1.0");
   });
 
+  it("serves HTML reports separately and omits the blob from list/detail", async () => {
+    const job = dbState.current.calibrationJobs[0];
+    job.kind = "item-analysis";
+    job.response.reportHtml = "<html><body>Iteman-class report</body></html>";
+    const { analysisArtefact } = ingestCalibrationJob(job, dbState.current);
+    expect(dbState.current.analysisArtefacts[0].payload.reportHtml).toMatch(/Iteman-class/);
+
+    const app = await artefactsApp();
+    const auth = { Authorization: `Bearer ${tokenFor("admin")}` };
+    const list = await request(app).get("/api/analysisArtefacts").set(auth);
+    expect(list.status).toBe(200);
+    expect(list.body[0].payload.reportHtml).toBeUndefined();
+    expect(list.body[0].hasReport).toBe(true);
+
+    const one = await request(app).get(`/api/analysisArtefacts/${analysisArtefact.id}`).set(auth);
+    expect(one.status).toBe(200);
+    expect(one.body.payload.reportHtml).toBeUndefined();
+
+    const report = await request(app)
+      .get(`/api/analysisArtefacts/${analysisArtefact.id}/report`)
+      .set(auth);
+    expect(report.status).toBe(200);
+    expect(report.body.html).toMatch(/Iteman-class report/);
+
+    const html = await request(app)
+      .get(`/api/analysisArtefacts/${analysisArtefact.id}/report?format=html`)
+      .set(auth);
+    expect(html.status).toBe(200);
+    expect(html.headers["content-type"]).toMatch(/text\/html/);
+    expect(html.text).toMatch(/Iteman-class report/);
+  });
+
   it("gates teacher and student out of the collection", async () => {
     const app = await artefactsApp();
     for (const role of ["teacher", "student"]) {

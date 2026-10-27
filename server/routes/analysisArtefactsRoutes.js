@@ -23,9 +23,25 @@ const canView = authorizeRole(["admin", "district"]);
 const IMMUTABLE =
   "analysisArtefacts are immutable — enqueue a new calibration job rather than mutating an existing artefact.";
 
-function presentArtefact(row, req) {
+function stripReportHtml(row) {
+  if (!row?.payload?.reportHtml) {
+    return {
+      ...row,
+      hasReport: Boolean(row?.payload?.reportHtml) || Boolean(row?.hasReport),
+    };
+  }
+  const { reportHtml, ...payload } = row.payload;
+  return {
+    ...row,
+    payload,
+    hasReport: true,
+  };
+}
+
+function presentArtefact(row, req, { includeReport = false } = {}) {
   const isAdmin = req.user?.role === "admin";
-  const body = isAdmin ? { ...row } : suppressArtefactSmallCells({ ...row });
+  let body = isAdmin ? { ...row } : suppressArtefactSmallCells({ ...row });
+  if (!includeReport) body = stripReportHtml(body);
   return {
     ...body,
     scopeMeta: namedAggregateScope(req, {
@@ -50,6 +66,26 @@ router.get("/", canView, (req, res) => {
   if (kind) rows = rows.filter((a) => a.kind === kind);
   if (jobId) rows = rows.filter((a) => a.jobId === jobId);
   res.json(rows.map((r) => presentArtefact(r, req)));
+});
+
+// ------------------------------
+// GET /api/analysisArtefacts/:id/report
+// Self-contained HTML technical report. JSON list/detail omit the HTML blob.
+// ------------------------------
+router.get("/:id/report", canView, (req, res) => {
+  const db = loadDB();
+  const row = (db.analysisArtefacts || []).find((a) => a.id === req.params.id);
+  if (!row) return res.status(404).json({ error: "Analysis artefact not found" });
+  const html = row.payload?.reportHtml;
+  if (typeof html !== "string" || !html.trim()) {
+    return res.status(404).json({ error: "No HTML report on this artefact." });
+  }
+  const asHtml = req.query.format === "html" || String(req.headers.accept || "").includes("text/html");
+  if (asHtml) {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.send(html);
+  }
+  return res.json({ id: row.id, html, mimeType: "text/html" });
 });
 
 // ------------------------------

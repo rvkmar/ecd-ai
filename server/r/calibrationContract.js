@@ -18,7 +18,7 @@ const CALIBRATION_MODEL_FAMILIES = [
   "test-information",
   "attribute-profile",
 ];
-const CALIBRATION_IRT_SUBTYPES = ["2PL", "3PL", "Rasch"];
+const CALIBRATION_IRT_SUBTYPES = ["2PL", "3PL", "Rasch", "GRM", "GPCM", "PCM"];
 
 const KIND_TO_R_PATH = {
   "irt-parameters": "/calibrate/irt",
@@ -228,6 +228,8 @@ export function validateCalibrationRequest(body) {
   if (diagnosticFamily && (body.qMatrix === undefined || body.qMatrix === null)) {
     errors.push("qMatrix is required for dina/gdina");
   }
+  errors.push(...validateOptionalAnalysisFields(body, model, rm));
+
   if (body.qMatrix !== undefined && body.qMatrix !== null) {
     if (typeof body.qMatrix !== "object" || Array.isArray(body.qMatrix)) {
       errors.push("qMatrix should be object");
@@ -257,6 +259,120 @@ export function validateCalibrationRequest(body) {
             errors.push(`qMatrix.data[${i}] must have one cell per attributeId`);
           }
         });
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Additive Iteman/Xcalibre fields. Absent is legal (LSAT7 stays 0/1).
+ * When present, dimensions and keys must match the response matrix.
+ */
+function sameIds(a, b) {
+  return (
+    Array.isArray(a) &&
+    Array.isArray(b) &&
+    a.length === b.length &&
+    a.every((id, i) => id === b[i])
+  );
+}
+
+function validateOptionalAnalysisFields(body, model, rm) {
+  const errors = [];
+  const itemIds = model?.itemIds;
+  const personIds = rm?.personIds;
+
+  if (body.optionMatrix !== undefined && body.optionMatrix !== null) {
+    const om = body.optionMatrix;
+    if (!om || typeof om !== "object" || Array.isArray(om)) {
+      errors.push("optionMatrix should be object");
+    } else {
+      if (Array.isArray(om.personIds) && Array.isArray(personIds) && !sameIds(om.personIds, personIds)) {
+        errors.push("optionMatrix.personIds must match responseMatrix.personIds in order");
+      }
+      if (Array.isArray(om.itemIds) && Array.isArray(itemIds) && !sameIds(om.itemIds, itemIds)) {
+        errors.push("optionMatrix.itemIds must match model.itemIds in order");
+      }
+      if (!Array.isArray(om.data) || om.data.length === 0) {
+        errors.push("optionMatrix.data is required when optionMatrix is present");
+      } else if (Array.isArray(personIds) && om.data.length !== personIds.length) {
+        errors.push("optionMatrix.data row count must match personIds");
+      } else if (Array.isArray(itemIds)) {
+        om.data.forEach((row, i) => {
+          if (!Array.isArray(row) || row.length !== itemIds.length) {
+            errors.push(`optionMatrix.data[${i}] must have one cell per itemId`);
+          }
+        });
+      }
+    }
+  }
+
+  if (body.itemKeys !== undefined && body.itemKeys !== null) {
+    if (typeof body.itemKeys !== "object" || Array.isArray(body.itemKeys)) {
+      errors.push("itemKeys should be object");
+    } else if (Array.isArray(itemIds)) {
+      for (const id of itemIds) {
+        const key = body.itemKeys[id];
+        if (key == null) continue;
+        if (typeof key !== "object" || Array.isArray(key)) {
+          errors.push(`itemKeys.${id} should be object`);
+          continue;
+        }
+        if (!key.keyedOptionId || typeof key.keyedOptionId !== "string") {
+          errors.push(`itemKeys.${id}.keyedOptionId is required`);
+        }
+        if (key.options !== undefined && key.options !== null && !Array.isArray(key.options)) {
+          errors.push(`itemKeys.${id}.options should be array`);
+        }
+      }
+    }
+  }
+
+  if (body.domains !== undefined && body.domains !== null) {
+    if (!Array.isArray(body.domains)) {
+      errors.push("domains should be array");
+    } else {
+      body.domains.forEach((domain, i) => {
+        if (!domain || typeof domain !== "object" || Array.isArray(domain)) {
+          errors.push(`domains[${i}] must be an object`);
+          return;
+        }
+        if (!domain.id || typeof domain.id !== "string") {
+          errors.push(`domains[${i}].id is required`);
+        }
+        if (!Array.isArray(domain.itemIds) || domain.itemIds.length < 1) {
+          errors.push(`domains[${i}].itemIds must name at least one item`);
+        } else if (Array.isArray(itemIds)) {
+          const missing = domain.itemIds.filter((id) => !itemIds.includes(id));
+          if (missing.length) {
+            errors.push(`domains[${i}].itemIds must be a subset of model.itemIds`);
+          }
+        }
+      });
+    }
+  }
+
+  if (body.cutScore !== undefined && body.cutScore !== null) {
+    if (typeof body.cutScore !== "number" || !Number.isFinite(body.cutScore)) {
+      errors.push("cutScore must be a finite number when present");
+    }
+  }
+
+  if (body.itemModels !== undefined && body.itemModels !== null) {
+    if (typeof body.itemModels !== "object" || Array.isArray(body.itemModels)) {
+      errors.push("itemModels should be object");
+    } else if (Array.isArray(itemIds)) {
+      for (const [id, subtype] of Object.entries(body.itemModels)) {
+        if (!itemIds.includes(id)) {
+          errors.push(`itemModels.${id} is not in model.itemIds`);
+        }
+        if (!CALIBRATION_IRT_SUBTYPES.includes(subtype)) {
+          errors.push(
+            `itemModels.${id} must be one of: ${CALIBRATION_IRT_SUBTYPES.join(", ")}`
+          );
+        }
       }
     }
   }
@@ -343,6 +459,7 @@ export function parameterSetFromCalibrationResponse(response, extras = {}) {
     calibratedBy: extras.calibratedBy || "r-backend",
     calibrationMethod: extras.calibrationMethod || "r-job",
     notes: extras.notes || "",
+    reportHtml: typeof response.reportHtml === "string" ? response.reportHtml : undefined,
   };
 }
 

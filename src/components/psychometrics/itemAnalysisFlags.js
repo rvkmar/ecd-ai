@@ -18,6 +18,13 @@ function formatNum(n, digits = 2) {
  * @returns {{ code: string, threshold: number, message: string }[]}
  */
 export function flagsForItemRow(row) {
+  if (Array.isArray(row?.flags) && row.flags.length) {
+    return row.flags.map((f) => ({
+      code: f.code,
+      threshold: f.threshold,
+      message: f.message,
+    }));
+  }
   const flags = [];
   const p = row?.pValue;
   const rpb = row?.pointBiserial;
@@ -70,8 +77,12 @@ export function itemRowsFromArtefact(artefact) {
       itemId,
       pValue: stats?.pValue ?? null,
       pointBiserial: stats?.pointBiserial ?? null,
+      biserial: stats?.biserial ?? null,
+      alphaWithout: stats?.alphaWithout ?? null,
       n: stats?.n ?? null,
       distractors: stats?.distractors ?? null,
+      keyQuantiles: stats?.keyQuantiles ?? null,
+      flags: stats?.flags,
     };
     row.flags = flagsForItemRow(row);
     return row;

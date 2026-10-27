@@ -4,6 +4,7 @@ import {
   itemRowsFromArtefact,
   ITEM_ANALYSIS_BOUNDS,
 } from "../itemAnalysisFlags";
+import { irtFitRows } from "../IrtFitTable";
 
 describe("itemAnalysisFlags (D82)", () => {
   it("flags too hard, too easy, and low / negative discrimination with thresholds", () => {
@@ -34,6 +35,22 @@ describe("itemAnalysisFlags (D82)", () => {
     ).toEqual([]);
   });
 
+  it("keeps R-supplied flags instead of recomputing them", () => {
+    const flags = flagsForItemRow({
+      pValue: 0.1,
+      pointBiserial: 0.4,
+      flags: [
+        {
+          code: "attractiveDistractor",
+          threshold: 0.05,
+          message: "Unkeyed option C has point-biserial 0.22.",
+        },
+      ],
+    });
+    expect(flags).toHaveLength(1);
+    expect(flags[0].code).toBe("attractiveDistractor");
+  });
+
   it("flattens artefact parameters into rows with flags", () => {
     const rows = itemRowsFromArtefact({
       payload: {
@@ -46,5 +63,29 @@ describe("itemAnalysisFlags (D82)", () => {
     expect(rows).toHaveLength(2);
     expect(rows.find((r) => r.itemId === "Item.easy").flags[0].code).toBe("tooEasy");
     expect(rows.find((r) => r.itemId === "Item.ok").flags).toEqual([]);
+  });
+});
+
+describe("irtFitRows", () => {
+  it("joins parameters, standard errors, and item fit without curve keys", () => {
+    const rows = irtFitRows({
+      parameters: {
+        theta: [-1, 0, 1],
+        information: [0.2, 0.8, 0.2],
+        "Item.1": { a: 1.2, b: -0.4, c: 0.1 },
+      },
+      standardErrors: { "Item.1": { a: 0.05, b: 0.04, c: 0.02 } },
+      itemFit: { "Item.1": { S_X2: 4.2, "p.S_X2": 0.12, outfit: 1.01 } },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      itemId: "Item.1",
+      a: 1.2,
+      seA: 0.05,
+      b: -0.4,
+      seB: 0.04,
+      sx2: 4.2,
+      outfit: 1.01,
+    });
   });
 });

@@ -5,6 +5,8 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
+  Line,
+  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -20,15 +22,51 @@ import {
   chartGridProps,
   chartLegendWrapperStyle,
   chartTooltipContentStyle,
+  seriesStrokeDasharray,
 } from "./chartTheme";
 import { ITEM_ANALYSIS_BOUNDS } from "./itemAnalysisFlags";
 
-export default function ItemAnalysisCharts({ provenance, rows = [] }) {
+function optionEntries(distractors) {
+  if (!distractors || typeof distractors !== "object") return [];
+  if (Array.isArray(distractors)) {
+    return distractors.map((d, i) => [d.id || String(i), d]);
+  }
+  return Object.entries(distractors);
+}
+
+function quantileChartData(row) {
+  const entries = optionEntries(row?.distractors);
+  const quantiles = new Map();
+  for (const [oid, d] of entries) {
+    for (const q of d?.quantiles || []) {
+      const key = Number(q.quantile);
+      if (!Number.isFinite(key)) continue;
+      const prev = quantiles.get(key) || { quantile: key };
+      prev[oid] = typeof q.proportion === "number" ? q.proportion : null;
+      quantiles.set(key, prev);
+    }
+  }
+  return {
+    series: entries.map(([oid, d]) => ({
+      id: oid,
+      keyed: Boolean(d?.keyed),
+    })),
+    points: [...quantiles.values()].sort((a, b) => a.quantile - b.quantile),
+  };
+}
+
+export default function ItemAnalysisCharts({
+  provenance,
+  rows = [],
+  scoreFrequency = [],
+  quantileRow = null,
+}) {
   const data = rows.map((r) => ({
     itemId: r.itemId,
     pValue: r.pValue,
     pointBiserial: r.pointBiserial,
   }));
+  const quantile = quantileRow ? quantileChartData(quantileRow) : { series: [], points: [] };
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -88,6 +126,59 @@ export default function ItemAnalysisCharts({ provenance, rows = [] }) {
           </ResponsiveContainer>
         </div>
       </PsychometricFigure>
+
+      {scoreFrequency.length > 0 ? (
+        <PsychometricFigure
+          provenance={provenance}
+          title="Score distribution"
+          description="Number-correct frequency from the classical test-level summary."
+        >
+          <div className="h-64 w-full" data-testid="item-analysis-score-histogram">
+            <ResponsiveContainer width="100%" height="100%" {...chartContainerMin}>
+              <BarChart data={scoreFrequency} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
+                <CartesianGrid {...chartGridProps} />
+                <XAxis dataKey="score" {...chartAxisProps} />
+                <YAxis allowDecimals={false} {...chartAxisProps} />
+                <Tooltip contentStyle={chartTooltipContentStyle} />
+                <Legend wrapperStyle={chartLegendWrapperStyle} />
+                <Bar dataKey="n" name="examinees" fill={chartColor(4)} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </PsychometricFigure>
+      ) : null}
+
+      {quantile.points.length > 0 ? (
+        <PsychometricFigure
+          provenance={provenance}
+          title={`Quantile plot — ${quantileRow.itemId}`}
+          description="Option selection rate by number-correct quantile. The keyed option should rise with ability."
+        >
+          <div className="h-64 w-full" data-testid="item-analysis-quantile-plot">
+            <ResponsiveContainer width="100%" height="100%" {...chartContainerMin}>
+              <LineChart data={quantile.points} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
+                <CartesianGrid {...chartGridProps} />
+                <XAxis dataKey="quantile" {...chartAxisProps} />
+                <YAxis domain={[0, 1]} {...chartAxisProps} />
+                <Tooltip contentStyle={chartTooltipContentStyle} />
+                <Legend wrapperStyle={chartLegendWrapperStyle} />
+                {quantile.series.map((s, i) => (
+                  <Line
+                    key={s.id}
+                    type="monotone"
+                    dataKey={s.id}
+                    name={s.keyed ? `${s.id} (key)` : s.id}
+                    stroke={chartColor(i)}
+                    strokeDasharray={s.keyed ? undefined : seriesStrokeDasharray(i)}
+                    dot
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </PsychometricFigure>
+      ) : null}
     </div>
   );
 }

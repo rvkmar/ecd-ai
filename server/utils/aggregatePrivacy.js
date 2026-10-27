@@ -187,6 +187,14 @@ export function redactCalibrationJobForViewer(job, isAdmin) {
         dataRedacted: true,
       };
     }
+    if (request.optionMatrix) {
+      request.optionMatrix = {
+        itemIds: request.optionMatrix.itemIds,
+        personCount: n,
+        personIdsRedacted: true,
+        dataRedacted: true,
+      };
+    }
   }
   const response = job.response ? { ...job.response } : undefined;
   // Keep high-level metrics; drop raw matrices if present.

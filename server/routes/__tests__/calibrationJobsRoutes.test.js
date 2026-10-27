@@ -394,3 +394,49 @@ describe("session item analysis enqueue", () => {
     expect(fixture.body.request.responseMatrix.personIds).toHaveLength(1000);
   });
 });
+
+describe("HTML technical report", () => {
+  it("omits reportHtml from list/detail and serves it at /:id/report", async () => {
+    dbState.current.calibrationJobs = [
+      {
+        id: "job-html",
+        kind: "irt-parameters",
+        status: "succeeded",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+        requestedBy: "admin1",
+        requestedAt: "2026-10-27T09:00:00Z",
+        request: validRequest(),
+        response: {
+          contractVersion: "1.0",
+          jobId: "job-html",
+          converged: true,
+          packageVersion: "mirt 1.47",
+          sampleSize: 4,
+          calibratedAt: "2026-10-27T09:01:00Z",
+          parameters: { item_a: { a: 1, b: 0, c: 0 } },
+          reportHtml: "<html><body>Xcalibre-class report</body></html>",
+        },
+        error: null,
+        attempts: 1,
+        maxAttempts: 3,
+        ingestedParameterSetId: null,
+      },
+    ];
+    const app = await jobsApp();
+    const auth = { Authorization: `Bearer ${tokenFor("admin")}` };
+    const list = await request(app).get("/api/calibrationJobs").set(auth);
+    expect(list.status).toBe(200);
+    expect(list.body[0].response.reportHtml).toBeUndefined();
+    expect(list.body[0].hasReport).toBe(true);
+
+    const one = await request(app).get("/api/calibrationJobs/job-html").set(auth);
+    expect(one.status).toBe(200);
+    expect(one.body.response.reportHtml).toBeUndefined();
+    expect(one.body.hasReport).toBe(true);
+
+    const report = await request(app).get("/api/calibrationJobs/job-html/report").set(auth);
+    expect(report.status).toBe(200);
+    expect(report.body.html).toMatch(/Xcalibre-class report/);
+  });
+});

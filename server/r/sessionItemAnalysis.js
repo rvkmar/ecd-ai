@@ -61,6 +61,7 @@ export function assessSessionItemAnalysis(db, evidenceModelId) {
         itemId: response.itemId,
         activated: response.activated,
         timestamp: response.timestamp || "",
+        selected: selectedOptionId(response),
       });
     }
   }
@@ -133,6 +134,34 @@ export function assessSessionItemAnalysis(db, evidenceModelId) {
     })
   );
 
+  const optionData = studentIds.map((studentId) =>
+    itemIds.map((itemId) => {
+      const cell = byCell.get(`${studentId}\0${itemId}`);
+      if (!cell) return null;
+      return cell.selected || null;
+    })
+  );
+  const hasOptions = optionData.some((row) => row.some((cell) => cell != null));
+  const itemKeys = itemKeysFromDb(db, itemIds);
+
+  const request = {
+    model: { family: "item-analysis", itemIds },
+    responseMatrix: { personIds: studentIds, itemIds, data },
+    options: { seed: SESSION_ITEM_ANALYSIS_SEED, maxIterations: 1 },
+    provenance: {
+      source: "completed-sessions",
+      evidenceModelId,
+      sampleSize: studentIds.length,
+      studentIds,
+    },
+  };
+  if (hasOptions) {
+    request.optionMatrix = { personIds: studentIds, itemIds, data: optionData };
+  }
+  if (itemKeys) {
+    request.itemKeys = itemKeys;
+  }
+
   return {
     ok: true,
     code: null,
@@ -140,16 +169,56 @@ export function assessSessionItemAnalysis(db, evidenceModelId) {
     sampleSize: studentIds.length,
     studentIds,
     itemIds,
-    request: {
-      model: { family: "item-analysis", itemIds },
-      responseMatrix: { personIds: studentIds, itemIds, data },
-      options: { seed: SESSION_ITEM_ANALYSIS_SEED, maxIterations: 1 },
-      provenance: {
-        source: "completed-sessions",
-        evidenceModelId,
-        sampleSize: studentIds.length,
-        studentIds,
-      },
-    },
+    request,
   };
+}
+
+function selectedOptionId(response) {
+  const raw = response?.rawAnswer;
+  if (raw == null) return null;
+  if (typeof raw === "string" || typeof raw === "number") {
+    const s = String(raw).trim();
+    return s ? s : null;
+  }
+  if (Array.isArray(raw)) {
+    const first = raw.find((v) => v != null && String(v).trim());
+    return first != null ? String(first) : null;
+  }
+  if (typeof raw === "object") {
+    const selected = raw.selected;
+    if (selected == null) return null;
+    if (Array.isArray(selected)) {
+      const first = selected.find((v) => v != null && String(v).trim());
+      return first != null ? String(first) : null;
+    }
+    const s = String(selected).trim();
+    return s ? s : null;
+  }
+  return null;
+}
+
+function itemKeysFromDb(db, itemIds) {
+  const items = db?.items || [];
+  if (!items.length) return null;
+  const keys = {};
+  let any = false;
+  for (const id of itemIds) {
+    const item = items.find((it) => it.id === id);
+    const components = item?.interaction?.responseComponents;
+    if (!Array.isArray(components) || components.length === 0) continue;
+    const keyed = components.find((c) => c?.isCorrect === true);
+    if (!keyed?.id) continue;
+    any = true;
+    keys[id] = {
+      keyedOptionId: String(keyed.id),
+      options: components
+        .filter((c) => c?.id)
+        .map((c) => ({
+          id: String(c.id),
+          label: c.label != null ? String(c.label) : String(c.id),
+          text: c.value != null ? String(c.value) : c.label != null ? String(c.label) : "",
+        })),
+    };
+  }
+  return any ? keys : null;
 }

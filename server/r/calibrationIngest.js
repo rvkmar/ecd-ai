@@ -72,6 +72,7 @@ function analysisArtefactFromCalibrationResponse(response, extras = {}) {
       standardErrors: response.standardErrors ?? undefined,
       fitStatistics: response.fitStatistics ?? undefined,
       diagnostics: response.diagnostics ?? undefined,
+      reportHtml: typeof response.reportHtml === "string" ? response.reportHtml : undefined,
       converged: response.converged,
       calibratedBy: extras.calibratedBy || "r-backend",
       calibrationMethod: extras.calibrationMethod || "r-job",

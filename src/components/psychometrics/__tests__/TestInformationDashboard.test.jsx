@@ -98,4 +98,32 @@ describe("TestInformationDashboard (D83)", () => {
       /never reaches SEM ≤ 0\.35/
     );
   });
+
+  it("renders IRT SE and item-fit columns when the artefact carries them", () => {
+    useAnalysisArtefacts.mockReturnValue({
+      data: [
+        {
+          ...CURVE_ARTEFACT,
+          payload: {
+            ...CURVE_ARTEFACT.payload,
+            parameters: {
+              ...CURVE_ARTEFACT.payload.parameters,
+              "Item.A": { a: 1, b: 0, c: 0 },
+            },
+            standardErrors: { "Item.A": { a: 0.08, b: 0.06, c: 0 } },
+            fitStatistics: {
+              ...CURVE_ARTEFACT.payload.fitStatistics,
+              itemFit: { "Item.A": { S_X2: 3.1, "p.S_X2": 0.21 } },
+            },
+          },
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    render(<TestInformationDashboard />);
+    expect(screen.getByTestId("irt-fit-table")).toBeInTheDocument();
+    expect(screen.getByText("SE(a)")).toBeInTheDocument();
+    expect(screen.getByText("Item.A")).toBeInTheDocument();
+  });
 });
