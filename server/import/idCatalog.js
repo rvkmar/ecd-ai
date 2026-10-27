@@ -25,6 +25,16 @@ function sharesSource(a, b) {
   return b.some((key) => set.has(key));
 }
 
+// Design-pattern KSA links that are collection ids. smvId is the id
+// stored on the student model (competencyModels.smVariables). Import
+// does not allocate a new SMV id, so that field is not rewritten.
+export const DESIGN_PATTERN_KSA_REF_PATHS = Object.freeze([
+  ["focalKsas[].competencyId", "competencies"],
+  ["focalKsas[].competencyModelId", "competencyModels"],
+  ["additionalKsas[].competencyId", "competencies"],
+  ["additionalKsas[].competencyModelId", "competencyModels"],
+]);
+
 export function createIdCatalog() {
   const entries = [];
 

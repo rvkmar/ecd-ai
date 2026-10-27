@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useDesignPatterns } from "@/api/queries/designPatterns";
+import { useCompetencies, useCompetencyModels } from "@/api/queries/competencies";
 import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
 import { useTemplates } from "@/api/queries/templates";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
@@ -18,6 +19,10 @@ import {
 
 vi.mock("@/api/queries/designPatterns", () => ({
   useDesignPatterns: vi.fn(),
+}));
+vi.mock("@/api/queries/competencies", () => ({
+  useCompetencies: vi.fn(),
+  useCompetencyModels: vi.fn(),
 }));
 vi.mock("@/api/queries/domainAnalyses", () => ({
   useDomainAnalyses: vi.fn(),
@@ -49,6 +54,8 @@ function groupCount(card, label) {
 describe("Design Pattern structure", () => {
   beforeEach(() => {
     useDesignPatterns.mockReturnValue(query(patterns));
+    useCompetencies.mockReturnValue(query([]));
+    useCompetencyModels.mockReturnValue(query([]));
     useDomainAnalyses.mockReturnValue(query(domainAnalyses));
     useTemplates.mockReturnValue(query(templates));
     useEvidenceModels.mockReturnValue(query(evidenceModels));
@@ -66,7 +73,7 @@ describe("Design Pattern structure", () => {
       "dp-ready",
       "Name a plant part",
       "draft",
-      "Ready",
+      "Ready Focal KSA not linked",
       "Plant structure",
       "1",
       "2",
@@ -120,6 +127,8 @@ describe("Design Pattern structure", () => {
     const thin = screen.getByRole("heading", { name: "Unfinished argument" }).closest(".rounded-2xl");
     await user.click(within(thin).getByRole("heading", { name: "Unfinished argument" }));
 
+    await user.click(within(card).getByRole("button", { name: /Focal KSAs/ }));
+    expect(within(card).getByText(/Not linked/)).toBeInTheDocument();
     expect(groupCount(card, "Focal KSAs")).toBe("1");
     expect(groupCount(card, "Additional KSAs")).toBe("1");
     expect(groupCount(card, "Potential observations")).toBe("1");

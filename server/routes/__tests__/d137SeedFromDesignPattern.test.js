@@ -142,6 +142,49 @@ describe("D137 seed from a confirmed design pattern", () => {
     expect((promoteTask.body.details || []).join(" ")).toMatch(/must be confirmed/i);
   });
 
+  it("pre-fills the evidence competency and student model variable from the focal KSA", async () => {
+    dbState.current.competencyModels[0].smVariables = [
+      { id: "smv-explain", label: "Explains" },
+    ];
+    dbState.current.designPatterns[0].focalKsas = [
+      {
+        label: "Explain the claim",
+        competencyId: "c1",
+        competencyModelId: "cm1",
+        smvId: "smv-explain",
+      },
+    ];
+    const expressApp = await app();
+    const admin = tokenFor("admin");
+
+    const seeded = await request(expressApp)
+      .post("/api/designPatterns/dp1/seed")
+      .set("Authorization", `Bearer ${admin}`)
+      .send({ selections: { potentialObservations: [0] } });
+
+    expect(seeded.status).toBe(201);
+    expect(seeded.body.evidenceModel.competencyId).toBe("c1");
+    expect(seeded.body.evidenceModel.seededFrom.studentModel).toEqual({
+      competencyId: "c1",
+      competencyModelId: "cm1",
+      smvId: "smv-explain",
+    });
+    expect(seeded.body.taskModel.seededFrom.studentModel.smvId).toBe("smv-explain");
+
+    const overridden = await request(expressApp)
+      .post("/api/designPatterns/dp1/seed")
+      .set("Authorization", `Bearer ${admin}`)
+      .send({
+        competencyId: "c1",
+        competencyModelId: "",
+        smvId: "",
+        selections: { potentialObservations: [0] },
+      });
+    expect(overridden.status).toBe(201);
+    expect(overridden.body.evidenceModel.competencyId).toBe("c1");
+    expect(overridden.body.evidenceModel.seededFrom.studentModel).toEqual({ competencyId: "c1" });
+  });
+
   it("refuses a draft pattern", async () => {
     const expressApp = await app();
     const admin = tokenFor("admin");

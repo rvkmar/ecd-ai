@@ -26,7 +26,11 @@
 
 import { randomBytes } from "crypto";
 import { unzipSafe, zipFiles, ZipError } from "../utils/safeZip.js";
-import { createIdCatalog, sourceKeysFromRow } from "./idCatalog.js";
+import {
+  DESIGN_PATTERN_KSA_REF_PATHS,
+  createIdCatalog,
+  sourceKeysFromRow,
+} from "./idCatalog.js";
 import { createCurricularPolicyRecord } from "../routes/curricularPoliciesRoutes.js";
 import { createPolicyRecord } from "../routes/policiesRoutes.js";
 import { createDomainAnalysisRecord } from "../routes/domainAnalysesRoutes.js";
@@ -104,7 +108,8 @@ const ID_PREFIX = {
 // Foreign keys rewritten before the collection's own builder runs.
 // `self` means "the collection currently being imported".
 // Attribute / SMV ids are not collection ids; builders resolve those by
-// name or by the id still stored on the Student Model.
+// name or by the id still stored on the Student Model. A design-pattern
+// KSA smvId is the same kind of id and is left as stored.
 const REF_PATHS = {
   competencyModels: [
     ["domainAnalysisId", "domainAnalyses"],
@@ -117,6 +122,7 @@ const REF_PATHS = {
     ["potentialWorkProducts[].workProductId", "workProducts"],
     ["potentialRubrics[].rubricId", "rubrics"],
     ["variableFeatures[].taskModelVariableId", "taskModelVariables"],
+    ...DESIGN_PATTERN_KSA_REF_PATHS,
   ],
   evidenceModels: [
     ["competencyId", "competencies"],

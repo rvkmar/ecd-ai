@@ -46,6 +46,8 @@ describe("D137 seed control", () => {
     expect(onSeed).toHaveBeenCalledWith({
       id: "dp1",
       competencyId: "c1",
+      competencyModelId: "",
+      smvId: "",
       selections: {
         potentialObservations: [0],
         potentialWorkProducts: [],

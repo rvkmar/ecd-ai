@@ -10,6 +10,10 @@ import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
 import { syncSmVariablesFromCompetencies, buildStudentModelSpecification } from "../../src/utils/smVariableSync.js";
+import {
+  patternsCitingCompetency,
+  patternsCitingSmv,
+} from "../../src/utils/ksaStudentModelLink.js";
 import { computeStructuralAudit } from "../../src/utils/studentModelAudit.js";
 import {
   normalizeStudentModelBulkRows,
@@ -862,6 +866,18 @@ router.delete("/models/:id", canAuthor, (req, res) => {
     });
   }
 
+  const patterns = db.designPatterns || [];
+  const citedByPattern =
+    modelCompetencies.some((row) => patternsCitingCompetency(patterns, row.id).length > 0) ||
+    (model.smVariables || []).some(
+      (smv) => patternsCitingSmv(patterns, model.id, smv?.id).length > 0
+    );
+  if (citedByPattern) {
+    return res.status(409).json({
+      error: "Cannot delete Competency Model referenced by a design pattern."
+    });
+  }
+
   db.competencyModels = db.competencyModels.filter(m => m.id !== model.id);
   db.competencies = db.competencies.filter(c => c.modelId !== model.id);
 
@@ -940,6 +956,12 @@ router.delete("/:id", canAuthor, (req, res) => {
   if (evidenceUsing?.length > 0) {
     return res.status(409).json({
       error: "Cannot delete competency referenced by confirmed Evidence Model."
+    });
+  }
+
+  if (patternsCitingCompetency(db.designPatterns, comp.id).length > 0) {
+    return res.status(409).json({
+      error: "Cannot delete competency referenced by a design pattern."
     });
   }
 

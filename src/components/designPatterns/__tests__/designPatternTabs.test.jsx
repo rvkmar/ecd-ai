@@ -15,7 +15,7 @@ import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
 import { useTemplates, useUpdateTemplate } from "@/api/queries/templates";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { useTaskModels } from "@/api/queries/taskModels";
-import { useCompetencies } from "@/api/queries/competencies";
+import { useCompetencies, useCompetencyModels } from "@/api/queries/competencies";
 import { useWorkProducts } from "@/api/queries/workProducts";
 import { useRubrics } from "@/api/queries/rubrics";
 import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
@@ -54,6 +54,7 @@ vi.mock("@/api/queries/taskModels", () => ({
 }));
 vi.mock("@/api/queries/competencies", () => ({
   useCompetencies: vi.fn(),
+  useCompetencyModels: vi.fn(),
 }));
 vi.mock("@/api/queries/workProducts", () => ({
   useWorkProducts: vi.fn(),
@@ -89,6 +90,7 @@ describe("Design Pattern three-tab shell", () => {
     useEvidenceModels.mockReturnValue(query([]));
     useTaskModels.mockReturnValue(query([]));
     useCompetencies.mockReturnValue(query([]));
+    useCompetencyModels.mockReturnValue(query([]));
     useWorkProducts.mockReturnValue(query([]));
     useRubrics.mockReturnValue(query([]));
     useTaskModelVariables.mockReturnValue(query([]));

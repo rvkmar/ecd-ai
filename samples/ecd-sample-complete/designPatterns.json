@@ -61,7 +61,10 @@
     "domainAnalysisId": "da-plant",
     "focalKsas": [
       {
-        "label": "Plant-part vocabulary"
+        "label": "Plant-part vocabulary",
+        "competencyId": "c-plant",
+        "competencyModelId": "cm-plant",
+        "smvId": "smv-names-part"
       }
     ],
     "additionalKsas": [

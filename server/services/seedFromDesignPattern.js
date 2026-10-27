@@ -1,6 +1,10 @@
 // D137. One confirmed design pattern seeds a draft Evidence Model and a
 // draft Task Model. The designer picks menu rows. Declined rows stay on
 // the shared back-link. Existing confirm rules are the substance gate.
+// A focal KSA that cites a competency or a student model variable
+// pre-fills that link. The request body still wins when it sends one.
+
+import { resolveSeedStudentModel } from "../../src/utils/ksaStudentModelLink.js";
 
 const SEED_MENU_KEYS = [
   "potentialObservations",
@@ -71,10 +75,9 @@ export function seedFromDesignPattern({
     };
   }
 
-  const competencyId = body.competencyId;
-  if (!competencyId || typeof competencyId !== "string") {
-    return { ok: false, status: 400, error: "competencyId is required." };
-  }
+  const studentModel = resolveSeedStudentModel(pattern, body, db);
+  if (!studentModel.ok) return studentModel;
+  const { competencyId, competencyModelId, smvId } = studentModel;
 
   const split = partitionMenus(pattern, body.selections || {});
   if (!split.ok) return { ok: false, status: 400, error: split.error };
@@ -102,12 +105,18 @@ export function seedFromDesignPattern({
     designPatternId: pattern.id,
     accepted: split.accepted,
     declined: split.declined,
+    studentModel: {
+      competencyId,
+      ...(competencyModelId ? { competencyModelId } : {}),
+      ...(smvId ? { smvId } : {}),
+    },
   };
 
   const evidence = createEvidenceModelRecord(
     {
       name: `${pattern.name} evidence`,
       competencyId,
+      ...(competencyModelId ? { competencyModelId } : {}),
       observables,
       evaluationProcedures: [],
       seededFrom,
