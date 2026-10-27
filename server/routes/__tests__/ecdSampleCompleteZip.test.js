@@ -132,6 +132,13 @@ describe("ecd-sample-complete.zip", () => {
 
     const delivery = db.deliveryModels.find((row) => row.name === "Plant part naming delivery");
     const plantAssembly = db.assemblyModels.find((row) => row.name === "Plant part naming assembly");
+    const plantTask = db.taskModels.find((row) => row.name === "Name the plant part");
+    const functionTask = db.taskModels.find((row) => row.name === "Name the plant function");
+    expect(plantAssembly.constraints.exposure.maxPerItem).toBe(1);
+    expect(plantAssembly.constraints.taskModelCounts).toEqual([
+      { taskModelId: plantTask.id, min: 1, max: 8 },
+      { taskModelId: functionTask.id, min: 1, max: 4 },
+    ]);
     const plantStudent = db.competencyModels.find((row) => row.name === "Plant part naming");
     const fixedPolicy = db.policies.find((row) => row.name === "Fixed Form - Grade 6 Numeracy Benchmark");
     const plantPresentation = db.presentationModels.find((row) => row.name === "Plant part presentation");

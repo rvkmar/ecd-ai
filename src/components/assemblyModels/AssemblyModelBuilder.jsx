@@ -59,6 +59,7 @@ export function duplicateAssemblyDraft(row) {
     selectionAlgorithm: row?.selectionAlgorithm?.policyId
       ? { policyId: row.selectionAlgorithm.policyId }
       : {},
+    constraints: row?.constraints ? structuredClone(row.constraints) : undefined,
   };
 }
 

@@ -4,6 +4,7 @@ import { useAuth } from "../../auth/AuthProvider";
 import { apiFetch } from "../../api/apiClient";
 import { can } from "../../config/rolePermissions";
 import { measurementStopHeading, measurementStopDetails } from "./measurementStop";
+import { assemblyProgressLine } from "../../utils/assemblyConstraints";
 import AttributeProfileList from "./AttributeProfileList";
 
 // SessionReport.jsx
@@ -171,6 +172,12 @@ export default function SessionReport({ sessionId, onClose }) {
           <p className="text-gray-700">Level: {learnerFeedback.summary?.level}</p>
           <p className="text-gray-700">{learnerFeedback.summary?.message}</p>
 
+          {learnerFeedback.assemblyProgress?.assemblyModelId && (
+            <p className="text-gray-700">
+              Assembly progress: {assemblyProgressLine(learnerFeedback.assemblyProgress)}
+            </p>
+          )}
+
           {stopped && (
             <div>
               <h4 className="font-semibold">Why this session ended</h4>
@@ -230,6 +237,12 @@ export default function SessionReport({ sessionId, onClose }) {
             </p>
           {teacherReport.studentName && (
             <p className="text-gray-700">Student: {teacherReport.studentName}</p>
+          )}
+
+          {teacherReport.assemblyProgress?.assemblyModelId && (
+            <p className="text-gray-700" data-testid="teacher-assembly-progress">
+              Assembly progress: {assemblyProgressLine(teacherReport.assemblyProgress)}
+            </p>
           )}
 
           {stopped && (

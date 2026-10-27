@@ -34,6 +34,10 @@ export const readyDraft = {
   targetsBySMV: [{ smvId: "smv-part", requiredClassificationAccuracy: 0.8 }],
   stoppingRules: { minItems: 1, maxItems: 3, targetsMet: true },
   selectionAlgorithm: { policyId: "p-fixed" },
+  constraints: {
+    taskModelCounts: [{ taskModelId: "tm-plant", min: 1, max: 8 }],
+    exposure: { maxPerItem: 1 },
+  },
   status: "draft",
   locked: false,
   versionNumber: 1,

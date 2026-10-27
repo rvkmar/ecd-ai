@@ -132,6 +132,7 @@ router.get("/session/:id", (req, res) => {
     recommendations: [],
     stopped: measurement.stopped,
     attributeProfile: measurement.attributeProfile,
+    ...(session.assemblyProgress ? { assemblyProgress: session.assemblyProgress } : {}),
   };
 
   // 🔹 Captured evidence/observations (from Task Instances)
@@ -286,6 +287,7 @@ router.get("/session/:id/learner-feedback", (req, res) => {
     encouragement: "Great effort! Keep practicing.",
     stopped: measurement.stopped,
     attributeProfile: measurement.attributeProfile,
+    ...(session.assemblyProgress ? { assemblyProgress: session.assemblyProgress } : {}),
   };
 
   // IRT version
@@ -440,6 +442,7 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, (req, res) => {
     },
     stopped: measurement.stopped,
     attributeProfile: measurement.attributeProfile,
+    ...(session.assemblyProgress ? { assemblyProgress: session.assemblyProgress } : {}),
   };
 
   // 🔹 IRT summary

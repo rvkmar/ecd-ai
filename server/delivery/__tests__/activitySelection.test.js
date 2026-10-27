@@ -1213,6 +1213,27 @@ describe("a cited delivery model is authoritative", () => {
     expect(result.warnings[0]).toContain("dm-missing");
   });
 
+  it("uses the assembly model policy when that model declares one", () => {
+    const db = deliveryDb({
+      assemblyModels: [
+        assemblyModel({
+          id: "am-draft",
+          status: "draft",
+          stoppingRules: { maxItems: 99 },
+          selectionAlgorithm: { policyId: "p-fixed" },
+        }),
+      ],
+    });
+    const result = selectNextActivity(
+      session({ deliveryModelId: "dm1", selectionStrategy: "IRT" }),
+      db
+    );
+    expect(result.strategy).toBe("fixed");
+    expect(result.taskId).toBe("t1");
+    expect(result.warnings.join(" ")).toMatch(/drives this session/);
+    expect(result.warnings.join(" ")).not.toMatch(/not applied retroactively/);
+  });
+
   it("keeps the advisory warning when no delivery model is cited", () => {
     const db = irtDb({
       assemblyModels: [
@@ -1321,5 +1342,159 @@ describe("selectNextActivity is pure", () => {
   it("refuses to run without its arguments", () => {
     expect(() => selectNextActivity(null, irtDb())).toThrow(/requires a session/);
     expect(() => selectNextActivity(session(), null)).toThrow(/requires a db/);
+  });
+});
+
+describe("assembly model content constraints", () => {
+  function constrainedDb(constraints, stoppingRules = { maxItems: 99 }) {
+    return irtDb({
+      taskModels: [
+        { id: "tm1", versionNumber: 1, evidenceModelIds: ["em1"], taskModelVariableSettings: [{ taskModelVariableId: "tmv-bloom", variation: "fixed", fixedValue: "remember" }] },
+        { id: "tm2", versionNumber: 1, evidenceModelIds: ["em1"] },
+      ],
+      tasks: [
+        { id: "t1", taskModelId: "tm1", itemId: "item1" },
+        { id: "t2", taskModelId: "tm1", itemId: "item2" },
+        { id: "t3", taskModelId: "tm2", itemId: "item3" },
+      ],
+      items: [
+        { id: "item1", taskModelId: "tm1", observationId: "o1", evidenceModelId: "em1", status: "operational" },
+        { id: "item2", taskModelId: "tm1", observationId: "o2", evidenceModelId: "em1", status: "operational" },
+        { id: "item3", taskModelId: "tm2", observationId: "o1", evidenceModelId: "em1", status: "operational", metadata: { contentStandardCodes: ["CG-S1"] } },
+      ],
+      // IRT can only rank a task whose item sits in an active composite
+      // library package. tm2 is a second task model, so it needs its own.
+      compositeLibrary: [
+        {
+          id: "cl1",
+          taskModelId: "tm1",
+          taskModelVersion: 1,
+          active: true,
+          items: [
+            { itemId: "item1", observationId: "o1", evidenceModelId: "em1", evidenceModelVersion: 1 },
+            { itemId: "item2", observationId: "o2", evidenceModelId: "em1", evidenceModelVersion: 1 },
+          ],
+        },
+        {
+          id: "cl2",
+          taskModelId: "tm2",
+          taskModelVersion: 1,
+          active: true,
+          items: [
+            { itemId: "item3", observationId: "o1", evidenceModelId: "em1", evidenceModelVersion: 1 },
+          ],
+        },
+      ],
+      assemblyModels: [
+        assemblyModel({
+          stoppingRules,
+          constraints,
+        }),
+      ],
+    });
+  }
+
+  it("skips a task model that is already at its maximum and keeps a fixed form otherwise unchanged", () => {
+    const db = constrainedDb({ taskModelCounts: [{ taskModelId: "tm1", max: 1 }] });
+    const open = selectNextActivity(session({ taskIds: ["t1", "t2", "t3"] }), db);
+    expect(open.taskId).toBe("t1");
+    expect(open.strategy).toBe("fixed");
+
+    const after = selectNextActivity(
+      session({
+        taskIds: ["t1", "t2", "t3"],
+        currentTaskIndex: 1,
+        responses: [{ taskId: "t1" }],
+      }),
+      db
+    );
+    expect(after.taskId).toBe("t3");
+  });
+
+  it("prefers a task that fills an open minimum", () => {
+    const db = constrainedDb({
+      taskModelCounts: [{ taskModelId: "tm2", min: 1 }],
+    });
+    const result = selectNextActivity(
+      session({ selectionStrategy: "IRT", taskIds: ["t1", "t2", "t3"] }),
+      db
+    );
+    expect(result.taskId).toBe("t3");
+  });
+
+  it("does not stop on targetsMet while a minimum can still be filled", () => {
+    const db = constrainedDb(
+      { taskModelCounts: [{ taskModelId: "tm2", min: 1 }] },
+      { targetsMet: true, minItems: 1, maxItems: 99 }
+    );
+    const s = session({
+      selectionStrategy: "fixed",
+      taskIds: ["t1", "t2", "t3"],
+      currentTaskIndex: 1,
+      responses: [
+        {
+          taskId: "t1",
+          itemId: "item1",
+          evidenceModelId: "em1",
+          evidenceModelVersion: 1,
+          observableId: "o1",
+          parameterSetId: "ps1",
+          parameterSource: "calibrated",
+          activated: true,
+          direction: "supports",
+          strength: 4,
+        },
+      ],
+    });
+    const decision = evaluateStoppingRules(s, db.assemblyModels[0], db);
+    expect(decision.stop).toBeUndefined();
+    expect(decision.warnings.join(" ")).toMatch(/open minimum/);
+    expect(selectNextActivity(s, db).taskId).toBe("t3");
+  });
+
+  it("stops when every remaining task would break an enemy group or the exposure cap", () => {
+    const enemies = constrainedDb({ enemies: [{ itemIds: ["item1", "item2"] }] });
+    const blocked = selectNextActivity(
+      session({
+        selectionStrategy: "IRT",
+        taskIds: ["t1", "t2"],
+        responses: [{ taskId: "t1" }],
+      }),
+      enemies
+    );
+    expect(blocked.stopped.rule).toBe("constraints");
+    expect(blocked.stopped.reason).toMatch(/content constraints/);
+
+    const exposure = constrainedDb({ exposure: { maxPerItem: 1 } });
+    exposure.tasks = [
+      { id: "t1", taskModelId: "tm1", itemId: "item1" },
+      { id: "t2", taskModelId: "tm1", itemId: "item1" },
+    ];
+    const repeated = selectNextActivity(
+      session({
+        selectionStrategy: "IRT",
+        taskIds: ["t1", "t2"],
+        responses: [{ taskId: "t1" }],
+      }),
+      exposure
+    );
+    expect(repeated.stopped.rule).toBe("constraints");
+  });
+
+  it("counts a fixed task model variable value and a content standard code", () => {
+    const db = constrainedDb({
+      taskModelVariableCounts: [{ taskModelVariableId: "tmv-bloom", value: "remember", max: 1 }],
+      contentStandardCounts: [{ code: "CG-S1", min: 1 }],
+    });
+    const result = selectNextActivity(
+      session({
+        selectionStrategy: "fixed",
+        taskIds: ["t1", "t2", "t3"],
+        currentTaskIndex: 1,
+        responses: [{ taskId: "t1" }],
+      }),
+      db
+    );
+    expect(result.taskId).toBe("t3");
   });
 });

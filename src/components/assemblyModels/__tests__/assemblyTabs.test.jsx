@@ -13,6 +13,9 @@ import {
 } from "@/api/queries/assemblyModels";
 import { useCompetencyModels } from "@/api/queries/competencies";
 import { usePolicies } from "@/api/queries/policies";
+import { useTaskModels } from "@/api/queries/taskModels";
+import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
+import { useItems } from "@/api/queries/items";
 import AssemblyModelBuilder from "../AssemblyModelBuilder";
 import {
   assemblyModels,
@@ -35,6 +38,15 @@ vi.mock("@/api/queries/competencies", () => ({
 }));
 vi.mock("@/api/queries/policies", () => ({
   usePolicies: vi.fn(),
+}));
+vi.mock("@/api/queries/taskModels", () => ({
+  useTaskModels: vi.fn(),
+}));
+vi.mock("@/api/queries/taskModelVariables", () => ({
+  useTaskModelVariables: vi.fn(),
+}));
+vi.mock("@/api/queries/items", () => ({
+  useItems: vi.fn(),
 }));
 
 function query(data = []) {
@@ -63,6 +75,9 @@ describe("Assembly Model three-tab shell", () => {
     useAssemblyModel.mockImplementation((id) => query(assemblyModels.find((row) => row.id === id)));
     useCompetencyModels.mockReturnValue(query(competencyModels));
     usePolicies.mockReturnValue(query(policies));
+    useTaskModels.mockReturnValue(query([{ id: "tm-plant", name: "Name the plant part" }]));
+    useTaskModelVariables.mockReturnValue(query([]));
+    useItems.mockReturnValue(query([]));
     useCreateAssemblyModel.mockReturnValue(idleMutation());
     useUpdateAssemblyModel.mockReturnValue(idleMutation());
     useTransitionAssemblyModel.mockReturnValue(idleMutation());
@@ -159,6 +174,16 @@ describe("Assembly Model three-tab shell", () => {
     await user.click(screen.getByRole("button", { name: "Delete" }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
     expect(remove).toHaveBeenCalledWith("am-thin");
+  });
+
+  it("opens the content constraints step from an existing assembly model", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderBuilder(`/admin?tab=assembly&focus=${readyDraft.id}`);
+    expect(await screen.findByDisplayValue(readyDraft.name)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Content constraints/ }));
+    expect(screen.getByTestId("assembly-constraints-step")).toBeInTheDocument();
+    expect(screen.getByLabelText("Maximum uses of each item")).toHaveValue(1);
+    expect(screen.getByLabelText("Task model 1")).toHaveValue("tm-plant");
   });
 
   it("filters by status and readiness", async () => {

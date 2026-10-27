@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { usePolicies } from "../../api/queries/policies";
 import { useDeliveryModels } from "../../api/queries/deliveryModels";
+import { useAssemblyModels } from "../../api/queries/assemblyModels";
 import {
   Select,
   SelectContent,
@@ -41,6 +42,7 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
   // data-layer migration.
   const { data: policies = [] } = usePolicies();
   const { data: deliveryModels = [] } = useDeliveryModels();
+  const { data: assemblyModels = [] } = useAssemblyModels();
   const [policyId, setPolicyId] = useState(model.nextTaskPolicy?.policyId || "");
   const [deliveryModelId, setDeliveryModelId] = useState(model.deliveryModelId || "");
   const [carryForward, setCarryForward] = useState(model.carryForward === true);
@@ -143,16 +145,35 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
     }
   }, [policies, selectionStrategy, deliveryModelId]);
 
+  function policyForDeliveryModel(deliveryModel) {
+    if (!deliveryModel) return null;
+    const assemblyModel = assemblyModels.find((row) => row.id === deliveryModel.assemblyModelId);
+    const assemblyPolicy = policies.find((row) => row.id === assemblyModel?.selectionAlgorithm?.policyId);
+    if (assemblyPolicy) return { policy: assemblyPolicy, source: "assemblyModel" };
+    const deliveryPolicy = policies.find((row) => row.id === deliveryModel.policyId);
+    if (deliveryPolicy) return { policy: deliveryPolicy, source: "deliveryModel" };
+    return null;
+  }
+
   const handleDeliveryModelChange = (value) => {
     setDeliveryModelId(value);
     if (!value) return;
     const chosen = deliveryModels.find((row) => row.id === value);
     if (!chosen) return;
-    const policy = policies.find((row) => row.id === chosen.policyId);
-    if (policy?.type) setSelectionStrategy(policy.type);
-    if (chosen.policyId) setPolicyId(chosen.policyId);
+    const resolved = policyForDeliveryModel(chosen);
+    if (resolved?.policy?.type) setSelectionStrategy(resolved.policy.type);
+    if (resolved?.policy?.id) setPolicyId(resolved.policy.id);
     if (chosen.administration?.carryForward === true) setCarryForward(true);
   };
+
+  useEffect(() => {
+    if (!deliveryModelId) return;
+    const chosen = deliveryModels.find((row) => row.id === deliveryModelId);
+    const resolved = policyForDeliveryModel(chosen);
+    if (!resolved?.policy) return;
+    setSelectionStrategy(resolved.policy.type);
+    setPolicyId(resolved.policy.id);
+  }, [deliveryModelId, deliveryModels, assemblyModels, policies]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -375,7 +396,7 @@ export default function SessionForm({ model = EMPTY_MODEL, students = [], cohort
           ))}
         </select>
         <p className="mt-1 text-xs text-gray-500">
-          When a delivery model is selected, the session uses its assembly model and selection policy.
+          When a delivery model is selected, the assembly model it cites supplies the selection policy. The strategy and policy below follow that assembly model. If the assembly model does not declare a policy, the delivery model's own policy is used.
         </p>
         <label className="mt-2 flex items-center gap-2 text-sm">
           <input
