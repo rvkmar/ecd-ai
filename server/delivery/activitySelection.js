@@ -48,6 +48,44 @@
 // a task that names a `questionId` and no `itemId`. When the legacy path is
 // finally retired, deleting `selectLegacyQuestionCandidate` is the whole job.
 //
+// G20 leaves that reader in place on the roster path. The player, /submit,
+// and stored question tasks still depend on it. The package pool below
+// never calls it, because a package entry is an item. Removing the reader
+// would need those question tasks migrated onto items, and the player and
+// the submit branch retargeted. Until then a question-only session with no
+// delivery model still selects as it does today.
+//
+// ------------------------------------------------------------------
+// G20. Adaptive candidates for a cited delivery model.
+// ------------------------------------------------------------------
+// An active composite library package belongs to the session's assembly
+// model when the package's task model has an evidence model whose
+// competency resolves to assemblyModel.competencyModelId. A candidate is
+// an unanswered task that instantiates an item in such a package. A
+// suspended or archived item is not a candidate. An item with no task
+// record is not a candidate: delivery still presents a task.
+//
+// session.taskIds is the seed. It is not an allow-list, and it is not
+// ignored. Fixed order still walks the seed and does not pull a task from
+// outside it. IRT and BayesianNetwork, on a session that cites a delivery
+// model, rank this package pool. Pool order is the seed first, then every
+// other pool task by task id. A tie keeps the earlier task. A seed task
+// that is not in the pool is not ranked, and a warning says so.
+//
+// If no active package belongs to the assembly model, adaptive selection
+// stays on the seed and a warning says so. A session with no delivery
+// model keeps the roster path exactly, including the legacy question reader.
+//
+// G19 constraints, exposure, and enemies filter this same pool. Exposure
+// is still the count of that item id in this session's responses. Selection
+// does not read or write item.exposureControl.usageCount. Submit still
+// increments that counter when an operational item is delivered.
+//
+// Submit appends a delivered task id that was not in the seed. Reports
+// also union response task ids, so a stored response whose task was never
+// appended still appears. Resume does not recompute the roster; the next
+// call to selection reads the pool again.
+//
 // ------------------------------------------------------------------
 // F24 -- FOUND WHILE BUILDING THIS UNIT. The BayesianNetwork strategy has
 // never once run its own algorithm.
@@ -77,10 +115,11 @@
 // machinery that actually exists and actually produces live beliefs:
 // attributeAccumulation.js's per-attribute mastery posteriors (DINA/G-DINA,
 // keyed by Q-matrix attribute, landing in `smvPosteriors`). Where a session
-// carries no diagnostic data at all, the strategy DEGRADES to first-
-// unanswered -- which is what it has always actually done -- and says so in
-// `debug.reason` rather than presenting an accidental default as a
-// computed choice.
+// carries no diagnostic data at all, the strategy DEGRADES to pool order
+// (the session seed, then task id) and says so in `debug.fallback` and a
+// warning, rather than presenting an accidental default as a computed
+// choice. On a roster session that order is the old first unanswered task.
+// G-DINA still cannot be ranked (D60 P1-5): it uses this same fallback.
 //
 // ------------------------------------------------------------------
 // WHAT THIS MODULE DELIBERATELY DOES NOT DO
@@ -458,13 +497,14 @@ export function resolveAssemblyModelForSession(session, db) {
  * progress, also never stops a session -- "no targets could be evaluated"
  * is not "all targets met".
  */
-function evaluateStoppingRules(session, assemblyModel, db) {
+function evaluateStoppingRules(session, assemblyModel, db, options = {}) {
   const stoppingRules = assemblyModel.stoppingRules || {};
   const delivered = (session.responses || []).length;
   const warnings = [];
+  const candidateIds = Array.isArray(options.candidateIds) ? options.candidateIds : null;
 
   if (Number.isFinite(stoppingRules.maxItems) && delivered >= stoppingRules.maxItems) {
-    const plan = planConstraintSelection(session, assemblyModel, db, "adaptive");
+    const plan = planConstraintSelection(session, assemblyModel, db, "adaptive", candidateIds);
     if (plan.unmetMinimums) warnings.push(maxItemsMinimumWarning(assemblyModel.id));
     return {
       stop: {
@@ -520,7 +560,7 @@ function evaluateStoppingRules(session, assemblyModel, db) {
 
   if (!declared.allScoredAndMet) return { warnings };
 
-  const plan = planConstraintSelection(session, assemblyModel, db, "adaptive");
+  const plan = planConstraintSelection(session, assemblyModel, db, "adaptive", candidateIds);
   if (targetsMetHeldForConstraints(plan)) {
     warnings.push(constraintHoldWarning(assemblyModel.id));
     return { warnings };
@@ -579,6 +619,131 @@ function candidatesFor(session, db) {
       return { taskId, task };
     })
     .filter((c) => !!c.task);
+}
+
+function competencyModelIdForEvidenceModel(evidenceModel, db) {
+  if (!evidenceModel) return null;
+  const competency = (db.competencies || []).find((row) => row && row.id === evidenceModel.competencyId);
+  return competency?.modelId || evidenceModel.competencyModelId || null;
+}
+
+function taskModelBelongsToCompetencyModel(taskModel, competencyModelId, db) {
+  if (!taskModel || !competencyModelId) return false;
+  for (const evidenceModelId of taskModel.evidenceModelIds || []) {
+    const evidenceModel = (db.evidenceModels || []).find((row) => row && row.id === evidenceModelId);
+    if (competencyModelIdForEvidenceModel(evidenceModel, db) === competencyModelId) return true;
+  }
+  return false;
+}
+
+/**
+ * Adaptive candidate ids for a delivery-model session.
+ *
+ * source "packages": ids are unanswered tasks in active packages that
+ * belong to the assembly model's competency model. Order is the session
+ * seed first, then remaining task ids.
+ * source "roster": no such package exists, so the caller keeps the seed.
+ */
+function buildAssemblyPackagePool(session, db, assemblyModel) {
+  const warnings = [];
+  const seed = Array.isArray(session?.taskIds) ? session.taskIds : [];
+  const competencyModelId = assemblyModel?.competencyModelId;
+
+  if (!competencyModelId) {
+    warnings.push(
+      `Assembly Model '${assemblyModel?.id || ""}' has no competencyModelId, so adaptive selection stays on the session seed.`
+    );
+    return { source: "roster", ids: [...seed], warnings };
+  }
+
+  const packages = [];
+  for (const pkg of db.compositeLibrary || []) {
+    if (!pkg || pkg.active !== true) continue;
+    const taskModel = (db.taskModels || []).find((row) => row && row.id === pkg.taskModelId);
+    if (!taskModelBelongsToCompetencyModel(taskModel, competencyModelId, db)) continue;
+    packages.push(pkg);
+  }
+
+  if (packages.length === 0) {
+    warnings.push(
+      `No active composite library package belongs to Assembly Model '${assemblyModel.id}' (competency model '${competencyModelId}'). Adaptive selection stays on the session seed.`
+    );
+    return { source: "roster", ids: [...seed], warnings };
+  }
+
+  const answered = new Set((session?.responses || []).map((response) => response?.taskId).filter(Boolean));
+  const byId = new Map();
+  for (const pkg of packages) {
+    const itemIds = new Set((pkg.items || []).map((entry) => entry?.itemId).filter(Boolean));
+    for (const task of db.tasks || []) {
+      if (!task?.id || !task.itemId || task.taskModelId !== pkg.taskModelId) continue;
+      if (!itemIds.has(task.itemId) || answered.has(task.id) || byId.has(task.id)) continue;
+      const item = (db.items || []).find((row) => row && row.id === task.itemId);
+      if (!item || item.status === "suspended" || item.status === "archived") continue;
+      byId.set(task.id, task);
+    }
+  }
+
+  const ids = [];
+  const seen = new Set();
+  for (const taskId of seed) {
+    if (byId.has(taskId) && !seen.has(taskId)) {
+      ids.push(taskId);
+      seen.add(taskId);
+    }
+  }
+  const rest = [...byId.keys()].filter((taskId) => !seen.has(taskId)).sort((a, b) => a.localeCompare(b));
+  ids.push(...rest);
+
+  const outside = seed.filter((taskId) => !answered.has(taskId) && !byId.has(taskId));
+  if (outside.length > 0) {
+    warnings.push(
+      `Session seed task(s) ${outside.join(", ")} are outside the active packages for Assembly Model '${assemblyModel.id}', so adaptive selection will not use them.`
+    );
+  }
+
+  return { source: "packages", ids, warnings };
+}
+
+/**
+ * A task may be submitted when it is in the seed, or when this session's
+ * delivery model would rank it from the package pool.
+ */
+export function taskIsInSessionDelivery(session, db, taskId) {
+  if (!taskId) return false;
+  if ((session?.taskIds || []).includes(taskId)) return true;
+  if (typeof session?.deliveryModelId !== "string" || session.deliveryModelId === "") return false;
+  const resolution = resolveAssemblyModelForSession(session, db);
+  if (!resolution?.assemblyModel || resolution.authoritative !== true) return false;
+  const resolved = selectionPolicyForDelivery(resolution.deliveryModel, db);
+  const strategy = resolved.policy?.type || session.selectionStrategy;
+  if (strategy === "fixed") return false;
+  const pool = buildAssemblyPackagePool(session, db, resolution.assemblyModel);
+  return pool.source === "packages" && pool.ids.includes(taskId);
+}
+
+/** Keep the seed prefix and record a delivered task that was not in it. */
+export function noteDeliveredTask(session, taskId) {
+  if (!session || !taskId) return;
+  if (!Array.isArray(session.taskIds)) session.taskIds = [];
+  if (!session.taskIds.includes(taskId)) session.taskIds.push(taskId);
+}
+
+/**
+ * Seed plus any response whose task id was not stored on the seed.
+ * Report loops use this so a delivered off-seed task is still listed.
+ */
+export function taskIdsIncludingDelivered(session) {
+  const ids = Array.isArray(session?.taskIds) ? [...session.taskIds] : [];
+  const seen = new Set(ids);
+  for (const response of session?.responses || []) {
+    const taskId = response?.taskId;
+    if (typeof taskId === "string" && taskId !== "" && !seen.has(taskId)) {
+      ids.push(taskId);
+      seen.add(taskId);
+    }
+  }
+  return ids;
 }
 
 /**
@@ -966,11 +1131,12 @@ function selectIrt(session, db, warnings) {
  * BayesianNetwork: the candidate with the greatest expected reduction in
  * uncertainty about the attributes it measures, given current beliefs.
  *
- * See F24 in the header for what this replaces and why "first unanswered"
- * is the honest fallback rather than a bug: it is what the pre-D56 branch
- * actually did in every case, so a session with no diagnostic data behaves
- * exactly as it did before, and one WITH diagnostic data now gets the
- * selection the strategy always claimed to make.
+ * When no candidate has evaluable diagnostic information, the fallback is
+ * pool order: the first remaining candidate in the list this function was
+ * given. On a roster session that list is the seed, so the task is the
+ * same one the old first-unanswered rule returned. The fallback name and
+ * the warning say that this was not an information-gain ranking. G-DINA
+ * still cannot be ranked and uses this fallback (D60 P1-5).
  */
 function selectBayesianNetwork(session, db, warnings) {
   let candidates = candidatesFor(session, db);
@@ -1093,28 +1259,29 @@ function selectBayesianNetwork(session, db, warnings) {
     return { taskId: best.taskId, strategy: "BayesianNetwork", debug: { ...best.debug, unrankable } };
   }
 
-  /* Nothing could be ranked. Fall back to first-unanswered -- which is what
-     this strategy has ALWAYS actually done (F24) -- and say why, rather
-     than returning an accidental default dressed as a computed choice. */
+  /* Nothing could be ranked. Deliver the first remaining candidate in
+     pool order and say so. Pool order is the list candidatesFor walked:
+     the seed on a roster session, or the G20 package pool (seed, then
+     task id) when a delivery model widened it. */
   const first = candidates[0];
   if (!first) return {};
 
-  if (unrankable.length > 0) {
-    warnings.push(
-      `BayesianNetwork selection could rank no candidate on information gain and fell back to the first unanswered task. Reasons: ${unrankable
-        .map((u) => `${u.taskId} (${u.reason})`)
-        .join("; ")}`
-    );
-  }
+  const reason =
+    "No candidate had evaluable diagnostic information. The first remaining candidate in pool order was delivered. Pool order is the session seed, then task id. This is not an information-gain ranking.";
+  const detail = unrankable.length > 0
+    ? ` Reasons: ${unrankable.map((u) => `${u.taskId} (${u.reason})`).join("; ")}`
+    : "";
+  warnings.push(
+    `BayesianNetwork selection could rank no candidate on information gain. It delivered the first remaining candidate in pool order (session seed, then task id). This is not an information-gain ranking.${detail}`
+  );
 
   return {
     taskId: first.taskId,
     strategy: "BayesianNetwork",
     debug: {
       totalGain: null,
-      fallback: "first-unanswered",
-      reason:
-        "No candidate carried evaluable diagnostic information (see unrankable). This is the pre-D56 behaviour of this strategy in every case -- see F24.",
+      fallback: "pool-order",
+      reason,
       unrankable,
     },
   };
@@ -1162,6 +1329,7 @@ export function selectNextActivity(session, db) {
   }
 
   let strategy = session.selectionStrategy;
+  let packagePool = null;
 
   if (assemblyResolution.assemblyModel) {
     const assemblyModel = assemblyResolution.assemblyModel;
@@ -1199,7 +1367,14 @@ export function selectNextActivity(session, db) {
       }
     }
 
-    const stopping = evaluateStoppingRules(session, assemblyModel, db);
+    if (authoritative && strategy !== "fixed") {
+      packagePool = buildAssemblyPackagePool(session, db, assemblyModel);
+      warnings.push(...packagePool.warnings);
+    }
+
+    const stopping = evaluateStoppingRules(session, assemblyModel, db, {
+      candidateIds: packagePool?.source === "packages" ? packagePool.ids : null,
+    });
     warnings.push(...stopping.warnings);
 
     if (stopping.stop) {
@@ -1208,11 +1383,18 @@ export function selectNextActivity(session, db) {
   }
 
   let selectionSession = session;
+  const packageIds = packagePool?.source === "packages" ? packagePool.ids : null;
   if (
     assemblyResolution.assemblyModel &&
     assemblyConstraintsActive(assemblyResolution.assemblyModel.constraints)
   ) {
-    const plan = planConstraintSelection(session, assemblyResolution.assemblyModel, db, strategy);
+    const plan = planConstraintSelection(
+      session,
+      assemblyResolution.assemblyModel,
+      db,
+      strategy,
+      packageIds
+    );
     warnings.push(...plan.warnings);
     if (plan.stop) {
       return { stopped: plan.stop, strategy, ...(warnings.length ? { warnings } : {}) };
@@ -1224,6 +1406,12 @@ export function selectNextActivity(session, db) {
     selectionSession = {
       ...session,
       taskIds: plan.eligibleIds,
+      currentTaskIndex: 0,
+    };
+  } else if (packageIds) {
+    selectionSession = {
+      ...session,
+      taskIds: packageIds,
       currentTaskIndex: 0,
     };
   }
@@ -1259,6 +1447,10 @@ export const __testing__ = {
   resolveAssemblyModelForSession,
   evaluateStoppingRules,
   candidatesFor,
+  buildAssemblyPackagePool,
+  taskIsInSessionDelivery,
+  noteDeliveredTask,
+  taskIdsIncludingDelivered,
   applyPrerequisiteGating,
   resolveGatingPolicy,
   selectionPolicyForDelivery,

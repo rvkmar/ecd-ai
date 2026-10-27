@@ -40,7 +40,7 @@ import { recordSubmitOutcome } from "../utils/submitStats.js";
 // D56: Activity Selection. /next-task's whole strategy block used to live
 // inline below; it now lives in one module that reads the composite library
 // and the live posteriors instead of db.questions. See that file's header.
-import { selectNextActivity, resolveAssemblyModelForSession, selectionPolicyForDelivery } from "../delivery/activitySelection.js";
+import { selectNextActivity, resolveAssemblyModelForSession, selectionPolicyForDelivery, taskIsInSessionDelivery, noteDeliveredTask } from "../delivery/activitySelection.js";
 import { persistableAssemblyProgress } from "../delivery/assemblyConstraints.js";
 import {
   commitFinishedSession,
@@ -422,7 +422,7 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     });
   }
 
-  if (!session.taskIds.includes(taskId)) {
+  if (!taskIsInSessionDelivery(session, db, taskId)) {
     return res.status(400).json({ error: `Task ${taskId} not part of this session` });
   }
 
@@ -625,6 +625,7 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
 
     session.responses.push(response);
     session.currentTaskIndex = Math.min(session.currentTaskIndex + 1, session.taskIds.length);
+    noteDeliveredTask(session, taskId);
     session.updatedAt = new Date().toISOString();
 
     // Day 30: defensive -- a task instance record predating this field, or
@@ -782,6 +783,7 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
 
   session.responses.push(response);
   session.currentTaskIndex = Math.min(session.currentTaskIndex + 1, session.taskIds.length);
+  noteDeliveredTask(session, taskId);
   session.updatedAt = new Date().toISOString();
 
   // 🔹 Update Task Instance: record generated evidence/observations

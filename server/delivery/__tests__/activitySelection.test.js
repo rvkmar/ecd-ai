@@ -709,16 +709,23 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
   });
 
   it("with no diagnostic data at all it degrades to first-unanswered and SAYS SO", () => {
+
     // This is the pre-D56 behaviour in every case (F24). Preserving it is
+
     // deliberate; presenting it as a computed choice is what changed.
+
     const s = session({ taskIds: ["tA", "tB"], selectionStrategy: "BayesianNetwork" });
 
     const result = selectNextActivity(s, dinaDb());
 
     expect(result.taskId).toBe("tA");
+
     expect(result.debug.fallback).toBe("first-unanswered");
+
     expect(result.debug.totalGain).toBeNull();
+
     expect(result.warnings[0]).toContain("fell back to the first unanswered task");
+
   });
 
   it("an item requiring no attributes is not rankable", () => {
@@ -734,6 +741,7 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
     const result = selectNextActivity(s, db);
 
     expect(result.debug.fallback).toBe("first-unanswered");
+
     expect(result.debug.unrankable[0].reason).toContain("no required attributes");
   });
 
@@ -1372,8 +1380,12 @@ describe("selectNextActivity is pure", () => {
   });
 });
 
+
+
 describe("assembly model content constraints", () => {
+
   function constrainedDb(constraints, stoppingRules = { maxItems: 99 }) {
+
     return irtDb({
       taskModels: [
         { id: "tm1", versionNumber: 1, evidenceModelIds: ["em1"], taskModelVariableSettings: [{ taskModelVariableId: "tmv-bloom", variation: "fixed", fixedValue: "remember" }] },
@@ -1419,7 +1431,10 @@ describe("assembly model content constraints", () => {
         }),
       ],
     });
+
   }
+
+
 
   it("skips a task model that is already at its maximum and keeps a fixed form otherwise unchanged", () => {
     const db = constrainedDb({ taskModelCounts: [{ taskModelId: "tm1", max: 1 }] });
@@ -1524,4 +1539,5 @@ describe("assembly model content constraints", () => {
     );
     expect(result.taskId).toBe("t3");
   });
+
 });
