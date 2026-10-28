@@ -8,7 +8,7 @@ import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
-import { bindSessions } from "../sessions/sessionRepository.js";
+import { attachEvidenceSessions } from "../sessions/sessionRepository.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { applyParameterSetActivation } from "../../src/utils/parameterSetStatus.js";
 import {
@@ -189,7 +189,7 @@ function readinessErrorsFor(model, db) {
 ===================================================== */
 router.get("/", async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   res.json(db.evidenceModels || []);
 });
 
@@ -198,7 +198,7 @@ router.get("/", async (req, res) => {
 ===================================================== */
 router.get("/:id", async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const model = db.evidenceModels?.find(m => m.id === req.params.id);
 
   if (!model) {
@@ -430,7 +430,7 @@ export function createEvidenceModelRecord(payload = {}, db, idSuffix = "", optio
 ===================================================== */
 router.post("/", canAuthor, async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const result = createEvidenceModelRecord(req.body || {}, db);
   if (!result.ok) return res.status(result.status).json({ error: result.error });
   saveDB(db);
@@ -462,7 +462,7 @@ router.post("/bulk", canAuthor, async (req, res) => {
   }
 
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const results = rows.map((row, i) => {
     const result = createEvidenceModelRecord(row || {}, db, `_${i}`, {
       competencyModelId,
@@ -491,7 +491,7 @@ router.post("/bulk", canAuthor, async (req, res) => {
 ===================================================== */
 router.put("/:id", canAuthor, async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const idx = db.evidenceModels?.findIndex(m => m.id === req.params.id);
 
   if (idx === -1) return res.status(404).json({ error: "Model not found" });
@@ -574,7 +574,7 @@ router.put("/:id", canAuthor, async (req, res) => {
 ===================================================== */
 router.post("/:id/confirm", canAuthor, async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const model = db.evidenceModels?.find(m => m.id === req.params.id);
 
   if (!model) return res.status(404).json({ error: "Model not found" });
@@ -702,7 +702,7 @@ router.post("/:id/confirm", canAuthor, async (req, res) => {
 ===================================================== */
 router.post("/:id/clone", canAuthor, async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const original = db.evidenceModels?.find(m => m.id === req.params.id);
 
   if (!original) return res.status(404).json({ error: "Model not found." });
@@ -745,7 +745,7 @@ router.post("/:id/clone", canAuthor, async (req, res) => {
 ===================================================== */
 router.post("/:id/recalibrate", canAuthor, async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const model = db.evidenceModels?.find(m => m.id === req.params.id);
 
   if (!model) return res.status(404).json({ error: "Model not found" });
@@ -862,7 +862,7 @@ router.post("/:id/recalibrate", canAuthor, async (req, res) => {
 ===================================================== */
 router.post("/:id/attach-seed-parameter-sets", canAuthor, async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const model = db.evidenceModels?.find(m => m.id === req.params.id);
 
   if (!model) return res.status(404).json({ error: "Model not found." });
@@ -932,7 +932,7 @@ router.post("/:id/attach-seed-parameter-sets", canAuthor, async (req, res) => {
 ===================================================== */
 router.post("/:id/activate-parameter-set", canAuthor, async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const model = db.evidenceModels?.find(m => m.id === req.params.id);
 
   if (!model) return res.status(404).json({ error: "Model not found." });
@@ -983,7 +983,7 @@ router.post("/:id/activate-parameter-set", canAuthor, async (req, res) => {
 ===================================================== */
 router.post("/:id/decision-rule", canAuthor, async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const model = db.evidenceModels?.find(m => m.id === req.params.id);
 
   if (!model) return res.status(404).json({ error: "Model not found." });
@@ -1218,7 +1218,7 @@ function applyLifecycleTransition(model, nextStatus, db) {
 router.patch("/:id/lifecycle", canAuthor, async (req, res) => {
 
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const model = db.evidenceModels?.find(m => m.id === req.params.id);
 
   if (!model) return res.status(404).json({ error: "Model not found." });
@@ -1257,7 +1257,7 @@ router.patch("/:id/lifecycle", canAuthor, async (req, res) => {
 router.post("/:id/activate", canAuthor, async (req, res) => {
 
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const model = db.evidenceModels?.find(m => m.id === req.params.id);
 
   if (!model) return res.status(404).json({ error: "Model not found." });
@@ -1277,7 +1277,7 @@ router.post("/:id/activate", canAuthor, async (req, res) => {
 ===================================================== */
 router.delete("/:id", canAuthor, async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  await attachEvidenceSessions(db, req.params?.id);
   const model = db.evidenceModels?.find(m => m.id === req.params.id);
 
   if (!model) return res.status(404).json({ error: "Model not found" });

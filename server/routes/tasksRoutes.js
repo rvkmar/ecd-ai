@@ -3,7 +3,7 @@ import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB, readRawDB } from "../../src/utils/db-server.js";
-import { bindSessions, commitSessions, listSessions, sessionsUseExternalStore } from "../sessions/sessionRepository.js";
+import { deleteSessionsWithTask, querySessions, sessionsUseExternalStore } from "../sessions/sessionRepository.js";
 import { sessionAssignedToStudent } from "../../src/utils/sessionPlay.js";
 import { validateEntity } from "../../src/utils/schema.js";
 
@@ -65,7 +65,7 @@ async function taskOnAssigneeSession(taskId, user, rawDb) {
   const students = rawDb.students || [];
   const users = rawDb.users || [];
   const sessions = sessionsUseExternalStore()
-    ? await listSessions(rawDb)
+    ? await querySessions(rawDb, { taskId })
     : rawDb.sessions || [];
   return sessions.some(
     (s) =>
@@ -198,11 +198,7 @@ router.delete("/:id", canDelete, async (req, res) => {
     return res.status(404).json({ error: "Task not found" });
   }
 
-  await bindSessions(db);
-  db.sessions = (db.sessions || []).filter(
-    (s) => !(s.taskIds || []).includes(req.params.id)
-  );
-  await commitSessions(db);
+  await deleteSessionsWithTask(db, req.params.id);
 
   saveDB(db);
   res.json({ success: true });

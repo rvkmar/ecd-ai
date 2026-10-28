@@ -13,8 +13,9 @@ import fs from "fs";
 import path from "path";
 import { backupDirPath, forgetDbCache } from "../../../src/utils/db-server.js";
 import { resolveSessionsBackend } from "../../sessions/sessionBackend.js";
+import { sessionsMatch } from "../../sessions/sessionCanonical.js";
 import {
-  findStoredSessionIds,
+  loadStoredSessions,
   upsertSessions,
 } from "../../sessions/sessionRepository.js";
 
@@ -54,7 +55,7 @@ export async function migrateFileSessions({
   file = dbFilePath(),
   now = new Date(),
   upsert = upsertSessions,
-  findIds = findStoredSessionIds,
+  loadStored = loadStoredSessions,
 } = {}) {
   if (backend === "json") {
     return {
@@ -96,11 +97,16 @@ export async function migrateFileSessions({
 
   const copies = writePreMigrationCopy(file, now instanceof Date ? now : new Date(now));
   await upsert(sessions);
-  const found = new Set(await findIds(ids));
-  const missing = ids.filter((id) => !found.has(id));
-  if (missing.length) {
+  const stored = await loadStored(ids);
+  const storedById = new Map((stored || []).filter((row) => row?.id).map((row) => [row.id, row]));
+  const mismatched = [];
+  for (const source of sessions) {
+    const got = storedById.get(source.id);
+    if (!got || !sessionsMatch(source, got)) mismatched.push(source.id);
+  }
+  if (mismatched.length) {
     throw new Error(
-      `Session migration verify failed (${missing.length} id(s) missing in the store, first ${missing.slice(0, 5).join(", ")}). db.json was not changed. Pre-migration copy: ${copies.stable}`
+      `Session migration verify failed (${mismatched.length} session(s) do not match the store, first ${mismatched.slice(0, 5).join(", ")}). db.json was not changed. Pre-migration copy: ${copies.stable}`
     );
   }
 

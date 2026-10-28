@@ -3,13 +3,13 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs, submitRateLimiter } from "../utils/requestValidation.js";
 import { loadDB, saveDB, finishSession, readRawDB } from "../../src/utils/db-server.js";
 import {
-  bindSessions,
-  commitSessions,
+  deleteStoredSession,
   getSessionById,
-  listSessions,
+  insertStoredSessions,
+  querySessions,
   replaceStoredSession,
-  sessionsUseExternalStore,
 } from "../sessions/sessionRepository.js";
+import { canonicalSession } from "../sessions/sessionCanonical.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
 import {
@@ -123,15 +123,9 @@ function storeAssemblyProgress(session, db, smvProgress) {
   );
 }
 
-async function openSessionDb() {
-  const db = loadDB();
-  await bindSessions(db);
-  return db;
-}
-
-async function saveSessionDb(db, options) {
-  await commitSessions(db);
-  saveDB(db, options);
+async function persistSession(db, session) {
+  await replaceStoredSession(db, session);
+  saveDB(db);
 }
 
 // ------------------------------
@@ -147,7 +141,7 @@ async function saveSessionDb(db, options) {
 // model's own policy is stored and the body is not consulted.
 router.post("/", async (req, res) => {
   const { taskIds, studentId, studentIds, cohortId, selectionStrategy, nextTaskPolicy, deliveryModelId } = req.body;
-  const db = await openSessionDb();
+  const db = loadDB();
   // A brand-new store has no collections yet. Reading them as arrays is
   // what lets the first session save instead of throwing on `.find`.
   for (const key of ["tasks", "sessions", "policies", "students", "users"]) {
@@ -294,9 +288,8 @@ router.post("/", async (req, res) => {
     created.push(newSession);
   }
 
-  if (!db.sessions) db.sessions = [];
-  db.sessions.push(...created);
-  await saveSessionDb(db);
+  await insertStoredSessions(db, created);
+  saveDB(db);
 
   if (created.length === 1) {
     return res.status(201).json(created[0]);
@@ -309,8 +302,8 @@ router.post("/", async (req, res) => {
 // GET /api/sessions
 // ------------------------------
 router.get("/", async (req, res) => {
-  const db = await openSessionDb();
-  const sessions = db.sessions || [];
+  const db = loadDB();
+  const sessions = await querySessions(db);
   res.json(sessionsVisibleToUser(sessions, req.user, db.students || [], db.users || []));
 });
 
@@ -318,9 +311,8 @@ router.get("/", async (req, res) => {
 // GET /api/sessions/active
 // ------------------------------
 router.get("/active", async (req, res) => {
-  const db = await openSessionDb();
-  if (!db.sessions) db.sessions = [];
-  const active = db.sessions.filter((s) => s.status !== "archived");
+  const db = loadDB();
+  const active = await querySessions(db, { statusNe: "archived" });
   res.json(sessionsVisibleToUser(active, req.user, db.students || [], db.users || []));
 });
 
@@ -328,9 +320,8 @@ router.get("/active", async (req, res) => {
 // GET /api/sessions/archived
 // ------------------------------
 router.get("/archived", async (req, res) => {
-  const db = await openSessionDb();
-  if (!db.sessions) db.sessions = [];
-  const archived = db.sessions.filter((s) => s.status === "archived");
+  const db = loadDB();
+  const archived = await querySessions(db, { status: "archived" });
   res.json(sessionsVisibleToUser(archived, req.user, db.students || [], db.users || []));
 });
 
@@ -342,8 +333,8 @@ router.get("/archived", async (req, res) => {
 // treated as a session id.
 router.get("/mine", async (req, res) => {
   try {
-    const db = await openSessionDb();
-    const sessions = db.sessions || [];
+    const db = loadDB();
+    const sessions = await querySessions(db);
     const students = db.students || [];
     const users = db.users || [];
     const user = req.user || {};
@@ -371,8 +362,9 @@ router.get("/mine", async (req, res) => {
 // Must be registered before /:id. Tenant scope comes from loadDB.
 const staffRater = authorizeRole(["admin", "district", "teacher"]);
 router.get("/rating-queue", staffRater, async (req, res) => {
-  const db = await openSessionDb();
-  const queue = blindedRatingQueueFromSessions(db.sessions || []);
+  const db = loadDB();
+  const sessions = await querySessions(db, { pendingRating: true });
+  const queue = blindedRatingQueueFromSessions(sessions);
   return res.json({ items: queue });
 });
 
@@ -382,9 +374,19 @@ router.get("/rating-queue", staffRater, async (req, res) => {
 // Re-apply identification to stored responses that were saved unscored.
 // Admin only. Does not accept new answers.
 router.post("/rescore-responses", authorizeRole(["admin"]), async (req, res) => {
-  const db = await openSessionDb();
+  const db = loadDB();
+  const sessions = await querySessions(db, { unscoped: true });
+  const before = new Map(sessions.map((row) => [row.id, canonicalSession(row)]));
+  db.sessions = sessions;
   const updated = rescoreStoredItemResponses(db);
-  if (updated > 0) await saveSessionDb(db);
+  if (updated > 0) {
+    for (const session of db.sessions) {
+      if (canonicalSession(session) !== before.get(session.id)) {
+        await replaceStoredSession(db, session);
+      }
+    }
+    saveDB(db);
+  }
   res.json({ updated });
 });
 
@@ -395,8 +397,8 @@ router.get("/:id", async (req, res) => {
   if (isReservedSessionCollectionId(req.params.id)) {
     return res.json([]);
   }
-  const db = await openSessionDb();
-  const session = (db.sessions || []).find(s => s.id === req.params.id);
+  const db = loadDB();
+  const session = await getSessionById(db, req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
   if (rejectUnassignedStudent(req, res, session, db)) return;
   // D123: honest pending-human reporting — never present provisional as final.
@@ -918,9 +920,7 @@ router.post("/:id/human-rating", staffRater, async (req, res) => {
   // writes that log without the session body.
   await replaceStoredSession(db, session);
   saveDB(db);
-  const queueSessions = sessionsUseExternalStore()
-    ? await listSessions(db)
-    : db.sessions || [];
+  const queueSessions = await querySessions(db, { pendingRating: true });
   const pendingHumanRatings = pendingHumanRatingsFromSession(session);
   return res.json({
     sessionId: session.id,
@@ -942,8 +942,8 @@ router.post("/:id/human-rating", staffRater, async (req, res) => {
 // ------------------------------
 // Blinded single-item card for the rater UI (work product + rubric).
 router.get("/:id/rating/:responseIndex", staffRater, async (req, res) => {
-  const db = await openSessionDb();
-  const session = (db.sessions || []).find((s) => s.id === req.params.id);
+  const db = loadDB();
+  const session = await getSessionById(db, req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
   const index = Number(req.params.responseIndex);
   if (!Number.isInteger(index) || index < 0) {
@@ -964,8 +964,9 @@ router.get("/:id/rating/:responseIndex", staffRater, async (req, res) => {
 // GET /api/sessions/:id/next-task
 // ------------------------------
 router.get("/:id/next-task", async (req, res) => {
-  const db = await openSessionDb();
-  const session = db.sessions.find(s => s.id === req.params.id && !s.isCompleted);
+  const db = loadDB();
+  const loaded = await getSessionById(db, req.params.id);
+  const session = loaded && !loaded.isCompleted ? loaded : null;
   if (!session) return res.json({});
   if (rejectUnassignedStudent(req, res, session, db)) return;
 
@@ -991,7 +992,7 @@ router.get("/:id/next-task", async (req, res) => {
     const stoppedAt = new Date().toISOString();
     session.stopped = { ...decision.stopped, stoppedAt };
     session.updatedAt = stoppedAt;
-    await saveSessionDb(db);
+    await persistSession(db, session);
     return res.json({ ...decision, stopped: session.stopped });
   }
 
@@ -1062,12 +1063,9 @@ function attachPresentationOverlay(decision, session, _db) {
 // become in_progress; already in_progress is a no-op persist.
 router.post("/:id/play", async (req, res) => {
   const { id } = req.params;
-  const db = await openSessionDb();
-  if (!db.sessions) db.sessions = [];
-  const idx = db.sessions.findIndex((s) => s.id === id);
-  if (idx === -1) return res.status(404).json({ error: "Session not found" });
-
-  const session = db.sessions[idx];
+  const db = loadDB();
+  const session = await getSessionById(db, id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
   if (rejectUnassignedStudent(req, res, session, db)) return;
   if (session.isCompleted || ["completed", "archived", "submitted", "reviewed"].includes(session.status)) {
     return res.status(400).json({ error: "Session cannot be played" });
@@ -1076,7 +1074,7 @@ router.post("/:id/play", async (req, res) => {
   session.status = SESSION_STATUS.IN_PROGRESS;
   session.updatedAt = new Date().toISOString();
   if (!session.startedAt) session.startedAt = session.updatedAt;
-  await saveSessionDb(db);
+  await persistSession(db, session);
   res.json(session);
 });
 
@@ -1085,16 +1083,15 @@ router.post("/:id/play", async (req, res) => {
 // ------------------------------
 router.post("/:id/pause", async (req, res) => {
   const { id } = req.params;
-  const db = await openSessionDb();
-  if (!db.sessions) db.sessions = [];
-  const idx = db.sessions.findIndex((s) => s.id === id);
-  if (idx === -1) return res.status(404).json({ error: "Session not found" });
-  if (rejectUnassignedStudent(req, res, db.sessions[idx], db)) return;
+  const db = loadDB();
+  const session = await getSessionById(db, id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+  if (rejectUnassignedStudent(req, res, session, db)) return;
 
-  db.sessions[idx].status = "paused";
-  db.sessions[idx].updatedAt = new Date().toISOString();
-  await saveSessionDb(db);
-  res.json(db.sessions[idx]);
+  session.status = "paused";
+  session.updatedAt = new Date().toISOString();
+  await persistSession(db, session);
+  res.json(session);
 });
 
 // ------------------------------
@@ -1102,20 +1099,19 @@ router.post("/:id/pause", async (req, res) => {
 // ------------------------------
 router.post("/:id/resume", async (req, res) => {
   const { id } = req.params;
-  const db = await openSessionDb();
-  if (!db.sessions) db.sessions = [];
-  const idx = db.sessions.findIndex((s) => s.id === id);
-  if (idx === -1) return res.status(404).json({ error: "Session not found" });
-  if (rejectUnassignedStudent(req, res, db.sessions[idx], db)) return;
+  const db = loadDB();
+  const session = await getSessionById(db, id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+  if (rejectUnassignedStudent(req, res, session, db)) return;
 
-  if (db.sessions[idx].status !== SESSION_STATUS.PAUSED) {
+  if (session.status !== SESSION_STATUS.PAUSED) {
     return res.status(400).json({ error: "Session is not paused" });
   }
 
-  const session = db.sessions[idx];
   const draft = structuredClone(session);
   draft.status = SESSION_STATUS.IN_PROGRESS;
   draft.updatedAt = new Date().toISOString();
+  let stored = session;
   try {
     refreshBayesianNetworkPosteriors(draft, db);
   } catch {
@@ -1123,13 +1119,14 @@ router.post("/:id/resume", async (req, res) => {
   }
   const check = validateEntity("sessions", draft, db);
   if (check.valid) {
-    db.sessions[idx] = draft;
+    stored = draft;
   } else {
     session.status = SESSION_STATUS.IN_PROGRESS;
     session.updatedAt = draft.updatedAt;
+    stored = session;
   }
-  await saveSessionDb(db);
-  res.json(db.sessions[idx]);
+  await persistSession(db, stored);
+  res.json(stored);
 });
 
 
@@ -1140,12 +1137,9 @@ router.post("/:id/resume", async (req, res) => {
 // ------------------------------
 router.post("/:id/wizard-timing", async (req, res) => {
   const { id } = req.params;
-  const db = await openSessionDb();
-  if (!db.sessions) db.sessions = [];
-  const idx = db.sessions.findIndex((s) => s.id === id);
-  if (idx === -1) return res.status(404).json({ error: "Session not found" });
-
-  const session = db.sessions[idx];
+  const db = loadDB();
+  const session = await getSessionById(db, id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
   if (rejectUnassignedStudent(req, res, session, db)) return;
 
   const phase = String(req.body?.phase || "").trim();
@@ -1167,7 +1161,7 @@ router.post("/:id/wizard-timing", async (req, res) => {
   const now = new Date().toISOString();
   applyWizardTimingToSession(session, { phase, close, atIso: now });
   session.updatedAt = now;
-  await saveSessionDb(db);
+  await persistSession(db, session);
   res.json(session);
 });
 
@@ -1176,13 +1170,10 @@ router.post("/:id/wizard-timing", async (req, res) => {
 // ------------------------------
 router.post("/:id/finish", async (req, res) => {
   const { id } = req.params;
-  const db = await openSessionDb();
-  if (!db.sessions) db.sessions = [];
-  const idx = db.sessions.findIndex((s) => s.id === id);
-  if (idx === -1) return res.status(404).json({ error: "Session not found" });
-  if (rejectUnassignedStudent(req, res, db.sessions[idx], db)) return;
-
-  const session = db.sessions[idx];
+  const db = loadDB();
+  const session = await getSessionById(db, id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+  if (rejectUnassignedStudent(req, res, session, db)) return;
   const now = new Date().toISOString();
   session.status = "completed"; // ✅ mark completed
   session.isCompleted = true; // keep legacy flag if used
@@ -1199,7 +1190,7 @@ router.post("/:id/finish", async (req, res) => {
   // erase an earlier record.
   commitFinishedSession(db, session, { now });
 
-  await saveSessionDb(db);
+  await persistSession(db, session);
   res.json(session);
 });
 
@@ -1208,19 +1199,16 @@ router.post("/:id/finish", async (req, res) => {
 // ------------------------------
 router.post("/:id/review", async (req, res) => {
   const { id } = req.params;
-  const db = await openSessionDb();
-  if (!db.sessions) db.sessions = [];
-  const idx = db.sessions.findIndex((s) => s.id === id);
-  if (idx === -1) return res.status(404).json({ error: "Session not found" });
-
-  const session = db.sessions[idx];
+  const db = loadDB();
+  const session = await getSessionById(db, id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
   if (rejectUnassignedStudent(req, res, session, db)) return;
   session.status = "reviewed";
   session.isCompleted = true;
   session.reviewedAt = new Date().toISOString();
   session.updatedAt = new Date().toISOString();
 
-  await saveSessionDb(db);
+  await persistSession(db, session);
   res.json(session);
 });
 
@@ -1229,15 +1217,14 @@ router.post("/:id/review", async (req, res) => {
 // ------------------------------
 router.post("/:id/archive", async (req, res) => {
   const { id } = req.params;
-  const db = await openSessionDb();
-  if (!db.sessions) db.sessions = [];
-  const idx = db.sessions.findIndex((s) => s.id === id);
-  if (idx === -1) return res.status(404).json({ error: "Session not found" });
+  const db = loadDB();
+  const session = await getSessionById(db, id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
 
-  db.sessions[idx].status = "archived";
-  db.sessions[idx].updatedAt = new Date().toISOString();
-  await saveSessionDb(db);
-  res.json(db.sessions[idx]);
+  session.status = "archived";
+  session.updatedAt = new Date().toISOString();
+  await persistSession(db, session);
+  res.json(session);
 });
 
 // ------------------------------
@@ -1246,13 +1233,10 @@ router.post("/:id/archive", async (req, res) => {
 // For admin use only
 router.delete("/:id", adminOnly, async (req, res) => {
   const { id } = req.params;
-  const db = await openSessionDb();
-  if (!db.sessions) db.sessions = [];
-  const idx = db.sessions.findIndex((s) => s.id === id);
-  if (idx === -1) return res.status(404).json({ error: "Session not found" });
-
-  const deleted = db.sessions.splice(idx, 1)[0];
-  await saveSessionDb(db);
+  const db = loadDB();
+  const deleted = await deleteStoredSession(db, id);
+  if (!deleted) return res.status(404).json({ error: "Session not found" });
+  saveDB(db);
   res.json({ success: true, deleted });
 });
 

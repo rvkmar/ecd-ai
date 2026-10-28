@@ -5,7 +5,7 @@
 
 import cron from "node-cron";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
-import { bindSessions } from "../sessions/sessionRepository.js";
+import { querySessions } from "../sessions/sessionRepository.js";
 import { kickQueue } from "../r/calibrationWorker.js";
 import { runScheduledCalibrationEnqueue } from "../r/scheduledCalibrationEnqueue.js";
 
@@ -37,7 +37,7 @@ export default function startScheduledCalibrationCron(options = {}) {
 
 async function runScheduledTick() {
   const db = loadDB();
-  await bindSessions(db);
+  db.sessions = await querySessions(db, { closed: true, unscoped: true });
   const beforeActive = snapshotActiveParameterSetIds(db);
   const result = runScheduledCalibrationEnqueue(db);
   const afterActive = snapshotActiveParameterSetIds(db);

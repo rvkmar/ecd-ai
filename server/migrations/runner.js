@@ -26,6 +26,7 @@
 
 import fs from "fs";
 import path from "path";
+import mongoose from "mongoose";
 
 function dbFilePath() {
   return process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
@@ -97,4 +98,10 @@ export async function runMigrations(migrations, options = {}) {
     results.push(await runMigration(migration, options));
   }
   return results;
+}
+
+export async function shutdownMigrationConnections() {
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
 }

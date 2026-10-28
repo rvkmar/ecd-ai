@@ -1,12 +1,9 @@
 // Session data access.
 //
-// JSON harness: callers keep using the sessions array on the ECD db object.
-// bindSessions / commitSessions / replaceStoredSession are no-ops there,
-// and saveDB still writes the array into db.json.
-//
-// memory and mongo: the array on a request db is a clone. commitSessions
-// and replaceStoredSession write only the documents that changed. saveDB
-// omits sessions from the file (see db-server.js).
+// JSON harness: the sessions array on the ECD db object. saveDB writes it.
+// memory and mongo: one document read or write per call. List uses a
+// query plus the tenancy filter. It does not clone the collection twice
+// or stringify every session to find a diff.
 
 import { getTenancyContext } from "../utils/tenancyContext.js";
 import { filterRows, rowVisible } from "../utils/tenancyScope.js";
@@ -16,29 +13,24 @@ import {
   sessionsUseExternalStore,
 } from "./sessionBackend.js";
 import {
-  mongoFindIds,
-  mongoLoadAll,
+  mongoFind,
+  mongoFindOne,
   mongoRemove,
   mongoReplace,
+  sessionToPlain,
 } from "./mongoSessionStore.js";
+import { EVALUATION_STATUS } from "../delivery/evaluationPhases.js";
 
 const memoryDocs = new Map();
-let memoryLoaded = false;
 const writeLog = [];
-const boundSnap = new WeakMap();
 
 function clone(value) {
   if (value == null) return value;
   return structuredClone(value);
 }
 
-function cacheMap() {
-  return memoryDocs;
-}
-
 export function resetSessionStoreForTests() {
   memoryDocs.clear();
-  memoryLoaded = false;
   writeLog.length = 0;
 }
 
@@ -48,76 +40,186 @@ function noteWrite(op, id) {
   writeLog.push({ op, id });
 }
 
-async function driverLoadAll() {
-  const backend = resolveSessionsBackend();
-  if (backend === "mongo") return mongoLoadAll();
-  return [...memoryDocs.values()].map(clone);
-}
+const PENDING_RATING = [
+  EVALUATION_STATUS.PENDING_HUMAN,
+  EVALUATION_STATUS.PENDING_ADJUDICATION,
+];
 
-async function driverReplace(doc) {
-  const clean = clone(doc);
-  delete clean._id;
-  delete clean.__v;
-  const backend = resolveSessionsBackend();
-  if (backend === "mongo") {
-    await mongoReplace(clean);
+function assigneeIdsOf(row) {
+  const ids = [];
+  if (row?.studentId != null && row.studentId !== "") ids.push(String(row.studentId));
+  for (const id of row?.studentIds || []) {
+    if (id != null && id !== "") ids.push(String(id));
   }
-  memoryDocs.set(clean.id, clone(clean));
-  return clean;
+  return ids;
 }
 
-async function driverRemove(id) {
-  const backend = resolveSessionsBackend();
-  if (backend === "mongo") await mongoRemove(id);
-  memoryDocs.delete(id);
+function sessionMatchesFilter(row, filter = {}) {
+  if (!row) return false;
+  if (filter.id != null && row.id !== filter.id) return false;
+  if (filter.status != null && row.status !== filter.status) return false;
+  if (filter.statusNe != null && row.status === filter.statusNe) return false;
+  if (Array.isArray(filter.statusIn) && !filter.statusIn.includes(row.status)) return false;
+  if (filter.taskId != null && !(row.taskIds || []).includes(filter.taskId)) return false;
+  if (filter.deliveryModelId != null && row.deliveryModelId !== filter.deliveryModelId) return false;
+  if (filter.studentId != null && !assigneeIdsOf(row).includes(String(filter.studentId))) return false;
+  if (Array.isArray(filter.assigneeIds) && filter.assigneeIds.length) {
+    const want = new Set(filter.assigneeIds.map(String));
+    if (!assigneeIdsOf(row).some((id) => want.has(id))) return false;
+  }
+  if (filter.pendingRating) {
+    const pending = new Set(PENDING_RATING);
+    if (!(row.responses || []).some((response) => pending.has(response?.evaluationStatus))) {
+      return false;
+    }
+  }
+  if (filter.evidenceModelId != null) {
+    if (!(row.responses || []).some((response) => response?.evidenceModelId === filter.evidenceModelId)) {
+      return false;
+    }
+  }
+  if (filter.questionId != null) {
+    if (!(row.responses || []).some((response) => response?.questionId === filter.questionId)) {
+      return false;
+    }
+  }
+  if (filter.closed) {
+    const closed = new Set(["completed", "submitted", "reviewed"]);
+    if (row.isCompleted !== true && !closed.has(row.status)) return false;
+  }
+  if (filter.dependency) {
+    const taskIds = new Set(filter.dependency.taskIds || []);
+    const itemIds = new Set(filter.dependency.itemIds || []);
+    const viaTasks = (row.taskIds || []).some((id) => taskIds.has(id));
+    const viaResponses = (row.responses || []).some(
+      (response) => taskIds.has(response?.taskId) || itemIds.has(response?.itemId)
+    );
+    if (!viaTasks && !viaResponses) return false;
+  }
+  return true;
+}
+
+function mongoFilterFrom(filter = {}) {
+  const query = {};
+  const parts = [];
+  if (filter.id != null) query.id = filter.id;
+  if (filter.status != null) query.status = filter.status;
+  if (filter.statusNe != null) query.status = { $ne: filter.statusNe };
+  if (Array.isArray(filter.statusIn)) query.status = { $in: filter.statusIn };
+  if (filter.taskId != null) query.taskIds = filter.taskId;
+  if (filter.deliveryModelId != null) query.deliveryModelId = filter.deliveryModelId;
+  if (filter.studentId != null) {
+    parts.push({ studentId: filter.studentId }, { studentIds: filter.studentId });
+  }
+  if (Array.isArray(filter.assigneeIds) && filter.assigneeIds.length) {
+    parts.push(
+      { studentId: { $in: filter.assigneeIds } },
+      { studentIds: { $in: filter.assigneeIds } }
+    );
+  }
+  if (filter.pendingRating) {
+    query["responses.evaluationStatus"] = { $in: PENDING_RATING };
+  }
+  if (filter.evidenceModelId != null) {
+    query["responses.evidenceModelId"] = filter.evidenceModelId;
+  }
+  if (filter.questionId != null) {
+    query["responses.questionId"] = filter.questionId;
+  }
+  if (filter.closed) {
+    parts.push(
+      { isCompleted: true },
+      { status: { $in: ["completed", "submitted", "reviewed"] } }
+    );
+  }
+  if (filter.dependency) {
+    const taskIds = filter.dependency.taskIds || [];
+    const itemIds = filter.dependency.itemIds || [];
+    const or = [];
+    if (taskIds.length) {
+      or.push({ taskIds: { $in: taskIds } });
+      or.push({ "responses.taskId": { $in: taskIds } });
+    }
+    if (itemIds.length) or.push({ "responses.itemId": { $in: itemIds } });
+    if (or.length) parts.push(...or);
+    else return { id: { $in: [] } };
+  }
+  if (parts.length === 1) Object.assign(query, parts[0]);
+  else if (parts.length > 1) query.$or = parts;
+  return query;
+}
+
+function applyTenancy(rows, db, filter) {
+  if (filter?.unscoped) return rows;
+  return filterRows("sessions", rows, getTenancyContext(), db || { sessions: rows });
+}
+
+export async function querySessions(db, filter = {}) {
+  if (!sessionsUseExternalStore()) {
+    // loadDB already applied tenancy to the file. Filtering again throws
+    // for a staff token that has no district claim and hides rows the
+    // caller already scoped.
+    return (db?.sessions || []).filter((row) => sessionMatchesFilter(row, filter));
+  }
+  let rows;
+  if (resolveSessionsBackend() === "mongo") {
+    rows = await mongoFind(mongoFilterFrom(filter));
+    rows = rows.filter((row) => sessionMatchesFilter(row, filter));
+  } else {
+    rows = [...memoryDocs.values()]
+      .filter((row) => sessionMatchesFilter(row, filter))
+      .map(clone);
+  }
+  return applyTenancy(rows, db, filter);
 }
 
 export async function ensureSessionCache() {
-  if (!sessionsUseExternalStore()) return;
-  if (memoryLoaded && resolveSessionsBackend() !== "mongo") return;
-  if (resolveSessionsBackend() === "memory") {
-    memoryLoaded = true;
-    return;
-  }
-  if (memoryLoaded) return;
-  const rows = await driverLoadAll();
-  memoryDocs.clear();
-  for (const row of rows) {
-    if (row?.id) memoryDocs.set(row.id, clone(row));
-  }
-  memoryLoaded = true;
-}
-
-function visibleRows(db) {
-  const rows = [...cacheMap().values()].map(clone);
-  return filterRows("sessions", rows, getTenancyContext(), db || { sessions: rows });
+  // Kept so boot can call it. Reads go to Mongo or the memory map directly.
+  return;
 }
 
 export function sessionsForDependencyCheck(db) {
   if (!sessionsUseExternalStore()) return db?.sessions || [];
   if (db?._sessionsBound) return db.sessions || [];
-  if (!memoryLoaded) return db?.sessions || [];
-  return visibleRows(db);
+  return db?.sessions || [];
 }
 
-export async function bindSessions(db) {
-  if (!db || typeof db !== "object") return [];
-  if (!sessionsUseExternalStore()) {
-    if (!Array.isArray(db.sessions)) db.sessions = [];
-    return db.sessions;
-  }
-  await ensureSessionCache();
-  const rows = visibleRows(db);
-  db.sessions = rows.map(clone);
-  db._sessionsBound = true;
-  boundSnap.set(db, rows.map(clone));
-  return db.sessions;
-}
-
-export async function listSessions(db) {
+export async function attachEvidenceSessions(db, evidenceModelId) {
   if (!sessionsUseExternalStore()) return db?.sessions || [];
-  await ensureSessionCache();
-  return visibleRows(db);
+  const rows = evidenceModelId
+    ? await querySessions(db, { evidenceModelId })
+    : [];
+  db.sessions = rows;
+  db._sessionsBound = true;
+  return rows;
+}
+
+export async function attachTaskModelSessions(db, taskModelId) {
+  if (!sessionsUseExternalStore()) return db?.sessions || [];
+  const taskIds = (db?.tasks || []).filter((task) => task?.taskModelId === taskModelId).map((task) => task.id);
+  const itemIds = (db?.items || []).filter((item) => item?.taskModelId === taskModelId).map((item) => item.id);
+  const rows =
+    taskIds.length || itemIds.length
+      ? await querySessions(db, { dependency: { taskIds, itemIds } })
+      : [];
+  db.sessions = rows;
+  db._sessionsBound = true;
+  return rows;
+}
+
+export async function attachItemSessions(db, item) {
+  if (!sessionsUseExternalStore()) return db?.sessions || [];
+  const taskIds = (db?.tasks || [])
+    .filter((task) => task?.taskModelId && task.taskModelId === item?.taskModelId)
+    .map((task) => task.id);
+  const itemIds = item?.id ? [item.id] : [];
+  const rows =
+    taskIds.length || itemIds.length
+      ? await querySessions(db, { dependency: { taskIds, itemIds } })
+      : [];
+  db.sessions = rows;
+  db._sessionsBound = true;
+  return rows;
 }
 
 export async function getSessionById(db, id) {
@@ -125,13 +227,17 @@ export async function getSessionById(db, id) {
   if (!sessionsUseExternalStore()) {
     return (db?.sessions || []).find((row) => row && row.id === id) || null;
   }
-  await ensureSessionCache();
-  const row = cacheMap().get(id);
+  const row =
+    resolveSessionsBackend() === "mongo"
+      ? await mongoFindOne(id)
+      : memoryDocs.has(id)
+        ? clone(memoryDocs.get(id))
+        : null;
   if (!row) return null;
   const ctx = getTenancyContext();
   const peer = db || { sessions: [row] };
   if (!rowVisible("sessions", row, ctx, peer)) return null;
-  return clone(row);
+  return row;
 }
 
 function rememberAudit(db, before, after) {
@@ -139,6 +245,17 @@ function rememberAudit(db, before, after) {
   if (!entries.length || !db) return;
   db.auditLog = Array.isArray(db.auditLog) ? db.auditLog : [];
   for (const entry of entries) db.auditLog.push(entry);
+}
+
+async function writeDoc(doc) {
+  const clean = sessionToPlain(clone(doc));
+  if (resolveSessionsBackend() === "mongo") {
+    await mongoReplace(clean);
+  }
+  if (resolveSessionsBackend() !== "json") {
+    memoryDocs.set(clean.id, clone(clean));
+  }
+  return clean;
 }
 
 export async function replaceStoredSession(db, doc) {
@@ -154,77 +271,95 @@ export async function replaceStoredSession(db, doc) {
     }
     return doc;
   }
-  await ensureSessionCache();
-  const before = cacheMap().has(doc.id) ? clone(cacheMap().get(doc.id)) : null;
+  const before =
+    resolveSessionsBackend() === "mongo"
+      ? await mongoFindOne(doc.id)
+      : memoryDocs.has(doc.id)
+        ? clone(memoryDocs.get(doc.id))
+        : null;
   noteWrite(before ? "replace" : "insert", doc.id);
-  await driverReplace(doc);
+  await writeDoc(doc);
   rememberAudit(db, before, doc);
   return doc;
 }
 
-export async function commitSessions(db) {
-  if (!sessionsUseExternalStore()) return [];
-  if (!db || !boundSnap.has(db)) return [];
-  const before = boundSnap.get(db);
-  const after = Array.isArray(db.sessions) ? db.sessions : [];
-  const beforeMap = new Map(before.filter((row) => row?.id).map((row) => [String(row.id), row]));
-  const afterMap = new Map();
-  const ops = [];
-  for (const row of after) {
-    if (!row?.id) continue;
-    afterMap.set(String(row.id), row);
-    const prev = beforeMap.get(String(row.id));
-    if (!prev) ops.push({ op: "insert", doc: row });
-    else if (JSON.stringify(prev) !== JSON.stringify(row)) {
-      ops.push({ op: "replace", before: prev, doc: row });
+export async function insertStoredSessions(db, docs) {
+  const list = Array.isArray(docs) ? docs : [];
+  if (!sessionsUseExternalStore()) {
+    if (db) {
+      db.sessions = db.sessions || [];
+      db.sessions.push(...list);
     }
+    return list;
   }
-  for (const [id, prev] of beforeMap) {
-    if (!afterMap.has(id)) ops.push({ op: "delete", id: prev.id, before: prev });
+  for (const doc of list) {
+    if (!doc?.id) continue;
+    noteWrite("insert", doc.id);
+    await writeDoc(doc);
   }
-  for (const op of ops) {
-    if (op.op === "delete") {
-      noteWrite("delete", op.id);
-      await driverRemove(op.id);
-    } else {
-      noteWrite(op.op, op.doc.id);
-      await driverReplace(op.doc);
-      rememberAudit(db, op.before || null, op.doc);
-    }
+  return list;
+}
+
+export async function deleteStoredSession(db, id) {
+  if (!id) return null;
+  if (!sessionsUseExternalStore()) {
+    if (!db) return null;
+    const idx = (db.sessions || []).findIndex((row) => row && row.id === id);
+    if (idx < 0) return null;
+    return db.sessions.splice(idx, 1)[0];
   }
-  boundSnap.set(
-    db,
-    after.filter((row) => row?.id).map((row) => clone(row))
-  );
-  return ops;
+  const before =
+    resolveSessionsBackend() === "mongo" ? await mongoFindOne(id) : memoryDocs.get(id) || null;
+  if (!before) return null;
+  noteWrite("delete", id);
+  if (resolveSessionsBackend() === "mongo") await mongoRemove(id);
+  memoryDocs.delete(id);
+  return before;
+}
+
+export async function deleteSessionsWithTask(db, taskId) {
+  const matches = await querySessions(db, { taskId });
+  if (!sessionsUseExternalStore()) {
+    const drop = new Set(matches.map((row) => row.id));
+    db.sessions = (db.sessions || []).filter((row) => !drop.has(row?.id));
+    return matches;
+  }
+  for (const row of matches) {
+    noteWrite("delete", row.id);
+    if (resolveSessionsBackend() === "mongo") await mongoRemove(row.id);
+    memoryDocs.delete(row.id);
+  }
+  return matches;
 }
 
 export async function exportAllSessions() {
   if (!sessionsUseExternalStore()) return null;
-  await ensureSessionCache();
-  return [...cacheMap().values()].map(clone);
+  if (resolveSessionsBackend() === "mongo") return mongoFind({});
+  return [...memoryDocs.values()].map(clone);
 }
 
 export async function upsertSessions(docs) {
-  await ensureSessionCache();
   const ids = [];
   for (const doc of docs || []) {
     if (!doc?.id) {
       throw new Error("Session migration refused a document with no id.");
     }
     ids.push(doc.id);
-    await driverReplace(doc);
+    await writeDoc(doc);
   }
-  memoryLoaded = true;
   return ids;
 }
 
-export async function findStoredSessionIds(ids) {
-  const backend = resolveSessionsBackend();
-  if (backend === "mongo") return mongoFindIds(ids);
-  const have = [];
-  for (const id of ids) {
-    if (memoryDocs.has(id)) have.push(id);
+export async function loadStoredSessions(ids) {
+  const want = new Set(ids || []);
+  if (resolveSessionsBackend() === "mongo") {
+    const rows = await mongoFind({ id: { $in: [...want] } });
+    return rows.filter((row) => want.has(row.id));
   }
-  return have;
+  const out = [];
+  for (const id of want) {
+    if (memoryDocs.has(id)) out.push(clone(memoryDocs.get(id)));
+  }
+  return out;
 }
+

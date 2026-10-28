@@ -8,7 +8,7 @@
  import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
  import { autoFinishDueSessions } from "../utils/autoFinish.js";
  import { loadDB, saveDB } from "../../src/utils/db-server.js";
- import { bindSessions, commitSessions } from "../sessions/sessionRepository.js";
+ import { getSessionById, replaceStoredSession } from "../sessions/sessionRepository.js";
  import { commitFinishedSession } from "../../src/utils/studentModelRecord.js";
 
  const router = express.Router();
@@ -35,14 +35,10 @@
  router.post("/sessions/:id/force-finish", authorizeRole(["admin", "teacher"]), async (req, res) => {
    const { id } = req.params;
    const db = loadDB();
-   await bindSessions(db);
- 
-   const idx = (db.sessions || []).findIndex((s) => s.id === id);
-   if (idx === -1) {
+   const session = await getSessionById(db, id);
+   if (!session) {
      return res.status(404).json({ error: "Session not found" });
    }
- 
-   const session = db.sessions[idx];
  
    if (session.status === "submitted" && session.isCompleted) {
      return res.json({ success: true, message: "Already submitted", id });
@@ -61,9 +57,8 @@
      r.submittedAt = r.submittedAt || now.toISOString();
    }
  
-   db.sessions[idx] = session;
    commitFinishedSession(db, session, { now: session.finishedAt });
-   await commitSessions(db);
+   await replaceStoredSession(db, session);
    saveDB(db);
  
    res.json({ success: true, id });

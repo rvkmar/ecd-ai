@@ -6,7 +6,7 @@ import express from "express";
 import { authenticateToken } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
-import { bindSessions, commitSessions, ensureSessionCache } from "../sessions/sessionRepository.js";
+import { attachTaskModelSessions, replaceStoredSession } from "../sessions/sessionRepository.js";
 import { validateEntity, isLinkableEvidenceModel } from "../../src/utils/schema.js";
 import { validateTaskModelLifecycle } from "../utils/lifecycleValidation.js";
 import {
@@ -395,8 +395,8 @@ router.post("/bulk", canAuthor, (req, res) => {
 ===================================================== */
 router.put("/:id", canAuthor, async (req, res) => {
 
-  await ensureSessionCache();
   const db = loadDB();
+  await attachTaskModelSessions(db, req.params.id);
 
   // `db.taskModels?.findIndex(...)` yields undefined when the collection
   // is missing, and `undefined === -1` is false -- so the not-found guard
@@ -583,8 +583,8 @@ router.put("/:id", canAuthor, async (req, res) => {
 ===================================================== */
 router.post("/:id/confirm", canAuthor, async (req, res) => {
 
-  await ensureSessionCache();
   const db = loadDB();
+  await attachTaskModelSessions(db, req.params.id);
   const model = db.taskModels?.find(m => m.id === req.params.id);
 
   if (!model)
@@ -637,7 +637,7 @@ router.post("/:id/confirm", canAuthor, async (req, res) => {
 router.get("/:id/dependents", async (req, res) => {
 
   const db = loadDB();
-  await bindSessions(db);
+  await attachTaskModelSessions(db, req.params.id);
   const model = db.taskModels?.find(m => m.id === req.params.id);
 
   if (!model) return res.status(404).json({ error: "TaskModel not found" });
@@ -683,7 +683,7 @@ router.get("/:id/dependents", async (req, res) => {
 router.post("/:id/force-deactivate", authorizeRole(["admin", "district"]), async (req, res) => {
 
   const db = loadDB();
-  await bindSessions(db);
+  await attachTaskModelSessions(db, req.params.id);
   const idx = (db.taskModels || []).findIndex(m => m.id === req.params.id);
 
   if (idx === -1) return res.status(404).json({ error: "TaskModel not found" });
@@ -731,18 +731,19 @@ router.post("/:id/force-deactivate", authorizeRole(["admin", "district"]), async
 
   const live = liveSessionsForTaskModel(model.id, db);
 
-  const closed = live.map(session => {
+  const closed = [];
+  for (const session of live) {
     forceCloseSession(session, now, reason);
     commitFinishedSession(db, session, { now });
-    return { id: session.id, studentId: session.studentId || null };
-  });
+    await replaceStoredSession(db, session);
+    closed.push({ id: session.id, studentId: session.studentId || null });
+  }
 
   model.status = "suspended";
   model.updatedAt = now;
   // D109: force-deactivate detail stays in the HTTP response + structured
   // log; deactivation blob removed by 005 / no longer written.
 
-  await commitSessions(db);
   saveDB(db);
 
   logger.warn("taskModel.force_deactivate", {

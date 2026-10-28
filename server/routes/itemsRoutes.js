@@ -48,7 +48,7 @@ import {
 import { validateItemLifecycle } from "../utils/lifecycleValidation.js";
 import { canTransition, TRANSITIONS } from "../utils/lifecycleMatrix.js";
 import { liveSessionsForItem } from "../utils/sessionDependencies.js";
-import { bindSessions, ensureSessionCache } from "../sessions/sessionRepository.js";
+import { attachItemSessions, querySessions } from "../sessions/sessionRepository.js";
 import { recordItemUsage } from "../utils/itemExposure.js";
 import {
   maySeeGlobalExposure,
@@ -674,7 +674,6 @@ function applyLifecycle(req, res, db, items, index, nextStatus, options = {}) {
 }
 
 router.patch("/:id/lifecycle", canAuthor, async (req, res) => {
-  await ensureSessionCache();
   const db = loadDB();
   const items = db.items || [];
   const index = items.findIndex((i) => i.id === req.params.id);
@@ -691,6 +690,7 @@ router.patch("/:id/lifecycle", canAuthor, async (req, res) => {
       .json({ error: "Only an admin may force a transition past live sessions." });
   }
 
+  await attachItemSessions(db, items[index]);
   return applyLifecycle(req, res, db, items, index, req.body?.nextStatus, { force });
 });
 
@@ -699,7 +699,8 @@ router.patch("/:id/lifecycle", canAuthor, async (req, res) => {
    offers the force option, so the warning names real sessions. */
 router.get("/:id/dependents", async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
+  const itemPreview = db.items?.find((row) => row.id === req.params.id);
+  if (itemPreview) await attachItemSessions(db, itemPreview);
   const item = db.items?.find((i) => i.id === req.params.id);
 
   if (!item) return res.status(404).json({ error: "Item not found." });
@@ -959,7 +960,6 @@ router.post("/:id/record-usage", canAuthor, (req, res) => {
 
 router.delete("/:id", canAuthor, async (req, res) => {
   const db = loadDB();
-  await bindSessions(db);
   const items = db.items || [];
   const item = items.find((i) => i.id === req.params.id);
 
@@ -981,8 +981,8 @@ router.delete("/:id", canAuthor, async (req, res) => {
      from recording a response against an item that was later reverted to
      draft. Deleting it would orphan those responses, and a report that
      cannot resolve an item silently drops the evidence. */
-  const answered = (db.sessions || []).filter((s) =>
-    (s.responses || []).some((r) => r && r.itemId === item.id)
+  const answered = (await querySessions(db, { dependency: { taskIds: [], itemIds: [item.id] } })).filter(
+    (row) => (row.responses || []).some((response) => response && response.itemId === item.id)
   );
 
   if (answered.length) {

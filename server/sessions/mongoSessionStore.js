@@ -5,12 +5,19 @@ function mongoUri(env = process.env) {
   return env.MONGO_URI || "mongodb://localhost:27017/ecd_assessment";
 }
 
-function plain(row) {
+export function sessionToPlain(row) {
   if (!row || typeof row !== "object") return null;
-  const obj = typeof row.toObject === "function" ? row.toObject() : { ...row };
+  const obj =
+    typeof row.toObject === "function"
+      ? row.toObject({ minimize: false, versionKey: false, flattenObjectIds: true })
+      : { ...row };
   delete obj._id;
   delete obj.__v;
   return obj;
+}
+
+function plain(row) {
+  return sessionToPlain(row);
 }
 
 let indexesReady = null;
@@ -29,8 +36,17 @@ async function getSessionModel() {
   }
   const schema = new mongoose.Schema(
     { id: { type: String, required: true } },
-    { strict: false, collection: "sessions", versionKey: false }
+    {
+      strict: false,
+      collection: "sessions",
+      versionKey: false,
+      // Default minimize drops empty objects such as studentModel.smvPosteriors = {}.
+      minimize: false,
+    }
   );
+  schema.set("minimize", false);
+  schema.set("toObject", { minimize: false, versionKey: false });
+  schema.set("toJSON", { minimize: false, versionKey: false });
   for (const spec of SESSION_INDEX_FIELDS) {
     const fields = spec[0];
     const options = spec[1] || {};
@@ -49,10 +65,16 @@ async function getSessionModel() {
   return model;
 }
 
-export async function mongoLoadAll() {
+export async function mongoFind(filter = {}) {
   const model = await getSessionModel();
-  const rows = await model.find({}).lean();
+  const rows = await model.find(filter).lean();
   return rows.map(plain).filter(Boolean);
+}
+
+export async function mongoFindOne(id) {
+  const model = await getSessionModel();
+  const row = await model.findOne({ id }).lean();
+  return plain(row);
 }
 
 export async function mongoReplace(doc) {
@@ -65,12 +87,6 @@ export async function mongoReplace(doc) {
 export async function mongoRemove(id) {
   const model = await getSessionModel();
   await model.deleteOne({ id });
-}
-
-export async function mongoFindIds(ids) {
-  const model = await getSessionModel();
-  const rows = await model.find({ id: { $in: ids } }, { id: 1 }).lean();
-  return rows.map((row) => row.id);
 }
 
 export async function ensureSessionIndexes() {

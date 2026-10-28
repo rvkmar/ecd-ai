@@ -14,15 +14,16 @@ import { decryptBackupBlob } from "../../backup/cryptoArchive.js";
 import zlib from "zlib";
 import crypto from "crypto";
 import {
-  bindSessions,
-  commitSessions,
   exportAllSessions,
+  querySessions,
   getSessionById,
-  listSessions,
   replaceStoredSession,
   resetSessionStoreForTests,
   upsertSessions,
 } from "../sessionRepository.js";
+import { canonicalSession } from "../sessionCanonical.js";
+import { sessionToPlain } from "../mongoSessionStore.js";
+import mongoose from "mongoose";
 
 vi.mock("../../utils/authMiddleware.js", () => ({
   authenticateToken: (req, _res, next) => {
@@ -260,9 +261,9 @@ describe("011 session migration", () => {
       migrateFileSessions({
         dryRun: false,
         upsert: async () => ["s1"],
-        findIds: async () => [],
+        loadStored: async () => [{ id: "s1", status: "ready", studentModel: {} }],
       })
-    ).rejects.toThrow(/verify failed/);
+    ).rejects.toThrow(/do not match/);
     expect(readFile().sessions).toEqual([{ id: "s1", status: "ready" }]);
   });
 
@@ -271,6 +272,58 @@ describe("011 session migration", () => {
     const result = await migrateFileSessions({ dryRun: false, backend: "json" });
     expect(result.summary).toMatch(/JSON harness/);
     expect(readFile().sessions).toEqual([{ id: "s1", status: "ready" }]);
+  });
+});
+
+describe("empty nested objects", () => {
+  it("keeps studentModel.smvPosteriors through the session schema", () => {
+    const schema = new mongoose.Schema(
+      { id: { type: String, required: true } },
+      { strict: false, versionKey: false, minimize: false }
+    );
+    schema.set("minimize", false);
+    schema.set("toObject", { minimize: false, versionKey: false });
+    const Model =
+      mongoose.models.SessionEmptyRoundTrip ||
+      mongoose.model("SessionEmptyRoundTrip", schema);
+    const source = {
+      id: "s-empty",
+      status: "in_progress",
+      studentModel: { smvPosteriors: {} },
+      responses: [],
+    };
+    const plain = sessionToPlain(new Model(source));
+    expect(plain.studentModel).toEqual({ smvPosteriors: {} });
+    expect(canonicalSession(plain)).toBe(canonicalSession(source));
+  });
+
+  it("refuses to delete db.json sessions when the stored doc dropped an empty object", async () => {
+    fs.writeFileSync(
+      process.env.ECD_DB_FILE,
+      JSON.stringify({
+        items: [],
+        sessions: [
+          {
+            id: "s-empty",
+            status: "in_progress",
+            studentModel: { smvPosteriors: {} },
+          },
+        ],
+        auditLog: [],
+      })
+    );
+    forgetDbCache();
+    await expect(
+      migrateFileSessions({
+        dryRun: false,
+        upsert: async () => {},
+        loadStored: async () => [
+          { id: "s-empty", status: "in_progress", studentModel: {} },
+        ],
+      })
+    ).rejects.toThrow(/do not match/);
+    const onDisk = JSON.parse(fs.readFileSync(process.env.ECD_DB_FILE, "utf8"));
+    expect(onDisk.sessions[0].studentModel.smvPosteriors).toEqual({});
   });
 });
 
@@ -377,7 +430,7 @@ describe("tenancy and cascades", () => {
         districtId: "tn-chennai",
         schoolId: null,
       },
-      () => listSessions(peer)
+      () => querySessions(peer)
     );
     expect(visible.map((row) => row.id)).toEqual(["s-c"]);
     const hidden = await runWithTenancy(
@@ -454,7 +507,7 @@ describe("calibration matrix and backup", () => {
     const { loadDB } = await import("../../../src/utils/db-server.js");
     const db = loadDB();
     expect(db.sessions).toEqual([]);
-    await bindSessions(db);
+    db.sessions = await querySessions(db);
     const assessed = assessLiveResponseMatrix(db, {
       evidenceModelId: "em1",
       statisticalModelId: "sm1",
@@ -500,13 +553,20 @@ describe("mongo session store", () => {
       const { ensureSessionIndexes, mongoRemove } = await import("../mongoSessionStore.js");
       const names = await ensureSessionIndexes();
       expect(names.some((name) => name === "id_1" || name.includes("id"))).toBe(true);
-      await upsertSessions([{ id: "mongo-s", studentId: "a", status: "ready" }]);
+      const source = {
+        id: "mongo-s",
+        studentId: "a",
+        status: "ready",
+        studentModel: { smvPosteriors: {} },
+      };
+      await upsertSessions([source]);
+      const got = await getSessionById({ students: [], users: [] }, "mongo-s");
+      expect(got.studentModel).toEqual({ smvPosteriors: {} });
+      expect(canonicalSession(got)).toBe(canonicalSession(source));
       await replaceStoredSession(
         { auditLog: [], students: [], users: [] },
-        { id: "mongo-s", studentId: "a", status: "in_progress" }
+        { ...source, status: "in_progress" }
       );
-      const got = await getSessionById({ students: [], users: [] }, "mongo-s");
-      expect(got.status).toBe("in_progress");
       await mongoRemove("mongo-s");
     } finally {
       resetSessionStoreForTests();
