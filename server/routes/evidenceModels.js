@@ -9,6 +9,7 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
+import { applyParameterSetActivation } from "../../src/utils/parameterSetStatus.js";
 import {
   qMatrixCitesObservableOnModel,
   qMatrixEntriesCitingEvidenceModel,
@@ -826,9 +827,11 @@ router.post("/:id/recalibrate", canAuthor, (req, res) => {
 
   sm.parameterSets = sm.parameterSets || [];
   sm.parameterSets.push(newParamSet);
-  sm.activeParameterSetId = newParamSet.parameterSetId;
-
   model.updatedAt = new Date().toISOString();
+  applyParameterSetActivation(sm, newParamSet.parameterSetId, {
+    activatedBy: req.user?.username || req.user?.id || newParamSet.calibratedBy,
+    activatedAt: model.updatedAt,
+  });
 
   saveDB(db);
   res.json({ message: "Recalibration successful.", parameterSet: newParamSet });
@@ -945,11 +948,14 @@ router.post("/:id/activate-parameter-set", canAuthor, (req, res) => {
     });
   }
 
-  statModel.activeParameterSetId = parameterSetId;
   model.updatedAt = new Date().toISOString();
+  applyParameterSetActivation(statModel, parameterSetId, {
+    activatedBy: req.user?.username || req.user?.id || null,
+    activatedAt: model.updatedAt,
+  });
 
   saveDB(db);
-  res.json({ message: "Parameter set activated successfully." });
+  res.json({ message: "Parameter set activated successfully.", parameterSet: paramSet });
 });
 
 /* =====================================================

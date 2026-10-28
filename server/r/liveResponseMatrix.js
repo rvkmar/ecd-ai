@@ -5,17 +5,63 @@
 // it as a wrong answer or drop the column.
 //
 // DINA and G-DINA take their Q-matrix from the statistical model's
-// qMatrixModels row. Observable-keyed entries win over item-only entries,
-// the same rule scoring uses. Slip and guess stay keyed by item id.
+// qMatrixModels row. The item columns are the items that matrix covers,
+// including items scored under another evidence model, intersected with
+// the items finished sessions actually answered. Observable-keyed entries
+// win over item-only entries, the same rule scoring uses. Slip and guess
+// stay keyed by item id.
+//
+// Item floors are per family. The ADR envelope still requires two items.
+// These floors are the smallest dichotomous models mirt or GDINA can
+// identify, so a job is refused here instead of coming back from R with
+// "Too few degrees of freedom".
+//
+// Saturated dichotomous patterns: 2^J - 1. mirt fixes the latent mean at
+// 0 and the variance at 1.
+//   Rasch / 1PL / PCM: J difficulty parameters. J = 2 leaves 1 df.
+//   2PL, and dichotomous GRM / GPCM: 2J parameters. J = 2 leaves -1 df
+//     (mirt: "Too few degrees of freedom"). J = 3 leaves 1 df.
+//   3PL: 3J parameters (slope, difficulty, guessing). J = 3 leaves -2 df.
+//     J = 4 leaves 3 df. Stable guessing still wants more people; this
+//     floor only stops the unidentified model.
+//   DINA / G-DINA: slip and guess (2J) plus 2^K - 1 class probabilities.
+//     K = 1 is already unidentified at J = 2 (5 parameters, 3 patterns).
+//     J = 3 is the smallest saturated single-attribute matrix. G-DINA
+//     has at least that many item parameters.
+//   CTT and item analysis: a p-value is defined at J = 2. Item analysis
+//     still requires 10 students.
 
 import { createHash } from "node:crypto";
 import { statisticalModelTypesForJobKind } from "../../src/utils/ecdVocabulary.js";
-import { entriesForResponse, textId } from "../../src/utils/qMatrixEntries.js";
+import { entriesForResponse, itemIsPlacedInQMatrix, textId } from "../../src/utils/qMatrixEntries.js";
 
 const ITEM_ANALYSIS_MIN_STUDENTS = 10;
 const CONTRACT_MIN_PERSONS = 2;
-const CONTRACT_MIN_ITEMS = 2;
 const SOURCE_SESSION_ID_LIST_LIMIT = 50;
+
+const CALIBRATION_MIN_ITEMS = Object.freeze({
+  Rasch: 2,
+  "2PL": 3,
+  "3PL": 4,
+  GRM: 3,
+  GPCM: 3,
+  PCM: 2,
+  dina: 3,
+  gdina: 3,
+  ctt: 2,
+  "item-analysis": 2,
+});
+
+function minimumItemsForRequest(family, subtype) {
+  if (family === "item-analysis") return CALIBRATION_MIN_ITEMS["item-analysis"];
+  if (family === "ctt") return CALIBRATION_MIN_ITEMS.ctt;
+  if (family === "dina") return CALIBRATION_MIN_ITEMS.dina;
+  if (family === "gdina") return CALIBRATION_MIN_ITEMS.gdina;
+  if (family === "irt") {
+    return CALIBRATION_MIN_ITEMS[subtype] || CALIBRATION_MIN_ITEMS["2PL"];
+  }
+  return CALIBRATION_MIN_ITEMS["item-analysis"];
+}
 
 const ITEM_ANALYSIS_SEED = 20261016;
 const LIVE_CALIBRATION_SEED = 20261028;
@@ -197,6 +243,21 @@ function itemKeysFromDb(db, itemIds) {
   return any ? keys : null;
 }
 
+function coveredItemIds(qMatrix, db) {
+  const ids = new Set();
+  for (const entry of qMatrix?.entries || []) {
+    const itemId = textId(entry?.itemId);
+    if (itemId) ids.add(itemId);
+  }
+  for (const item of db?.items || []) {
+    if (!item?.id) continue;
+    if (itemIsPlacedInQMatrix(item, qMatrix?.entries, item.evidenceModelId)) {
+      ids.add(textId(item.id));
+    }
+  }
+  return ids;
+}
+
 function attributeIdsOf(qMatrix) {
   const declared = Array.isArray(qMatrix?.attributeIds)
     ? qMatrix.attributeIds.map(textId).filter(Boolean)
@@ -211,6 +272,29 @@ function attributeIdsOf(qMatrix) {
     if (id && !unique.includes(id)) unique.push(id);
   }
   return unique;
+}
+
+function majorityText(itemId, cells, field) {
+  const counts = new Map();
+  for (const cell of cells) {
+    if (cell.itemId !== itemId) continue;
+    const id = textId(cell[field]);
+    if (!id) continue;
+    counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  if (counts.size === 0) return "";
+  let best = [];
+  let bestN = 0;
+  for (const [id, n] of counts) {
+    if (n > bestN) {
+      best = [id];
+      bestN = n;
+    } else if (n === bestN) {
+      best.push(id);
+    }
+  }
+  best.sort((a, b) => a.localeCompare(b));
+  return best[0] || "";
 }
 
 function primaryObservableId(itemId, cells, items) {
@@ -379,6 +463,7 @@ export function assessLiveResponseMatrix(db, options = {}) {
   const itemIdSet = itemIdsFilter ? new Set(itemIdsFilter) : null;
   const sessionIdSet = sessionIdsFilter ? new Set(sessionIdsFilter) : null;
   const hasDateFilter = Boolean(fromBound || toBound);
+  const qCovered = diagnostic ? coveredItemIds(qMatrix, db) : null;
   const rows = [];
 
   for (const session of db?.sessions || []) {
@@ -387,7 +472,12 @@ export function assessLiveResponseMatrix(db, options = {}) {
     const studentId = studentIdOf(session);
     if (!studentId) continue;
     for (const response of session.responses || []) {
-      if (response?.evidenceModelId !== evidenceModelId) continue;
+      if (diagnostic) {
+        const itemId = textId(response?.itemId);
+        if (!itemId || !qCovered.has(itemId)) continue;
+      } else if (response?.evidenceModelId !== evidenceModelId) {
+        continue;
+      }
       if (
         statisticalModelId &&
         response.statisticalModelId &&
@@ -407,6 +497,7 @@ export function assessLiveResponseMatrix(db, options = {}) {
         sessionId: typeof session.id === "string" ? session.id : "",
         itemId: response.itemId,
         observableId: response.observableId,
+        evidenceModelId: response.evidenceModelId,
         activated: response.activated,
         timestamp: response.timestamp || "",
         selected: selectedOptionId(response),
@@ -425,9 +516,13 @@ export function assessLiveResponseMatrix(db, options = {}) {
       code: "NO_RESPONSES",
       kind,
       qMatrixId,
-      message: filtered
-        ? "No completed session responses match this evidence model and the item, session, or date filters."
-        : "No completed session responses cite this evidence model.",
+      message: diagnostic
+        ? filtered
+          ? "No completed session responses match items on this Q-matrix and the item, session, or date filters."
+          : `No completed session responses cite an item on Q-matrix '${qMatrixId}'.`
+        : filtered
+          ? "No completed session responses match this evidence model and the item, session, or date filters."
+          : "No completed session responses cite this evidence model.",
     });
   }
 
@@ -453,6 +548,7 @@ export function assessLiveResponseMatrix(db, options = {}) {
 
   let itemIds = [...new Set(scored.map((row) => row.itemId))].sort((a, b) => a.localeCompare(b));
   const minimumPersons = personMinimum(kind, options.minSampleSize);
+  const minimumItems = minimumItemsForRequest(family, subtype);
   const label = familyLabel(family);
 
   let qRows = null;
@@ -471,11 +567,12 @@ export function assessLiveResponseMatrix(db, options = {}) {
     const dropped = [];
     for (const itemId of itemIds) {
       const observableId = primaryObservableId(itemId, cells, db?.items);
+      const responseEvidenceModelId = majorityText(itemId, cells, "evidenceModelId") || evidenceModelId;
       const vector = qVectorForItem({
         entries: qMatrix.entries,
         itemId,
         observableId,
-        evidenceModelId,
+        evidenceModelId: responseEvidenceModelId,
         attributeIds,
       });
       if (vector.unknown.length) {
@@ -492,13 +589,13 @@ export function assessLiveResponseMatrix(db, options = {}) {
       }
       kept.push({ itemId, data: vector.data, usedObservableRows: vector.usedObservableRows });
     }
-    if (kept.length < CONTRACT_MIN_ITEMS) {
+    if (kept.length < minimumItems) {
       const droppedNote = dropped.length ? ` Dropped items with an empty Q-vector: ${dropped.join(", ")}.` : "";
       return fail({
         code: "TOO_FEW_ITEMS",
         kind,
         qMatrixId,
-        message: `${label} needs at least ${CONTRACT_MIN_ITEMS} items with a required attribute on Q-matrix '${qMatrixId}'. This selection has ${kept.length}.${droppedNote}`,
+        message: `${label} needs at least ${minimumItems} items with a required attribute on Q-matrix '${qMatrixId}'. This selection has ${kept.length}.${droppedNote}`,
         sampleSize: new Set(scored.map((row) => row.studentId)).size,
         itemIds: kept.map((row) => row.itemId),
       });
@@ -528,11 +625,11 @@ export function assessLiveResponseMatrix(db, options = {}) {
     });
   }
 
-  if (itemIds.length < CONTRACT_MIN_ITEMS) {
+  if (itemIds.length < minimumItems) {
     const message =
       kind === "item-analysis"
-        ? `Item analysis needs scored responses on at least two items. This evidence model has ${itemIds.length}.`
-        : `${label} needs scored responses on at least ${CONTRACT_MIN_ITEMS} items. This selection has ${itemIds.length}.`;
+        ? `Item analysis needs scored responses on at least ${minimumItems} items. This evidence model has ${itemIds.length}.`
+        : `${label} needs scored responses on at least ${minimumItems} items. This selection has ${itemIds.length}.`;
     return fail({
       code: "TOO_FEW_ITEMS",
       kind,

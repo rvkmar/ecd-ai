@@ -56,22 +56,26 @@ export function canTransition(from, to) {
 // Calibration jobs (D62). A different machine from the authored-entity
 // STATUS list above -- jobs are not drafted/reviewed/confirmed. Declared
 // here (the D8 lesson) rather than as ad-hoc status strings in the route.
-// queued -> running -> succeeded | failed
+// queued -> running -> succeeded | failed | not-converged
 // queued -> cancelled
-// failed -> queued on retry
+// failed | not-converged -> queued on retry
+// not-converged is a finished non-success: R returned a contract-valid
+// body with converged: false. It is not succeeded, and ingest refuses it.
 // ------------------------------------------------------------------
 export const CALIBRATION_JOB_STATUS = [
   "queued",
   "running",
   "succeeded",
   "failed",
+  "not-converged",
   "cancelled",
 ];
 
 const CALIBRATION_JOB_TRANSITIONS = {
   queued: ["running", "cancelled"],
-  running: ["succeeded", "failed"],
+  running: ["succeeded", "failed", "not-converged"],
   failed: ["queued"],
+  "not-converged": ["queued"],
   succeeded: [],
   cancelled: [],
 };

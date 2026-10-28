@@ -313,9 +313,8 @@ describe("ingest refuses non-converged", () => {
     expect(ps.standardErrors.item_a.a).toBe(0.1);
     expect(ps.calibrationJobId).toBe("job_ok");
     expect(dbState.current.calibrationJobs[0].ingestedParameterSetId).toBe(ps.parameterSetId);
-    expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe(
-      ps.parameterSetId
-    );
+    expect(ps.status).toBe("candidate");
+    expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBeUndefined();
   });
 
   it("copies live session ids and the Q-matrix id onto the parameter set", async () => {
@@ -471,6 +470,7 @@ describe("session item analysis enqueue", () => {
         responses: [
           { itemId: "item-a", evidenceModelId: "em1", activated: true, timestamp: "2026-10-20T00:00:00.000Z" },
           { itemId: "item-b", evidenceModelId: "em1", activated: false, timestamp: "2026-10-20T00:00:00.000Z" },
+          { itemId: "item-c", evidenceModelId: "em1", activated: true, timestamp: "2026-10-20T00:00:00.000Z" },
         ],
       },
       {
@@ -480,6 +480,7 @@ describe("session item analysis enqueue", () => {
         isCompleted: true,
         responses: [
           { itemId: "item-a", evidenceModelId: "em1", activated: false, timestamp: "2026-10-20T00:00:00.000Z" },
+          { itemId: "item-c", evidenceModelId: "em1", activated: false, timestamp: "2026-10-20T00:00:00.000Z" },
         ],
       },
     ];
@@ -499,8 +500,8 @@ describe("session item analysis enqueue", () => {
     expect(res.body.sourceSessionIds).toEqual(["sess-a", "sess-b"]);
     expect(res.body.request.model.subtype).toBe("2PL");
     expect(res.body.request.responseMatrix.data).toEqual([
-      [1, 0],
-      [0, null],
+      [1, 0, 1],
+      [0, null, 0],
     ]);
     expect(res.body.request.qMatrix).toBeUndefined();
   });

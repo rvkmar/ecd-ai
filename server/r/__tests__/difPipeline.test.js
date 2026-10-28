@@ -264,7 +264,11 @@ describe("planted DIF contract-path pipeline (always runs)", () => {
       .post(`/api/calibrationJobs/${jobId}/ingest`)
       .set("Authorization", `Bearer ${tokenFor("admin")}`);
     expect(ingested.status).toBe(409);
-    expect(ingested.body.error).toMatch(/converged: false/);
+    expect(ingested.body.error).toMatch(/not-converged/);
+    expect(dbState.current.calibrationJobs.find((job) => job.id === jobId).status).toBe("not-converged");
+    expect(dbState.current.calibrationJobs.find((job) => job.id === jobId).error.message).toBe(
+      "DIF statistics were not identified"
+    );
     expect(dbState.current.analysisArtefacts || []).toHaveLength(0);
     expect(dbState.current.evidenceModels[0].analysisArtefacts || []).toHaveLength(0);
   });

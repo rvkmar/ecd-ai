@@ -19,19 +19,23 @@
       "responseComponents": [
         {
           "id": "opt_a",
-          "label": "Leaf"
+          "label": "Leaf",
+          "isCorrect": true
         },
         {
           "id": "opt_b",
-          "label": "Root"
+          "label": "Root",
+          "isCorrect": false
         },
         {
           "id": "opt_c",
-          "label": "Stem"
+          "label": "Stem",
+          "isCorrect": false
         },
         {
           "id": "opt_d",
-          "label": "Flower"
+          "label": "Flower",
+          "isCorrect": false
         }
       ]
     },
@@ -83,19 +87,23 @@
       "responseComponents": [
         {
           "id": "opt_a",
-          "label": "Flower"
+          "label": "Flower",
+          "isCorrect": false
         },
         {
           "id": "opt_b",
-          "label": "Root"
+          "label": "Root",
+          "isCorrect": true
         },
         {
           "id": "opt_c",
-          "label": "Leaf"
+          "label": "Leaf",
+          "isCorrect": false
         },
         {
           "id": "opt_d",
-          "label": "Fruit"
+          "label": "Fruit",
+          "isCorrect": false
         }
       ]
     },
@@ -147,19 +155,23 @@
       "responseComponents": [
         {
           "id": "opt_a",
-          "label": "Makes food"
+          "label": "Makes food",
+          "isCorrect": true
         },
         {
           "id": "opt_b",
-          "label": "Takes up water"
+          "label": "Takes up water",
+          "isCorrect": false
         },
         {
           "id": "opt_c",
-          "label": "Holds the plant in the soil"
+          "label": "Holds the plant in the soil",
+          "isCorrect": false
         },
         {
           "id": "opt_d",
-          "label": "Makes seeds"
+          "label": "Makes seeds",
+          "isCorrect": false
         }
       ]
     },
@@ -211,19 +223,23 @@
       "responseComponents": [
         {
           "id": "opt_a",
-          "label": "1/2"
+          "label": "1/2",
+          "isCorrect": true
         },
         {
           "id": "opt_b",
-          "label": "3/8"
+          "label": "3/8",
+          "isCorrect": false
         },
         {
           "id": "opt_c",
-          "label": "2/3"
+          "label": "2/3",
+          "isCorrect": false
         },
         {
           "id": "opt_d",
-          "label": "5/6"
+          "label": "5/6",
+          "isCorrect": false
         }
       ]
     },

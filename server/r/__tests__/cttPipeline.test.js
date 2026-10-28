@@ -276,15 +276,16 @@ describe("LSAT7 CTT contract-path pipeline (always runs)", () => {
     const processed = await processJobById(jobId, {
       client: { postCalibration: async () => ({ ok: true, status: 200, json: stub, text: "" }) },
     });
-    expect(processed.ok).toBe(true);
-    expect(processed.job.status).toBe("succeeded");
+    expect(processed.ok).toBe(false);
+    expect(processed.job.status).toBe("not-converged");
     expect(processed.job.response.converged).toBe(false);
+    expect(processed.job.error.message).toBe("CTT statistics were not identified");
 
     const ingested = await request(app)
       .post(`/api/calibrationJobs/${jobId}/ingest`)
       .set("Authorization", `Bearer ${tokenFor("admin")}`);
     expect(ingested.status).toBe(409);
-    expect(ingested.body.error).toMatch(/converged: false/);
+    expect(ingested.body.error).toMatch(/not-converged/);
     expect(dbState.current.evidenceModels[0].statisticalModels[0].parameterSets).toHaveLength(0);
   });
 });

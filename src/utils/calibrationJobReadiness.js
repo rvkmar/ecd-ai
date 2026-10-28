@@ -24,7 +24,7 @@ const ARTEFACT_KINDS = new Set([
   "test-information",
   "attribute-profile-summary",
 ]);
-const JOB_STATUSES = ["queued", "running", "succeeded", "failed", "cancelled"];
+const JOB_STATUSES = ["queued", "running", "succeeded", "failed", "not-converged", "cancelled"];
 const CONTRACT_VERSION = "1.0";
 
 function requestProblems(request) {
@@ -199,17 +199,31 @@ export function enqueueReadiness(job, db) {
     });
   }
 
-  if (job?.status === "failed") {
+  if (job?.status === "failed" || job?.status === "not-converged") {
+    const label = job.status === "not-converged" ? "Not-converged" : "Failed";
     const hasError = Boolean(job.error?.message);
     checks.push({
       id: "failedError",
       ok: hasError,
-      message: hasError ? "Failed job has an inspectable error" : "A failed job must store an inspectable error",
+      message: hasError
+        ? `${label} job has an inspectable error`
+        : `A ${job.status} job must store an inspectable error`,
     });
     checks.push({
       id: "finishedAt",
       ok: Boolean(job.finishedAt),
-      message: job.finishedAt ? "finishedAt is recorded" : "A failed job must record finishedAt",
+      message: job.finishedAt ? "finishedAt is recorded" : `A ${job.status} job must record finishedAt`,
+    });
+  }
+
+  if (job?.status === "not-converged") {
+    checks.push({
+      id: "notConvergedResponse",
+      ok: job.response?.converged === false,
+      message:
+        job.response?.converged === false
+          ? "R reported converged: false"
+          : "A not-converged job must store converged: false",
     });
   }
 

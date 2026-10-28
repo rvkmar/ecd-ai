@@ -203,28 +203,19 @@ describe("D80 exit check — scheduled analytics artefact without active-set cha
   });
 });
 
-function finishedSessions(n, evidenceModelId, extraResponse = {}) {
+function finishedSessions(n, evidenceModelId, extraResponse = {}, itemIds = ["item-a", "item-b"]) {
   return Array.from({ length: n }, (_, i) => ({
     id: `sess-${i}`,
     studentId: `stud-${i}`,
     status: "completed",
     isCompleted: true,
-    responses: [
-      {
-        itemId: "item-a",
-        evidenceModelId,
-        activated: true,
-        timestamp: "2026-10-20T00:00:00.000Z",
-        ...extraResponse,
-      },
-      {
-        itemId: "item-b",
-        evidenceModelId,
-        activated: i % 2 === 0,
-        timestamp: "2026-10-20T00:00:00.000Z",
-        ...extraResponse,
-      },
-    ],
+    responses: itemIds.map((itemId, idx) => ({
+      itemId,
+      evidenceModelId,
+      activated: idx === 0 ? true : i % 2 === 0,
+      timestamp: "2026-10-20T00:00:00.000Z",
+      ...extraResponse,
+    })),
   }));
 }
 
@@ -232,7 +223,7 @@ describe("scheduled enqueue reads live sessions when no fixture is named", () =>
   it("enqueues an IRT job from finished sessions and leaves the active set alone", () => {
     dbState.current = {
       calibrationJobs: [],
-      sessions: finishedSessions(2, "em-live"),
+      sessions: finishedSessions(2, "em-live", {}, ["item-a", "item-b", "item-c"]),
       evidenceModels: [
         {
           id: "em-live",
@@ -273,6 +264,7 @@ describe("scheduled enqueue reads live sessions when no fixture is named", () =>
     expect(job.sourceSessionIds).toEqual(["sess-0", "sess-1"]);
     expect(job.request.responseMatrix.personIds).toEqual(["stud-0", "stud-1"]);
     expect(job.request.model.subtype).toBe("2PL");
+    expect(job.request.model.itemIds).toEqual(["item-a", "item-b", "item-c"]);
     expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe(
       "ps-keep"
     );
@@ -315,7 +307,7 @@ describe("scheduled enqueue reads live sessions when no fixture is named", () =>
   it("builds the authored Q-matrix for a live DINA job", () => {
     dbState.current = {
       calibrationJobs: [],
-      sessions: finishedSessions(2, "em-live", { observableId: "obs-1" }),
+      sessions: finishedSessions(2, "em-live", { observableId: "obs-1" }, ["item-a", "item-b", "item-c"]),
       qMatrixModels: [
         {
           id: "qm-live",
@@ -325,6 +317,7 @@ describe("scheduled enqueue reads live sessions when no fixture is named", () =>
             { itemId: "item-b", attributeId: "attr-1" },
             { itemId: "item-a", observableId: "obs-1", evidenceModelId: "em-live", attributeId: "attr-2" },
             { itemId: "item-b", observableId: "obs-1", evidenceModelId: "em-live", attributeId: "attr-2" },
+            { itemId: "item-c", attributeId: "attr-1" },
           ],
         },
       ],
@@ -362,7 +355,50 @@ describe("scheduled enqueue reads live sessions when no fixture is named", () =>
     expect(job.request.qMatrix.data).toEqual([
       [0, 1],
       [0, 1],
+      [1, 0],
     ]);
+    expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe(
+      "ps-keep"
+    );
+  });
+
+  it("skips a 2PL live matrix with fewer than 3 items and does not enqueue", () => {
+    dbState.current = {
+      calibrationJobs: [],
+      sessions: finishedSessions(2, "em-live"),
+      evidenceModels: [
+        {
+          id: "em-live",
+          competencyId: "c1",
+          calibrationPlan: {
+            scheduledEnqueue: {
+              enabled: true,
+              minSampleSize: 2,
+              jobs: [{ kind: "irt-parameters", source: "sessions" }],
+            },
+          },
+          statisticalModels: [
+            {
+              id: "sm-irt",
+              type: "irt",
+              subtype: "2pl",
+              active: true,
+              parameterSets: [],
+              activeParameterSetId: "ps-keep",
+            },
+          ],
+        },
+      ],
+      competencies: [{ id: "c1", modelId: "cm1", variableType: "continuous" }],
+    };
+    const result = runScheduledCalibrationEnqueue(dbState.current);
+    expect(result.enqueued).toEqual([]);
+    expect(result.errors).toEqual([]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].reason).toMatch(/at least 3 items/);
+    expect(result.skipped[0].reason).toMatch(/This selection has 2/);
+    expect(result.skipped[0].code).toBe("TOO_FEW_ITEMS");
+    expect(dbState.current.calibrationJobs).toEqual([]);
     expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe(
       "ps-keep"
     );

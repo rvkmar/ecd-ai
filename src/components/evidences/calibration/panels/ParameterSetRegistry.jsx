@@ -218,6 +218,12 @@ export default function ParameterSetRegistry({
                                             </span>
                                         )}
 
+                                        {!isActive && ps.status === "candidate" && (
+                                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                                                Candidate
+                                            </span>
+                                        )}
+
                                         {kind && (
                                             <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
                                                 {kind}
@@ -232,6 +238,12 @@ export default function ParameterSetRegistry({
                                             {formatDate(ps.calibratedAt)}
                                         </div>
                                         <div>By: {ps.calibratedBy || "—"}</div>
+                                        {ps.activatedAt && (
+                                            <div>
+                                                Activated: {formatDate(ps.activatedAt)}
+                                                {ps.activatedBy ? ` by ${ps.activatedBy}` : ""}
+                                            </div>
+                                        )}
                                         <div>Method: {ps.calibrationMethod || "—"}</div>
                                         <div>Sample size: {ps.sampleSize ?? 0}</div>
                                         <div>Observables calibrated: {entries.length}</div>
@@ -256,7 +268,7 @@ export default function ParameterSetRegistry({
                                             onClick={() => handleActivate(ps.parameterSetId)}
                                             className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-300 disabled:hover:bg-slate-50"
                                         >
-                                            Set active
+                                            {ps.status === "candidate" ? "Activate candidate" : "Set active"}
                                         </button>
                                     )}
 

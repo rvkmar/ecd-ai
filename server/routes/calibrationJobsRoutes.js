@@ -322,7 +322,7 @@ router.post("/:id/retry", canAuthor, (req, res) => {
   if (!job) return res.status(404).json({ error: "Calibration job not found" });
   if (!canTransitionCalibrationJob(job.status, "queued")) {
     return res.status(409).json({
-      error: `Cannot retry a '${job.status}' job. Only failed jobs may be retried.`,
+      error: `Cannot retry a '${job.status}' job. Only failed or not-converged jobs may be retried.`,
     });
   }
   if (job.attempts >= job.maxAttempts) {
