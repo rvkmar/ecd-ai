@@ -100,10 +100,11 @@ describe("calibration job vocabulary and status machine", () => {
     expect(CALIBRATION_JOB_KIND_VALUES).toHaveLength(8);
   });
 
-  it("declares the five job states", () => {
+  it("declares the job states, including not-converged", () => {
     expect(CALIBRATION_JOB_STATUS).toEqual(
-      expect.arrayContaining(["queued", "running", "succeeded", "failed", "cancelled"])
+      expect.arrayContaining(["queued", "running", "succeeded", "failed", "not-converged", "cancelled"])
     );
+    expect(CALIBRATION_JOB_STATUS).toHaveLength(6);
   });
 });
 

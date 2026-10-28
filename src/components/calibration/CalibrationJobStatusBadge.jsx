@@ -9,6 +9,7 @@ const STATUS_CLASSES = {
   running: "bg-primary text-primary-foreground",
   succeeded: "bg-primary/15 text-foreground",
   failed: "bg-destructive text-destructive-foreground",
+  "not-converged": "bg-destructive/15 text-destructive",
   cancelled: "bg-muted text-muted-foreground",
 };
 

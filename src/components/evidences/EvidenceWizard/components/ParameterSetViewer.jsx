@@ -92,16 +92,23 @@ export default function ParameterSetViewer({
                                             Active
                                         </span>
                                     ) : (
-                                        <button
-                                            type="button"
-                                            disabled={loading}
-                                            className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            onClick={() =>
-                                                handleActivate(ps.parameterSetId)
-                                            }
-                                        >
-                                            Set Active
-                                        </button>
+                                        <span className="inline-flex items-center gap-2">
+                                            {ps.status === "candidate" && (
+                                                <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                                                    Candidate
+                                                </span>
+                                            )}
+                                            <button
+                                                type="button"
+                                                disabled={loading}
+                                                className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                onClick={() =>
+                                                    handleActivate(ps.parameterSetId)
+                                                }
+                                            >
+                                                {ps.status === "candidate" ? "Activate candidate" : "Set Active"}
+                                            </button>
+                                        </span>
                                     )}
 
                                 </div>
@@ -119,6 +126,15 @@ export default function ParameterSetViewer({
                                         </span>{" "}
                                         {ps.calibratedBy}
                                     </div>
+                                    {ps.activatedAt && (
+                                        <div>
+                                            <span className="font-medium text-slate-700">
+                                                Activated:
+                                            </span>{" "}
+                                            {ps.activatedAt}
+                                            {ps.activatedBy ? ` by ${ps.activatedBy}` : ""}
+                                        </div>
+                                    )}
                                     <div>
                                         <span className="font-medium text-slate-700">
                                             Method:

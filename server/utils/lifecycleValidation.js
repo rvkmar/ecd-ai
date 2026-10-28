@@ -794,14 +794,23 @@ export function validateCalibrationJobLifecycle(job, db = null) {
     }
   }
 
-  if (status === "failed") {
+  if (status === "failed" || status === "not-converged") {
+    const label = status === "not-converged" ? "not-converged" : "failed";
     if (!job?.error || typeof job.error !== "object" || Array.isArray(job.error)) {
-      errors.push("A failed calibration job must store an inspectable error (message, stderr, rClass).");
+      errors.push(`A ${label} calibration job must store an inspectable error (message, stderr, rClass).`);
     } else if (!job.error.message) {
-      errors.push("A failed calibration job error must include a message.");
+      errors.push(`A ${label} calibration job error must include a message.`);
     }
     if (!job?.finishedAt) {
-      errors.push("A failed calibration job must record finishedAt.");
+      errors.push(`A ${label} calibration job must record finishedAt.`);
+    }
+  }
+
+  if (status === "not-converged") {
+    if (!job?.response || typeof job.response !== "object" || Array.isArray(job.response)) {
+      errors.push("A not-converged calibration job must store the R response envelope.");
+    } else if (job.response.converged !== false) {
+      errors.push("A not-converged calibration job must store converged: false.");
     }
   }
 

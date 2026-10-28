@@ -40,6 +40,7 @@ const fx = vi.hoisted(() => {
     sessionPreview: null,
     processIds: [],
     ingestIds: [],
+    activatePayloads: [],
     ingestRefuse: false,
     subscribe: (fn) => {
       listeners.add(fn);
@@ -66,6 +67,7 @@ const fx = vi.hoisted(() => {
       this.sessionPreview = null;
       this.processIds = [];
       this.ingestIds = [];
+      this.activatePayloads = [];
       this.ingestRefuse = false;
       emit();
     },
@@ -119,6 +121,14 @@ function succeededResponse({ converged = true } = {}) {
 vi.mock("@/api/queries/evidenceModels", () => ({
   useEvidenceModels: () => ({ data: fx.evidenceModels, isLoading: false }),
   evidenceModelsKey: ["evidenceModels"],
+  useActivateParameterSet: () => ({
+    isPending: false,
+    error: null,
+    mutateAsync: async (payload) => {
+      fx.activatePayloads.push(payload);
+      return { message: "Parameter set activated successfully." };
+    },
+  }),
 }));
 
 vi.mock("@/api/queries/calibrationJobs", () => ({
@@ -392,8 +402,19 @@ describe("admin start → process → watch → ingest", () => {
     await user.click(screen.getByRole("button", { name: /^ingest$/i }));
 
     expect(fx.ingestIds).toEqual(["job-lsat7"]);
-    expect(screen.getByRole("status")).toHaveTextContent("Wrote parameter set ps-lsat7");
+    expect(screen.getByRole("status")).toHaveTextContent("Saved parameter set ps-lsat7");
+    expect(screen.getByRole("status")).toHaveTextContent(/candidate/i);
+    expect(screen.getByRole("button", { name: /activate candidate/i })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /activate candidate/i }));
+    expect(fx.activatePayloads).toEqual([
+      {
+        id: "em1",
+        payload: { statisticalModelId: "sm1", parameterSetId: "ps-lsat7" },
+      },
+    ]);
+    expect(screen.getByText(/Activated/)).toBeInTheDocument();
   });
 
   it("enqueues sim10GDINA bound to a G-DINA statistical model", async () => {
@@ -673,6 +694,29 @@ describe("live session provenance", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText(/Missing responses: 1/)).toBeInTheDocument();
     expect(screen.getByText(/sess-a, sess-b/)).toBeInTheDocument();
+  });
+});
+
+describe("not-converged job", () => {
+  it("shows the R message and offers Retry, not Ingest", async () => {
+    const user = userEvent.setup();
+    fx.setJobs([
+      queuedJob({
+        status: "not-converged",
+        finishedAt: "2026-09-13T12:01:00.000Z",
+        response: succeededResponse({ converged: false }),
+        error: { message: "did not converge", rClass: "NotConverged", stderr: "EM stall" },
+      }),
+    ]);
+
+    render(<CalibrationConsole />);
+    await user.click(screen.getByRole("button", { name: /^inspect$/i }));
+
+    expect(screen.getAllByText("not-converged").length).toBeGreaterThan(0);
+    expect(screen.getByText(/did not converge/)).toBeInTheDocument();
+    expect(screen.getByText("EM stall")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^retry$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^ingest$/i })).not.toBeInTheDocument();
   });
 });
 

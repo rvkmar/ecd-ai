@@ -47,8 +47,8 @@ describe("live response matrix", () => {
   it("builds an IRT matrix from finished sessions and keeps a missing answer null", () => {
     const sessions = students(2, (i) =>
       i === 0
-        ? [scored("item-b", false), scored("item-a", true)]
-        : [scored("item-a", false)]
+        ? [scored("item-b", false), scored("item-a", true), scored("item-c", true)]
+        : [scored("item-a", false), scored("item-c", false)]
     );
     sessions.push(
       session("open", "stud-open", [scored("item-a", true), scored("item-b", true)], {
@@ -76,11 +76,15 @@ describe("live response matrix", () => {
 
     expect(assessed.ok).toBe(true);
     expect(assessed.kind).toBe("irt-parameters");
-    expect(assessed.request.model).toEqual({ family: "irt", subtype: "2PL", itemIds: ["item-a", "item-b"] });
+    expect(assessed.request.model).toEqual({
+      family: "irt",
+      subtype: "2PL",
+      itemIds: ["item-a", "item-b", "item-c"],
+    });
     expect(assessed.request.responseMatrix.personIds).toEqual(["stud-0", "stud-1"]);
     expect(assessed.request.responseMatrix.data).toEqual([
-      [1, 0],
-      [0, null],
+      [1, 0, 1],
+      [0, null, 0],
     ]);
     expect(JSON.parse(JSON.stringify(assessed.request.responseMatrix.data))[1][1]).toBeNull();
     expect(assessed.request.provenance.missingResponses).toBe("null");
@@ -172,6 +176,7 @@ describe("live response matrix", () => {
         { itemId: "item-b", attributeId: "attr-1" },
         { itemId: "item-a", observableId: "obs-a", evidenceModelId: "em1", attributeId: "attr-2" },
         { itemId: "item-b", observableId: "obs-b", evidenceModelId: "em1", attributeId: "attr-2" },
+        { itemId: "item-c", attributeId: "attr-1" },
       ],
     };
     const db = {
@@ -180,10 +185,12 @@ describe("live response matrix", () => {
       items: [
         { id: "item-a", observationId: "obs-a" },
         { id: "item-b", observationId: "obs-b" },
+        { id: "item-c", observationId: "obs-c" },
       ],
       sessions: students(2, () => [
         scored("item-a", true, { observableId: "obs-a" }),
         scored("item-b", false, { observableId: "obs-b" }),
+        scored("item-c", true),
       ]),
     };
     db.evidenceModels[0].statisticalModels[0] = {
@@ -203,10 +210,11 @@ describe("live response matrix", () => {
     expect(assessed.request.qMatrix).toEqual({
       id: "qm1",
       attributeIds: ["attr-1", "attr-2"],
-      itemIds: ["item-a", "item-b"],
+      itemIds: ["item-a", "item-b", "item-c"],
       data: [
         [0, 1],
         [0, 1],
+        [1, 0],
       ],
     });
     expect(assessed.request.provenance.qMatrixUsesObservableRows).toBe(true);
@@ -223,10 +231,14 @@ describe("live response matrix", () => {
             { itemId: "item-a", attributeId: "attr-1" },
             { itemId: "item-b", attributeId: "attr-2" },
             { itemId: "item-a", observableId: "obs-a", evidenceModelId: "em1", attributeId: "attr-2" },
+            { itemId: "item-c", attributeId: "attr-1" },
           ],
         },
       ],
-      items: [{ id: "item-a", observationId: "obs-a" }],
+      items: [
+        { id: "item-a", observationId: "obs-a" },
+        { id: "item-c" },
+      ],
       evidenceModels: [
         {
           id: "em1",
@@ -235,7 +247,7 @@ describe("live response matrix", () => {
           ],
         },
       ],
-      sessions: students(2, () => [scored("item-a", true), scored("item-b", false)]),
+      sessions: students(2, () => [scored("item-a", true), scored("item-b", false), scored("item-c", true)]),
     };
     const assessed = assessLiveResponseMatrix(db, {
       evidenceModelId: "em1",
@@ -247,6 +259,7 @@ describe("live response matrix", () => {
     expect(assessed.request.qMatrix.data).toEqual([
       [1, 0],
       [0, 1],
+      [1, 0],
     ]);
     expect(assessed.request.provenance.qMatrixUsesObservableRows).toBe(false);
   });
@@ -276,7 +289,7 @@ describe("live response matrix", () => {
 
   it("stores a count and a hash when the session list is long", () => {
     const n = 51;
-    const sessions = students(n, () => [scored("item-a", true), scored("item-b", false)]);
+    const sessions = students(n, () => [scored("item-a", true), scored("item-b", false), scored("item-c", true)]);
     const assessed = assessLiveResponseMatrix(
       { ...irtModel(), sessions },
       { evidenceModelId: "em1", statisticalModelId: "sm1", kind: "irt-parameters" }
@@ -294,7 +307,7 @@ describe("live response matrix", () => {
     const assessed = assessLiveResponseMatrix(
       {
         ...irtModel(),
-        sessions: students(2, () => [scored("item-a", true), scored("item-b", false)]),
+        sessions: students(2, () => [scored("item-a", true), scored("item-b", false), scored("item-c", true)]),
       },
       { evidenceModelId: "em1", statisticalModelId: "sm1", kind: "irt-parameters" }
     );
@@ -317,5 +330,157 @@ describe("live response matrix", () => {
     expect(red.request.provenance.sourceSessionCount).toBe(2);
     expect(red.request.responseMatrix.personIds).toBeUndefined();
     expect(red.request.responseMatrix.data).toBeUndefined();
+  });
+
+  it("refuses 2PL with two items and 3PL with three, and names the floor", () => {
+    const two = assessLiveResponseMatrix(
+      {
+        ...irtModel("2pl"),
+        sessions: students(2, () => [scored("item-a", true), scored("item-b", false)]),
+      },
+      { evidenceModelId: "em1", statisticalModelId: "sm1", kind: "irt-parameters" }
+    );
+    expect(two.ok).toBe(false);
+    expect(two.code).toBe("TOO_FEW_ITEMS");
+    expect(two.message).toMatch(/at least 3 items/);
+    expect(two.message).toMatch(/This selection has 2/);
+
+    const threePl = assessLiveResponseMatrix(
+      {
+        ...irtModel("3pl"),
+        sessions: students(2, () => [
+          scored("item-a", true),
+          scored("item-b", false),
+          scored("item-c", true),
+        ]),
+      },
+      { evidenceModelId: "em1", statisticalModelId: "sm1", kind: "irt-parameters" }
+    );
+    expect(threePl.ok).toBe(false);
+    expect(threePl.code).toBe("TOO_FEW_ITEMS");
+    expect(threePl.message).toMatch(/at least 4 items/);
+
+    const four = assessLiveResponseMatrix(
+      {
+        ...irtModel("3pl"),
+        sessions: students(2, () => [
+          scored("item-a", true),
+          scored("item-b", false),
+          scored("item-c", true),
+          scored("item-d", false),
+        ]),
+      },
+      { evidenceModelId: "em1", statisticalModelId: "sm1", kind: "irt-parameters" }
+    );
+    expect(four.ok).toBe(true);
+    expect(four.request.model.subtype).toBe("3PL");
+    expect(four.request.model.itemIds).toEqual(["item-a", "item-b", "item-c", "item-d"]);
+  });
+
+  it("takes DINA items from the Q-matrix, including items scored on another evidence model", () => {
+    const db = {
+      evidenceModels: [
+        { id: "em-plant", statisticalModels: [] },
+        {
+          id: "em-function",
+          statisticalModels: [
+            {
+              id: "sm-plant-dina",
+              type: "dina",
+              structureConfig: { qMatrixId: "qm-plant" },
+            },
+          ],
+        },
+      ],
+      qMatrixModels: [
+        {
+          id: "qm-plant",
+          attributeIds: ["smv-names-part", "smv-names-function"],
+          entries: [
+            { itemId: "it-leaf", attributeId: "smv-names-part", required: true },
+            { itemId: "it-root", attributeId: "smv-names-part", required: true },
+            { itemId: "it-function", attributeId: "smv-names-function", required: true },
+            { itemId: "it-unanswered", attributeId: "smv-names-part", required: true },
+            {
+              observableId: "obs-plant-function",
+              evidenceModelId: "em-function",
+              attributeId: "smv-names-function",
+              required: true,
+            },
+          ],
+        },
+      ],
+      items: [
+        { id: "it-leaf", observationId: "obs-plant-name" },
+        { id: "it-root", observationId: "obs-plant-name" },
+        { id: "it-function", observationId: "obs-plant-function", evidenceModelId: "em-function" },
+      ],
+      sessions: [
+        ...students(2, () => [
+          scored("it-leaf", true, { evidenceModelId: "em-plant", observableId: "obs-plant-name" }),
+          scored("it-root", false, { evidenceModelId: "em-plant", observableId: "obs-plant-name" }),
+          scored("it-function", true, {
+            evidenceModelId: "em-function",
+            observableId: "obs-plant-function",
+          }),
+          scored("it-equiv", true, { evidenceModelId: "em-frac" }),
+        ]),
+        session("other-sm", "stud-other", [
+          scored("it-leaf", true, { evidenceModelId: "em-plant", statisticalModelId: "sm-other" }),
+          scored("it-root", true, { evidenceModelId: "em-plant", statisticalModelId: "sm-other" }),
+          scored("it-function", true, {
+            evidenceModelId: "em-function",
+            statisticalModelId: "sm-other",
+          }),
+        ]),
+      ],
+    };
+
+    const assessed = assessLiveResponseMatrix(db, {
+      evidenceModelId: "em-function",
+      statisticalModelId: "sm-plant-dina",
+      kind: "dina-parameters",
+    });
+    expect(assessed.ok).toBe(true);
+    expect(assessed.itemIds).toEqual(["it-function", "it-leaf", "it-root"]);
+    expect(assessed.request.qMatrix.itemIds).toEqual(["it-function", "it-leaf", "it-root"]);
+    expect(assessed.request.qMatrix.data).toEqual([
+      [0, 1],
+      [1, 0],
+      [1, 0],
+    ]);
+    expect(assessed.request.provenance.qMatrixUsesObservableRows).toBe(true);
+    expect(assessed.request.responseMatrix.personIds).toEqual(["stud-0", "stud-1"]);
+    expect(validateCalibrationRequest({ ...assessed.request, contractVersion: "1.0", jobId: "job-plant" })).toEqual([]);
+  });
+
+  it("refuses a two-item DINA matrix even when both items are on the Q-matrix", () => {
+    const db = {
+      qMatrixModels: [
+        {
+          id: "qm1",
+          attributeIds: ["attr-1"],
+          entries: [
+            { itemId: "item-a", attributeId: "attr-1" },
+            { itemId: "item-b", attributeId: "attr-1" },
+          ],
+        },
+      ],
+      evidenceModels: [
+        {
+          id: "em1",
+          statisticalModels: [{ id: "sm1", type: "dina", structureConfig: { qMatrixId: "qm1" } }],
+        },
+      ],
+      sessions: students(2, () => [scored("item-a", true), scored("item-b", false)]),
+    };
+    const assessed = assessLiveResponseMatrix(db, {
+      evidenceModelId: "em1",
+      statisticalModelId: "sm1",
+      kind: "dina-parameters",
+    });
+    expect(assessed.ok).toBe(false);
+    expect(assessed.code).toBe("TOO_FEW_ITEMS");
+    expect(assessed.message).toMatch(/at least 3 items/);
   });
 });

@@ -494,6 +494,64 @@ describe("selection and scoring agree on which parameters an item is delivered u
     expect(mine.reason).toContain("could be presented but not scored");
   });
 
+  it("uses the active set and ignores a candidate sitting on the same model", () => {
+    const evidenceModel = {
+      id: "em1",
+      statisticalModels: [
+        {
+          id: "sm1",
+          active: true,
+          type: "irt",
+          activeParameterSetId: "ps-active",
+          parameterSets: [
+            {
+              parameterSetId: "ps-candidate",
+              status: "candidate",
+              parameters: { o1: { a: 3, b: 2 } },
+            },
+            {
+              parameterSetId: "ps-active",
+              status: "active",
+              parameters: { o1: { a: 1, b: 0.5 } },
+            },
+          ],
+        },
+      ],
+    };
+    const item = { id: "item1", psychometrics: { irtParams: { a: 9, b: 9 } } };
+    const mine = resolveContinuousParameters("o1", evidenceModel, item);
+    expect(mine.parameterSource).toBe("calibrated");
+    expect(mine.parameterSetId).toBe("ps-active");
+    expect(mine.params.a).toBe(1);
+    expect(mine.params.b).toBe(0.5);
+  });
+
+  it("stays on pilot when the only stored set is a candidate", () => {
+    const evidenceModel = {
+      id: "em1",
+      statisticalModels: [
+        {
+          id: "sm1",
+          active: true,
+          type: "irt",
+          activeParameterSetId: null,
+          parameterSets: [
+            {
+              parameterSetId: "ps-candidate",
+              status: "candidate",
+              parameters: { o1: { a: 3, b: 2 } },
+            },
+          ],
+        },
+      ],
+    };
+    const item = { id: "item1", psychometrics: { irtParams: { a: 1, b: 0.25 } } };
+    const mine = resolveContinuousParameters("o1", evidenceModel, item);
+    expect(mine.parameterSource).toBe("pilot");
+    expect(mine.parameterSetId).toBeNull();
+    expect(mine.params).toEqual({ a: 1, b: 0.25 });
+  });
+
   it("DINA: calibrated set wins, pilot is the fallback, gdina gets no pilot", () => {
     const calibrated = {
       id: "sm2",

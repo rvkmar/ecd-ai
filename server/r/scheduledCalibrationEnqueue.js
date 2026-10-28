@@ -278,7 +278,12 @@ export function runScheduledCalibrationEnqueue(
       ? buildFixtureJob(db, target, { nowIso, nowMs, requestedBy })
       : buildLiveJob(db, target, { nowIso, nowMs, requestedBy });
     if (built.skipped) {
-      skipped.push({ target, reason: built.reason, sampleSize: built.sampleSize });
+      skipped.push({
+        target,
+        reason: built.reason,
+        sampleSize: built.sampleSize,
+        code: built.code,
+      });
       continue;
     }
     if (!built.ok) {

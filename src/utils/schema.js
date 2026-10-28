@@ -27,6 +27,7 @@ import { intendedDifficultyPlacement } from "./intendedDifficulty.js";
 import { dinaParametersAreUsable } from "../../server/delivery/attributeAccumulation.js";
 import { bayesianNetworkAuthoringErrors } from "../../server/delivery/bayesianNetwork.js";
 import { evaluateAssemblySufficiency } from "./assemblySufficiency.js";
+import { isParameterSetStatus } from "./parameterSetStatus.js";
 import { assemblyConstraintErrors } from "./assemblyConstraints.js";
 
 // The shared ECD response vocabulary. Imported rather than restated so the
@@ -367,6 +368,11 @@ export const schema = {
         sourceSessionIds: 'array',
         sourceSessionCount: 'number',
         sourceSessionIdsHash: 'string',
+        // candidate until a person activates it. active is the live pointer's
+        // set. Missing status is a legacy row; migration 010 stamps it.
+        status: 'string',
+        activatedAt: 'date',
+        activatedBy: 'string',
       }],
       activeParameterSetId: 'string',
     }],
@@ -1142,7 +1148,7 @@ export const schema = {
   // ------------------------------------------------------------------
   // calibrationJobs — D62 (W13). Node-side job record for offline R
   // calibration. Not an authored entity: status is queued/running/
-  // succeeded/failed/cancelled (lifecycleMatrix.js), not draft/reviewed.
+  // succeeded/failed/not-converged/cancelled (lifecycleMatrix.js), not draft/reviewed.
   // Seven-artefact contract: this block, validateEntity below, lifecycle
   // validator, routes + role gate, vocabulary, readiness mirror, tests.
   // ------------------------------------------------------------------
@@ -2752,6 +2758,18 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         }
         if (ps.sourceSessionIdsHash != null && typeof ps.sourceSessionIdsHash !== "string") {
           errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid sourceSessionIdsHash: should be string.`);
+        }
+        if (ps.status != null && ps.status !== "" && !isParameterSetStatus(ps.status)) {
+          errors.push(
+            `Parameter set ${psTag} on model ${sm.id} has invalid status '${ps.status}'. Use 'candidate' or 'active'.`
+          );
+        } else if (ps.status === "active" && sm.activeParameterSetId !== ps.parameterSetId) {
+          errors.push(
+            `Parameter set ${psTag} on model ${sm.id} is marked active but is not activeParameterSetId.`
+          );
+        }
+        if (ps.activatedBy != null && typeof ps.activatedBy !== "string") {
+          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid activatedBy: should be string.`);
         }
       }
 

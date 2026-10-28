@@ -264,7 +264,11 @@ describe("known equating contract-path pipeline (always runs)", () => {
       .post(`/api/calibrationJobs/${jobId}/ingest`)
       .set("Authorization", `Bearer ${tokenFor("admin")}`);
     expect(ingested.status).toBe(409);
-    expect(ingested.body.error).toMatch(/converged: false/);
+    expect(ingested.body.error).toMatch(/not-converged/);
+    expect(dbState.current.calibrationJobs.find((job) => job.id === jobId).status).toBe("not-converged");
+    expect(dbState.current.calibrationJobs.find((job) => job.id === jobId).error.message).toBe(
+      "mirt Rasch did not converge"
+    );
     expect(dbState.current.analysisArtefacts || []).toHaveLength(0);
     expect(dbState.current.evidenceModels[0].analysisArtefacts || []).toHaveLength(0);
   });

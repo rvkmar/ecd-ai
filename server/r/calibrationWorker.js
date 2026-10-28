@@ -181,8 +181,23 @@ export async function processJobById(
     return { ok: false, job: live };
   }
 
+  if (body.converged === false) {
+    live.status = "not-converged";
+    live.response = body;
+    live.error = body.error || {
+      message: "R reported converged: false.",
+      rClass: "NotConverged",
+      stderr: "",
+    };
+    if (!live.error.message) {
+      live.error = { ...live.error, message: "R reported converged: false." };
+    }
+    saveDB(after);
+    return { ok: false, job: live };
+  }
+
   live.response = body;
-  live.error = body.converged === false ? body.error || null : null;
+  live.error = null;
   live.status = "succeeded";
   saveDB(after);
   return { ok: true, job: live };

@@ -97,6 +97,81 @@ describe("D101 auditLog chokepoint", () => {
     expect(actions).toEqual(["calibration.ingest", "parameter_set.replace"]);
   });
 
+  it("a candidate ingest that leaves the active pointer does not record a replacement", () => {
+    beginAuditRequest("req-candidate");
+    bindAuditActor({ userId: "admin1", role: "admin" });
+    const before = {
+      evidenceModels: [
+        {
+          id: "em1",
+          versionNumber: 1,
+          statisticalModels: [{ id: "sm1", activeParameterSetId: "ps1" }],
+        },
+      ],
+      calibrationJobs: [{ id: "job1", status: "succeeded", kind: "irt-parameters" }],
+    };
+    const after = {
+      evidenceModels: [
+        {
+          id: "em1",
+          versionNumber: 1,
+          statisticalModels: [
+            {
+              id: "sm1",
+              activeParameterSetId: "ps1",
+              parameterSets: [{ parameterSetId: "ps-new", status: "candidate" }],
+            },
+          ],
+        },
+      ],
+      calibrationJobs: [
+        {
+          id: "job1",
+          status: "succeeded",
+          kind: "irt-parameters",
+          ingestedParameterSetId: "ps-new",
+        },
+      ],
+      auditLog: [],
+    };
+    applySaveAudits(before, after);
+    expect(after.auditLog.map((e) => e.action)).toEqual(["calibration.ingest"]);
+  });
+
+  it("activating a candidate still records who moved the pointer and when", () => {
+    beginAuditRequest("req-activate");
+    bindAuditActor({ userId: "admin1", role: "admin" });
+    const before = {
+      evidenceModels: [
+        {
+          id: "em1",
+          versionNumber: 1,
+          statisticalModels: [{ id: "sm1", activeParameterSetId: "ps1" }],
+        },
+      ],
+    };
+    const after = {
+      evidenceModels: [
+        {
+          id: "em1",
+          versionNumber: 1,
+          statisticalModels: [{ id: "sm1", activeParameterSetId: "ps2" }],
+        },
+      ],
+      auditLog: [],
+    };
+    applySaveAudits(before, after);
+    expect(after.auditLog).toHaveLength(1);
+    expect(after.auditLog[0].action).toBe("parameter_set.replace");
+    expect(after.auditLog[0].actor).toEqual({ userId: "admin1", role: "admin" });
+    expect(typeof after.auditLog[0].at).toBe("string");
+    expect(after.auditLog[0].detail).toEqual({
+      statisticalModelId: "sm1",
+      from: "ps1",
+      to: "ps2",
+    });
+  });
+
   it("applySaveAudits records entity.create for bulk-style inserts", () => {
     const before = { items: [] };
     const after = { items: [{ id: "i1", status: "draft", versionNumber: 1 }], auditLog: [] };

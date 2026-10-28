@@ -604,6 +604,35 @@ describe("calibration window", () => {
     expect(db.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe("ps1");
   });
 
+  it("activates a candidate, stamps who and when, and demotes the previous active set", async () => {
+    const model = makeModel();
+    model.statisticalModels[0].parameterSets[0].status = "active";
+    model.statisticalModels[0].parameterSets.push({
+      parameterSetId: "ps-candidate",
+      status: "candidate",
+      parameters: { o1: { a: 1.4, b: -0.2 } },
+      packageVersion: "mirt 1.47",
+      converged: true,
+      sampleSize: 80,
+      calibratedAt: "2026-10-28T00:00:00.000Z",
+    });
+    const { app, db } = await buildApp(model);
+
+    const res = await request(app)
+      .post("/api/evidenceModels/em1/activate-parameter-set")
+      .send({ statisticalModelId: "sm1", parameterSetId: "ps-candidate" });
+
+    expect(res.status).toBe(200);
+    const sm = db.evidenceModels[0].statisticalModels[0];
+    expect(sm.activeParameterSetId).toBe("ps-candidate");
+    const candidate = sm.parameterSets.find((ps) => ps.parameterSetId === "ps-candidate");
+    const previous = sm.parameterSets.find((ps) => ps.parameterSetId === "ps1");
+    expect(candidate.status).toBe("active");
+    expect(candidate.activatedBy).toBe("u1");
+    expect(candidate.activatedAt).toBeTruthy();
+    expect(previous.status).toBe("candidate");
+  });
+
   it("still blocks everything on a draft, for the original reason", async () => {
     const { app } = await buildApp(makeModel({ status: "draft", locked: false }));
 

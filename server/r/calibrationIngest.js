@@ -6,6 +6,7 @@
 // authorise a parameter set or lifecycle transition.
 
 import { validateEntity } from "../../src/utils/schema.js";
+import { markParameterSetCandidate } from "../../src/utils/parameterSetStatus.js";
 import { jobKindIngestsParameterSets, jobKindIngestsAnalysisArtefact } from "../../src/utils/ecdVocabulary.js";
 import {
   parameterSetFromCalibrationResponse,
@@ -186,12 +187,13 @@ export function ingestCalibrationJob(job, db, extras = {}) {
   };
 
   sm.parameterSets = sm.parameterSets || [];
+  markParameterSetCandidate(parameterSet);
   sm.parameterSets.push(parameterSet);
-  // Same as POST /evidenceModels/:id/recalibrate: an ingested calibrated
-  // set becomes the live pointer so new sessions leave pilot. In-flight
-  // sessions stay on their opening freeze (D68); they do not retag.
+  // A candidate is stored and not live. Scoring and selection keep reading
+  // activeParameterSetId. A person activates the candidate on
+  // POST /evidenceModels/:id/activate-parameter-set. In-flight sessions
+  // stay on their opening freeze (D68).
   const previousActiveParameterSetId = sm.activeParameterSetId ?? null;
-  sm.activeParameterSetId = parameterSetId;
 
   const { valid, errors } = validateEntity("evidenceModels", em, db, { strict: false });
   if (!valid) {

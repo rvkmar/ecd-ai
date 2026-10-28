@@ -163,7 +163,7 @@ describe("processJobById", () => {
     expect(job.error.message).toBe("R crashed");
   });
 
-  it("treats a non-converged but contract-valid response as succeeded (ingest will refuse)", async () => {
+  it("stores a non-converged R result as not-converged and keeps the R message", async () => {
     dbState.current = world([queuedJob()]);
     const response = {
       contractVersion: "1.0",
@@ -174,8 +174,13 @@ describe("processJobById", () => {
     const result = await processJobById("job1", {
       client: { postCalibration: async () => ({ ok: true, status: 200, json: response, text: "" }) },
     });
-    expect(result.ok).toBe(true);
-    expect(dbState.current.calibrationJobs[0].status).toBe("succeeded");
-    expect(dbState.current.calibrationJobs[0].response.converged).toBe(false);
+    expect(result.ok).toBe(false);
+    const job = dbState.current.calibrationJobs[0];
+    expect(job.status).toBe("not-converged");
+    expect(job.status).not.toBe("succeeded");
+    expect(job.response.converged).toBe(false);
+    expect(job.error.message).toBe("did not converge");
+    expect(job.error.rClass).toBe("NotConverged");
+    expect(job.error.stderr).toBe("EM cycles");
   });
 });

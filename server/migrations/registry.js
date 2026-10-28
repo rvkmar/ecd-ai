@@ -10,6 +10,7 @@ import domainAnalysisContentStandards from "./migrations/006-domain-analysis-con
 import qMatrixDomainAnalysisLink from "./migrations/007-qmatrix-domain-analysis-link.js";
 import perspectiveInheritance from "./migrations/008-perspective-inheritance.js";
 import domainAnalysisEntryIds from "./migrations/009-domain-analysis-entry-ids.js";
+import parameterSetStatus from "./migrations/010-parameter-set-status.js";
 
 export const MIGRATION_REGISTRY = [
   normalizeSessionStatus,
@@ -21,6 +22,7 @@ export const MIGRATION_REGISTRY = [
   qMatrixDomainAnalysisLink,
   perspectiveInheritance,
   domainAnalysisEntryIds,
+  parameterSetStatus,
 ];
 
 export function migrationRegistryIds() {

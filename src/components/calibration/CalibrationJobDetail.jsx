@@ -16,6 +16,7 @@ import {
   useProcessCalibrationJob,
   useRetryCalibrationJob,
 } from "@/api/queries/calibrationJobs";
+import { useActivateParameterSet } from "@/api/queries/evidenceModels";
 import CalibrationJobStatusBadge from "./CalibrationJobStatusBadge";
 import {
   convergedLabel,
@@ -41,8 +42,10 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
   const retry = useRetryCalibrationJob();
   const process = useProcessCalibrationJob();
   const ingest = useIngestCalibrationJob();
+  const activate = useActivateParameterSet();
   const [actionError, setActionError] = useState(null);
   const [ingestResult, setIngestResult] = useState(null);
+  const [activatedId, setActivatedId] = useState(null);
 
   if (!job) {
     return <p className="text-sm text-muted-foreground">Select a job to inspect it.</p>;
@@ -53,7 +56,9 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
   const canCancel = !readOnly && job.status === "queued";
   const canProcess = !readOnly && job.status === "queued";
   const canRetry =
-    !readOnly && job.status === "failed" && (job.attempts || 0) < (job.maxAttempts || 0);
+    !readOnly &&
+    (job.status === "failed" || job.status === "not-converged") &&
+    (job.attempts || 0) < (job.maxAttempts || 0);
   const canIngest =
     !readOnly &&
     job.status === "succeeded" &&
@@ -84,8 +89,9 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
           toast.error("Ingest response did not include a parameter set or analysis artefact.");
           return;
         }
-        setIngestResult(result.parameterSet || { parameterSetId });
-        toast.success(`Ingested as parameter set ${parameterSetId}.`);
+        setIngestResult(result.parameterSet || { parameterSetId, status: "candidate" });
+        setActivatedId(null);
+        toast.success(`Saved candidate parameter set ${parameterSetId}. It is not active yet.`);
         return;
       }
       toast.success(`${label} completed.`);
@@ -166,10 +172,45 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
       )}
 
       {ingestResult?.parameterSetId && (
-        <p className="text-sm" role="status">
-          Wrote parameter set <strong>{ingestResult.parameterSetId}</strong> and
-          set it active for new sessions.
-        </p>
+        <div className="space-y-2" role="status">
+          <p className="text-sm">
+            Saved parameter set <strong>{ingestResult.parameterSetId}</strong> as a
+            candidate. Scoring still uses the active set.
+          </p>
+          {!readOnly && activatedId !== ingestResult.parameterSetId && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={activate.isPending}
+              onClick={async () => {
+                setActionError(null);
+                try {
+                  await activate.mutateAsync({
+                    id: job.evidenceModelId,
+                    payload: {
+                      statisticalModelId: job.statisticalModelId,
+                      parameterSetId: ingestResult.parameterSetId,
+                    },
+                  });
+                  setActivatedId(ingestResult.parameterSetId);
+                  toast.success(`Activated parameter set ${ingestResult.parameterSetId}.`);
+                } catch (err) {
+                  const message = apiErrorMessage(err, "Activation failed.");
+                  setActionError(message);
+                  toast.error(message);
+                }
+              }}
+            >
+              {activate.isPending ? "Activating…" : "Activate candidate"}
+            </Button>
+          )}
+          {activatedId === ingestResult.parameterSetId && (
+            <p className="text-sm">
+              Activated <strong>{activatedId}</strong>. New sessions use this set.
+            </p>
+          )}
+        </div>
       )}
 
       {ingestResult?.analysisArtefactId || ingestResult?.id ? (
@@ -351,7 +392,7 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
         )}
       </section>
 
-      {job.status === "failed" && job.error && (
+      {(job.status === "failed" || job.status === "not-converged") && job.error && (
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">Error</h3>
           <p className="text-sm">

@@ -10,6 +10,7 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { accumulateEvidence } from "../evidenceAccumulation.js";
 import { ingestCalibrationJob } from "../../r/calibrationIngest.js";
+import { applyParameterSetActivation } from "../../../src/utils/parameterSetStatus.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const packPath = join(
@@ -64,8 +65,19 @@ describe("Newtonian console ingest — Accumulation smoke (EM-R2)", () => {
       statisticalModels: [
         {
           ...smSrc,
-          parameterSets: [],
-          activeParameterSetId: null,
+          parameterSets: [
+            {
+              parameterSetId: "ps-pilot",
+              status: "active",
+              parameters: Object.fromEntries(obsIds.map((id) => [id, { a: 1, b: 0 }])),
+              packageVersion: "ecd-pilot-1.0.0",
+              converged: true,
+              sampleSize: 1,
+              calibratedAt: "2026-01-01T00:00:00.000Z",
+              calibrationMethod: "seed-parameter-set",
+            },
+          ],
+          activeParameterSetId: "ps-pilot",
         },
       ],
     };
@@ -122,8 +134,15 @@ describe("Newtonian console ingest — Accumulation smoke (EM-R2)", () => {
     expect(ingest.parameterSet?.packageVersion).toBe(CONSOLE_PACKAGE);
     expect(ingest.parameterSet?.packageVersion).not.toBe("ecd-pilot-1.0.0");
     expect(ingest.parameterSet?.calibrationMethod).toBe("r-job");
+    expect(ingest.parameterSet?.status).toBe("candidate");
+    expect(em.statisticalModels[0].activeParameterSetId).toBe("ps-pilot");
+    expect(em.statisticalModels[0].parameterSets).toHaveLength(2);
+
+    applyParameterSetActivation(em.statisticalModels[0], "ps_console_sm_theta_2pl", {
+      activatedBy: "admin1",
+      activatedAt: "2026-09-16T12:05:00.000Z",
+    });
     expect(em.statisticalModels[0].activeParameterSetId).toBe("ps_console_sm_theta_2pl");
-    expect(em.statisticalModels[0].parameterSets).toHaveLength(1);
 
     const o1 = obsIds[0];
     const session = {
