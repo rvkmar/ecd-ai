@@ -5,10 +5,21 @@
   import { querySessions, replaceStoredSession, sessionsUseExternalStore } from "../sessions/sessionRepository.js";
   import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
   import { commitFinishedSession } from "../../src/utils/studentModelRecord.js";
+  import {
+    closeSessionAtDeadline,
+    deliveryClockStarted,
+    isPastDeliveryDeadline,
+  } from "../delivery/deliveryAdministration.js";
   
   /**
    * Sweep through sessions and auto-finish those past their deadlines.
-   * Deadline policy:
+   *
+   * A session whose delivery clock has started uses that effective deadline
+   * and does not also close on session.endTime or a task endTime. Pause
+   * freezes the clock: a paused session is not in this sweep, and a running
+   * session is not due while pauseStartedAt is still before the deadline.
+   * Before the delivery clock starts, and for every session with no stamp,
+   * the older rule is unchanged:
    *   1. Prefer session.endTime if defined.
    *   2. Else, use the latest (max) endTime among tasks in the session.
    *
@@ -33,15 +44,26 @@
     for (let session of sessions) {
       if (!session) continue;
   
-      // Only consider sessions in progress/reopened
-      if (
-        session.status &&
-        session.status !== SESSION_STATUS.IN_PROGRESS &&
-        session.status !== SESSION_STATUS.REOPENED
-      ) {
+      const clock = deliveryClockStarted(session);
+      const legacyLive =
+        !session.status ||
+        session.status === SESSION_STATUS.IN_PROGRESS ||
+        session.status === SESSION_STATUS.REOPENED;
+      const deliveryLive =
+        clock &&
+        (legacyLive || session.status === SESSION_STATUS.READY);
+      if (clock ? !deliveryLive : !legacyLive) continue;
+
+      if (clock) {
+        if (isPastDeliveryDeadline(session, now)) {
+          closeSessionAtDeadline(session, now);
+          commitFinishedSession(db, session, { now: session.finishedAt });
+          if (sessionsUseExternalStore()) await replaceStoredSession(db, session);
+          changed.push(session.id);
+        }
         continue;
       }
-  
+
       // Determine deadline
       let sessionDeadline = session.endTime ? new Date(session.endTime) : null;
   

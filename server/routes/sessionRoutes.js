@@ -65,6 +65,19 @@ import {
   selectPresentationModelIdForTaskModel,
   resolvePresentationModel,
 } from "../delivery/presentationModelResolution.js";
+import {
+  beginPause,
+  closeSessionAtDeadline,
+  computeEffectiveDeadline,
+  deliveryTimingView,
+  endPause,
+  ensureClockStarted,
+  evaluateAttempt,
+  isPastDeliveryDeadline,
+  placeAttempt,
+  presentSession,
+  stampDeliveryAdministration,
+} from "../delivery/deliveryAdministration.js";
 import { activePackageFor } from "../compositeLibrary/activePackage.js";
 import { recordItemUsage } from "../utils/itemExposure.js";
 // D49b: `import { log2 } from "mathjs"` stood here and was NEVER CALLED --
@@ -131,6 +144,112 @@ function storeAssemblyProgress(session, db, smvProgress) {
 async function persistSession(db, session) {
   await replaceStoredSession(db, session);
   saveDB(db);
+}
+
+function sessionView(session, user) {
+  return presentSession(session, user);
+}
+
+function timeLimitBody(session) {
+  return {
+    error: "Time limit reached.",
+    code: "time_limit",
+    autoFinished: true,
+    status: session.status,
+    deliveryTiming: deliveryTimingView(session),
+  };
+}
+
+async function closeForTimeLimit(db, session, now = new Date()) {
+  if (!session || !isPastDeliveryDeadline(session, now)) return false;
+  closeSessionAtDeadline(session, now);
+  commitFinishedSession(db, session, { now: session.finishedAt });
+  await persistSession(db, session);
+  return true;
+}
+
+function beginDeliveryClock(session, now = new Date()) {
+  const started = ensureClockStarted(session, now);
+  if (started && session.status === SESSION_STATUS.READY) {
+    session.status = SESSION_STATUS.IN_PROGRESS;
+  }
+  return started;
+}
+
+/**
+ * Presentation inputs for the create-time stamp.
+ * A delivery-model presentationModelId that still resolves is the only
+ * input. Otherwise each task's linkable presentation model is included.
+ * The stamp takes the largest timeMultiplier and the stricter allowReview.
+ */
+function presentationInputsForSession(db, deliveryModel, taskIds) {
+  const inputs = [];
+  const overrideId = typeof deliveryModel?.presentationModelId === "string"
+    ? deliveryModel.presentationModelId
+    : "";
+  if (overrideId) {
+    const resolved = resolvePresentationModel(db, { presentationModelId: overrideId });
+    if (resolved.ok) {
+      inputs.push({
+        source: "override",
+        id: resolved.presentationModelId,
+        timeMultiplier: presentationTimeMultiplier(resolved.overlay),
+        allowReview: resolved.overlay?.conditionalDisplay?.allowReview,
+      });
+      return inputs;
+    }
+  }
+  for (const taskId of taskIds || []) {
+    const task = (db?.tasks || []).find((row) => row && row.id === taskId);
+    if (!task?.taskModelId) continue;
+    const taskModel = (db?.taskModels || []).find((row) => row && row.id === task.taskModelId);
+    const taskModelVersion = typeof taskModel?.versionNumber === "number" ? taskModel.versionNumber : null;
+    const pkg = activePackageFor(task.taskModelId, db);
+    const liveId = taskModelVersion != null
+      ? selectPresentationModelIdForTaskModel(db, task.taskModelId, taskModelVersion)
+      : null;
+    const resolved = resolvePresentationModel(db, {
+      presentationModelId: liveId || pkg?.presentationModelId || null,
+      taskModelId: task.taskModelId,
+      taskModelVersion: taskModelVersion ?? pkg?.taskModelVersion ?? null,
+    });
+    if (!resolved.ok) continue;
+    inputs.push({
+      source: "task",
+      id: resolved.presentationModelId,
+      timeMultiplier: presentationTimeMultiplier(resolved.overlay),
+      allowReview: resolved.overlay?.conditionalDisplay?.allowReview,
+    });
+  }
+  return inputs;
+}
+
+function stampSessionAdministration(db, session, deliveryModel, taskIds) {
+  if (!deliveryModel) return;
+  let contentDb = db;
+  try {
+    contentDb = readRawDB() || db;
+  } catch {
+    contentDb = db;
+  }
+  const stamped = stampDeliveryAdministration({
+    administration: deliveryModel.administration,
+    presentations: presentationInputsForSession(contentDb, deliveryModel, taskIds),
+  });
+  if (!stamped) return;
+  session.deliveryAdministration = stamped;
+  const ceiling = {};
+  if (typeof stamped.reviewAllowed === "boolean") ceiling.allowedReview = stamped.reviewAllowed;
+  if (stamped.feedbackMode) ceiling.feedbackMode = stamped.feedbackMode;
+  if (Object.keys(ceiling).length) session.administration = ceiling;
+  // Fold the presentation factor in once, from the create timestamp.
+  // endTime is that deadline. The player reads endTime and does not scale it.
+  if (stamped.timeLimitMinutes) {
+    stamped.clockStartedAt = session.startedAt;
+    const computed = computeEffectiveDeadline(stamped);
+    stamped.effectiveDeadline = computed.effectiveDeadline;
+    if (computed.effectiveDeadline) session.endTime = computed.effectiveDeadline;
+  }
 }
 
 // ------------------------------
@@ -286,6 +405,11 @@ router.post("/", async (req, res) => {
       now,
     });
 
+    if (boundDeliveryModelId) {
+      const cited = (db.deliveryModels || []).find((row) => row && row.id === boundDeliveryModelId);
+      stampSessionAdministration(db, newSession, cited, taskIds);
+    }
+
     const { valid, errors } = validateEntity("sessions", newSession, db);
     if (!valid) {
       return res.status(400).json({ error: "Schema validation failed", details: errors });
@@ -297,9 +421,12 @@ router.post("/", async (req, res) => {
   saveDB(db);
 
   if (created.length === 1) {
-    return res.status(201).json(created[0]);
+    return res.status(201).json(sessionView(created[0], req.user));
   }
-  res.status(201).json({ assignmentGroupId, sessions: created });
+  res.status(201).json({
+    assignmentGroupId,
+    sessions: created.map((row) => sessionView(row, req.user)),
+  });
 });
 
 
@@ -309,7 +436,8 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   const db = loadDB();
   const sessions = await querySessions(db, {}, { projection: CATALOG_LIST_PROJECTION });
-  res.json(sessionsVisibleToUser(sessions, req.user, db.students || [], db.users || []));
+  const visible = sessionsVisibleToUser(sessions, req.user, db.students || [], db.users || []);
+  res.json(visible.map((row) => sessionView(row, req.user)));
 });
 
 // ------------------------------
@@ -318,7 +446,8 @@ router.get("/", async (req, res) => {
 router.get("/active", async (req, res) => {
   const db = loadDB();
   const active = await querySessions(db, { statusNe: "archived" }, { projection: CATALOG_LIST_PROJECTION });
-  res.json(sessionsVisibleToUser(active, req.user, db.students || [], db.users || []));
+  const visible = sessionsVisibleToUser(active, req.user, db.students || [], db.users || []);
+  res.json(visible.map((row) => sessionView(row, req.user)));
 });
 
 // ------------------------------
@@ -327,7 +456,8 @@ router.get("/active", async (req, res) => {
 router.get("/archived", async (req, res) => {
   const db = loadDB();
   const archived = await querySessions(db, { status: "archived" }, { projection: CATALOG_LIST_PROJECTION });
-  res.json(sessionsVisibleToUser(archived, req.user, db.students || [], db.users || []));
+  const visible = sessionsVisibleToUser(archived, req.user, db.students || [], db.users || []);
+  res.json(visible.map((row) => sessionView(row, req.user)));
 });
 
 // ------------------------------
@@ -346,13 +476,15 @@ router.get("/mine", async (req, res) => {
     if (user.role === "student") {
       if (String(req.query.scope || "") === "history") {
         return res.json(
-          closedSessionsForStudent(sessions, user, students, users)
+          closedSessionsForStudent(sessions, user, students, users).map((row) => sessionView(row, user))
         );
       }
-      return res.json(attendableSessionsForStudent(sessions, user, students, users));
+      return res.json(
+        attendableSessionsForStudent(sessions, user, students, users).map((row) => sessionView(row, user))
+      );
     }
     const live = sessions.filter((s) => s.status !== "archived");
-    return res.json(live);
+    return res.json(live.map((row) => sessionView(row, user)));
   } catch (err) {
     // A thrown /mine must not become GET /:id's 404. Empty list is honest.
     console.error("GET /api/sessions/mine failed:", err);
@@ -406,13 +538,14 @@ router.get("/:id", async (req, res) => {
   const session = await getSessionById(db, req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
   if (rejectUnassignedStudent(req, res, session, db)) return;
+  const closed = session.isCompleted === true || ["completed", "submitted", "reviewed", "archived"].includes(session.status);
+  if (!closed) await closeForTimeLimit(db, session);
   // D123: honest pending-human reporting — never present provisional as final.
   const pendingHumanRatings = pendingHumanRatingsFromSession(session);
-  res.json(
-    pendingHumanRatings.length > 0
-      ? { ...session, pendingHumanRatings }
-      : session
-  );
+  const payload = pendingHumanRatings.length > 0
+    ? { ...session, pendingHumanRatings }
+    : session;
+  res.json(sessionView(payload, req.user));
 });
 
 // ------------------------------
@@ -439,6 +572,16 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
   const session = loadedSession && !loadedSession.isCompleted ? loadedSession : null;
   if (!session) return res.status(404).json({ error: "Session not found or already completed" });
   if (rejectUnassignedStudent(req, res, session, db)) return;
+
+  if (await closeForTimeLimit(db, session)) {
+    return res.status(409).json(timeLimitBody(session));
+  }
+  if (
+    session.deliveryAdministration?.timeLimitMinutes > 0 &&
+    (session.status === SESSION_STATUS.PAUSED || session.deliveryAdministration.pauseStartedAt)
+  ) {
+    return res.status(409).json({ error: "Session is paused.", code: "session_paused" });
+  }
 
   // D60: a persisted stop is the authority that nothing more will be
   // presented. Accepting another response after that would keep updating
@@ -503,7 +646,14 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     // past a task that was never actually reached -- a session-ending bug
     // for the `fixed` strategy, which is purely index-driven. Refused
     // outright rather than silently accepted twice.
-    if (session.responses.some(r => r.taskId === taskId)) {
+    // A stamped delivery administration can allow a later attempt when
+    // review is on and the attempt cap is not used up. That replaces the
+    // stored response. With no stamp, the refusal below is unchanged.
+    const decision = evaluateAttempt(session, taskId);
+    if (!decision.ok) {
+      return res.status(decision.status).json({ error: decision.error, code: decision.code });
+    }
+    if (decision.action === "legacy") {
       return res.status(409).json({ error: `Task ${taskId} already has a recorded response for this session.` });
     }
 
@@ -666,9 +816,12 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
       parameterSource,
     });
 
-    session.responses.push(response);
-    session.currentTaskIndex = Math.min(session.currentTaskIndex + 1, session.taskIds.length);
-    noteDeliveredTask(session, taskId);
+    beginDeliveryClock(session);
+    const placed = placeAttempt(session, taskId, response, decision);
+    if (placed === "append") {
+      session.currentTaskIndex = Math.min(session.currentTaskIndex + 1, session.taskIds.length);
+      noteDeliveredTask(session, taskId);
+    }
     session.updatedAt = new Date().toISOString();
 
     // Day 30: defensive -- a task instance record predating this field, or
@@ -696,12 +849,14 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     // make. Surfaced as a response field; never blocks the score itself,
     // since a scoring failure and an exposure-bookkeeping failure are
     // different severities and the student's response is valid either way.
-    const itemIndex = db.items.findIndex(it => it.id === itemId);
-    const usageResult = recordItemUsage(item, db, {});
-    if (usageResult.ok) {
-      db.items[itemIndex] = usageResult.item;
-    } else {
-      response.exposureNote = usageResult.error;
+    if (placed !== "replace") {
+      const itemIndex = db.items.findIndex(it => it.id === itemId);
+      const usageResult = recordItemUsage(item, db, {});
+      if (usageResult.ok) {
+        db.items[itemIndex] = usageResult.item;
+      } else {
+        response.exposureNote = usageResult.error;
+      }
     }
 
     // Day 34 (Week 7): Evidence Accumulation, run immediately after the
@@ -764,12 +919,12 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     // written by storeAssemblyProgress, and the spread above is overwritten
     // here on purpose. accumulationWarnings stay response-only.
     const pendingHumanRatings = pendingHumanRatingsFromSession(session);
-    return res.json({
+    return res.json(sessionView({
       ...session,
       assemblyProgress,
       accumulationWarnings,
       ...(pendingHumanRatings.length > 0 ? { pendingHumanRatings } : {}),
-    });
+    }, req.user));
   }
 
   // 🔹 Validation: observationId & evidenceId
@@ -813,6 +968,13 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     }
   }
 
+  // Same attempt and review decision as the item path. With no stamp,
+  // action "legacy" still appends, which is what this path did before.
+  const legacyDecision = evaluateAttempt(session, taskId);
+  if (!legacyDecision.ok) {
+    return res.status(legacyDecision.status).json({ error: legacyDecision.error, code: legacyDecision.code });
+  }
+
   // 🔹 Save response in session
   const response = {
     taskId,
@@ -825,9 +987,12 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     timestamp: new Date().toISOString(),
   };
 
-  session.responses.push(response);
-  session.currentTaskIndex = Math.min(session.currentTaskIndex + 1, session.taskIds.length);
-  noteDeliveredTask(session, taskId);
+  beginDeliveryClock(session);
+  const legacyPlaced = placeAttempt(session, taskId, response, legacyDecision);
+  if (legacyPlaced === "append") {
+    session.currentTaskIndex = Math.min(session.currentTaskIndex + 1, session.taskIds.length);
+    noteDeliveredTask(session, taskId);
+  }
   session.updatedAt = new Date().toISOString();
 
   // 🔹 Update Task Instance: record generated evidence/observations
@@ -852,7 +1017,7 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
 
   await replaceStoredSession(db, session);
   saveDB(db);
-  res.json(session);
+  res.json(sessionView(session, req.user));
 });
 
 // ------------------------------
@@ -975,16 +1140,28 @@ router.get("/:id/next-task", async (req, res) => {
   if (!session) return res.json({});
   if (rejectUnassignedStudent(req, res, session, db)) return;
 
+  if (await closeForTimeLimit(db, session)) {
+    return res.json({
+      timeLimitReached: true,
+      autoFinished: true,
+      status: session.status,
+      deliveryTiming: deliveryTimingView(session),
+    });
+  }
+
+  const timing = deliveryTimingView(session);
+  const withTiming = (body) => (timing ? { ...body, deliveryTiming: timing } : body);
+
   // D58: once a stopping rule has fired, the persisted record is the
   // authority -- not a fresh re-evaluation that could disagree if the
   // Assembly Model was later archived or a second matching model appeared.
   // Status stays in_progress until the examinee (or /finish) closes it;
   // this only stores *why* nothing more will be presented.
   if (session.stopped && typeof session.stopped === "object") {
-    return res.json({
+    return res.json(withTiming({
       stopped: session.stopped,
       strategy: session.selectionStrategy,
-    });
+    }));
   }
 
   // D56: the three strategies (fixed / IRT / BayesianNetwork), the
@@ -998,7 +1175,21 @@ router.get("/:id/next-task", async (req, res) => {
     session.stopped = { ...decision.stopped, stoppedAt };
     session.updatedAt = stoppedAt;
     await persistSession(db, session);
-    return res.json({ ...decision, stopped: session.stopped });
+    return res.json(withTiming({ ...decision, stopped: session.stopped }));
+  }
+
+  // Review off, or the attempt cap used up: do not hand back a task that
+  // already has a response. An unanswered task is action "append" and is
+  // unchanged. With no stamp, evaluateAttempt does not refuse.
+  if (decision.taskId) {
+    const revisit = evaluateAttempt(session, decision.taskId);
+    if (!revisit.ok) {
+      return res.status(revisit.status).json({
+        error: revisit.error,
+        code: revisit.code,
+        ...(timing ? { deliveryTiming: timing } : {}),
+      });
+    }
   }
 
   // D114: attach the live Presentation Model overlay (pointer to a live
@@ -1007,7 +1198,7 @@ router.get("/:id/next-task", async (req, res) => {
   // stored endTime. R2 multiplies timeLimitMinutes by overlay.timeMultiplier
   // when it stamps that deadline.
   const presentation = attachPresentationOverlay(decision, session, db);
-  return res.json(presentation ? { ...decision, presentation } : decision);
+  return res.json(withTiming(presentation ? { ...decision, presentation } : decision));
 });
 
 /**
@@ -1069,8 +1260,9 @@ function attachPresentationOverlay(decision, session, _db) {
 // ------------------------------
 // POST /api/sessions/:id/play
 // ------------------------------
-// List-level start/resume. Does not finish the session. Ready or paused
-// become in_progress; already in_progress is a no-op persist.
+// List-level start/resume. Ready or paused become in_progress; already
+// in_progress persists the same status. A delivery clock that has already
+// run out closes the session instead of starting it.
 router.post("/:id/play", async (req, res) => {
   const { id } = req.params;
   const db = loadDB();
@@ -1081,11 +1273,19 @@ router.post("/:id/play", async (req, res) => {
     return res.status(400).json({ error: "Session cannot be played" });
   }
 
+  const now = new Date();
+  if (await closeForTimeLimit(db, session, now)) {
+    return res.status(409).json(timeLimitBody(session));
+  }
+  if (session.deliveryAdministration) {
+    endPause(session, now);
+    ensureClockStarted(session, now);
+  }
   session.status = SESSION_STATUS.IN_PROGRESS;
-  session.updatedAt = new Date().toISOString();
+  session.updatedAt = now.toISOString();
   if (!session.startedAt) session.startedAt = session.updatedAt;
   await persistSession(db, session);
-  res.json(session);
+  res.json(sessionView(session, req.user));
 });
 
 // ------------------------------
@@ -1098,10 +1298,15 @@ router.post("/:id/pause", async (req, res) => {
   if (!session) return res.status(404).json({ error: "Session not found" });
   if (rejectUnassignedStudent(req, res, session, db)) return;
 
+  const now = new Date();
+  if (await closeForTimeLimit(db, session, now)) {
+    return res.status(409).json(timeLimitBody(session));
+  }
+  if (session.deliveryAdministration) beginPause(session, now);
   session.status = "paused";
-  session.updatedAt = new Date().toISOString();
+  session.updatedAt = now.toISOString();
   await persistSession(db, session);
-  res.json(session);
+  res.json(sessionView(session, req.user));
 });
 
 // ------------------------------
@@ -1116,6 +1321,15 @@ router.post("/:id/resume", async (req, res) => {
 
   if (session.status !== SESSION_STATUS.PAUSED) {
     return res.status(400).json({ error: "Session is not paused" });
+  }
+
+  const now = new Date();
+  if (await closeForTimeLimit(db, session, now)) {
+    return res.status(409).json(timeLimitBody(session));
+  }
+  if (session.deliveryAdministration) {
+    endPause(session, now);
+    ensureClockStarted(session, now);
   }
 
   const draft = structuredClone(session);
@@ -1136,7 +1350,7 @@ router.post("/:id/resume", async (req, res) => {
     stored = session;
   }
   await persistSession(db, stored);
-  res.json(stored);
+  res.json(sessionView(stored, req.user));
 });
 
 
@@ -1161,7 +1375,7 @@ router.post("/:id/wizard-timing", async (req, res) => {
   if (isSessionClosedForStudent(session)) {
     // Idempotent: already finished with submit clock closed.
     if (session.wizardPhaseTimings?.submitted?.endedAt) {
-      return res.json(session);
+      return res.json(sessionView(session, req.user));
     }
     if (!(close && phase === "submitted")) {
       return res.status(400).json({ error: "Session is closed" });
@@ -1172,7 +1386,7 @@ router.post("/:id/wizard-timing", async (req, res) => {
   applyWizardTimingToSession(session, { phase, close, atIso: now });
   session.updatedAt = now;
   await persistSession(db, session);
-  res.json(session);
+  res.json(sessionView(session, req.user));
 });
 
 // ------------------------------
@@ -1184,6 +1398,9 @@ router.post("/:id/finish", async (req, res) => {
   const session = await getSessionById(db, id);
   if (!session) return res.status(404).json({ error: "Session not found" });
   if (rejectUnassignedStudent(req, res, session, db)) return;
+  if (await closeForTimeLimit(db, session)) {
+    return res.json(sessionView(session, req.user));
+  }
   const now = new Date().toISOString();
   session.status = "completed"; // ✅ mark completed
   session.isCompleted = true; // keep legacy flag if used
@@ -1201,7 +1418,7 @@ router.post("/:id/finish", async (req, res) => {
   commitFinishedSession(db, session, { now });
 
   await persistSession(db, session);
-  res.json(session);
+  res.json(sessionView(session, req.user));
 });
 
 // ------------------------------
@@ -1219,7 +1436,7 @@ router.post("/:id/review", async (req, res) => {
   session.updatedAt = new Date().toISOString();
 
   await persistSession(db, session);
-  res.json(session);
+  res.json(sessionView(session, req.user));
 });
 
 // ------------------------------
@@ -1234,7 +1451,7 @@ router.post("/:id/archive", async (req, res) => {
   session.status = "archived";
   session.updatedAt = new Date().toISOString();
   await persistSession(db, session);
-  res.json(session);
+  res.json(sessionView(session, req.user));
 });
 
 // ------------------------------

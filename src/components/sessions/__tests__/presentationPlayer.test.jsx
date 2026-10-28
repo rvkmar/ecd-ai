@@ -362,6 +362,43 @@ describe("SessionPlayer presentation settings", () => {
   });
   afterEach(() => cleanup());
 
+  it("reads the stamped deadline and administration ceiling without scaling the clock", async () => {
+    const started = Date.now();
+    const factor = 2;
+    const limitMinutes = 20;
+    const end = new Date(started + limitMinutes * factor * 60 * 1000).toISOString();
+    installPlayerFetch({
+      session: {
+        id: "s-play",
+        status: "in_progress",
+        taskIds: ["t1"],
+        responses: [{ taskId: "t1", rationale: "Hidden by the server ceiling.", rawAnswer: "a" }],
+        studentId: "stud1",
+        startedAt: new Date(started).toISOString(),
+        endTime: end,
+        administration: { allowedReview: false, feedbackMode: "none" },
+      },
+      next: {
+        taskId: "t1",
+        presentation: overlay({
+          accessibility: { timeMultiplier: factor },
+          timeMultiplier: factor,
+          conditionalDisplay: { allowReview: true, showFeedback: "immediate", showProgress: true },
+        }),
+      },
+      task: { id: "t1" },
+    });
+    renderPlayer();
+    const banner = await screen.findByTestId("session-time-remaining");
+    expect(banner).toHaveAttribute("data-presentation-time-multiplier", "2");
+    expect(banner).toHaveTextContent(/40m|39m/);
+    expect(banner).not.toHaveTextContent(/1h 20m/);
+    expect(banner).not.toHaveTextContent(/80m/);
+    expect(screen.getByTestId("session-extra-time")).toHaveTextContent("Extra time: 2×");
+    expect(screen.queryByRole("button", { name: "Enter review" })).toBeNull();
+    expect(screen.queryByTestId("item-response-feedback")).toBeNull();
+  });
+
   it("shows the server deadline and the extra-time factor without scaling the clock", async () => {
     const end = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
     installPlayerFetch({
