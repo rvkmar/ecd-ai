@@ -13,6 +13,11 @@ import { taskModelVariableValueIds } from "./ecdVocabulary.js";
 
 export const TMV_VARIATION_MODES = Object.freeze(["fixed", "varying"]);
 
+/** Stated family-size ceiling. D152 refuses above this; the projector
+ *  still caps allocation so a caller that skips the size check cannot
+ *  expand forever. */
+export const TASK_SPEC_FAMILY_MAX = 500;
+
 /**
  * D117 settings omit `variation`. Treat them as varying so existing
  * allowedValues constraints keep working.
@@ -108,7 +113,7 @@ export function projectTaskSpecFamilySize(settings, variables) {
  * Capped so an accidental 4,000-spec design does not allocate forever.
  */
 export function projectTaskSpecFamily(settings, variables, options = {}) {
-  const max = typeof options.max === "number" ? options.max : 500;
+  const max = typeof options.max === "number" ? options.max : TASK_SPEC_FAMILY_MAX;
   const byId = indexVariables(variables);
   const axes = [];
   for (const setting of settings || []) {

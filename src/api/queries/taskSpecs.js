@@ -1,7 +1,8 @@
 // src/api/queries/taskSpecs.js
 //
 // React Query hooks for /api/taskSpecs (D151). Read-only: specs are
-// generated, not authored. Family generation is D152.
+// generated, not authored. Family generation is
+// POST /api/templates/:id/generate-task-specs (D152).
 
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "../apiClient";

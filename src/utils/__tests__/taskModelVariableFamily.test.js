@@ -8,6 +8,7 @@ import {
   projectTaskSpecFamilySize,
   projectTaskSpecFamily,
   discreteLevelsForSetting,
+  TASK_SPEC_FAMILY_MAX,
 } from "../taskModelVariableFamily.js";
 import { BLOOM_LEVEL_VALUES } from "../ecdVocabulary.js";
 
@@ -75,6 +76,27 @@ describe("taskModelVariableFamily projection", () => {
       family.map((row) => row.find((a) => a.taskModelVariableId === "tmv-bloom").value)
     );
     expect(bloomValues.size).toBe(5);
+  });
+
+  it("reports size above TASK_SPEC_FAMILY_MAX without truncating the count", () => {
+    expect(TASK_SPEC_FAMILY_MAX).toBe(500);
+    const levels = Array.from({ length: 26 }, (_, i) => `v${i}`);
+    const a = {
+      id: "tmv-a",
+      type: "categorical",
+      possibleValues: levels.map((value) => ({ value })),
+    };
+    const b = {
+      id: "tmv-b",
+      type: "categorical",
+      possibleValues: levels.map((value) => ({ value })),
+    };
+    const settings = [
+      { taskModelVariableId: "tmv-a", variation: "varying" },
+      { taskModelVariableId: "tmv-b", variation: "varying" },
+    ];
+    expect(projectTaskSpecFamilySize(settings, [a, b])).toBe(676);
+    expect(projectTaskSpecFamily(settings, [a, b])).toHaveLength(TASK_SPEC_FAMILY_MAX);
   });
 
   it("returns 0 when a fixed setting lacks a legal fixedValue", () => {

@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../apiClient";
 import { useAuth } from "../../auth/AuthProvider";
+import { taskSpecsKey } from "./taskSpecs";
 
 export const templatesKey = ["templates"];
 export const templateKey = (id) => ["templates", id];
@@ -65,6 +66,20 @@ export function useConfirmTemplate() {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: templatesKey });
       queryClient.invalidateQueries({ queryKey: templateKey(id) });
+    },
+  });
+}
+
+export function useGenerateTaskSpecsFromTemplate() {
+  const { auth } = useAuth() || {};
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) =>
+      apiFetch(`/api/templates/${id}/generate-task-specs`, { method: "POST" }, auth),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: templatesKey });
+      queryClient.invalidateQueries({ queryKey: templateKey(id) });
+      queryClient.invalidateQueries({ queryKey: taskSpecsKey });
     },
   });
 }

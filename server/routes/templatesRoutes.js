@@ -1,9 +1,10 @@
 // server/routes/templatesRoutes.js
 // ------------------------------------------------------------------
 // Templates (D126 / W26 G14). Family-generating blueprint binding
-// Student + Evidence + Task + Presentation. Generates nothing yet
-// (W31). Confirm requires coherent four bindings; PM↔TM mismatch is
-// refused with the same rule compositeLibrary uses (ADR 0008).
+// Student + Evidence + Task + Presentation. D152 generates the family
+// via POST /:id/generate-task-specs. Confirm requires coherent four
+// bindings; PM↔TM mismatch is refused with the same rule
+// compositeLibrary uses (ADR 0008).
 //
 // Admin-authored (system-level CAF blueprint). District may view.
 // TMV settings are read from the bound Task Model (D120), not stored here.
@@ -14,6 +15,7 @@ import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { markTaskSpecsStaleForTemplate } from "../../src/utils/taskSpecReadiness.js";
+import { generateTaskSpecFamily } from "../services/generateTaskSpecFamily.js";
 
 const router = express.Router();
 
@@ -157,6 +159,21 @@ router.post("/:id/confirm", canAuthor, (req, res) => {
   markTaskSpecsStaleForTemplate(db, updated.id);
   saveDB(db);
   res.json(updated);
+});
+
+router.post("/:id/generate-task-specs", canAuthor, (req, res) => {
+  const db = loadDB();
+  const result = generateTaskSpecFamily(db, req.params.id, authorTenancy(req));
+  if (!result.ok) {
+    return res.status(result.status || 400).json({
+      error: result.error,
+      details: result.details,
+      citingIds: result.citingIds,
+      projectedSize: result.projectedSize,
+    });
+  }
+  saveDB(db);
+  res.status(201).json({ specs: result.specs, count: result.count });
 });
 
 router.delete("/:id", canDelete, (req, res) => {
