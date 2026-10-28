@@ -317,6 +317,71 @@ describe("ingest refuses non-converged", () => {
       ps.parameterSetId
     );
   });
+
+  it("copies live session ids and the Q-matrix id onto the parameter set", async () => {
+    const app = await jobsApp();
+    dbState.current.calibrationJobs = [
+      {
+        id: "job_live",
+        kind: "dina-parameters",
+        status: "succeeded",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+        responseSource: "sessions",
+        qMatrixId: "qm-live",
+        sourceSessionIds: ["sess-a", "sess-b"],
+        sourceSessionCount: 2,
+        sourceSessionIdsHash: "abc123",
+        requestedBy: "admin1",
+        requestedAt: "2026-11-20T09:00:00Z",
+        startedAt: "2026-11-20T09:00:01Z",
+        finishedAt: "2026-11-20T09:03:11Z",
+        request: {
+          ...validRequest(),
+          model: { family: "dina", itemIds: ["item_a", "item_b"] },
+          qMatrix: {
+            id: "qm-live",
+            attributeIds: ["attr-1"],
+            itemIds: ["item_a", "item_b"],
+            data: [[1], [1]],
+          },
+          provenance: {
+            source: "completed-sessions",
+            qMatrixId: "qm-live",
+            sourceSessionIds: ["sess-a", "sess-b"],
+            sourceSessionCount: 2,
+            sourceSessionIdsHash: "abc123",
+          },
+        },
+        response: {
+          contractVersion: "1.0",
+          jobId: "job_live",
+          converged: true,
+          packageVersion: "GDINA 2.9.4",
+          sampleSize: 2,
+          calibratedAt: "2026-11-20T09:03:11Z",
+          parameters: { item_a: { slip: 0.1, guess: 0.2 }, item_b: { slip: 0.1, guess: 0.2 } },
+        },
+        error: null,
+        attempts: 1,
+        maxAttempts: 3,
+        ingestedParameterSetId: null,
+      },
+    ];
+    dbState.current.evidenceModels[0].statisticalModels[0].type = "dina";
+
+    const res = await request(app)
+      .post("/api/calibrationJobs/job_live/ingest")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`);
+    expect(res.status).toBe(200);
+    const ps = res.body.parameterSet;
+    expect(ps.qMatrixId).toBe("qm-live");
+    expect(ps.responseSource).toBe("sessions");
+    expect(ps.sourceSessionIds).toEqual(["sess-a", "sess-b"]);
+    expect(ps.sourceSessionCount).toBe(2);
+    expect(ps.sourceSessionIdsHash).toBe("abc123");
+    expect(ps.calibrationJobId).toBe("job_live");
+  });
 });
 
 describe("legacy /api/calibrate", () => {
@@ -392,6 +457,63 @@ describe("session item analysis enqueue", () => {
     expect(fixture.status).toBe(201);
     expect(fixture.body.kind).toBe("irt-parameters");
     expect(fixture.body.request.responseMatrix.personIds).toHaveLength(1000);
+    expect(fixture.body.responseSource).toBe("fixture");
+    expect(fixture.body.fixtureName).toBe("lsat7");
+  });
+
+  it("builds an IRT matrix from finished sessions and stamps the session ids", async () => {
+    dbState.current.sessions = [
+      {
+        id: "sess-a",
+        studentId: "stud-a",
+        status: "completed",
+        isCompleted: true,
+        responses: [
+          { itemId: "item-a", evidenceModelId: "em1", activated: true, timestamp: "2026-10-20T00:00:00.000Z" },
+          { itemId: "item-b", evidenceModelId: "em1", activated: false, timestamp: "2026-10-20T00:00:00.000Z" },
+        ],
+      },
+      {
+        id: "sess-b",
+        studentId: "stud-b",
+        status: "completed",
+        isCompleted: true,
+        responses: [
+          { itemId: "item-a", evidenceModelId: "em1", activated: false, timestamp: "2026-10-20T00:00:00.000Z" },
+        ],
+      },
+    ];
+    const app = await jobsApp();
+    const res = await request(app)
+      .post("/api/calibrationJobs/")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send({
+        source: "sessions",
+        kind: "irt-parameters",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.kind).toBe("irt-parameters");
+    expect(res.body.responseSource).toBe("sessions");
+    expect(res.body.sourceSessionIds).toEqual(["sess-a", "sess-b"]);
+    expect(res.body.request.model.subtype).toBe("2PL");
+    expect(res.body.request.responseMatrix.data).toEqual([
+      [1, 0],
+      [0, null],
+    ]);
+    expect(res.body.request.qMatrix).toBeUndefined();
+  });
+
+  it("refuses a fixture source that does not name a fixture", async () => {
+    const app = await jobsApp();
+    const res = await request(app)
+      .post("/api/calibrationJobs/")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send({ source: "fixture", kind: "irt-parameters", evidenceModelId: "em1", statisticalModelId: "sm1" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/named fixture/);
+    expect(dbState.current.calibrationJobs).toHaveLength(0);
   });
 });
 

@@ -178,6 +178,11 @@ export function redactCalibrationJobForViewer(job, isAdmin) {
       evidenceModelId: request.provenance.evidenceModelId,
       sampleSize: n,
       studentIdsRedacted: true,
+      qMatrixId: request.provenance.qMatrixId || null,
+      sourceSessionCount: request.provenance.sourceSessionCount ?? null,
+      sourceSessionIdsHash: request.provenance.sourceSessionIdsHash || null,
+      missingCellCount: request.provenance.missingCellCount ?? null,
+      responseSource: "sessions",
     };
     if (request.responseMatrix) {
       request.responseMatrix = {
@@ -202,7 +207,13 @@ export function redactCalibrationJobForViewer(job, isAdmin) {
     response.responseMatrix = undefined;
     response.responseMatrixRedacted = true;
   }
-  return { ...job, request, response };
+  const redacted = { ...job, request, response };
+  if (Array.isArray(redacted.sourceSessionIds)) {
+    redacted.sourceSessionCount = redacted.sourceSessionCount ?? redacted.sourceSessionIds.length;
+    redacted.sourceSessionIds = undefined;
+    redacted.sourceSessionIdsRedacted = true;
+  }
+  return redacted;
 }
 
 /**

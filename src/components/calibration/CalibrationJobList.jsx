@@ -6,7 +6,7 @@ import React from "react";
 
 import { Button } from "@/components/ui/button";
 import CalibrationJobStatusBadge from "./CalibrationJobStatusBadge";
-import { convergedLabel, formatTimestamp } from "./calibrationConsoleUtils";
+import { calibrationJobSourceLabel, convergedLabel, formatTimestamp } from "./calibrationConsoleUtils";
 
 export default function CalibrationJobList({
   jobs = [],
@@ -32,6 +32,7 @@ export default function CalibrationJobList({
           <tr className="bg-muted/50 text-left text-muted-foreground">
             <th className="px-4 py-2">Status</th>
             <th className="px-4 py-2">Kind</th>
+            <th className="px-4 py-2">Source</th>
             <th className="px-4 py-2">Evidence model</th>
             <th className="px-4 py-2">Attempts</th>
             <th className="px-4 py-2">Requested</th>
@@ -52,6 +53,7 @@ export default function CalibrationJobList({
                   <CalibrationJobStatusBadge status={job.status} />
                 </td>
                 <td className="px-4 py-2">{job.kind || "—"}</td>
+                <td className="px-4 py-2">{calibrationJobSourceLabel(job)}</td>
                 <td className="px-4 py-2">{modelName(job.evidenceModelId)}</td>
                 <td className="px-4 py-2">
                   {job.attempts ?? "—"}

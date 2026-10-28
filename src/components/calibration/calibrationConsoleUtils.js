@@ -178,6 +178,45 @@ export const NAMED_CALIBRATION_FIXTURES = [
   },
 ];
 
+export const LIVE_CALIBRATION_JOBS = [
+  {
+    kind: LSAT7_ITEM_ANALYSIS_JOB_KIND,
+    label: "Item analysis",
+    buttonLabel: "Enqueue session item analysis",
+    statisticalModelTypes: LSAT7_ITEM_ANALYSIS_STATISTICAL_MODEL_TYPES,
+    description:
+      "Item analysis uses completed session responses for the evidence model you choose. Sample size is the number of students with a scored response. LSAT7 stays a published fixture.",
+  },
+  {
+    kind: LSAT7_JOB_KIND,
+    label: "IRT or Rasch parameters",
+    buttonLabel: "Enqueue live IRT calibration",
+    statisticalModelTypes: LSAT7_STATISTICAL_MODEL_TYPES,
+    description:
+      "IRT or Rasch parameters are estimated from scored responses on finished sessions. A missing answer stays missing. LSAT7 stays a published fixture.",
+  },
+  {
+    kind: LSAT7_CTT_JOB_KIND,
+    label: "CTT statistics",
+    buttonLabel: "Enqueue live CTT calibration",
+    statisticalModelTypes: LSAT7_CTT_STATISTICAL_MODEL_TYPES,
+    description:
+      "Classical item statistics are computed from scored responses on finished sessions. A missing answer stays missing. LSAT7 stays a published fixture.",
+  },
+  {
+    kind: SIM10GDINA_JOB_KIND,
+    label: "DINA or G-DINA parameters",
+    buttonLabel: "Enqueue live DINA calibration",
+    statisticalModelTypes: SIM10GDINA_STATISTICAL_MODEL_TYPES,
+    description:
+      "DINA or G-DINA uses the Q-matrix on the statistical model. Observable rows take precedence over item rows. Slip and guess stay on the item. sim10GDINA stays a published fixture.",
+  },
+];
+
+export function liveCalibrationJob(kind) {
+  return LIVE_CALIBRATION_JOBS.find((job) => job.kind === kind) || LIVE_CALIBRATION_JOBS[0];
+}
+
 export function namedCalibrationFixture(id) {
   return NAMED_CALIBRATION_FIXTURES.find((f) => f.id === id) || NAMED_CALIBRATION_FIXTURES[0];
 }
@@ -229,7 +268,33 @@ export function requestSummary(job) {
     attributeIds: Array.isArray(request.qMatrix?.attributeIds)
       ? request.qMatrix.attributeIds
       : [],
+    responseSource:
+      job?.responseSource ||
+      (request.provenance?.source === "completed-sessions" ? "sessions" : null),
+    fixtureName: job?.fixtureName || null,
+    qMatrixId: job?.qMatrixId || request.provenance?.qMatrixId || request.qMatrix?.id || null,
+    sourceSessionCount:
+      job?.sourceSessionCount ?? request.provenance?.sourceSessionCount ?? null,
+    sourceSessionIds: Array.isArray(job?.sourceSessionIds)
+      ? job.sourceSessionIds
+      : Array.isArray(request.provenance?.sourceSessionIds)
+        ? request.provenance.sourceSessionIds
+        : [],
+    missingCellCount: request.provenance?.missingCellCount ?? null,
   };
+}
+
+export function calibrationJobSourceLabel(job) {
+  const summary = requestSummary(job);
+  const source = summary?.responseSource;
+  if (source === "sessions" || summary?.source === "completed-sessions") {
+    const n = summary?.sourceSessionCount;
+    return n != null ? `Live sessions (${n})` : "Live sessions";
+  }
+  if (source === "fixture") {
+    return summary?.fixtureName ? `Fixture (${summary.fixtureName})` : "Fixture";
+  }
+  return "Response matrix";
 }
 
 export function statisticalModelsForFixture(evidenceModel, types) {

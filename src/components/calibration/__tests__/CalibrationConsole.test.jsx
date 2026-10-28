@@ -501,6 +501,27 @@ describe("admin start → process → watch → ingest", () => {
     ]);
   });
 
+  it("enqueues live IRT from completed sessions when that calibration is chosen", async () => {
+    fx.sessionPreview = { ok: true, sampleSize: 4, studentIds: ["stud-0"], message: null };
+    const user = userEvent.setup();
+    render(<CalibrationConsole />);
+
+    await user.selectOptions(screen.getByLabelText(/response source/i), "sessions");
+    await user.selectOptions(screen.getByLabelText(/live calibration/i), "irt-parameters");
+    await user.selectOptions(screen.getByLabelText(/evidence model/i), "em1");
+    await user.selectOptions(screen.getByLabelText(/statistical model/i), "sm1");
+    await user.click(screen.getByRole("button", { name: /enqueue live irt calibration/i }));
+
+    expect(fx.enqueuePayloads).toEqual([
+      {
+        source: "sessions",
+        kind: "irt-parameters",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+      },
+    ]);
+  });
+
   it("enqueues known 2PL test info bound to an IRT statistical model", async () => {
     const user = userEvent.setup();
     render(<CalibrationConsole />);
@@ -597,6 +618,61 @@ describe("non-converged ingest refusal", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/ingestion refuses converged: false/i);
     expect(screen.queryByText(/wrote parameter set/i)).not.toBeInTheDocument();
     expect(fx.getJobs()[0].ingestedParameterSetId).toBeNull();
+  });
+});
+
+describe("live session provenance", () => {
+  it("shows the source, the sample size, and the Q-matrix on the job", async () => {
+    const user = userEvent.setup();
+    fx.setJobs([
+      queuedJob({
+        id: "job-live",
+        kind: "dina-parameters",
+        responseSource: "sessions",
+        qMatrixId: "qm-live",
+        sourceSessionCount: 2,
+        sourceSessionIds: ["sess-a", "sess-b"],
+        request: {
+          contractVersion: "1.0",
+          jobId: "job-live",
+          model: { family: "dina", itemIds: ["item-a", "item-b"] },
+          responseMatrix: {
+            personIds: ["stud-a", "stud-b"],
+            itemIds: ["item-a", "item-b"],
+            data: [
+              [1, 0],
+              [0, null],
+            ],
+          },
+          qMatrix: {
+            id: "qm-live",
+            attributeIds: ["attr-1", "attr-2"],
+            itemIds: ["item-a", "item-b"],
+            data: [
+              [0, 1],
+              [0, 1],
+            ],
+          },
+          provenance: {
+            source: "completed-sessions",
+            sampleSize: 2,
+            missingCellCount: 1,
+            sourceSessionCount: 2,
+            qMatrixId: "qm-live",
+          },
+          options: { seed: 20261028 },
+        },
+      }),
+    ]);
+
+    render(<CalibrationConsole />);
+    expect(screen.getByRole("cell", { name: /live sessions \(2\)/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^inspect$/i }));
+    expect(screen.getByText("Live sessions")).toBeInTheDocument();
+    expect(screen.getByText("qm-live")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText(/Missing responses: 1/)).toBeInTheDocument();
+    expect(screen.getByText(/sess-a, sess-b/)).toBeInTheDocument();
   });
 });
 
