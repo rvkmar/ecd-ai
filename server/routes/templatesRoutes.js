@@ -13,6 +13,7 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
+import { markTaskSpecsStaleForTemplate } from "../../src/utils/taskSpecReadiness.js";
 
 const router = express.Router();
 
@@ -132,6 +133,7 @@ router.put("/:id", canAuthor, (req, res) => {
   if (rejectIfInvalid(res, updated, db)) return;
 
   db.templates[idx] = updated;
+  markTaskSpecsStaleForTemplate(db, updated.id);
   saveDB(db);
   res.json(updated);
 });
@@ -152,6 +154,7 @@ router.post("/:id/confirm", canAuthor, (req, res) => {
   if (rejectIfInvalid(res, updated, db)) return;
 
   db.templates[idx] = updated;
+  markTaskSpecsStaleForTemplate(db, updated.id);
   saveDB(db);
   res.json(updated);
 });
@@ -161,6 +164,14 @@ router.delete("/:id", canDelete, (req, res) => {
   const rows = db.templates || [];
   const existing = rows.find((v) => v.id === req.params.id);
   if (!existing) return res.status(404).json({ error: "Template not found" });
+
+  const citing = (db.taskSpecs || []).filter((spec) => spec.templateId === existing.id);
+  if (citing.length) {
+    return res.status(409).json({
+      error: "Remove generated task specs before deleting this template.",
+      citingIds: citing.map((spec) => spec.id),
+    });
+  }
 
   db.templates = rows.filter((v) => v.id !== existing.id);
   saveDB(db);

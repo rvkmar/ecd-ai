@@ -318,6 +318,32 @@ describe("deliveryModels", () => {
   });
 });
 
+describe("taskSpecs (D151) specifically", () => {
+  it("has a route file, is mounted, and is gated", () => {
+    const file = "taskSpecsRoutes.js";
+    const full = path.join(ROUTES_DIR, file);
+    expect(fs.existsSync(full), `${file} should exist`).toBe(true);
+    const src = liveCode(fs.readFileSync(full, "utf8"));
+    expect(src, `${file} should apply authenticateToken in LIVE code`).toMatch(
+      HAS_ROUTER_GATE
+    );
+    expect(src, `${file} should import authorizeRole for its write gates`).toContain(
+      "authorizeRole"
+    );
+    expect(INDEX, "taskSpecs should be mounted in server/index.js").toContain(
+      `app.use("/api/taskSpecs"`
+    );
+  });
+
+  it("refuses a generic authored create", () => {
+    const src = liveCode(
+      fs.readFileSync(path.join(ROUTES_DIR, "taskSpecsRoutes.js"), "utf8")
+    );
+    expect(src).toMatch(/generated, not authored/);
+    expect(src).toMatch(/status\(405\)/);
+  });
+});
+
 describe("templates (D126) specifically", () => {
   it("has a route file, is mounted, and is gated", () => {
     const file = "templatesRoutes.js";

@@ -359,6 +359,12 @@ const DEAD_EXPORT_BASELINE = new Map([
     "D92 test harness only — clears in-memory refresh/denylist/epoch maps " +
       "between suites. Not a production caller by design.",
   ],
+  [
+    "server/services/insertGeneratedTaskSpec.js :: insertGeneratedTaskSpec",
+    "D151 ships the generate-only insert so POST /api/taskSpecs can stay 405. " +
+      "D152's family generator is the first production caller; tests and the " +
+      "route file must not count as one.",
+  ],
 ]);
 
 describe("nothing is done until something calls it (server)", () => {

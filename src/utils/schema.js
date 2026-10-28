@@ -81,6 +81,7 @@ import { exemplarCount, levelValues } from "./rubricDelivery.js";
 import { jointPriorErrors } from "./jointPrior.js";
 import { deliveryModelBindingErrors } from "./deliveryModelReadiness.js";
 import { studentModelRecordErrors } from "./studentModelRecord.js";
+import { taskSpecErrors } from "./taskSpecReadiness.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 
 // Canonical session status spellings -- see src/utils/sessionStatus.js for
@@ -1066,6 +1067,27 @@ export const schema = {
     // D136: optional. A pattern offers structure; it does not constrain confirm.
     designPatternId: 'string',
     status: 'string',
+    districtId: 'string',
+    schoolId: 'string',
+    createdBy: 'string',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
+  // taskSpecs — D151 (W31 G15). PADI's final plan for an individual
+  // task, generated from a template with TMVs fixed. Derived, never
+  // authored: POST /api/taskSpecs is refused. No CAF status — the
+  // template carries draft|confirmed. stale is set when the source
+  // template is PUT or confirmed (ADR 0003b). Family generation is D152.
+  // Named taskSpecs so the singularizer yields TaskSpec.
+  // ------------------------------------------------------------------
+  taskSpecs: {
+    id: 'string',
+    templateId: 'string',
+    tmvAssignment: 'array',
+    stale: 'boolean',
+    generatedAt: 'date',
     districtId: 'string',
     schoolId: 'string',
     createdBy: 'string',
@@ -6721,6 +6743,10 @@ export function validateEntity(collection, obj, db = null, options = {}) {
     errors.push(
       ...templateBindingErrors(obj, db, { requireAllBindings: requireAll })
     );
+  }
+
+  if (collection === "taskSpecs") {
+    errors.push(...taskSpecErrors(obj, db));
   }
 
   /* =====================================================

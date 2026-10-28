@@ -57,6 +57,7 @@ function defaultDB() {
     workProducts: [],
     rubrics: [],
     templates: [],
+    taskSpecs: [],
     deliveryModels: [],
     designPatterns: [],
     students: [],

@@ -118,6 +118,26 @@ describe("templates (D126 authoring RBAC)", () => {
   });
 });
 
+describe("taskSpecs (D151 derived RBAC)", () => {
+  it("admin can view and delete task specs, not edit them", () => {
+    expect(can("admin", "view", "taskSpecs")).toBe(true);
+    expect(can("admin", "delete", "taskSpecs")).toBe(true);
+    expect(can("admin", "edit", "taskSpecs")).toBeFalsy();
+    expect(can("admin", "create", "taskSpecs")).toBeFalsy();
+  });
+
+  it("district can view and cannot write them", () => {
+    expect(can("district", "view", "taskSpecs")).toBe(true);
+    expect(can("district", "edit", "taskSpecs")).toBeFalsy();
+    expect(can("district", "delete", "taskSpecs")).toBeFalsy();
+  });
+
+  it("teacher and student cannot see the entity", () => {
+    expect(can("teacher", "view", "taskSpecs")).toBe(false);
+    expect(can("student", "view", "taskSpecs")).toBe(false);
+  });
+});
+
 describe("designPatterns (D131 authoring RBAC)", () => {
   it("admin can view, edit, and delete design patterns", () => {
     expect(can("admin", "view", "designPatterns")).toBe(true);

@@ -21,6 +21,8 @@ export const rolePermissions = {
       "workProducts",
       "rubrics",
       "templates",
+      // D151: derived task specs. Admin may delete; nobody authors.
+      "taskSpecs",
       // D131: system-level PADI pattern. Admin authors. District may
       // see it. Confirmed is a seeding source, not operational delivery.
       "designPatterns",
@@ -103,6 +105,7 @@ export const rolePermissions = {
       "workProducts",
       "rubrics",
       "templates",
+      "taskSpecs",
       "designPatterns",
       "domainAnalyses",
       "items",
@@ -138,6 +141,7 @@ export const rolePermissions = {
       "workProducts",
       "rubrics",
       "templates",
+      "taskSpecs",
       "designPatterns",
       "domainAnalyses",
       "tasks",
