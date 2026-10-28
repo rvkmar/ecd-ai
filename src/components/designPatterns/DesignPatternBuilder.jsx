@@ -14,7 +14,7 @@
 // New, Edit, and Duplicate open DesignPatternLibraryView. A focus id
 // in the URL opens Manage on that pattern.
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -1256,6 +1256,15 @@ export function DesignPatternLibraryView({
     setStepIndex(0);
   }
 
+  const openNeighbourhoodPattern = useCallback((id) => {
+    const row = patterns.find((item) => item.id === id);
+    if (!row) return;
+    setEditingId(row.id);
+    setForm(formFromRow(row));
+    setServerError("");
+    setStepIndex(0);
+  }, [patterns]);
+
   function cancelEdit() {
     setEditingId(null);
     setForm(emptyForm());
@@ -1668,10 +1677,7 @@ export function DesignPatternLibraryView({
                 report={descendantReport}
                 onLoad={onLoadDescendants}
                 refreshKey={descendantTick}
-                onOpen={(id) => {
-                  const row = patterns.find((item) => item.id === id);
-                  if (row) startEdit(row);
-                }}
+                onOpen={openNeighbourhoodPattern}
               />
             </section>
           ) : null
@@ -1685,10 +1691,7 @@ export function DesignPatternLibraryView({
               report={descendantReport}
               onLoad={onLoadDescendants}
               refreshKey={descendantTick}
-              onOpen={(id) => {
-                const row = patterns.find((item) => item.id === id);
-                if (row) startEdit(row);
-              }}
+              onOpen={openNeighbourhoodPattern}
             />
           ) : null}
           {patterns.length === 0 ? (

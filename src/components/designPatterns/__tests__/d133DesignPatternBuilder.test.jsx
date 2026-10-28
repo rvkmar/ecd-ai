@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   DesignPatternLibraryView,
@@ -8,6 +8,11 @@ import {
   DESIGN_PATTERN_NARRATIVE_GUIDANCE,
 } from "../DesignPatternBuilder.jsx";
 import { openDesignPatternStep } from "./openDesignPatternStep.js";
+
+/** One change event — user.type walks every keystroke through React Flow. */
+function fill(label, value) {
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+}
 
 describe("D133 design pattern narrative", () => {
   it("explains what each narrative attribute is for", async () => {
@@ -91,7 +96,7 @@ describe("D133 design pattern narrative", () => {
 
     expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
 
-    await user.type(screen.getByLabelText("Title"), "Explain a diagram");
+    fill("Title", "Explain a diagram");
     await user.click(screen.getByRole("button", { name: "Create draft" }));
 
     expect(onCreate).toHaveBeenCalledWith({
@@ -140,18 +145,15 @@ describe("D133 design pattern narrative", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
-    await user.type(screen.getByLabelText("Summary"), "Students explain a labelled diagram.");
+    fill("Summary", "Students explain a labelled diagram.");
     await openDesignPatternStep(user, "Rationale");
-    await user.type(
-      screen.getByLabelText("Rationale"),
-      "The pattern separates explanation from recognition."
-    );
+    fill("Rationale", "The pattern separates explanation from recognition.");
     await openDesignPatternStep(user, "Focal KSAs");
     await user.click(screen.getByRole("button", { name: "Add Focal KSAs" }));
-    await user.type(screen.getByLabelText("Focal KSAs 1"), "Model-based explanation");
+    fill("Focal KSAs 1", "Model-based explanation");
     await openDesignPatternStep(user, "Additional KSAs");
     await user.click(screen.getByRole("button", { name: "Add Additional KSAs" }));
-    await user.type(screen.getByLabelText("Additional KSAs 1"), "Diagram conventions");
+    fill("Additional KSAs 1", "Diagram conventions");
     expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
     await user.selectOptions(
       screen.getByLabelText("Additional KSAs 1 relationship"),

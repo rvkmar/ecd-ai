@@ -65,7 +65,7 @@ function flowFrom(neighbourhood) {
   return { nodes: layoutNodes(nodes, edges), edges };
 }
 
-export default function PatternNeighbourhood({
+function PatternNeighbourhood({
   patternId,
   patterns = [],
   report = null,
@@ -147,3 +147,5 @@ export default function PatternNeighbourhood({
     </div>
   );
 }
+
+export default React.memo(PatternNeighbourhood);
