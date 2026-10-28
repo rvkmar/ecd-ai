@@ -192,12 +192,24 @@ describe("identifyEvidence — degrades gracefully rather than throwing", () => 
     expect(result.observableId).toBe("o-does-not-exist");
   });
 
-  it("warns (but does not throw) when the work product matches no declared responsePattern", () => {
+  it("scores a keyed dichotomous selection that is not the key as an observed 0", () => {
     const result = identify({ selected: "opt_z" }, equivalentFractionsItem);
 
+    expect(result.activated).toBe(false);
+    expect(result.direction).toBe("supports");
+    expect(result.warning).toBeUndefined();
+    expect(result.rationale).toMatch(/not the keyed option/);
+  });
+
+  it("leaves an empty selection unscored", () => {
+    const result = identify({}, equivalentFractionsItem);
     expect(result.activated).toBeNull();
-    expect(result.direction).toBe("supports"); // still resolvable even without a pattern match
     expect(result.warning).toMatch(/did not match any declared responsePattern/);
+  });
+
+  it("leaves an explicit skip unscored even when a selection is also present", () => {
+    const result = identify({ selected: "opt_z", skipped: true }, equivalentFractionsItem);
+    expect(result.activated).toBeNull();
   });
 
   it("handles an item with no evidenceActivationMap at all (empty, not missing)", () => {

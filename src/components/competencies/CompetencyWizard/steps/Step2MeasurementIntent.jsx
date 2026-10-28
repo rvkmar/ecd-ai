@@ -81,7 +81,7 @@ export default function Step2MeasurementIntent() {
                 {renderCard(
                     "multidimensional",
                     "Multidimensional",
-                    "The model contains multiple latent proficiency variables. Suitable for multidimensional IRT or Bayesian networks. Requires ≥3 structural relationships at confirmation."
+                    "The model contains multiple latent proficiency variables. Suitable for multidimensional IRT or Bayesian networks. At confirmation it needs 3 structural relationships when there are 3 or more competencies, and 2 when there are exactly 2, so each ordered pair keeps a single relationship type."
                 )}
             </div>
 

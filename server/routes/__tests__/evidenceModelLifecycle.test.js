@@ -70,8 +70,10 @@ function makeModel(overrides = {}) {
       type: "posterior_threshold",
       threshold: 0.35,
       direction: "above",
-      justification: "Cut from the June 2026 standard setting on this calibration scale.",
+      justification: "Cut from the June 2026 calibration and standard setting on this scale.",
     },
+    fairnessNotes:
+      "Residual language-load risk accepted for Grade 10 numerical stems after an orientation screen.",
     ...overrides,
   };
 }
@@ -89,7 +91,12 @@ function makeDB(model, taskModels) {
   return {
     evidenceModels: [model],
     taskModels: taskModels === undefined ? [boundTaskModel()] : taskModels,
-    competencies: [{ id: "c1", modelId: "cm1", variableType: "continuous" }],
+    competencies: [{
+      id: "c1",
+      modelId: "cm1",
+      variableType: "continuous",
+      scale: { min: -3, max: 3 },
+    }],
     competencyModels: [{ id: "cm1", versionNumber: 1, status: "confirmed", locked: true }],
   };
 }
@@ -217,6 +224,20 @@ describe("review stage", () => {
 
     expect(res.status).toBe(200);
     expect(db.evidenceModels[0].status).toBe("reviewed");
+  });
+
+  it("refuses draft to reviewed when fairnessNotes are missing", async () => {
+    const { app, db } = await buildApp(
+      makeModel({ status: "draft", locked: false, fairnessNotes: "too short" })
+    );
+
+    const res = await request(app)
+      .patch("/api/evidenceModels/em1/lifecycle")
+      .send({ nextStatus: "reviewed" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors.join(" ")).toMatch(/fairnessNotes/);
+    expect(db.evidenceModels[0].status).toBe("draft");
   });
 
   it("leaves a reviewed model unlocked so the reviewer's findings can be acted on", async () => {
@@ -767,6 +788,18 @@ describe("POST /api/evidenceModels/:id/confirm — review gate", () => {
     expect(res.status).toBe(200);
     expect(db.evidenceModels[0].status).toBe("confirmed");
     expect(db.evidenceModels[0].locked).toBe(true);
+  });
+
+  it("refuses to confirm a reviewed model that has no decision rule", async () => {
+    const { app, db, saveDB } = await buildApp(strictValidModel({ decisionRule: null }));
+
+    const res = await request(app).post("/api/evidenceModels/em1/confirm");
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors.join(" ")).toMatch(/decisionRule/);
+    expect(db.evidenceModels[0].status).toBe("reviewed");
+    expect(db.evidenceModels[0].locked).toBe(false);
+    expect(saveDB).not.toHaveBeenCalled();
   });
 
   it("refuses to confirm Classical Test Theory with one scored observable", async () => {

@@ -170,7 +170,7 @@ describe("mirror: itemCompatibilityNotes() <-> schema.js items block", () => {
         method: "dichotomous",
         maxScore: 1,
         evidenceActivationMap: [
-          { responsePattern: { equalsCorrect: false }, score: 0, activatesObservable: false, rationale: "x" },
+          { responsePattern: { equalsCorrect: false }, score: 0, activatesObservable: false, strengthOverride: 3, rationale: "x" },
         ],
       },
     });
@@ -179,6 +179,44 @@ describe("mirror: itemCompatibilityNotes() <-> schema.js items block", () => {
     const { errors } = validateEntity("items", item, db);
     const notes = itemCompatibilityNotes(item, contextFor(item, em));
 
+    expect(errors.some((e) => /counter-evidence/i.test(e))).toBe(true);
+    expect(notes.some((n) => n.severity === "blocking" && /counter-evidence/i.test(n.message))).toBe(true);
+  });
+
+  it("agree that a dichotomous score of 0 is an observed wrong answer, not counter-evidence", () => {
+    const em = makeEvidenceModel();
+    const item = makeItem({
+      scoring: {
+        method: "dichotomous",
+        maxScore: 1,
+        evidenceActivationMap: [
+          { responsePattern: { equalsCorrect: true }, score: 1, activatesObservable: true, rationale: "Key." },
+          { responsePattern: { equalsCorrect: false }, score: 0, activatesObservable: false, rationale: "Any other option." },
+        ],
+      },
+    });
+    const db = makeDB({ item, evidenceModel: em });
+    const { errors } = validateEntity("items", item, db);
+    const notes = itemCompatibilityNotes(item, contextFor(item, em));
+    expect(errors.some((e) => /counter-evidence/i.test(e))).toBe(false);
+    expect(notes.some((n) => /counter-evidence/i.test(n.message))).toBe(false);
+  });
+
+  it("agree that a non-dichotomous non-activation is still counter-evidence", () => {
+    const em = makeEvidenceModel();
+    const item = makeItem({
+      scoring: {
+        method: "polytomous",
+        maxScore: 2,
+        evidenceActivationMap: [
+          { responsePattern: { categoryValue: 2 }, score: 2, activatesObservable: true, rationale: "Full credit." },
+          { responsePattern: { categoryValue: 0 }, score: 0, activatesObservable: false, rationale: "Treated as counter-evidence." },
+        ],
+      },
+    });
+    const db = makeDB({ item, evidenceModel: em });
+    const { errors } = validateEntity("items", item, db);
+    const notes = itemCompatibilityNotes(item, contextFor(item, em));
     expect(errors.some((e) => /counter-evidence/i.test(e))).toBe(true);
     expect(notes.some((n) => n.severity === "blocking" && /counter-evidence/i.test(n.message))).toBe(true);
   });

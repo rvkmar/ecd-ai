@@ -275,6 +275,49 @@ describe("evidence model enterprise fields", () => {
     expect(errors.some((e) => /pending/i.test(e))).toBe(true);
   });
 
+  it("a confirmed model may have candidates and no active parameter set", () => {
+    const em = baseEm({
+      status: "confirmed",
+      locked: true,
+      statisticalModels: [
+        {
+          id: "sm1",
+          type: "irt",
+          subtype: "1pl",
+          active: true,
+          structureConfig: { observableIds: ["obs1"], dimensions: 1 },
+          parameterSets: [],
+          activeParameterSetId: null,
+        },
+      ],
+    });
+    const { errors } = validateEntity("evidenceModels", em, db(), { strict: true });
+    expect(errors.some((e) => /activeParameterSetId/i.test(e))).toBe(false);
+    expect(errors.some((e) => /must contain at least one parameterSet/i.test(e))).toBe(false);
+  });
+
+  it("an operational model must name an active parameter set for scoring and selection", () => {
+    const em = baseEm({
+      status: "operational",
+      locked: true,
+      statisticalModels: [
+        {
+          id: "sm1",
+          type: "irt",
+          subtype: "1pl",
+          active: true,
+          structureConfig: { observableIds: ["obs1"], dimensions: 1 },
+          parameterSets: [],
+          activeParameterSetId: null,
+        },
+      ],
+    });
+    const { errors } = validateEntity("evidenceModels", em, db(), { strict: true });
+    const text = errors.join(" ");
+    expect(text).toMatch(/activeParameterSetId/);
+    expect(text).toMatch(/Scoring and adaptive selection/);
+  });
+
   it("reviewed status requires meaningful fairnessNotes", () => {
     const em = baseEm({ status: "reviewed", fairnessNotes: "" });
     const { errors } = validateEntity("evidenceModels", em, db(), { strict: false });

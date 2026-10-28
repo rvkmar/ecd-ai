@@ -40,6 +40,8 @@ import {
   scoringLabel,
   responsePatternFields,
   responsePatternIsSpecified,
+  nonActivationIsCounterEvidence,
+  SUPPORTS_COUNTER_EVIDENCE_MESSAGE,
 } from "@/utils/ecdVocabulary";
 
 // D53b: the readiness checklist below must AGREE with schema.js's strict
@@ -874,16 +876,14 @@ export function itemCompatibilityNotes(item = {}, ctx = {}) {
   }
 
   /* An observable whose evidence rule only ever SUPPORTS the claim cannot
-     have a rule that counts a response as counter-evidence. */
+     have a rule that counts a response as counter-evidence. A dichotomous
+     score of 0 is the other category of the same observable, not that. */
   if (observable?.evidenceRule?.direction === "supports") {
-    const negative = (item.scoring?.evidenceActivationMap || []).some(
-      (r) => r.activatesObservable === false
+    const negative = (item.scoring?.evidenceActivationMap || []).some((r) =>
+      nonActivationIsCounterEvidence(r, item.scoring?.method)
     );
     if (negative) {
-      push(
-        "blocking",
-        "This observable's evidence rule is directional ('supports'), but the scoring map contains a rule that explicitly does not activate it. A non-activating rule reads as counter-evidence, which the rule does not permit. Remove it or change the direction on the Evidence Model."
-      );
+      push("blocking", SUPPORTS_COUNTER_EVIDENCE_MESSAGE);
     }
   }
 

@@ -80,6 +80,19 @@ function relationshipCount(competencies) {
   );
 }
 
+/**
+ * Floor for multidimensional structural relationships.
+ * One relationship type is allowed toward a given competency. Two
+ * competencies therefore have two ordered pairs, and a floor of 3 would
+ * require a second type on one of those pairs. Models with three or more
+ * competencies still need 3 relationships.
+ */
+export function multidimensionalRelationshipMinimum(competencyCount) {
+  const n = Number.isFinite(competencyCount) ? competencyCount : 0;
+  if (n < 2) return 0;
+  return Math.min(3, n * (n - 1));
+}
+
 function smvParityOk(model, competencies) {
   const smvs = Array.isArray(model?.smVariables) ? model.smVariables : [];
   if (competencies.length === 0) return false;
@@ -198,13 +211,14 @@ export function computeStructuralAudit({ model, competencies = [], policies } = 
   }
 
   if (model?.measurementIntent === "multidimensional") {
+    const relationshipMinimum = multidimensionalRelationshipMinimum(competencies.length);
     checks.push({
       label: "Multidimensional models declare ≥2 latent variables",
       passed: competencies.length >= 2,
     });
     checks.push({
-      label: "Multidimensional models declare ≥3 structural relationships",
-      passed: relationshipCount(competencies) >= 3,
+      label: `Multidimensional models declare ≥${relationshipMinimum} structural relationships`,
+      passed: relationshipCount(competencies) >= relationshipMinimum,
     });
   }
 

@@ -150,13 +150,8 @@ const itemFractionComparison = makeItem({
   scoring: {
     method: "dichotomous",
     maxScore: 1,
-    // Deliberately a single activating rule, no explicit distractor entry:
-    // schema.js refuses an `activatesObservable:false` rule on a purely
-    // "supports"-direction observable ("reads as counter-evidence the rule
-    // does not permit") -- a pre-existing constraint, found during Day 29,
-    // out of scope to revisit today. A response matching no declared
-    // pattern correctly comes back indeterminate (activated: null, with a
-    // warning), not a silent wrong-answer zero.
+    // One activating rule. A selected option that is not that key is an
+    // observed 0. An empty or skipped response stays activated null.
     evidenceActivationMap: [
       { responsePattern: { selected: "opt_b" }, activatesObservable: true, strengthOverride: 3, rationale: "5/8 is larger." },
     ],
@@ -250,21 +245,14 @@ describe("Milestone: a student session selects, presents and scores entirely thr
     expect(next2.status).toBe(200);
     expect(next2.body.taskId).toBe("t2");
 
-    // A response matching no declared activation pattern -- shown here
-    // deliberately alongside the activating case above, since "no evidence
-    // either way" is a real, distinct outcome from "activates" and must
-    // never silently collapse into a wrong-answer zero.
+    // A selected option that is not the key. This is an observed 0, not a
+    // missing cell. Provenance is still filled in: the chain resolved.
     const submit2 = await request(app)
       .post("/api/sessions/s1/submit")
       .send({ taskId: "t2", itemId: "item-fraction-comparison", rawAnswer: "opt_c" });
 
     expect(submit2.status).toBe(200);
     const response2 = submit2.body.responses[1];
-    // Full shape, not just the three fields that differ from response1 --
-    // the provenance fields (evidenceModelId, parameterSetId, direction)
-    // must still be populated even when the response is indeterminate,
-    // since "no match" is a fact about the ANSWER, not about whether the
-    // item/evidence-model chain resolved correctly.
     expect(response2).toMatchObject({
       taskId: "t2",
       itemId: "item-fraction-comparison",
@@ -273,11 +261,11 @@ describe("Milestone: a student session selects, presents and scores entirely thr
       parameterSetId: "ps1",
       observationId: "o2",
       observableId: "o2",
-      activated: null,
+      activated: false,
       direction: "supports",
-      strength: null,
+      strength: 3,
     });
-    expect(response2.warning).toMatch(/did not match any declared responsePattern/);
+    expect(response2.warning).toBeUndefined();
     expect(response2).not.toHaveProperty("scoredValue");
     expect(response2).not.toHaveProperty("score");
 

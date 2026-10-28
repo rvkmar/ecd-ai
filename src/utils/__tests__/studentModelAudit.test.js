@@ -1,6 +1,6 @@
 // src/utils/__tests__/studentModelAudit.test.js
 import { describe, it, expect } from "vitest";
-import { computeStructuralAudit } from "../studentModelAudit";
+import { computeStructuralAudit, multidimensionalRelationshipMinimum } from "../studentModelAudit";
 import { syncSmVariablesFromCompetencies } from "../smVariableSync";
 import { validateEntity } from "../schema.js";
 
@@ -144,8 +144,79 @@ describe("studentModelAudit + smVariableSync", () => {
       smVariables: syncSmVariablesFromCompetencies(competencies, []),
     });
     const { checks } = computeStructuralAudit({ model, competencies });
+    expect(multidimensionalRelationshipMinimum(4)).toBe(3);
     expect(
       checks.find((c) => c.label.includes("≥3 structural relationships"))?.passed
+    ).toBe(false);
+  });
+
+  it("does not lower the floor for a large model that declares only two relationships", () => {
+    const competencies = comps().map((c, i) => ({
+      ...c,
+      relationships: i === 0 ? [{ targetCompetencyId: "c4", type: "part-of" }] : [],
+    }));
+    competencies[1] = {
+      ...competencies[1],
+      relationships: [{ targetCompetencyId: "c1", type: "prerequisite" }],
+    };
+    const model = baseModel({
+      smVariables: syncSmVariablesFromCompetencies(competencies, []),
+    });
+    const { checks } = computeStructuralAudit({ model, competencies });
+    expect(
+      checks.find((c) => c.label.includes("≥3 structural relationships"))?.passed
+    ).toBe(false);
+  });
+
+  it("scales the relationship floor to two ordered pairs when the model has two competencies", () => {
+    expect(multidimensionalRelationshipMinimum(2)).toBe(2);
+    const competencies = [
+      {
+        id: "c-plant",
+        name: "Plant parts",
+        description: "Names the parts of a plant.",
+        variableType: "binary",
+        states: [
+          { value: "0", label: "Non-Mastery" },
+          { value: "1", label: "Mastery" },
+        ],
+        domain: "Science",
+        strand: "Plants",
+        facet: "Structure",
+        relationships: [{ targetCompetencyId: "c-function", type: "correlates-with" }],
+      },
+      {
+        id: "c-function",
+        name: "Plant function",
+        description: "Names what a plant part does.",
+        variableType: "binary",
+        states: [
+          { value: "0", label: "Non-Mastery" },
+          { value: "1", label: "Mastery" },
+        ],
+        domain: "Science",
+        strand: "Plants",
+        facet: "Function",
+        relationships: [{ targetCompetencyId: "c-plant", type: "correlates-with" }],
+      },
+    ];
+    const model = baseModel({
+      smVariables: syncSmVariablesFromCompetencies(competencies, []),
+    });
+    const { checks } = computeStructuralAudit({ model, competencies });
+    const floor = checks.find((c) => c.label.includes("structural relationships"));
+    expect(floor.label).toContain("≥2");
+    expect(floor.passed).toBe(true);
+
+    const thin = competencies.map((c, i) =>
+      i === 0 ? c : { ...c, relationships: [] }
+    );
+    const thinAudit = computeStructuralAudit({
+      model,
+      competencies: thin,
+    });
+    expect(
+      thinAudit.checks.find((c) => c.label.includes("structural relationships"))?.passed
     ).toBe(false);
   });
 

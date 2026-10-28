@@ -709,6 +709,28 @@ export function statisticalModelTypesForCalibrationKind(kind) {
   return CALIBRATION_FILE_KINDS.find((k) => k.value === kind)?.statisticalModelTypes || [];
 }
 
+/* A supports evidence rule says that activation of the observable is
+   positive evidence for the claim. The complementary value of a
+   dichotomous observable (the keyed wrong answer, score 0, no strength
+   of its own) is an observed 0, not evidence against the claim.
+   Counter-evidence is a non-activation that still carries points or
+   strength, or a non-activation on a method that is not dichotomous.
+   Those still have to be written as a weakens observable. */
+export function nonActivationIsCounterEvidence(rule, scoringMethod) {
+  if (!rule || rule.activatesObservable !== false) return false;
+  if (scoringMethod === "dichotomous") {
+    const score = rule.score;
+    const awardsPoints = typeof score === "number" && Number.isFinite(score) && score !== 0;
+    const carriesStrength =
+      typeof rule.strengthOverride === "number" && Number.isFinite(rule.strengthOverride);
+    return awardsPoints || carriesStrength;
+  }
+  return true;
+}
+
+export const SUPPORTS_COUNTER_EVIDENCE_MESSAGE =
+  "This observable's evidence rule is directional ('supports'), but the scoring map contains a rule that explicitly does not activate it and still carries a score or a strength. That reads as counter-evidence the rule does not permit. A dichotomous score of 0, with no strength override, is the observed wrong answer and is allowed.";
+
 /* =====================================================
    8b. Calibration job kinds (D62, W13)
    -----------------------------------------------------
