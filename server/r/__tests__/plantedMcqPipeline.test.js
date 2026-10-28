@@ -1,7 +1,8 @@
 // Constructed MCQ item-analysis fixture: option counts are definitional.
 // Live R (when R_BACKEND_URL is set) asserts distractors and flags.
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { liveR, acquireLiveR, releaseLiveR } from "./liveRFlag.js";
 import express from "express";
 import request from "supertest";
 import jwt from "jsonwebtoken";
@@ -86,9 +87,10 @@ describe("planted MCQ fixture (always-run)", () => {
   });
 });
 
-const live = Boolean(process.env.R_BACKEND_URL);
+describe.skipIf(!liveR)("planted MCQ live R", () => {
+  beforeEach(acquireLiveR, 720_000);
+  afterEach(releaseLiveR);
 
-describe.skipIf(!live)("planted MCQ live R", () => {
   it("returns option distractors, unused D, and an attractive-distractor flag", async () => {
     const health = await getRHealth();
     expect(health.ok).toBe(true);

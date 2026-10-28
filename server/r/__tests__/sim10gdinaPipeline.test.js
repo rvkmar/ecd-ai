@@ -12,7 +12,8 @@
 // Existing CI `npm test` covers (1). The live job starts
 // rvkmar/r-backend:latest (same image as compose) and covers (2).
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { liveR, acquireLiveR, releaseLiveR } from "./liveRFlag.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -315,9 +316,9 @@ describe("sim10GDINA contract-path pipeline (always runs)", () => {
   });
 });
 
-const live = Boolean(process.env.R_BACKEND_URL);
-
-describe.skipIf(!live)("sim10GDINA live R pipeline", () => {
+describe.skipIf(!liveR)("sim10GDINA live R pipeline", () => {
+  beforeEach(acquireLiveR, 720_000);
+  afterEach(releaseLiveR);
   it("health reports GDINA, then enqueue → process → ingest a converged G-DINA run", async () => {
     const health = await getRHealth({ timeoutMs: 15_000 });
     expect(health.ok, health.text || health.error?.message).toBe(true);

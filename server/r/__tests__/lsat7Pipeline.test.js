@@ -12,7 +12,8 @@
 // Existing CI `npm test` covers (1). The `lsat7-pipeline` job starts
 // rvkmar/r-backend:latest (same image as compose) and covers (2).
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { liveR, acquireLiveR, releaseLiveR } from "./liveRFlag.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -254,9 +255,10 @@ describe("LSAT7 contract-path pipeline (always runs)", () => {
   });
 });
 
-const live = Boolean(process.env.R_BACKEND_URL);
+describe.skipIf(!liveR)("LSAT7 live R pipeline", () => {
+  beforeEach(acquireLiveR, 720_000);
+  afterEach(releaseLiveR);
 
-describe.skipIf(!live)("LSAT7 live R pipeline", () => {
   it("health reports a running mirt, then enqueue → process → ingest a converged run", async () => {
     const health = await getRHealth({ timeoutMs: 15_000 });
     expect(health.ok, health.text || health.error?.message).toBe(true);

@@ -19,7 +19,8 @@
 // this matrix in this pipeline — those live checks are structural, not
 // coefficient pins (same honesty as D64/D66).
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { liveR, acquireLiveR, releaseLiveR } from "./liveRFlag.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -288,9 +289,9 @@ describe("LSAT7 CTT contract-path pipeline (always runs)", () => {
   });
 });
 
-const live = Boolean(process.env.R_BACKEND_URL);
-
-describe.skipIf(!live)("LSAT7 CTT live R pipeline", () => {
+describe.skipIf(!liveR)("LSAT7 CTT live R pipeline", () => {
+  beforeEach(acquireLiveR, 720_000);
+  afterEach(releaseLiveR);
   it("health reports TAM, then enqueue → process → ingest identified CTT statistics", async () => {
     const health = await getRHealth({ timeoutMs: 15_000 });
     expect(health.ok, health.text || health.error?.message).toBe(true);

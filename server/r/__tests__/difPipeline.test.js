@@ -15,7 +15,8 @@
 // The fixture is generated (seed 20261201, documented in
 // plantedDifFixture.js). It is not a published DIF table.
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { liveR, acquireLiveR, releaseLiveR } from "./liveRFlag.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -269,9 +270,9 @@ describe("planted DIF contract-path pipeline (always runs)", () => {
   });
 });
 
-const live = Boolean(process.env.R_BACKEND_URL);
-
-describe.skipIf(!live)("planted DIF live R pipeline", () => {
+describe.skipIf(!liveR)("planted DIF live R pipeline", () => {
+  beforeEach(acquireLiveR, 720_000);
+  afterEach(releaseLiveR);
   it("health reports difR, then enqueue → process flags Item.5 only, then artefact ingest", async () => {
     const health = await getRHealth({ timeoutMs: 15_000 });
     expect(health.ok, health.text || health.error?.message).toBe(true);

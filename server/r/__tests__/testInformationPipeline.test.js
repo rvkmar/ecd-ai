@@ -15,7 +15,8 @@
 // Reliability: KR-20 is classical (same .kr20 as CTT/item-analysis);
 // I(θ)/marginalReliability are IRT — both stated in diagnostics.
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { liveR, acquireLiveR, releaseLiveR } from "./liveRFlag.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -369,9 +370,9 @@ describe("lsat7-test-information fixture (structural)", () => {
   });
 });
 
-const live = Boolean(process.env.R_BACKEND_URL);
-
-describe.skipIf(!live)("known-2pl-testinfo live R pipeline", () => {
+describe.skipIf(!liveR)("known-2pl-testinfo live R pipeline", () => {
+  beforeEach(acquireLiveR, 720_000);
+  afterEach(releaseLiveR);
   it("health then enqueue → process → artefact ingest with hand I(θ) checkpoints", async () => {
     const health = await getRHealth({ timeoutMs: 15_000 });
     expect(health.ok, health.text || health.error?.message).toBe(true);
@@ -444,7 +445,9 @@ describe.skipIf(!live)("known-2pl-testinfo live R pipeline", () => {
   }, 180_000);
 });
 
-describe.skipIf(!live)("lsat7-test-information live R structural path", () => {
+describe.skipIf(!liveR)("lsat7-test-information live R structural path", () => {
+  beforeEach(acquireLiveR, 720_000);
+  afterEach(releaseLiveR);
   it("fits mirt then returns info>0 and KR-20 matching JS on the same matrix", async () => {
     const health = await getRHealth({ timeoutMs: 15_000 });
     expect(health.ok).toBe(true);
