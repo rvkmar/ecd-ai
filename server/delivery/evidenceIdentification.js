@@ -222,8 +222,8 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
   const evaluationProcedure = entry.evaluationProcedure || null;
   const activationMap = entry.scoring?.evidenceActivationMap || [];
   const scoringSource = {
-    interaction: entry.interactionParams || item.interaction,
-    scoring: { method: entry.scoring?.method || item.scoring?.method },
+    interaction: entry.interactionParams || null,
+    scoring: { method: entry.scoring?.method ?? null },
   };
   const optionSets = componentSets(scoringSource);
   const resolvedMap = activationMap.map((row) => ({

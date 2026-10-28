@@ -16,6 +16,12 @@ vi.mock("../../../src/utils/db-server.js", () => ({
   },
 }));
 
+function noteFairness(evidenceId) {
+  const stored = dbState.current.evidenceModels.find((row) => row.id === evidenceId);
+  stored.fairnessNotes =
+    "Seeded draft notes residual language load so review can be requested while the claim is still incomplete.";
+}
+
 async function app() {
   const { default: patterns } = await import("../designPatternsRoutes.js");
   const { default: evidence } = await import("../evidenceModels.js");
@@ -104,6 +110,7 @@ describe("D138 seed snapshot divergence", () => {
     expect(taskRow.divergences.map((flag) => flag.label)).toEqual(["Complexity"]);
     expect(taskRow.divergences[0].detail).toMatch(/no longer cited/);
 
+    noteFairness(evidence.id);
     const reviewed = await request(expressApp)
       .patch(`/api/evidenceModels/${evidence.id}/lifecycle`)
       .set("Authorization", `Bearer ${admin}`)

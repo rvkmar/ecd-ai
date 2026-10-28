@@ -42,4 +42,11 @@ D154 was not started.
 
 ## Verification
 
-Targeted tests cover the keyed matrix, candidate ingest then activate, the reviewed fairness gate, confirm without a decision rule, the relationship floor, and the counter-evidence split. The full suite count is in the pull request after `npx vitest run`.
+```
+NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
+  2670 passed | 10 skipped (2680)
+```
+
+The 10 skipped tests are the existing live-R cases. No new skips were added.
+
+Targeted cases cover the keyed matrix, candidate ingest then activate, the reviewed fairness gate, confirm without a decision rule, the relationship floor, and the counter-evidence split. Seeded drafts that the pattern tests promote to reviewed now carry a fairness note, so review can be requested and confirm still refuses a model with no claim.
