@@ -140,6 +140,8 @@ describe("D80 exit check — scheduled analytics artefact without active-set cha
     const job = dbState.current.calibrationJobs[0];
     expect(job.status).toBe("queued");
     expect(job.requestedBy).toBe(SCHEDULED_CALIBRATION_REQUESTED_BY);
+    expect(job.responseSource).toBe("fixture");
+    expect(job.fixtureName).toBe("known-attribute-profile-cohort");
     expect(job.request.options.scheduledBy).toBe(SCHEDULED_CALIBRATION_REQUESTED_BY);
     expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe(
       activeBefore
@@ -198,5 +200,171 @@ describe("D80 exit check — scheduled analytics artefact without active-set cha
       "ps-keep"
     );
     expect(dbState.current.calibrationJobs[0].ingestedParameterSetId).toBeNull();
+  });
+});
+
+function finishedSessions(n, evidenceModelId, extraResponse = {}) {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `sess-${i}`,
+    studentId: `stud-${i}`,
+    status: "completed",
+    isCompleted: true,
+    responses: [
+      {
+        itemId: "item-a",
+        evidenceModelId,
+        activated: true,
+        timestamp: "2026-10-20T00:00:00.000Z",
+        ...extraResponse,
+      },
+      {
+        itemId: "item-b",
+        evidenceModelId,
+        activated: i % 2 === 0,
+        timestamp: "2026-10-20T00:00:00.000Z",
+        ...extraResponse,
+      },
+    ],
+  }));
+}
+
+describe("scheduled enqueue reads live sessions when no fixture is named", () => {
+  it("enqueues an IRT job from finished sessions and leaves the active set alone", () => {
+    dbState.current = {
+      calibrationJobs: [],
+      sessions: finishedSessions(2, "em-live"),
+      evidenceModels: [
+        {
+          id: "em-live",
+          competencyId: "c1",
+          calibrationPlan: {
+            scheduledEnqueue: {
+              enabled: true,
+              minSampleSize: 2,
+              jobs: [{ kind: "irt-parameters" }],
+            },
+          },
+          statisticalModels: [
+            {
+              id: "sm-irt",
+              type: "irt",
+              subtype: "2pl",
+              active: true,
+              parameterSets: [],
+              activeParameterSetId: "ps-keep",
+            },
+          ],
+        },
+      ],
+      competencies: [{ id: "c1", modelId: "cm1", variableType: "continuous" }],
+    };
+
+    const result = runScheduledCalibrationEnqueue(dbState.current, {
+      now: new Date("2026-10-28T03:15:00.000Z"),
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.skipped).toEqual([]);
+    expect(result.enqueued).toHaveLength(1);
+    expect(result.enqueued[0].responseSource).toBe("sessions");
+    expect(result.enqueued[0].fixture).toBeNull();
+    const job = dbState.current.calibrationJobs[0];
+    expect(job.kind).toBe("irt-parameters");
+    expect(job.responseSource).toBe("sessions");
+    expect(job.sourceSessionIds).toEqual(["sess-0", "sess-1"]);
+    expect(job.request.responseMatrix.personIds).toEqual(["stud-0", "stud-1"]);
+    expect(job.request.model.subtype).toBe("2PL");
+    expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe(
+      "ps-keep"
+    );
+  });
+
+  it("skips a short live sample with a readable reason and does not enqueue", () => {
+    dbState.current = {
+      calibrationJobs: [],
+      sessions: finishedSessions(2, "em-live"),
+      evidenceModels: [
+        {
+          id: "em-live",
+          competencyId: "c1",
+          calibrationPlan: {
+            scheduledEnqueue: {
+              enabled: true,
+              minSampleSize: 30,
+              jobs: [{ kind: "ctt-statistics", source: "sessions" }],
+            },
+          },
+          statisticalModels: [
+            { id: "sm-ctt", type: "ctt", active: true, parameterSets: [], activeParameterSetId: "ps-keep" },
+          ],
+        },
+      ],
+      competencies: [{ id: "c1", modelId: "cm1", variableType: "continuous" }],
+    };
+    const result = runScheduledCalibrationEnqueue(dbState.current);
+    expect(result.enqueued).toEqual([]);
+    expect(result.errors).toEqual([]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].reason).toMatch(/CTT calibration needs at least 30 students/);
+    expect(result.skipped[0].reason).toMatch(/This selection has 2/);
+    expect(dbState.current.calibrationJobs).toEqual([]);
+    expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe(
+      "ps-keep"
+    );
+  });
+
+  it("builds the authored Q-matrix for a live DINA job", () => {
+    dbState.current = {
+      calibrationJobs: [],
+      sessions: finishedSessions(2, "em-live", { observableId: "obs-1" }),
+      qMatrixModels: [
+        {
+          id: "qm-live",
+          attributeIds: ["attr-1", "attr-2"],
+          entries: [
+            { itemId: "item-a", attributeId: "attr-1" },
+            { itemId: "item-b", attributeId: "attr-1" },
+            { itemId: "item-a", observableId: "obs-1", evidenceModelId: "em-live", attributeId: "attr-2" },
+            { itemId: "item-b", observableId: "obs-1", evidenceModelId: "em-live", attributeId: "attr-2" },
+          ],
+        },
+      ],
+      evidenceModels: [
+        {
+          id: "em-live",
+          competencyId: "c1",
+          calibrationPlan: {
+            scheduledEnqueue: {
+              enabled: true,
+              minSampleSize: 2,
+              jobs: [{ kind: "dina-parameters" }],
+            },
+          },
+          statisticalModels: [
+            {
+              id: "sm-dina",
+              type: "dina",
+              active: true,
+              structureConfig: { qMatrixId: "qm-live" },
+              parameterSets: [],
+              activeParameterSetId: "ps-keep",
+            },
+          ],
+        },
+      ],
+      competencies: [{ id: "c1", modelId: "cm1", variableType: "binary" }],
+    };
+    const result = runScheduledCalibrationEnqueue(dbState.current);
+    expect(result.errors).toEqual([]);
+    expect(result.enqueued[0].qMatrixId).toBe("qm-live");
+    const job = dbState.current.calibrationJobs[0];
+    expect(job.qMatrixId).toBe("qm-live");
+    expect(job.request.model.family).toBe("dina");
+    expect(job.request.qMatrix.data).toEqual([
+      [0, 1],
+      [0, 1],
+    ]);
+    expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe(
+      "ps-keep"
+    );
   });
 });

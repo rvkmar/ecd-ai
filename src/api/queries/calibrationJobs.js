@@ -38,11 +38,19 @@ export function useCalibrationJob(id, options = {}) {
 
 export function useSessionItemAnalysisPreview(evidenceModelId, options = {}) {
   const { auth } = useAuth() || {};
-  const qs = evidenceModelId
-    ? `?evidenceModelId=${encodeURIComponent(evidenceModelId)}`
-    : "";
+  const params = new URLSearchParams();
+  if (evidenceModelId) params.set("evidenceModelId", evidenceModelId);
+  if (options.kind) params.set("kind", options.kind);
+  if (options.statisticalModelId) params.set("statisticalModelId", options.statisticalModelId);
+  const qs = params.toString() ? `?${params}` : "";
   return useQuery({
-    queryKey: ["calibrationJobs", "session-item-analysis", evidenceModelId || ""],
+    queryKey: [
+      "calibrationJobs",
+      "session-item-analysis",
+      evidenceModelId || "",
+      options.kind || "",
+      options.statisticalModelId || "",
+    ],
     queryFn: () => apiFetch(`/api/calibrationJobs/session-item-analysis${qs}`, {}, auth),
     enabled: Boolean(evidenceModelId) && options.enabled !== false,
   });

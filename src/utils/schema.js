@@ -359,6 +359,14 @@ export const schema = {
         // D62: the job that produced this set. Provenance that cannot be
         // traced back to its run is not provenance.
         calibrationJobId: 'string',
+        // Live-session runs record where the matrix came from. Fixture and
+        // caller-supplied runs leave these unset. Slip and guess stay on
+        // the item; qMatrixId is the authored matrix that was sent to R.
+        responseSource: 'string',
+        qMatrixId: 'string',
+        sourceSessionIds: 'array',
+        sourceSessionCount: 'number',
+        sourceSessionIdsHash: 'string',
       }],
       activeParameterSetId: 'string',
     }],
@@ -1160,6 +1168,13 @@ export const schema = {
     retainUntil: 'date',
     createdAt: 'date',
     updatedAt: 'date',
+    // Live sessions, a named fixture, or a caller-supplied matrix.
+    responseSource: 'string',
+    fixtureName: 'string',
+    qMatrixId: 'string',
+    sourceSessionIds: 'array',
+    sourceSessionCount: 'number',
+    sourceSessionIdsHash: 'string',
   },
 
   // ------------------------------------------------------------------
@@ -2722,6 +2737,21 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           if (typeof ps.fitStatistics !== "object" || Array.isArray(ps.fitStatistics)) {
             errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid fitStatistics: should be object.`);
           }
+        }
+        if (ps.qMatrixId != null && typeof ps.qMatrixId !== "string") {
+          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid qMatrixId: should be string.`);
+        }
+        if (ps.responseSource != null && typeof ps.responseSource !== "string") {
+          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid responseSource: should be string.`);
+        }
+        if (ps.sourceSessionIds != null && !Array.isArray(ps.sourceSessionIds)) {
+          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid sourceSessionIds: should be array.`);
+        }
+        if (ps.sourceSessionCount != null && typeof ps.sourceSessionCount !== "number") {
+          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid sourceSessionCount: should be number.`);
+        }
+        if (ps.sourceSessionIdsHash != null && typeof ps.sourceSessionIdsHash !== "string") {
+          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid sourceSessionIdsHash: should be string.`);
         }
       }
 

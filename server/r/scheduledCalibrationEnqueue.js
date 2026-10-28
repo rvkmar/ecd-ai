@@ -16,6 +16,7 @@ import {
   validateCalibrationRequest,
 } from "./calibrationContract.js";
 import { applyNamedCalibrationFixture } from "./calibrationFixtures.js";
+import { assessLiveResponseMatrix } from "./liveResponseMatrix.js";
 
 const SCHEDULED_CALIBRATION_REQUESTED_BY = "scheduled-calibration-cron";
 
@@ -52,7 +53,8 @@ function sampleSizeFromRequest(request) {
  *     enabled: true,
  *     minSampleSize?: number,   // default for every job entry
  *     jobs: [
- *       { kind, fixture, evidenceModelId?, statisticalModelId?, minSampleSize? }
+ *       { kind, fixture?, source?, evidenceModelId?, statisticalModelId?,
+ *         minSampleSize?, itemIds?, sessionIds?, from?, to? }
  *     ]
  *   }
  *
@@ -77,6 +79,11 @@ function collectScheduledEnqueueTargets(db) {
         statisticalModelId: jobSpec.statisticalModelId || activeSm?.id || null,
         kind: jobSpec.kind,
         fixture: jobSpec.fixture || null,
+        source: jobSpec.source === "sessions" || jobSpec.source === "fixture" ? jobSpec.source : null,
+        itemIds: Array.isArray(jobSpec.itemIds) ? jobSpec.itemIds : null,
+        sessionIds: Array.isArray(jobSpec.sessionIds) ? jobSpec.sessionIds : null,
+        from: typeof jobSpec.from === "string" ? jobSpec.from : null,
+        to: typeof jobSpec.to === "string" ? jobSpec.to : null,
         minSampleSize:
           Number.isFinite(jobSpec.minSampleSize) && jobSpec.minSampleSize > 0
             ? Number(jobSpec.minSampleSize)
@@ -89,21 +96,20 @@ function collectScheduledEnqueueTargets(db) {
   return targets;
 }
 
-function buildQueuedJob(db, target, { nowIso, nowMs, requestedBy }) {
-  const body = {
-    kind: target.kind,
-    evidenceModelId: target.evidenceModelId,
-    statisticalModelId: target.statisticalModelId,
-    ...(target.fixture ? { fixture: target.fixture } : {}),
-  };
-
-  let incoming;
-  try {
-    incoming = applyNamedCalibrationFixture(body, db);
-  } catch (err) {
-    return { ok: false, error: err?.message || String(err), code: err?.code };
+function stampJobSource(record, stamps) {
+  if (!stamps) return record;
+  if (stamps.responseSource) record.responseSource = stamps.responseSource;
+  if (stamps.fixtureName) record.fixtureName = stamps.fixtureName;
+  if (stamps.qMatrixId) record.qMatrixId = stamps.qMatrixId;
+  if (typeof stamps.sourceSessionCount === "number") {
+    record.sourceSessionCount = stamps.sourceSessionCount;
   }
+  if (stamps.sourceSessionIdsHash) record.sourceSessionIdsHash = stamps.sourceSessionIdsHash;
+  if (Array.isArray(stamps.sourceSessionIds)) record.sourceSessionIds = stamps.sourceSessionIds;
+  return record;
+}
 
+function finalizeQueuedJob(db, target, incoming, stamps, { nowIso, nowMs, requestedBy, enforceSampleGate = true }) {
   const id = genId(nowMs);
   const request = {
     ...(incoming?.request || {}),
@@ -115,27 +121,30 @@ function buildQueuedJob(db, target, { nowIso, nowMs, requestedBy }) {
     },
   };
 
-  const record = {
-    id,
-    kind: incoming?.kind ?? body.kind,
-    status: "queued",
-    evidenceModelId: incoming?.evidenceModelId ?? body.evidenceModelId,
-    statisticalModelId: incoming?.statisticalModelId ?? body.statisticalModelId,
-    requestedBy,
-    requestedAt: nowIso,
-    startedAt: null,
-    finishedAt: null,
-    request,
-    response: null,
-    error: null,
-    attempts: 1,
-    maxAttempts: 3,
-    ingestedParameterSetId: null,
-    ingestedAnalysisArtefactId: null,
-    retainUntil: retainUntilFrom(nowIso),
-    createdAt: nowIso,
-    updatedAt: nowIso,
-  };
+  const record = stampJobSource(
+    {
+      id,
+      kind: incoming?.kind ?? target.kind,
+      status: "queued",
+      evidenceModelId: incoming?.evidenceModelId ?? target.evidenceModelId,
+      statisticalModelId: incoming?.statisticalModelId ?? target.statisticalModelId,
+      requestedBy,
+      requestedAt: nowIso,
+      startedAt: null,
+      finishedAt: null,
+      request,
+      response: null,
+      error: null,
+      attempts: 1,
+      maxAttempts: 3,
+      ingestedParameterSetId: null,
+      ingestedAnalysisArtefactId: null,
+      retainUntil: retainUntilFrom(nowIso),
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    },
+    stamps
+  );
 
   if (!isDeclaredJobKind(record.kind)) {
     return { ok: false, error: `Invalid calibration job kind '${record.kind}'` };
@@ -147,7 +156,7 @@ function buildQueuedJob(db, target, { nowIso, nowMs, requestedBy }) {
   }
 
   const sampleSize = sampleSizeFromRequest(record.request);
-  if (sampleSize < target.minSampleSize) {
+  if (enforceSampleGate && sampleSize < target.minSampleSize) {
     return {
       ok: false,
       skipped: true,
@@ -168,6 +177,69 @@ function buildQueuedJob(db, target, { nowIso, nowMs, requestedBy }) {
   }
 
   return { ok: true, job: record, sampleSize };
+}
+
+function buildFixtureJob(db, target, ctx) {
+  const body = {
+    kind: target.kind,
+    evidenceModelId: target.evidenceModelId,
+    statisticalModelId: target.statisticalModelId,
+    fixture: target.fixture,
+  };
+  let incoming;
+  try {
+    incoming = applyNamedCalibrationFixture(body, db);
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err), code: err?.code };
+  }
+  return finalizeQueuedJob(
+    db,
+    target,
+    incoming,
+    { responseSource: "fixture", fixtureName: target.fixture },
+    ctx
+  );
+}
+
+function buildLiveJob(db, target, ctx) {
+  const assessed = assessLiveResponseMatrix(db, {
+    evidenceModelId: target.evidenceModelId,
+    statisticalModelId: target.statisticalModelId,
+    kind: target.kind,
+    itemIds: target.itemIds || undefined,
+    sessionIds: target.sessionIds || undefined,
+    from: target.from || undefined,
+    to: target.to || undefined,
+    minSampleSize: target.minSampleSize,
+  });
+  if (!assessed.ok) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: assessed.message || assessed.code || "live session matrix was not built",
+      code: assessed.code,
+      sampleSize: assessed.sampleSize,
+      minSampleSize: target.minSampleSize,
+    };
+  }
+  return finalizeQueuedJob(
+    db,
+    target,
+    {
+      kind: assessed.kind,
+      evidenceModelId: target.evidenceModelId,
+      statisticalModelId: target.statisticalModelId,
+      request: assessed.request,
+    },
+    {
+      responseSource: "sessions",
+      qMatrixId: assessed.qMatrixId,
+      sourceSessionCount: assessed.sourceSessionCount,
+      sourceSessionIdsHash: assessed.sourceSessionIdsHash,
+      sourceSessionIds: assessed.sourceSessionIds,
+    },
+    { ...ctx, enforceSampleGate: false }
+  );
 }
 
 /**
@@ -195,16 +267,16 @@ export function runScheduledCalibrationEnqueue(
       skipped.push({ target, reason: "no statisticalModelId to bind" });
       continue;
     }
-    if (!target.fixture) {
-      skipped.push({
-        target,
-        reason:
-          "scheduled enqueue requires a named fixture in this unit (live session-matrix builders are not yet wired)",
-      });
+    const wantsFixture =
+      target.source === "fixture" || (Boolean(target.fixture) && target.source !== "sessions");
+    if (wantsFixture && !target.fixture) {
+      skipped.push({ target, reason: "A fixture source needs a named fixture." });
       continue;
     }
 
-    const built = buildQueuedJob(db, target, { nowIso, nowMs, requestedBy });
+    const built = wantsFixture
+      ? buildFixtureJob(db, target, { nowIso, nowMs, requestedBy })
+      : buildLiveJob(db, target, { nowIso, nowMs, requestedBy });
     if (built.skipped) {
       skipped.push({ target, reason: built.reason, sampleSize: built.sampleSize });
       continue;
@@ -222,7 +294,10 @@ export function runScheduledCalibrationEnqueue(
       evidenceModelId: built.job.evidenceModelId,
       sampleSize: built.sampleSize,
       minSampleSize: target.minSampleSize,
-      fixture: target.fixture,
+      fixture: wantsFixture ? target.fixture : null,
+      responseSource: wantsFixture ? "fixture" : "sessions",
+      qMatrixId: built.job.qMatrixId || null,
+      sourceSessionCount: built.job.sourceSessionCount ?? null,
     });
   }
 

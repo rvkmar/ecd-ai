@@ -18,8 +18,8 @@ import {
 import {
   namedCalibrationFixture,
   NAMED_CALIBRATION_FIXTURES,
-  LSAT7_ITEM_ANALYSIS_JOB_KIND,
-  LSAT7_ITEM_ANALYSIS_STATISTICAL_MODEL_TYPES,
+  LIVE_CALIBRATION_JOBS,
+  liveCalibrationJob,
   statisticalModelsForFixture,
 } from "./calibrationConsoleUtils";
 
@@ -28,16 +28,20 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
   const enqueue = useEnqueueCalibrationJob();
   const [source, setSource] = useState("fixture");
   const [fixtureId, setFixtureId] = useState("lsat7");
+  const [liveKind, setLiveKind] = useState(LIVE_CALIBRATION_JOBS[0].kind);
   const [evidenceModelId, setEvidenceModelId] = useState("");
   const [statisticalModelId, setStatisticalModelId] = useState("");
   const [formError, setFormError] = useState(null);
 
   const fromSessions = source === "sessions";
   const fixture = namedCalibrationFixture(fixtureId);
-  const bindTypes = fromSessions
-    ? LSAT7_ITEM_ANALYSIS_STATISTICAL_MODEL_TYPES
-    : fixture.statisticalModelTypes;
-  const preview = useSessionItemAnalysisPreview(evidenceModelId, { enabled: fromSessions });
+  const liveJob = liveCalibrationJob(liveKind);
+  const bindTypes = fromSessions ? liveJob.statisticalModelTypes : fixture.statisticalModelTypes;
+  const preview = useSessionItemAnalysisPreview(evidenceModelId, {
+    enabled: fromSessions,
+    kind: liveKind,
+    statisticalModelId,
+  });
 
   const bindableModels = useMemo(
     () =>
@@ -53,6 +57,14 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
 
   function handleSourceChange(next) {
     setSource(next);
+    setLiveKind(LIVE_CALIBRATION_JOBS[0].kind);
+    setEvidenceModelId("");
+    setStatisticalModelId("");
+    setFormError(null);
+  }
+
+  function handleLiveKindChange(nextKind) {
+    setLiveKind(nextKind);
     setEvidenceModelId("");
     setStatisticalModelId("");
     setFormError(null);
@@ -79,7 +91,7 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
     if (!evidenceModelId || !statisticalModelId) {
       setFormError(
         fromSessions
-          ? "Choose an evidence model and a CTT, IRT, or Rasch statistical model."
+          ? "Choose an evidence model and a statistical model for this live calibration."
           : fixture.choosePrompt
       );
       return;
@@ -93,7 +105,7 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
         fromSessions
           ? {
               source: "sessions",
-              kind: LSAT7_ITEM_ANALYSIS_JOB_KIND,
+              kind: liveJob.kind,
               evidenceModelId,
               statisticalModelId,
             }
@@ -104,7 +116,7 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
               statisticalModelId,
             }
       );
-      toast.success(fromSessions ? "Session item-analysis job queued." : fixture.successToast);
+      toast.success(fromSessions ? `${liveJob.label} job queued from finished sessions.` : fixture.successToast);
       onEnqueued?.(job);
     } catch (err) {
       const message = apiErrorMessage(err, "Could not enqueue the calibration job.");
@@ -122,9 +134,7 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
       <div className="space-y-1">
         <h2 className="text-lg font-semibold tracking-tight">Start a calibration</h2>
         <p className="text-sm text-muted-foreground">
-          {fromSessions
-            ? "Item analysis uses completed session responses for the evidence model you choose. Sample size is the number of students with a scored response. LSAT7 stays a published fixture."
-            : fixture.description}
+          {fromSessions ? liveJob.description : fixture.description}
         </p>
       </div>
 
@@ -140,6 +150,24 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
           <option value="sessions">Completed sessions</option>
         </select>
       </div>
+
+      {fromSessions && (
+        <div className="space-y-2">
+          <Label htmlFor="calibration-live-kind">Live calibration</Label>
+          <select
+            id="calibration-live-kind"
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm md:max-w-sm"
+            value={liveKind}
+            onChange={(e) => handleLiveKindChange(e.target.value)}
+          >
+            {LIVE_CALIBRATION_JOBS.map((option) => (
+              <option key={option.kind} value={option.kind}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {!fromSessions && (
       <div className="space-y-2">
@@ -201,7 +229,7 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
       {bindableModels.length === 0 && (
         <p className="text-sm text-muted-foreground" role="status">
           {fromSessions
-            ? "No evidence model has a CTT, IRT, or Rasch statistical model to bind."
+            ? `No evidence model has a statistical model for ${liveJob.label.toLowerCase()}.`
             : fixture.emptyBind}
         </p>
       )}
@@ -211,6 +239,11 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
           <p>
             Sample size: <strong>{preview.data.sampleSize ?? 0}</strong>
           </p>
+          {preview.data.qMatrixId && (
+            <p>
+              Q-matrix: <strong>{preview.data.qMatrixId}</strong>
+            </p>
+          )}
           {Array.isArray(preview.data.studentIds) && preview.data.studentIds.length > 0 && (
             <p>Students: {preview.data.studentIds.join(", ")}</p>
           )}
@@ -236,7 +269,7 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
           {enqueue.isPending
             ? "Enqueueing…"
             : fromSessions
-              ? "Enqueue session item analysis"
+              ? liveJob.buttonLabel
               : fixture.buttonLabel}
         </Button>
         <p className="text-caption text-muted-foreground">

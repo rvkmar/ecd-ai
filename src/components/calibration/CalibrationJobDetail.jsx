@@ -216,15 +216,43 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
               <dt className="text-muted-foreground">Contract</dt>
               <dd>{summary.contractVersion}</dd>
             </div>
+            <div>
+              <dt className="text-muted-foreground">Source</dt>
+              <dd>
+                {summary.responseSource === "sessions" || summary.source === "completed-sessions"
+                  ? "Live sessions"
+                  : summary.responseSource === "fixture"
+                    ? summary.fixtureName
+                      ? `Fixture ${summary.fixtureName}`
+                      : "Fixture"
+                    : "Response matrix"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Sample size</dt>
+              <dd>{summary.personCount}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Q-matrix</dt>
+              <dd>{summary.qMatrixId || "none"}</dd>
+            </div>
             <div className="md:col-span-2">
               <dt className="text-muted-foreground">Item ids</dt>
               <dd>{summary.itemIds.join(", ") || "—"}</dd>
             </div>
-            {summary.source === "completed-sessions" && (
+            {(summary.responseSource === "sessions" || summary.source === "completed-sessions") && (
               <div className="md:col-span-2">
-                <dt className="text-muted-foreground">Provenance</dt>
+                <dt className="text-muted-foreground">Sessions</dt>
                 <dd>
-                  Completed sessions. Sample size {summary.personCount}.
+                  {summary.sourceSessionCount != null
+                    ? `${summary.sourceSessionCount} finished session${summary.sourceSessionCount === 1 ? "" : "s"}.`
+                    : "Finished sessions."}
+                  {summary.missingCellCount != null
+                    ? ` Missing responses: ${summary.missingCellCount}.`
+                    : ""}
+                  {summary.sourceSessionIds.length > 0
+                    ? ` Session ids: ${summary.sourceSessionIds.join(", ")}.`
+                    : ""}
                   {summary.studentIds.length > 0
                     ? ` Students: ${summary.studentIds.join(", ")}.`
                     : ""}

@@ -23,6 +23,7 @@ import {
   CALIBRATION_NAMED_FIXTURES,
 } from "../r/calibrationFixtures.js";
 import { assessSessionItemAnalysis } from "../r/sessionItemAnalysis.js";
+import { assessLiveResponseMatrix } from "../r/liveResponseMatrix.js";
 import {
   MIN_CELL_SIZE,
   namedAggregateScope,
@@ -110,7 +111,21 @@ router.get("/queue-metrics", canView, (_req, res) => {
 // Completed-session item analysis for one evidence model. Does not enqueue.
 router.get("/session-item-analysis", canView, (req, res) => {
   const db = loadDB();
-  const assessed = assessSessionItemAnalysis(db, req.query.evidenceModelId);
+  const kind = typeof req.query.kind === "string" ? req.query.kind.trim() : "";
+  const statisticalModelId =
+    typeof req.query.statisticalModelId === "string" ? req.query.statisticalModelId.trim() : "";
+  const assessed =
+    kind || statisticalModelId
+      ? assessLiveResponseMatrix(db, {
+          evidenceModelId: req.query.evidenceModelId,
+          statisticalModelId,
+          kind: kind || "item-analysis",
+          itemIds: req.query.itemIds,
+          sessionIds: req.query.sessionIds,
+          from: req.query.from,
+          to: req.query.to,
+        })
+      : assessSessionItemAnalysis(db, req.query.evidenceModelId);
   const isAdmin = req.user?.role === "admin";
   res.json({
     ok: assessed.ok,
@@ -118,6 +133,9 @@ router.get("/session-item-analysis", canView, (req, res) => {
     message: assessed.message,
     sampleSize: assessed.sampleSize,
     itemIds: assessed.itemIds,
+    qMatrixId: assessed.qMatrixId || null,
+    sourceSessionCount: assessed.sourceSessionCount || 0,
+    responseSource: "sessions",
     studentIds: isAdmin ? assessed.studentIds : undefined,
     studentCount: assessed.studentIds.length,
     studentIdsRedacted: !isAdmin,
@@ -152,25 +170,46 @@ router.post("/", canAuthor, (req, res) => {
   const id = genId();
 
   let incoming;
+  let liveStamp = null;
+  let fixtureName = null;
   try {
     if (req.body?.source === "sessions") {
-      const assessed = assessSessionItemAnalysis(db, req.body.evidenceModelId);
+      const minSampleSize = Number(req.body.minSampleSize);
+      const assessed = assessLiveResponseMatrix(db, {
+        evidenceModelId: req.body.evidenceModelId,
+        statisticalModelId: req.body.statisticalModelId,
+        kind: req.body.kind || "item-analysis",
+        itemIds: req.body.itemIds,
+        sessionIds: req.body.sessionIds,
+        from: req.body.from,
+        to: req.body.to,
+        minSampleSize: Number.isFinite(minSampleSize) && minSampleSize > 0 ? minSampleSize : undefined,
+      });
       if (!assessed.ok) {
         return res.status(400).json({
           error: assessed.message,
           code: assessed.code,
           sampleSize: assessed.sampleSize,
           studentIds: assessed.studentIds,
+          itemIds: assessed.itemIds,
+          qMatrixId: assessed.qMatrixId || null,
         });
       }
       incoming = {
-        kind: "item-analysis",
+        kind: assessed.kind,
         evidenceModelId: req.body.evidenceModelId,
         statisticalModelId: req.body.statisticalModelId,
         request: assessed.request,
       };
+      liveStamp = assessed;
+    } else if (req.body?.source === "fixture" && !req.body?.fixture) {
+      return res.status(400).json({
+        error: "A fixture source needs a named fixture.",
+        details: [`fixture must be one of: ${CALIBRATION_NAMED_FIXTURES.join(", ")}`],
+      });
     } else {
       incoming = applyNamedCalibrationFixture(req.body, db);
+      if (typeof req.body?.fixture === "string" && req.body.fixture) fixtureName = req.body.fixture;
     }
   } catch (err) {
     if (err?.code === "UNKNOWN_CALIBRATION_FIXTURE") {
@@ -211,6 +250,17 @@ router.post("/", canAuthor, (req, res) => {
     createdAt: now,
     updatedAt: now,
   };
+
+  if (liveStamp) {
+    record.responseSource = "sessions";
+    if (liveStamp.qMatrixId) record.qMatrixId = liveStamp.qMatrixId;
+    record.sourceSessionCount = liveStamp.sourceSessionCount;
+    record.sourceSessionIdsHash = liveStamp.sourceSessionIdsHash;
+    if (Array.isArray(liveStamp.sourceSessionIds)) record.sourceSessionIds = liveStamp.sourceSessionIds;
+  } else if (fixtureName) {
+    record.responseSource = "fixture";
+    record.fixtureName = fixtureName;
+  }
 
   if (!isDeclaredJobKind(record.kind)) {
     return res.status(400).json({

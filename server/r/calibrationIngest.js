@@ -12,6 +12,31 @@ import {
   validateCalibrationResponse,
 } from "./calibrationContract.js";
 
+function sessionProvenanceFromJob(job) {
+  const prov = job?.request?.provenance;
+  const fromSessions = job?.responseSource === "sessions" || prov?.source === "completed-sessions";
+  const qMatrixId = job?.qMatrixId || prov?.qMatrixId || null;
+  const out = {};
+  if (typeof qMatrixId === "string" && qMatrixId) out.qMatrixId = qMatrixId;
+  if (!fromSessions) return out;
+  out.responseSource = "sessions";
+  const ids = Array.isArray(job?.sourceSessionIds)
+    ? job.sourceSessionIds
+    : Array.isArray(prov?.sourceSessionIds)
+      ? prov.sourceSessionIds
+      : null;
+  if (ids) out.sourceSessionIds = ids;
+  const count = Number.isFinite(job?.sourceSessionCount)
+    ? job.sourceSessionCount
+    : Number.isFinite(prov?.sourceSessionCount)
+      ? prov.sourceSessionCount
+      : null;
+  if (count != null) out.sourceSessionCount = count;
+  const hash = job?.sourceSessionIdsHash || prov?.sourceSessionIdsHash || null;
+  if (typeof hash === "string" && hash) out.sourceSessionIdsHash = hash;
+  return out;
+}
+
 export function ingestRefusal(job, db) {
   if (!job) return "Calibration job not found.";
   if (job.status !== "succeeded") {
@@ -149,13 +174,16 @@ export function ingestCalibrationJob(job, db, extras = {}) {
   const sm = em.statisticalModels.find((m) => m.id === job.statisticalModelId);
 
   const parameterSetId = extras.parameterSetId || `ps${Date.now()}`;
-  const parameterSet = parameterSetFromCalibrationResponse(job.response, {
-    parameterSetId,
-    calibrationKind: job.kind,
-    calibrationJobId: job.id,
-    calibratedBy: extras.calibratedBy || job.requestedBy || "r-backend",
-    calibrationMethod: "r-job",
-  });
+  const parameterSet = {
+    ...parameterSetFromCalibrationResponse(job.response, {
+      parameterSetId,
+      calibrationKind: job.kind,
+      calibrationJobId: job.id,
+      calibratedBy: extras.calibratedBy || job.requestedBy || "r-backend",
+      calibrationMethod: "r-job",
+    }),
+    ...sessionProvenanceFromJob(job),
+  };
 
   sm.parameterSets = sm.parameterSets || [];
   sm.parameterSets.push(parameterSet);
