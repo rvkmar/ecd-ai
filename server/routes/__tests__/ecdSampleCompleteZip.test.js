@@ -21,11 +21,11 @@ const EXPECTED = {
   workProducts: 3,
   rubrics: 2,
   competencyModels: 2,
-  competencies: 3,
+  competencies: 4,
   designPatterns: 3,
   evidenceModels: 3,
   taskModels: 3,
-  items: 4,
+  items: 7,
   qMatrixModels: 2,
   assemblyModels: 2,
   presentationModels: 3,
@@ -109,14 +109,15 @@ describe("ecd-sample-complete.zip", () => {
     expect(evidence.statisticalModels[0].structureConfig.qMatrixId).toBe(qMatrix.id);
     const observableRow = qMatrix.entries.find((entry) => entry.observableId === "obs-plant-function");
     expect(observableRow.evidenceModelId).toBe(evidence.id);
-    expect(observableRow.attributeId).toBe("smv-names-function");
+    const namesFunction = db.competencies.find((row) => row.name === "Names the function");
+    expect(observableRow.attributeId).toBe(namesFunction.id);
     expect(observableRow.itemId).toBeUndefined();
     const functionItem = db.items.find((row) => row.name === "Job of the leaf");
     expect(qMatrix.entries).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           itemId: functionItem.id,
-          attributeId: "smv-names-function",
+          attributeId: namesFunction.id,
         }),
       ])
     );
@@ -212,7 +213,9 @@ describe("ecd-sample-complete.zip", () => {
     const fractionBn = fractionEvidence.statisticalModels.find((row) => row.id === "sm-frac-bn");
     expect(fractionBn.type).toBe("bayesian_network");
     expect(fractionBn.active).toBe(false);
-    expect(fractionBn.structureConfig.smvId).toBe("smv-equiv");
+    const fractionCompetency = db.competencies.find((row) => row.name === "Fraction equivalence");
+    expect(fractionBn.structureConfig.smvId).toBe(fractionCompetency.id);
+    expect(fractionEvidence.statisticalModels.find((row) => row.active).subtype).toBe("1pl");
     expect(fractionBn.structureConfig.cpt["obs-equiv"].levels.mastered).toBe(0.8);
     expect(fractionEvidence.statisticalModels.find((row) => row.active).type).toBe("irt");
     const fractionProc = fractionEvidence.evaluationProcedures[0];
@@ -225,8 +228,21 @@ describe("ecd-sample-complete.zip", () => {
     const plantModel = db.competencyModels.find((row) => row.name === "Plant part naming");
     expect(pattern.focalKsas[0].competencyId).toBe(plantCompetency.id);
     expect(pattern.focalKsas[0].competencyModelId).toBe(plantModel.id);
-    expect(pattern.focalKsas[0].smvId).toBe("smv-names-part");
-    expect(plantModel.smVariables.some((row) => row.id === "smv-names-part")).toBe(true);
+    expect(pattern.focalKsas[0].smvId).toBe(plantCompetency.id);
+    expect(plantModel.smVariables.some((row) => row.id === plantCompetency.id)).toBe(true);
+    const proficiency = db.competencies.find((row) => row.name === "Plant-part naming proficiency");
+    expect(proficiency.variableType).toBe("continuous");
+    expect(naming.competencyId).toBe(proficiency.id);
+    expect(naming.statisticalModels.find((row) => row.active).subtype).toBe("2pl");
+    expect(plantModel.constructFramework.policyId).toBe(
+      db.curricularPolicies.find((row) => row.subject === "Science").id
+    );
+    expect(namesFunction.relationships).toEqual(
+      expect.arrayContaining([
+        { targetCompetencyId: plantCompetency.id, type: "correlates-with" },
+        { targetCompetencyId: proficiency.id, type: "correlates-with" },
+      ])
+    );
     expect(pattern.focalKsas[0].label).toBe("Plant-part vocabulary");
     const plantAnalysis = db.domainAnalyses.find((row) => row.name === "Plant structure");
     const diagramAnalysis = db.domainAnalyses.find((row) => row.name === "Explaining a labelled scientific diagram");

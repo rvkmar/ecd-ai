@@ -3,6 +3,7 @@
     "id": "it-leaf",
     "name": "Leaf on the diagram",
     "taskModelId": "tm-plant",
+    "taskModelVersion": 1,
     "observationId": "obs-plant-name",
     "stimulus": {
       "layout": "single",
@@ -17,26 +18,10 @@
       "type": "mcq",
       "workProductId": "wp-part-name",
       "responseComponents": [
-        {
-          "id": "opt_a",
-          "label": "Leaf",
-          "isCorrect": true
-        },
-        {
-          "id": "opt_b",
-          "label": "Root",
-          "isCorrect": false
-        },
-        {
-          "id": "opt_c",
-          "label": "Stem",
-          "isCorrect": false
-        },
-        {
-          "id": "opt_d",
-          "label": "Flower",
-          "isCorrect": false
-        }
+        { "id": "opt_a", "label": "Leaf", "isCorrect": true },
+        { "id": "opt_b", "label": "Root", "isCorrect": false },
+        { "id": "opt_c", "label": "Stem", "isCorrect": false },
+        { "id": "opt_d", "label": "Flower", "isCorrect": false }
       ]
     },
     "scoring": {
@@ -44,33 +29,47 @@
       "maxScore": 1,
       "evidenceActivationMap": [
         {
-          "responsePattern": {
-            "selected": "opt_a"
-          },
+          "responsePattern": { "selected": "opt_a" },
           "activatesObservable": true,
+          "score": 1,
           "strengthOverride": 4,
           "rationale": "Leaf is the name of the called-out part."
+        },
+        {
+          "responsePattern": { "selected": "opt_b" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Root is a different part. Score 0 is the other category of the same observable."
+        },
+        {
+          "responsePattern": { "selected": "opt_c" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Stem is a different part. Score 0 is the other category of the same observable."
+        },
+        {
+          "responsePattern": { "selected": "opt_d" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Flower is a different part. Score 0 is the other category of the same observable."
         }
       ]
     },
+    "psychometrics": {
+      "statisticalModelType": "irt",
+      "calibrationStatus": "pilot",
+      "irtParams": { "a": 1.2, "b": -0.4 }
+    },
     "learningDomain": "cognitive",
-    "cognitiveDemand": {
-      "bloomLevel": "remember"
-    },
-    "metadata": {
-      "gradeBand": "6",
-      "subject": "Science",
-      "tags": [
-        "plants",
-        "leaf"
-      ]
-    },
+    "cognitiveDemand": { "bloomLevel": "remember" },
+    "metadata": { "gradeBand": "6", "subject": "Science", "difficulty": 0.3, "tags": ["plants", "leaf"] },
     "status": "draft"
   },
   {
     "id": "it-root",
     "name": "Root on the diagram",
     "taskModelId": "tm-plant",
+    "taskModelVersion": 1,
     "observationId": "obs-plant-name",
     "stimulus": {
       "layout": "single",
@@ -85,26 +84,10 @@
       "type": "mcq",
       "workProductId": "wp-part-name",
       "responseComponents": [
-        {
-          "id": "opt_a",
-          "label": "Flower",
-          "isCorrect": false
-        },
-        {
-          "id": "opt_b",
-          "label": "Root",
-          "isCorrect": true
-        },
-        {
-          "id": "opt_c",
-          "label": "Leaf",
-          "isCorrect": false
-        },
-        {
-          "id": "opt_d",
-          "label": "Fruit",
-          "isCorrect": false
-        }
+        { "id": "opt_a", "label": "Flower", "isCorrect": false },
+        { "id": "opt_b", "label": "Root", "isCorrect": true },
+        { "id": "opt_c", "label": "Leaf", "isCorrect": false },
+        { "id": "opt_d", "label": "Fruit", "isCorrect": false }
       ]
     },
     "scoring": {
@@ -112,33 +95,113 @@
       "maxScore": 1,
       "evidenceActivationMap": [
         {
-          "responsePattern": {
-            "selected": "opt_b"
-          },
+          "responsePattern": { "selected": "opt_b" },
           "activatesObservable": true,
+          "score": 1,
           "strengthOverride": 4,
           "rationale": "Root is the name of the called-out part."
+        },
+        {
+          "responsePattern": { "selected": "opt_a" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Flower is a different part. Score 0 is the other category of the same observable."
+        },
+        {
+          "responsePattern": { "selected": "opt_c" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Leaf is a different part. Score 0 is the other category of the same observable."
+        },
+        {
+          "responsePattern": { "selected": "opt_d" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Fruit is a different part. Score 0 is the other category of the same observable."
         }
       ]
     },
-    "learningDomain": "cognitive",
-    "cognitiveDemand": {
-      "bloomLevel": "remember"
+    "psychometrics": {
+      "statisticalModelType": "irt",
+      "calibrationStatus": "pilot",
+      "irtParams": { "a": 1.0, "b": 0.1 }
     },
-    "metadata": {
-      "gradeBand": "6",
-      "subject": "Science",
-      "tags": [
-        "plants",
-        "root"
+    "learningDomain": "cognitive",
+    "cognitiveDemand": { "bloomLevel": "remember" },
+    "metadata": { "gradeBand": "6", "subject": "Science", "difficulty": 0.45, "tags": ["plants", "root"] },
+    "status": "draft"
+  },
+  {
+    "id": "it-stem",
+    "name": "Stem on the diagram",
+    "taskModelId": "tm-plant",
+    "taskModelVersion": 1,
+    "observationId": "obs-plant-name",
+    "stimulus": {
+      "layout": "single",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "The arrow points to the part that holds the leaves up. What is it called?"
+        }
       ]
     },
+    "interaction": {
+      "type": "mcq",
+      "workProductId": "wp-part-name",
+      "responseComponents": [
+        { "id": "opt_a", "label": "Root", "isCorrect": false },
+        { "id": "opt_b", "label": "Leaf", "isCorrect": false },
+        { "id": "opt_c", "label": "Stem", "isCorrect": true },
+        { "id": "opt_d", "label": "Flower", "isCorrect": false }
+      ]
+    },
+    "scoring": {
+      "method": "dichotomous",
+      "maxScore": 1,
+      "evidenceActivationMap": [
+        {
+          "responsePattern": { "selected": "opt_c" },
+          "activatesObservable": true,
+          "score": 1,
+          "strengthOverride": 4,
+          "rationale": "Stem is the name of the part that holds the leaves up."
+        },
+        {
+          "responsePattern": { "selected": "opt_a" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Root holds the plant in the soil, not the leaves up. Score 0 is the wrong name."
+        },
+        {
+          "responsePattern": { "selected": "opt_b" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Leaf is the flat green part, not the part that holds it up. Score 0 is the wrong name."
+        },
+        {
+          "responsePattern": { "selected": "opt_d" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Flower is not the part that holds the leaves up. Score 0 is the wrong name."
+        }
+      ]
+    },
+    "psychometrics": {
+      "statisticalModelType": "irt",
+      "calibrationStatus": "pilot",
+      "irtParams": { "a": 0.9, "b": 0.35 }
+    },
+    "learningDomain": "cognitive",
+    "cognitiveDemand": { "bloomLevel": "remember" },
+    "metadata": { "gradeBand": "6", "subject": "Science", "difficulty": 0.6, "tags": ["plants", "stem"] },
     "status": "draft"
   },
   {
     "id": "it-function",
     "name": "Job of the leaf",
     "taskModelId": "tm-function",
+    "taskModelVersion": 1,
     "observationId": "obs-plant-function",
     "stimulus": {
       "layout": "single",
@@ -153,26 +216,10 @@
       "type": "mcq",
       "workProductId": "wp-part-function",
       "responseComponents": [
-        {
-          "id": "opt_a",
-          "label": "Makes food",
-          "isCorrect": true
-        },
-        {
-          "id": "opt_b",
-          "label": "Takes up water",
-          "isCorrect": false
-        },
-        {
-          "id": "opt_c",
-          "label": "Holds the plant in the soil",
-          "isCorrect": false
-        },
-        {
-          "id": "opt_d",
-          "label": "Makes seeds",
-          "isCorrect": false
-        }
+        { "id": "opt_a", "label": "Makes food", "isCorrect": true },
+        { "id": "opt_b", "label": "Takes up water", "isCorrect": false },
+        { "id": "opt_c", "label": "Holds the plant in the soil", "isCorrect": false },
+        { "id": "opt_d", "label": "Makes seeds", "isCorrect": false }
       ]
     },
     "scoring": {
@@ -180,33 +227,113 @@
       "maxScore": 1,
       "evidenceActivationMap": [
         {
-          "responsePattern": {
-            "selected": "opt_a"
-          },
+          "responsePattern": { "selected": "opt_a" },
           "activatesObservable": true,
+          "score": 1,
           "strengthOverride": 3,
           "rationale": "Making food is the function of the leaf."
+        },
+        {
+          "responsePattern": { "selected": "opt_b" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Taking up water is the root's job. Score 0 is the wrong function."
+        },
+        {
+          "responsePattern": { "selected": "opt_c" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Holding the plant in the soil is the root's job. Score 0 is the wrong function."
+        },
+        {
+          "responsePattern": { "selected": "opt_d" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Making seeds is the flower's job. Score 0 is the wrong function."
         }
       ]
     },
-    "learningDomain": "cognitive",
-    "cognitiveDemand": {
-      "bloomLevel": "understand"
+    "psychometrics": {
+      "statisticalModelType": "dina",
+      "calibrationStatus": "pilot",
+      "dinaParams": { "slip": 0.1, "guess": 0.2 }
     },
-    "metadata": {
-      "gradeBand": "6",
-      "subject": "Science",
-      "tags": [
-        "plants",
-        "function"
+    "learningDomain": "cognitive",
+    "cognitiveDemand": { "bloomLevel": "understand" },
+    "metadata": { "gradeBand": "6", "subject": "Science", "tags": ["plants", "function"] },
+    "status": "draft"
+  },
+  {
+    "id": "it-function-words",
+    "name": "Function, not a place",
+    "taskModelId": "tm-function",
+    "taskModelVersion": 1,
+    "observationId": "obs-plant-function-words",
+    "stimulus": {
+      "layout": "single",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "Which sentence says what a leaf does, not where it is?"
+        }
       ]
     },
+    "interaction": {
+      "type": "mcq",
+      "workProductId": "wp-part-function",
+      "responseComponents": [
+        { "id": "opt_a", "label": "Makes food for the plant", "isCorrect": true },
+        { "id": "opt_b", "label": "Sits at the end of a stem", "isCorrect": false },
+        { "id": "opt_c", "label": "Is flat and green", "isCorrect": false },
+        { "id": "opt_d", "label": "Grows above the soil", "isCorrect": false }
+      ]
+    },
+    "scoring": {
+      "method": "dichotomous",
+      "maxScore": 1,
+      "evidenceActivationMap": [
+        {
+          "responsePattern": { "selected": "opt_a" },
+          "activatesObservable": true,
+          "score": 1,
+          "strengthOverride": 3,
+          "rationale": "Making food is a function. The other sentences say where the leaf is or what it looks like."
+        },
+        {
+          "responsePattern": { "selected": "opt_b" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Sitting at the end of a stem is a location, not a function. Score 0."
+        },
+        {
+          "responsePattern": { "selected": "opt_c" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Flat and green is a look, not a function. Score 0."
+        },
+        {
+          "responsePattern": { "selected": "opt_d" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "Above the soil is a location, not a function. Score 0."
+        }
+      ]
+    },
+    "psychometrics": {
+      "statisticalModelType": "dina",
+      "calibrationStatus": "pilot",
+      "dinaParams": { "slip": 0.15, "guess": 0.22 }
+    },
+    "learningDomain": "cognitive",
+    "cognitiveDemand": { "bloomLevel": "understand" },
+    "metadata": { "gradeBand": "6", "subject": "Science", "tags": ["plants", "function", "wording"] },
     "status": "draft"
   },
   {
     "id": "it-equiv",
     "name": "Equivalent to 2/4",
     "taskModelId": "tm-frac",
+    "taskModelVersion": 1,
     "observationId": "obs-equiv",
     "stimulus": {
       "layout": "single",
@@ -221,26 +348,10 @@
       "type": "mcq",
       "workProductId": "wp-equiv",
       "responseComponents": [
-        {
-          "id": "opt_a",
-          "label": "1/2",
-          "isCorrect": true
-        },
-        {
-          "id": "opt_b",
-          "label": "3/8",
-          "isCorrect": false
-        },
-        {
-          "id": "opt_c",
-          "label": "2/3",
-          "isCorrect": false
-        },
-        {
-          "id": "opt_d",
-          "label": "5/6",
-          "isCorrect": false
-        }
+        { "id": "opt_a", "label": "1/2", "isCorrect": true },
+        { "id": "opt_b", "label": "3/8", "isCorrect": false },
+        { "id": "opt_c", "label": "2/3", "isCorrect": false },
+        { "id": "opt_d", "label": "5/6", "isCorrect": false }
       ]
     },
     "scoring": {
@@ -248,27 +359,106 @@
       "maxScore": 1,
       "evidenceActivationMap": [
         {
-          "responsePattern": {
-            "selected": "opt_a"
-          },
+          "responsePattern": { "selected": "opt_a" },
           "activatesObservable": true,
+          "score": 1,
           "strengthOverride": 4,
           "rationale": "1/2 and 2/4 name the same amount."
+        },
+        {
+          "responsePattern": { "selected": "opt_b" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "3/8 is not the same amount as 2/4. Score 0."
+        },
+        {
+          "responsePattern": { "selected": "opt_c" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "2/3 shares a numerator with 2/4 but is not the same amount. Score 0."
+        },
+        {
+          "responsePattern": { "selected": "opt_d" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "5/6 is not the same amount as 2/4. Score 0."
         }
       ]
     },
-    "learningDomain": "cognitive",
-    "cognitiveDemand": {
-      "bloomLevel": "apply"
+    "psychometrics": {
+      "statisticalModelType": "irt",
+      "calibrationStatus": "pilot",
+      "irtParams": { "a": 1, "b": -0.2 }
     },
-    "metadata": {
-      "gradeBand": "6",
-      "subject": "Mathematics",
-      "tags": [
-        "fractions",
-        "equivalence"
+    "learningDomain": "cognitive",
+    "cognitiveDemand": { "bloomLevel": "apply" },
+    "metadata": { "gradeBand": "6", "subject": "Mathematics", "tags": ["fractions", "equivalence"] },
+    "status": "draft"
+  },
+  {
+    "id": "it-lowest",
+    "name": "4/6 in lowest terms",
+    "taskModelId": "tm-frac",
+    "taskModelVersion": 1,
+    "observationId": "obs-equiv-lowest",
+    "stimulus": {
+      "layout": "single",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "Which fraction is 4/6 written in lowest terms?"
+        }
       ]
     },
+    "interaction": {
+      "type": "mcq",
+      "workProductId": "wp-equiv",
+      "responseComponents": [
+        { "id": "opt_a", "label": "1/3", "isCorrect": false },
+        { "id": "opt_b", "label": "2/3", "isCorrect": true },
+        { "id": "opt_c", "label": "4/3", "isCorrect": false },
+        { "id": "opt_d", "label": "2/6", "isCorrect": false }
+      ]
+    },
+    "scoring": {
+      "method": "dichotomous",
+      "maxScore": 1,
+      "evidenceActivationMap": [
+        {
+          "responsePattern": { "selected": "opt_b" },
+          "activatesObservable": true,
+          "score": 1,
+          "strengthOverride": 4,
+          "rationale": "4/6 and 2/3 name the same amount, and 2/3 is in lowest terms."
+        },
+        {
+          "responsePattern": { "selected": "opt_a" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "1/3 is half of 2/3, not 4/6. Score 0."
+        },
+        {
+          "responsePattern": { "selected": "opt_c" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "4/3 turns the fraction upside down. Score 0."
+        },
+        {
+          "responsePattern": { "selected": "opt_d" },
+          "activatesObservable": false,
+          "score": 0,
+          "rationale": "2/6 divides both numbers by 2 but is not equal to 4/6. Score 0."
+        }
+      ]
+    },
+    "psychometrics": {
+      "statisticalModelType": "irt",
+      "calibrationStatus": "pilot",
+      "irtParams": { "a": 1, "b": 0.3 }
+    },
+    "learningDomain": "cognitive",
+    "cognitiveDemand": { "bloomLevel": "apply" },
+    "metadata": { "gradeBand": "6", "subject": "Mathematics", "tags": ["fractions", "lowest terms"] },
     "status": "draft"
   }
 ]

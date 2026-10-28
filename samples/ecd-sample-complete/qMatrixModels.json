@@ -2,34 +2,50 @@
   {
     "id": "qm-plant",
     "name": "Plant part Q-matrix",
-    "description": "Binary attributes for the plant student model: naming the part, and naming its function.",
+    "description": "Binary attributes for the plant student model: naming the part, and naming its function. The continuous naming proficiency is not an attribute.",
     "status": "draft",
     "competencyModelId": "cm-plant",
     "domainAnalysisId": "da-plant",
     "attributeIds": [
-      "smv-names-part",
-      "smv-names-function"
+      "c-plant",
+      "c-function"
     ],
     "entries": [
       {
         "itemId": "it-leaf",
-        "attributeId": "smv-names-part",
+        "attributeId": "c-plant",
         "required": true
       },
       {
         "itemId": "it-root",
-        "attributeId": "smv-names-part",
+        "attributeId": "c-plant",
+        "required": true
+      },
+      {
+        "itemId": "it-stem",
+        "attributeId": "c-plant",
         "required": true
       },
       {
         "itemId": "it-function",
-        "attributeId": "smv-names-function",
+        "attributeId": "c-function",
+        "required": true
+      },
+      {
+        "itemId": "it-function-words",
+        "attributeId": "c-function",
         "required": true
       },
       {
         "observableId": "obs-plant-function",
         "evidenceModelId": "em-function",
-        "attributeId": "smv-names-function",
+        "attributeId": "c-function",
+        "required": true
+      },
+      {
+        "observableId": "obs-plant-function-words",
+        "evidenceModelId": "em-function",
+        "attributeId": "c-function",
         "required": true
       }
     ]
@@ -42,12 +58,17 @@
     "competencyModelId": "cm-frac",
     "domainAnalysisId": "da-frac",
     "attributeIds": [
-      "smv-equiv"
+      "c-frac"
     ],
     "entries": [
       {
         "itemId": "it-equiv",
-        "attributeId": "smv-equiv",
+        "attributeId": "c-frac",
+        "required": true
+      },
+      {
+        "itemId": "it-lowest",
+        "attributeId": "c-frac",
         "required": true
       }
     ]

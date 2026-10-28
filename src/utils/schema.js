@@ -3806,10 +3806,18 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
         if (competencyModel?.measurementIntent === "unidimensional") {
 
+          const siblingIds = new Set(
+            (db.competencies || [])
+              .filter((row) => row.modelId === competency.modelId)
+              .map((row) => row.id)
+          );
+          // Scope to this Student Model. A confirmed evidence model on a
+          // different model is not a second competency of this one.
           const otherConfirmedEvidence = db.evidenceModels?.filter(
             em =>
               em.status === "confirmed" &&
               em.id !== obj.id &&
+              siblingIds.has(em.competencyId) &&
               em.competencyId !== obj.competencyId
           ) || [];
 

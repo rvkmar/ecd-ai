@@ -66,7 +66,7 @@
         "label": "Plant-part vocabulary",
         "competencyId": "c-plant",
         "competencyModelId": "cm-plant",
-        "smvId": "smv-names-part",
+        "smvId": "c-plant",
         "valuedKnowledgeId": "vk-plant-parts"
       }
     ],
@@ -120,7 +120,10 @@
     "domainAnalysisId": "da-frac",
     "focalKsas": [
       {
-        "label": "Fraction equivalence"
+        "label": "Fraction equivalence",
+        "competencyId": "c-frac",
+        "competencyModelId": "cm-frac",
+        "smvId": "c-frac"
       }
     ],
     "additionalKsas": [
