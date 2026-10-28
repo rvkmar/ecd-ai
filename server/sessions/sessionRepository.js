@@ -2,8 +2,10 @@
 //
 // JSON harness: the sessions array on the ECD db object. saveDB writes it.
 // memory and mongo: one document read or write per call. List uses a
-// query plus the tenancy filter. It does not clone the collection twice
-// or stringify every session to find a diff.
+// query plus the tenancy filter. List routes pass a projection so Mongo
+// does not load fields the response does not send. File and memory apply
+// the same projection. It does not clone the collection twice or stringify
+// every session to find a diff.
 
 import { getTenancyContext } from "../utils/tenancyContext.js";
 import { filterRows, rowVisible } from "../utils/tenancyScope.js";
@@ -19,6 +21,7 @@ import {
   mongoReplace,
   sessionToPlain,
 } from "./mongoSessionStore.js";
+import { projectSession } from "./sessionListProjection.js";
 import { EVALUATION_STATUS } from "../delivery/evaluationPhases.js";
 
 const memoryDocs = new Map();
@@ -154,23 +157,33 @@ function applyTenancy(rows, db, filter) {
   return filterRows("sessions", rows, getTenancyContext(), db || { sessions: rows });
 }
 
-export async function querySessions(db, filter = {}) {
+function applyProjection(rows, projection) {
+  if (!projection) return rows;
+  return rows.map((row) => projectSession(row, projection));
+}
+
+export async function querySessions(db, filter = {}, options = {}) {
+  const projection = options?.projection || null;
   if (!sessionsUseExternalStore()) {
     // loadDB already applied tenancy to the file. Filtering again throws
     // for a staff token that has no district claim and hides rows the
     // caller already scoped.
-    return (db?.sessions || []).filter((row) => sessionMatchesFilter(row, filter));
+    const rows = (db?.sessions || []).filter((row) => sessionMatchesFilter(row, filter));
+    return applyProjection(rows, projection);
   }
   let rows;
   if (resolveSessionsBackend() === "mongo") {
-    rows = await mongoFind(mongoFilterFrom(filter));
+    rows = await mongoFind(
+      mongoFilterFrom(filter),
+      projection ? { projection } : undefined
+    );
     rows = rows.filter((row) => sessionMatchesFilter(row, filter));
   } else {
     rows = [...memoryDocs.values()]
       .filter((row) => sessionMatchesFilter(row, filter))
       .map(clone);
   }
-  return applyTenancy(rows, db, filter);
+  return applyTenancy(applyProjection(rows, projection), db, filter);
 }
 
 export async function ensureSessionCache() {

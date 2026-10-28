@@ -50,6 +50,8 @@ describe("D104 health vs readiness", () => {
 
     expect(status.health.ok).toBe(true);
     expect(status.health.servingSessions).toBe(true);
+    expect(status.database.ecd.mode).toBe("ecd-json");
+    expect(status.database.ecd.sessionsBackend).toBe("file");
     expect(status.readiness.ok).toBe(false);
     expect(status.readiness.calibration).toBe(false);
     expect(status.readiness.reason).toBe("r_unreachable");
@@ -58,6 +60,40 @@ describe("D104 health vs readiness", () => {
     expect(status.migrations.registryCount).toBeGreaterThan(0);
     expect(status.backup.fileCount).toBe(1);
     expect(status.backup.ageMs).toEqual(expect.any(Number));
+  });
+
+  it("GET /api/health keeps mode ecd-json and names the session store", async () => {
+    const { default: router } = await import("../healthRoutes.js");
+    const app = express();
+    app.use(express.json());
+    app.use("/api", router);
+    const previous = process.env.SESSIONS_BACKEND;
+
+    try {
+      if (previous === undefined) delete process.env.SESSIONS_BACKEND;
+      else process.env.SESSIONS_BACKEND = previous;
+
+      const fileHealth = await request(app).get("/api/health");
+      expect(fileHealth.status).toBe(200);
+      expect(fileHealth.body.database.mode).toBe("ecd-json");
+      expect(fileHealth.body.database.sessionsBackend).toBe("file");
+      expect(fileHealth.body.servingSessions).toBe(true);
+
+      process.env.SESSIONS_BACKEND = "mongo";
+      const mongoHealth = await request(app).get("/api/health");
+      expect(mongoHealth.status).toBe(200);
+      expect(mongoHealth.body.database.mode).toBe("ecd-json");
+      expect(mongoHealth.body.database.sessionsBackend).toBe("mongo");
+      expect(mongoHealth.body.servingSessions).toBe(true);
+
+      process.env.SESSIONS_BACKEND = "memory";
+      const memoryHealth = await request(app).get("/api/health");
+      expect(memoryHealth.body.database.mode).toBe("ecd-json");
+      expect(memoryHealth.body.database.sessionsBackend).toBe("memory");
+    } finally {
+      if (previous === undefined) delete process.env.SESSIONS_BACKEND;
+      else process.env.SESSIONS_BACKEND = previous;
+    }
   });
 
   it("R healthy: readiness ok for calibration", async () => {

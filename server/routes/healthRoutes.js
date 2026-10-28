@@ -25,7 +25,11 @@ router.get("/health", async (_req, res) => {
     status: status.health.ok ? "ok" : "degraded",
     at: status.at,
     process: status.process,
-    database: { ok: status.database.ecd.ok, mode: status.database.ecd.mode },
+    database: {
+      ok: status.database.ecd.ok,
+      mode: status.database.ecd.mode,
+      sessionsBackend: status.database.ecd.sessionsBackend,
+    },
     // Diagnostic only — does not affect the HTTP status.
     r: { reachable: status.r.reachable, url: status.r.url },
     servingSessions: status.health.servingSessions,

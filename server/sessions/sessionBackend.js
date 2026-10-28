@@ -39,4 +39,7 @@ export const SESSION_INDEX_FIELDS = Object.freeze([
   ["isCompleted"],
   ["districtId"],
   [["responses.evidenceModelId", "status"]],
+  // Rating queue matches responses.evaluationStatus. The evidence-model
+  // compound index above does not cover that field.
+  ["responses.evaluationStatus"],
 ]);
