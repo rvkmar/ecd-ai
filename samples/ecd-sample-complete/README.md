@@ -14,12 +14,12 @@ One zip the Settings zip uploader accepts with no failed rows. It is two short c
 | taskModelVariables.json | 3 | Plant diagram, Bloom demand, fraction denominator |
 | workProducts.json | 3 | Selected plant-part name, selected plant-part function, selected equivalent fraction |
 | rubrics.json | 2 | Plant function judgement (confirmed, with an exemplar), Fraction equivalence judgement (draft) |
-| competencyModels.json | 2 | Plant part naming (two binary attributes), Grade 6 fractions (one) |
-| competencies.json | 3 | Names the part, Names the function, Fraction equivalence |
+| competencyModels.json | 2 | Plant part naming (continuous naming proficiency plus two binary attributes), Grade 6 fractions (one binary attribute) |
+| competencies.json | 4 | Plant-part naming proficiency, Names the part, Names the function, Fraction equivalence |
 | designPatterns.json | 3 | Explain a labelled diagram, Name a plant part (kind-of that pattern), Explain a fraction |
-| evidenceModels.json | 3 | Part naming (IRT), Part function (DINA, bound to the plant Q-matrix by name), Fraction evidence. Fraction evidence also carries an inactive Bayesian network (sm-frac-bn) over smv-equiv, with a conditional probability for obs-equiv. The active model stays IRT. |
+| evidenceModels.json | 3 | Part naming (2PL on the continuous naming proficiency), Part function (DINA, bound to the plant Q-matrix), Fraction evidence (1PL on the binary equivalence attribute). Fraction evidence also carries an inactive Bayesian network (sm-frac-bn) over c-frac. |
 | taskModels.json | 3 | Name the plant part, Name the plant function, Name the fraction |
-| items.json | 4 | Leaf, root, job of the leaf, equivalent to 2/4 |
+| items.json | 7 | Leaf, root, stem, job of the leaf, function rather than location, equivalent to 2/4, 4/6 in lowest terms |
 | qMatrixModels.json | 2 | Plant part Q-matrix, Fraction equivalence Q-matrix |
 | assemblyModels.json | 2 | Plant assembly on the fixed form, with task-model counts and a per-item cap. Fraction assembly on the Bayesian policy |
 | presentationModels.json | 3 | One linear overlay per task model |

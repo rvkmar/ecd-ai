@@ -7,11 +7,11 @@
     "competencyModelId": "cm-plant",
     "targetsBySMV": [
       {
-        "smvId": "smv-names-part",
+        "smvId": "c-plant",
         "requiredClassificationAccuracy": 0.8
       },
       {
-        "smvId": "smv-names-function",
+        "smvId": "c-function",
         "requiredClassificationAccuracy": 0.75
       }
     ],
@@ -39,7 +39,7 @@
     "competencyModelId": "cm-frac",
     "targetsBySMV": [
       {
-        "smvId": "smv-equiv",
+        "smvId": "c-frac",
         "requiredClassificationAccuracy": 0.8
       }
     ],

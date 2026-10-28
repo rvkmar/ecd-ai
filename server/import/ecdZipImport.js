@@ -56,6 +56,7 @@ import { createAssemblyModelRecord } from "../routes/assemblyModelsRoutes.js";
 import { createPresentationModelRecord } from "../routes/presentationModelsRoutes.js";
 import { createTemplateRecord } from "../routes/templatesRoutes.js";
 import { createDeliveryModelRecord } from "../routes/deliveryModelsRoutes.js";
+import { validateEntity } from "../../src/utils/schema.js";
 
 // Design collections only. studentModelRecords is runtime scoring state
 // (written when a session finishes) and is not imported or exported here.
@@ -119,6 +120,7 @@ const REF_PATHS = {
   competencyModels: [
     ["domainAnalysisId", "domainAnalyses"],
     ["parentModelId", "competencyModels"],
+    ["constructFramework.policyId", "curricularPolicies"],
   ],
   competencies: [["modelId", "competencyModels"]],
   designPatterns: [
@@ -669,6 +671,141 @@ function rebindEvidenceQMatrices(db, provenance, catalog) {
   return bound;
 }
 
+function uniqueCompetencyRemap(catalog) {
+  const groups = new Map();
+  for (const entry of catalog.entries || []) {
+    if (entry.collection !== "competencies") continue;
+    if (!entry.oldId || entry.oldId === entry.newId) continue;
+    const list = groups.get(entry.oldId) || [];
+    list.push(entry.newId);
+    groups.set(entry.oldId, list);
+  }
+  const map = new Map();
+  for (const [oldId, ids] of groups) {
+    const unique = [...new Set(ids)];
+    if (unique.length === 1) map.set(oldId, unique[0]);
+  }
+  return map;
+}
+
+// After review, a Student Model Variable id is the competency id. The
+// sample authors those ids up front so draft validation can see them on
+// the model. Import assigns new competency ids later, so this pass
+// renames the variable, and every citation that used that same id, once
+// the rows exist. A bare id that is not a competency id is left alone.
+// Design-pattern smvId stays off REF_PATHS for that reason.
+function rebindCompetencyAlignedVariableIds(db, catalog) {
+  const map = uniqueCompetencyRemap(catalog);
+  if (map.size === 0) return;
+  for (const model of db.competencyModels || []) {
+    if (!Array.isArray(model.smVariables)) continue;
+    model.smVariables = model.smVariables.map((smv) => {
+      if (!smv || !map.has(smv.id)) return smv;
+      return { ...smv, id: map.get(smv.id) };
+    });
+  }
+  const rewriteKsa = (row) => {
+    if (!row || typeof row !== "object" || !map.has(row.smvId)) return row;
+    return { ...row, smvId: map.get(row.smvId) };
+  };
+  for (const pattern of db.designPatterns || []) {
+    if (Array.isArray(pattern.focalKsas)) pattern.focalKsas = pattern.focalKsas.map(rewriteKsa);
+    if (Array.isArray(pattern.additionalKsas)) {
+      pattern.additionalKsas = pattern.additionalKsas.map(rewriteKsa);
+    }
+  }
+  const rewrite = (value) => (map.has(value) ? map.get(value) : value);
+  for (const matrix of db.qMatrixModels || []) {
+    if (Array.isArray(matrix.attributeIds)) {
+      matrix.attributeIds = matrix.attributeIds.map(rewrite);
+    }
+    if (Array.isArray(matrix.entries)) {
+      matrix.entries = matrix.entries.map((entry) => {
+        if (!entry || !map.has(entry.attributeId)) return entry;
+        return { ...entry, attributeId: map.get(entry.attributeId) };
+      });
+    }
+  }
+  for (const assembly of db.assemblyModels || []) {
+    if (!Array.isArray(assembly.targetsBySMV)) continue;
+    assembly.targetsBySMV = assembly.targetsBySMV.map((target) => {
+      if (!target || !map.has(target.smvId)) return target;
+      return { ...target, smvId: map.get(target.smvId) };
+    });
+  }
+  for (const model of db.evidenceModels || []) {
+    if (!Array.isArray(model.statisticalModels)) continue;
+    model.statisticalModels = model.statisticalModels.map((sm) => {
+      const cfg = sm?.structureConfig;
+      if (!cfg || typeof cfg !== "object") return sm;
+      const next = { ...cfg };
+      if (map.has(next.smvId)) next.smvId = map.get(next.smvId);
+      if (Array.isArray(next.latentNodes)) next.latentNodes = next.latentNodes.map(rewrite);
+      if (Array.isArray(next.edges)) {
+        next.edges = next.edges.map((edge) => {
+          if (!edge || !map.has(edge.from)) return edge;
+          return { ...edge, from: map.get(edge.from) };
+        });
+      }
+      return { ...sm, structureConfig: next };
+    });
+  }
+}
+
+// createCompetencyRecord drops relationships so a row can be inserted
+// before its sibling exists. Symmetric correlates-with needs both sides
+// present, so the links are applied after every competency in the file
+// has an id.
+function applyImportedCompetencyRelationships(plans, ctx, results) {
+  const planBySource = new Map(
+    plans.filter((plan) => plan.sourceId).map((plan) => [plan.sourceId, plan])
+  );
+  for (const result of results) {
+    if (!result.ok || !result.sourceId || !result.id) continue;
+    const plan = planBySource.get(result.sourceId);
+    const raw = Array.isArray(plan?.row?.relationships) ? plan.row.relationships : [];
+    if (raw.length === 0) continue;
+    const record = (ctx.db.competencies || []).find((row) => row.id === result.id);
+    if (!record) continue;
+    const relationships = [];
+    const errors = [];
+    raw.forEach((rel, i) => {
+      if (!rel || typeof rel !== "object" || !rel.targetCompetencyId || !rel.type) {
+        errors.push(`relationships[${i}] is missing targetCompetencyId or type.`);
+        return;
+      }
+      const resolved = ctx.catalog.resolve(
+        "competencies",
+        rel.targetCompetencyId,
+        plan.sources
+      );
+      if (resolved.status === "ambiguous") {
+        errors.push(
+          `relationships[${i}] target '${rel.targetCompetencyId}' is ambiguous.`
+        );
+        return;
+      }
+      relationships.push({
+        targetCompetencyId: resolved.status === "remapped" ? resolved.id : rel.targetCompetencyId,
+        type: rel.type,
+      });
+    });
+    if (!errors.length) {
+      record.relationships = relationships;
+      const check = validateEntity("competencies", record, ctx.db, { strict: false });
+      if (!check.valid) errors.push(...check.errors);
+    }
+    if (errors.length) {
+      result.ok = false;
+      result.error = "Relationship remapping failed.";
+      result.details = errors;
+      delete result.id;
+      ctx.db.competencies = (ctx.db.competencies || []).filter((row) => row.id !== record.id);
+      ctx.catalog.remove("competencies", result.sourceId, record.id);
+    }
+  }
+}
+
 function summarize(results) {
   const created = results.filter((row) => row.ok).length;
   return { created, failed: results.length - created, results };
@@ -763,6 +900,7 @@ export function importZipIntoDb(db, buffer, options = {}) {
           assignedId: opts.assignedId,
         })
       );
+      applyImportedCompetencyRelationships(plans, ctx, results);
     } else if (collection === "curricularPolicies") {
       results = importSimple(plans, collection, ctx, (row, opts) =>
         createCurricularPolicyRecord(row, db, "", { assignedId: opts.assignedId })
@@ -868,6 +1006,7 @@ export function importZipIntoDb(db, buffer, options = {}) {
     entities[collection] = { file: parsedFile.file, ...summary };
   }
 
+  rebindCompetencyAlignedVariableIds(db, catalog);
   const qMatrixLinksBound = rebindEvidenceQMatrices(db, provenance, catalog);
 
   const totals = { created: 0, failed: 0, fileErrors: 0 };

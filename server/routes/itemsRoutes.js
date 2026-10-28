@@ -393,6 +393,11 @@ export function createItemRecord(payload = {}, db, creatorId = "system", options
       // Pilot parameters may legitimately arrive with a bulk import of an
       // already-calibrated bank; they were silently dropped before.
       irtParams: payload.psychometrics?.irtParams || {},
+      // Same for a DINA pilot slip/guess pair. Omit the key when the
+      // payload has none, so an IRT item does not carry an empty object.
+      ...(payload.psychometrics?.dinaParams
+        ? { dinaParams: payload.psychometrics.dinaParams }
+        : {}),
     },
 
     // Dropped entirely by the previous implementation, which is why no

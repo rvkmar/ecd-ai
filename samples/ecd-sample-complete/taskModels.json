@@ -3,8 +3,11 @@
     "id": "tm-plant",
     "name": "Name the plant part",
     "description": "Selected-response items that ask for the name of one called-out plant part.",
-    "designRationale": "Recognition of the part name, before any explanation of its function.",
+    "designRationale": "Recognition of the part name. Responses update the continuous naming proficiency. The same items also sit on the binary name attribute in the Q-matrix.",
     "status": "draft",
+    "versionNumber": 1,
+    "taskCompositionType": "atomic",
+    "actions": ["select"],
     "evidenceModelIds": [
       "em-plant"
     ],
@@ -36,7 +39,10 @@
       }
     ],
     "taskStructure": {
-      "prompt": "Name the part the diagram calls out."
+      "prompt": "Name the part the diagram calls out.",
+      "presentationMode": "interactive",
+      "responseFormat": "selected",
+      "stimulusPolicy": "parameterized"
     },
     "blueprintConstraints": {
       "allowedInteractionTypes": [
@@ -57,6 +63,9 @@
     "description": "Selected-response items that ask what a named plant part does.",
     "designRationale": "The function claim, scored against the plant-part Q-matrix.",
     "status": "draft",
+    "versionNumber": 1,
+    "taskCompositionType": "atomic",
+    "actions": ["select"],
     "evidenceModelIds": [
       "em-function"
     ],
@@ -69,7 +78,13 @@
         "observationId": "obs-plant-function",
         "evidenceModelId": "em-function",
         "required": true,
-        "weight": 1
+        "weight": 0.5
+      },
+      {
+        "observationId": "obs-plant-function-words",
+        "evidenceModelId": "em-function",
+        "required": true,
+        "weight": 0.5
       }
     ],
     "taskModelVariableIds": [
@@ -82,7 +97,10 @@
       }
     ],
     "taskStructure": {
-      "prompt": "State the job of the named part."
+      "prompt": "State the job of the named part.",
+      "presentationMode": "interactive",
+      "responseFormat": "selected",
+      "stimulusPolicy": "parameterized"
     },
     "blueprintConstraints": {
       "allowedInteractionTypes": [
@@ -97,8 +115,11 @@
     "id": "tm-frac",
     "name": "Name the fraction",
     "description": "Selected-response items that ask which fraction is equivalent to the stem.",
-    "designRationale": "One observable, equivalence, on the fractions student model.",
+    "designRationale": "Equivalence on the fractions student model, including a lowest-terms name of the same amount.",
     "status": "draft",
+    "versionNumber": 1,
+    "taskCompositionType": "atomic",
+    "actions": ["select"],
     "evidenceModelIds": [
       "em-frac"
     ],
@@ -111,7 +132,13 @@
         "observationId": "obs-equiv",
         "evidenceModelId": "em-frac",
         "required": true,
-        "weight": 1
+        "weight": 0.5
+      },
+      {
+        "observationId": "obs-equiv-lowest",
+        "evidenceModelId": "em-frac",
+        "required": true,
+        "weight": 0.5
       }
     ],
     "taskModelVariableIds": [
@@ -124,7 +151,10 @@
       }
     ],
     "taskStructure": {
-      "prompt": "Which fraction is equivalent to the stem?"
+      "prompt": "Which fraction is equivalent to the stem?",
+      "presentationMode": "interactive",
+      "responseFormat": "selected",
+      "stimulusPolicy": "parameterized"
     },
     "blueprintConstraints": {
       "allowedInteractionTypes": [

@@ -2,17 +2,21 @@
   {
     "id": "em-plant",
     "name": "Part naming evidence",
-    "description": "Evidence that the student can name the plant part a diagram calls out.",
-    "competencyId": "c-plant",
-    "competencyName": "Names the part",
-    "claimStatement": "The student can name the plant part indicated on a labelled diagram.",
+    "description": "Evidence about how proficient the student is at naming the plant part a diagram calls out.",
+    "competencyId": "c-plant-proficiency",
+    "competencyName": "Plant-part naming proficiency",
+    "competencyModelVersion": 1,
+    "versionNumber": 1,
+    "claimStatement": "The student's plant-part naming proficiency is high enough to select the name of the called-out part.",
+    "authoringNotes": "2PL updates the continuous naming proficiency. The binary Names the part attribute stays on the Q-matrix for the diagnostic model. Those two variables correlate. They are not the same variable.",
     "seededFrom": {
       "designPatternId": "dp-plant"
     },
     "warrants": [
       {
         "id": "w-plant-name",
-        "reasoningStatement": "Selecting the name of the called-out part requires knowing which structure the label points to.",
+        "cognitiveAttribute": "Plant-part naming",
+        "reasoningStatement": "Selecting the name of the called-out part is evidence about naming proficiency. A student higher on that trait is more likely to select the name.",
         "performanceCondition": "A flowering-plant diagram with one part called out, and four part names.",
         "limitationClause": "Does not show that the student can state the part's function."
       }
@@ -22,7 +26,13 @@
         "id": "obs-plant-name",
         "statement": "The learner selects the name of the called-out plant part.",
         "type": "selected_response",
-        "warrantId": "w-plant-name"
+        "warrantId": "w-plant-name",
+        "evidenceRule": {
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "The selected option is the name of the called-out part.",
+          "justification": "A correct selection is direct evidence of naming proficiency."
+        }
       }
     ],
     "evidenceRules": [
@@ -32,7 +42,7 @@
         "direction": "supports",
         "strengthLevel": 4,
         "activationCondition": "The selected option is the name of the called-out part.",
-        "justification": "A correct selection is direct evidence of part-name knowledge."
+        "justification": "A correct selection is direct evidence of naming proficiency."
       }
     ],
     "statisticalModels": [
@@ -58,9 +68,44 @@
         "workProductId": "wp-part-name",
         "workProductType": "selected_response",
         "method": "key",
-        "description": "The selected option is scored against the name of the called-out part."
+        "description": "The selected option is scored against the name of the called-out part.",
+        "artifactRef": "inline:key/obs-plant-name",
+        "artifact": {
+          "kind": "key",
+          "correctPatterns": [
+            { "equalsCorrect": true }
+          ]
+        }
       }
     ],
+    "decisionRule": {
+      "type": "posterior_threshold",
+      "threshold": 0,
+      "direction": "above",
+      "justification": "Pilot cut at 0 on the -3 to 3 scale. Calibration of the 2PL naming items replaces this threshold."
+    },
+    "fairnessNotes": "Diagrams use a standard flowering plant and everyday English part names. A student who has not seen this diagram style may miss the label rather than the part.",
+    "difReviewChecklist": [
+      {
+        "id": "dif-plant-words",
+        "prompt": "Do the part names stay in everyday English?",
+        "status": "pass"
+      },
+      {
+        "id": "dif-plant-diagram",
+        "prompt": "Does the diagram show one familiar flowering plant?",
+        "status": "pass"
+      },
+      {
+        "id": "dif-plant-study",
+        "prompt": "Has a formal DIF study been run on these items?",
+        "status": "na"
+      }
+    ],
+    "calibrationPlan": {
+      "pilotSampleSize": 200,
+      "method": "Pilot the three naming items, then calibrate 2PL."
+    },
     "status": "draft"
   },
   {
@@ -69,6 +114,8 @@
     "description": "Diagnostic evidence that the student can state what a named plant part does.",
     "competencyId": "c-function",
     "competencyName": "Names the function",
+    "competencyModelVersion": 1,
+    "versionNumber": 1,
     "claimStatement": "The student can state the function of a named plant part.",
     "seededFrom": {
       "designPatternId": "dp-diagram"
@@ -76,8 +123,9 @@
     "warrants": [
       {
         "id": "w-plant-fn",
-        "reasoningStatement": "Choosing the job of a named part requires linking that structure to the work it does.",
-        "performanceCondition": "The part is named in the stem. The options are functions.",
+        "cognitiveAttribute": "Part function",
+        "reasoningStatement": "Choosing the job of a named part requires linking that structure to the work it does, and telling that job apart from where the part sits.",
+        "performanceCondition": "The part is named in the stem. The options are functions, or a mix of functions and locations.",
         "limitationClause": "Does not show that the student can find the part on an unlabelled diagram."
       }
     ],
@@ -86,7 +134,25 @@
         "id": "obs-plant-function",
         "statement": "The learner selects the function of the named plant part.",
         "type": "selected_response",
-        "warrantId": "w-plant-fn"
+        "warrantId": "w-plant-fn",
+        "evidenceRule": {
+          "direction": "supports",
+          "strengthLevel": 3,
+          "activationCondition": "The selected option is the function of the named part.",
+          "justification": "A correct function is direct evidence of the function attribute."
+        }
+      },
+      {
+        "id": "obs-plant-function-words",
+        "statement": "The learner selects the sentence that states the part's function, rather than where the part is or what it looks like.",
+        "type": "selected_response",
+        "warrantId": "w-plant-fn",
+        "evidenceRule": {
+          "direction": "supports",
+          "strengthLevel": 3,
+          "activationCondition": "The selected sentence states the function, not a location or a look.",
+          "justification": "Telling a function apart from a location is evidence of the function attribute."
+        }
       }
     ],
     "evidenceRules": [
@@ -97,6 +163,14 @@
         "strengthLevel": 3,
         "activationCondition": "The selected option is the function of the named part.",
         "justification": "A correct function is direct evidence of the function attribute."
+      },
+      {
+        "id": "er-plant-fn-words",
+        "observableId": "obs-plant-function-words",
+        "direction": "supports",
+        "strengthLevel": 3,
+        "activationCondition": "The selected sentence states the function, not a location or a look.",
+        "justification": "Telling a function apart from a location is evidence of the function attribute."
       }
     ],
     "statisticalModels": [
@@ -106,7 +180,8 @@
         "active": true,
         "structureConfig": {
           "observableIds": [
-            "obs-plant-function"
+            "obs-plant-function",
+            "obs-plant-function-words"
           ],
           "qMatrixName": "Plant part Q-matrix"
         },
@@ -130,8 +205,52 @@
             "rubricId": "rub-function"
           }
         ]
+      },
+      {
+        "id": "ep-plant-fn-words",
+        "observableId": "obs-plant-function-words",
+        "workProductId": "wp-part-function",
+        "workProductType": "selected_response",
+        "method": "rubric",
+        "rubricId": "rub-function",
+        "description": "A rater scores whether the chosen sentence states the function rather than a location.",
+        "phases": [
+          {
+            "order": 1,
+            "kind": "human",
+            "rubricId": "rub-function"
+          }
+        ]
       }
     ],
+    "decisionRule": {
+      "type": "mastery",
+      "threshold": 0.75,
+      "direction": "above",
+      "justification": "Mastery is a posterior at or above 0.75 on the function attribute until calibration replaces this pilot cut."
+    },
+    "fairnessNotes": "The stem names the part, so the item does not also test finding it on a diagram. Function words such as makes food and takes up water are everyday English.",
+    "difReviewChecklist": [
+      {
+        "id": "dif-fn-named",
+        "prompt": "Does the stem name the part, so location is not a second hurdle?",
+        "status": "pass"
+      },
+      {
+        "id": "dif-fn-words",
+        "prompt": "Are the function phrases everyday English rather than technical terms?",
+        "status": "pass"
+      },
+      {
+        "id": "dif-fn-study",
+        "prompt": "Has a formal DIF study been run on these items?",
+        "status": "na"
+      }
+    ],
+    "calibrationPlan": {
+      "pilotSampleSize": 200,
+      "method": "Pilot the function items, then calibrate DINA on the plant Q-matrix."
+    },
     "status": "draft"
   },
   {
@@ -140,15 +259,18 @@
     "description": "Evidence that the student recognises equivalent fractions.",
     "competencyId": "c-frac",
     "competencyName": "Fraction equivalence",
-    "claimStatement": "The student can identify a fraction equivalent to a given fraction.",
+    "competencyModelVersion": 1,
+    "versionNumber": 1,
+    "claimStatement": "The student can identify a fraction equivalent to a given fraction, including its lowest-terms name.",
     "seededFrom": {
       "designPatternId": "dp-frac"
     },
     "warrants": [
       {
         "id": "w-equiv",
-        "reasoningStatement": "Selecting 1/2 as equivalent to 2/4 requires seeing that both name the same amount.",
-        "performanceCondition": "A stem fraction and four options, one of which is equivalent.",
+        "cognitiveAttribute": "Fraction equivalence",
+        "reasoningStatement": "Selecting 1/2 as equivalent to 2/4, or 2/3 as the lowest terms of 4/6, requires seeing that both names are the same amount.",
+        "performanceCondition": "A stem fraction and four options. One option is equivalent, or is the lowest-terms name.",
         "limitationClause": "Does not show fluency with fraction arithmetic."
       }
     ],
@@ -157,7 +279,25 @@
         "id": "obs-equiv",
         "statement": "The learner selects the fraction equivalent to the stem fraction.",
         "type": "selected_response",
-        "warrantId": "w-equiv"
+        "warrantId": "w-equiv",
+        "evidenceRule": {
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "The selected option is equivalent to the stem.",
+          "justification": "A correct selection is direct evidence of equivalence."
+        }
+      },
+      {
+        "id": "obs-equiv-lowest",
+        "statement": "The learner selects the lowest-terms fraction that names the same amount as the stem.",
+        "type": "selected_response",
+        "warrantId": "w-equiv",
+        "evidenceRule": {
+          "direction": "supports",
+          "strengthLevel": 4,
+          "activationCondition": "The selected option is the stem written in lowest terms.",
+          "justification": "Lowest terms is the same amount under the simplest name, so it supports equivalence."
+        }
       }
     ],
     "evidenceRules": [
@@ -168,17 +308,26 @@
         "strengthLevel": 4,
         "activationCondition": "The selected option is equivalent to the stem.",
         "justification": "A correct selection is direct evidence of equivalence."
+      },
+      {
+        "id": "er-equiv-lowest",
+        "observableId": "obs-equiv-lowest",
+        "direction": "supports",
+        "strengthLevel": 4,
+        "activationCondition": "The selected option is the stem written in lowest terms.",
+        "justification": "Lowest terms is the same amount under the simplest name, so it supports equivalence."
       }
     ],
     "statisticalModels": [
       {
         "id": "sm-frac-irt",
         "type": "irt",
-        "subtype": "2pl",
+        "subtype": "1pl",
         "active": true,
         "structureConfig": {
           "observableIds": [
-            "obs-equiv"
+            "obs-equiv",
+            "obs-equiv-lowest"
           ],
           "dimensions": 1
         },
@@ -190,15 +339,24 @@
         "type": "bayesian_network",
         "active": false,
         "structureConfig": {
-          "latentNodes": ["smv-equiv"],
-          "smvId": "smv-equiv",
-          "observableIds": ["obs-equiv"],
-          "edges": [{ "from": "smv-equiv", "to": "obs-equiv" }],
+          "latentNodes": ["c-frac"],
+          "smvId": "c-frac",
+          "observableIds": ["obs-equiv", "obs-equiv-lowest"],
+          "edges": [
+            { "from": "c-frac", "to": "obs-equiv" },
+            { "from": "c-frac", "to": "obs-equiv-lowest" }
+          ],
           "cpt": {
             "obs-equiv": {
               "levels": {
                 "not_mastered": 0.25,
                 "mastered": 0.8
+              }
+            },
+            "obs-equiv-lowest": {
+              "levels": {
+                "not_mastered": 0.25,
+                "mastered": 0.75
               }
             }
           },
@@ -227,8 +385,52 @@
             "rubricId": "rub-equiv"
           }
         ]
+      },
+      {
+        "id": "ep-equiv-lowest",
+        "observableId": "obs-equiv-lowest",
+        "workProductId": "wp-equiv",
+        "workProductType": "selected_response",
+        "method": "rubric",
+        "rubricId": "rub-equiv",
+        "description": "A rater scores whether the chosen fraction is the stem written in lowest terms.",
+        "phases": [
+          {
+            "order": 1,
+            "kind": "human",
+            "rubricId": "rub-equiv"
+          }
+        ]
       }
     ],
+    "decisionRule": {
+      "type": "mastery",
+      "threshold": 0.75,
+      "direction": "above",
+      "justification": "Mastery is a posterior at or above 0.75 on the binary attribute. Calibration of the 1PL items replaces this pilot cut."
+    },
+    "fairnessNotes": "Stems use halves, thirds, and sixths with denominators at most 8. The wording is short. A student who has used fraction bars can still read the pair 2/4 and 1/2.",
+    "difReviewChecklist": [
+      {
+        "id": "dif-frac-size",
+        "prompt": "Are the denominators small enough for Grade 6?",
+        "status": "pass"
+      },
+      {
+        "id": "dif-frac-words",
+        "prompt": "Does the stem avoid extra reading load beyond the fraction?",
+        "status": "pass"
+      },
+      {
+        "id": "dif-frac-study",
+        "prompt": "Has a formal DIF study been run on these items?",
+        "status": "na"
+      }
+    ],
+    "calibrationPlan": {
+      "pilotSampleSize": 200,
+      "method": "Pilot the equivalence items, then calibrate 1PL."
+    },
     "status": "draft"
   }
 ]

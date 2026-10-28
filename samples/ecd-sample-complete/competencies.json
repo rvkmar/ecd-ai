@@ -1,20 +1,54 @@
 [
   {
+    "id": "c-plant-proficiency",
+    "name": "Plant-part naming proficiency",
+    "description": "Continuous proficiency at naming a plant part a diagram calls out. This is the latent trait the 2PL evidence model updates.",
+    "modelId": "cm-plant",
+    "variableType": "continuous",
+    "scale": {
+      "min": -3,
+      "max": 3
+    },
+    "relationships": [
+      {
+        "targetCompetencyId": "c-plant",
+        "type": "correlates-with"
+      },
+      {
+        "targetCompetencyId": "c-function",
+        "type": "correlates-with"
+      }
+    ],
+    "domain": "Science",
+    "strand": "Plant structure",
+    "facet": "Naming proficiency"
+  },
+  {
     "id": "c-plant",
     "name": "Names the part",
-    "description": "The student names the plant part the diagram calls out.",
+    "description": "Binary attribute: the student has or has not mastered naming the plant part the diagram calls out. The Q-matrix uses this attribute.",
     "modelId": "cm-plant",
     "variableType": "binary",
     "states": [
       {
-        "id": "absent",
+        "value": "absent",
         "label": "Does not name the part",
         "order": 0
       },
       {
-        "id": "present",
+        "value": "present",
         "label": "Names the part",
         "order": 1
+      }
+    ],
+    "relationships": [
+      {
+        "targetCompetencyId": "c-plant-proficiency",
+        "type": "correlates-with"
+      },
+      {
+        "targetCompetencyId": "c-function",
+        "type": "correlates-with"
       }
     ],
     "domain": "Science",
@@ -24,19 +58,29 @@
   {
     "id": "c-function",
     "name": "Names the function",
-    "description": "The student states the job of a named plant part.",
+    "description": "Binary attribute: the student has or has not mastered stating the job of a named plant part. The Q-matrix uses this attribute.",
     "modelId": "cm-plant",
     "variableType": "binary",
     "states": [
       {
-        "id": "absent",
+        "value": "absent",
         "label": "Does not state the function",
         "order": 0
       },
       {
-        "id": "present",
+        "value": "present",
         "label": "States the function",
         "order": 1
+      }
+    ],
+    "relationships": [
+      {
+        "targetCompetencyId": "c-plant-proficiency",
+        "type": "correlates-with"
+      },
+      {
+        "targetCompetencyId": "c-plant",
+        "type": "correlates-with"
       }
     ],
     "domain": "Science",
@@ -51,12 +95,12 @@
     "variableType": "binary",
     "states": [
       {
-        "id": "absent",
+        "value": "not_mastered",
         "label": "Does not recognise equivalence",
         "order": 0
       },
       {
-        "id": "present",
+        "value": "mastered",
         "label": "Recognises equivalence",
         "order": 1
       }
