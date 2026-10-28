@@ -1,5 +1,11 @@
 import ItemPresenter, { canPresentItem } from "./ItemPresenter";
-import { presentationChrome } from "./presentationChrome";
+import ItemResponseFeedback from "./ItemResponseFeedback";
+import PresentationItemFrame from "./PresentationItemFrame";
+import {
+  orderTaskIds,
+  presentationPlayerPolicy,
+  shouldHoldForImmediateFeedback,
+} from "./presentationPlayer";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import Modal from "../ui/Modal";
 import toast from "react-hot-toast";
@@ -104,6 +110,7 @@ export default function SessionPlayer({
   // Student wizard lifecycle (client phase). Server status stays ready /
   // in_progress until Submit calls /finish → completed.
   const [wizardPhase, setWizardPhase] = useState(WIZARD_PHASE.DRAFT);
+  const [feedbackHold, setFeedbackHold] = useState(false);
   const sessionBootstrappedRef = useRef(false);
   const wizardPhaseHydratedRef = useRef(false);
 
@@ -356,6 +363,7 @@ export default function SessionPlayer({
 
   // ----- loadNextTask: ask backend for next-task, enrich with taskModel -----
   async function loadNextTask() {
+    setFeedbackHold(false);
     setLoadingTask(true);
     setNoMoreTasks(false);
 
@@ -520,6 +528,7 @@ export default function SessionPlayer({
   // a PM flip lands without waiting for the next adaptive advance (D115).
   async function loadTaskById(tid) {
     if (!tid) return;
+    setFeedbackHold(false);
     setLoadingTask(true);
     setMeasurementStop(null);
     setNoMoreTasks(false);
@@ -668,6 +677,22 @@ export default function SessionPlayer({
     return { groups, others };
   }
 
+  async function advanceAfterResponse(updatedSession) {
+    const stored =
+      (updatedSession?.responses || []).find((r) => r.taskId === currentTaskId) || null;
+    if (shouldHoldForImmediateFeedback(policy.feedbackTiming, stored)) {
+      setFeedbackHold(true);
+      return;
+    }
+    setFeedbackHold(false);
+    setItemResponse(null);
+    setDeliveredItem(null);
+    setSelectedOptionId(null);
+    setTextAnswer("");
+    setSelectedRubricLevel(null);
+    await loadNextTask();
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     // Teachers review only — never submit examinee responses.
@@ -700,9 +725,7 @@ export default function SessionPlayer({
           auth
         );
         setSession(updatedSession);
-        setItemResponse(null);
-        setDeliveredItem(null);
-        await loadNextTask();
+        await advanceAfterResponse(updatedSession);
       } catch (err) {
         // Match the legacy branch's failure reporting, but through the
         // toast system D43 made accessible rather than a blocking alert().
@@ -770,14 +793,7 @@ export default function SessionPlayer({
         updatedSession.tasks = enrichedTasks;
       }
       setSession(updatedSession);
-
-      // clear inputs before next task
-      setSelectedOptionId(null);
-      setTextAnswer("");
-      setSelectedRubricLevel(null);
-
-      // load next task
-      await loadNextTask();
+      await advanceAfterResponse(updatedSession);
     } catch (err) {
       console.error(err);
       alert("Submission failed: " + apiErrorMessage(err, err.message));
@@ -860,6 +876,9 @@ export default function SessionPlayer({
     }
   }
 
+  const policy = presentationPlayerPolicy(presentation, session);
+  const chrome = policy.chrome;
+
   // ----- render banners -----
   let banner = null;
   // If autoFinished by backend, show auto-finished banner
@@ -883,9 +902,18 @@ export default function SessionPlayer({
       return `${s}s`;
     }
     banner = (
-      <div className="mb-4 p-3 rounded bg-blue-50 text-blue-800 border border-blue-100">
+      <div
+        className="mb-4 p-3 rounded bg-blue-50 text-blue-800 border border-blue-100"
+        data-testid="session-time-remaining"
+        data-presentation-time-multiplier={String(policy.timeMultiplier)}
+      >
         ⏱ Time remaining: <strong>{formatMs(countdownMs)}</strong>
         {deadline && <div className="text-xs text-gray-500 mt-1">Deadline: {deadline.toLocaleString()}</div>}
+        {policy.timeMultiplier > 1 && (
+          <div className="text-xs text-gray-600 mt-1" data-testid="session-extra-time">
+            Extra time: {policy.timeMultiplier}×. This clock is the server deadline.
+          </div>
+        )}
       </div>
     );
   } else if (session?.status === "paused") {
@@ -921,7 +949,13 @@ export default function SessionPlayer({
 
   const progressTotal = (session?.taskIds || []).length || 0;
   const progressDone = (session?.responses || []).length || 0;
-  const chrome = presentationChrome(presentation);
+  const wizardTaskIds = orderTaskIds(
+    session?.taskIds || [],
+    policy.itemOrder,
+    sessionId || ""
+  );
+  const currentResponse =
+    (session?.responses || []).find((r) => r.taskId === currentTaskId) || null;
 
   if (!sessionId) return <div className="p-6">Session id not provided.</div>;
   if (loading) return <div className="p-6">Loading session...</div>;
@@ -930,7 +964,6 @@ export default function SessionPlayer({
   const answeredIds = new Set(
     (session?.responses || []).map((r) => r.taskId).filter(Boolean)
   );
-  const wizardTaskIds = session?.taskIds || [];
   const allAnswered =
     wizardTaskIds.length > 0 &&
     wizardTaskIds.every((id) => answeredIds.has(id));
@@ -971,12 +1004,24 @@ export default function SessionPlayer({
           onPersistPhaseTiming={persistWizardTiming}
           canEnterReview={canEnterReview}
           submittingSession={finishing}
+          navigation={policy.navigation}
+          allowItemNavigation={policy.allowItemNavigation}
+          showReviewScreen={policy.showReviewScreen}
+          grouping={policy.grouping}
           stopHeading={
             session?.stopped ? measurementStopHeading(session.stopped) : null
           }
           onBack={goBack}
           onSelectTask={(tid) => {
             if (sessionClosed && !answeredIds.has(tid)) return;
+            if (!policy.allowItemNavigation && tid !== currentTaskId) return;
+            if (
+              policy.navigation === "reviewable" &&
+              wizardPhase === WIZARD_PHASE.DRAFT &&
+              tid !== currentTaskId
+            ) {
+              return;
+            }
             loadTaskById(tid);
           }}
           onEnterReview={() => {
@@ -1046,12 +1091,26 @@ export default function SessionPlayer({
                 )}
               </div>
 
-              {parentTaskModel?.description && (
+              <PresentationItemFrame
+                grouping={policy.grouping}
+                sharedText={
+                  policy.grouping == null
+                    ? ""
+                    : [parentTaskModel?.description, readingPassage?.stem]
+                        .filter(Boolean)
+                        .join("\n\n")
+                }
+              >
+              {policy.grouping == null && parentTaskModel?.description && (
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-slate-800 whitespace-pre-line">
                   {parentTaskModel.description}
                 </div>
               )}
-
+              {policy.grouping == null && readingPassage?.stem && (
+                <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm whitespace-pre-line text-slate-800">
+                  {readingPassage.stem}
+                </div>
+              )}
               {deliveredItem ? (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <ItemPresenter
@@ -1073,11 +1132,6 @@ export default function SessionPlayer({
                 </form>
               ) : question ? (
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {readingPassage?.stem && (
-                    <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm whitespace-pre-line text-slate-800">
-                      {readingPassage.stem}
-                    </div>
-                  )}
                   <div className="text-sm font-medium text-slate-900">
                     {question.stem || question.prompt || question.id}
                   </div>
@@ -1145,6 +1199,31 @@ export default function SessionPlayer({
                   No linked item for this activity.
                 </p>
               )}
+              <ItemResponseFeedback
+                response={currentResponse}
+                timing={policy.feedbackTiming}
+                phase={wizardPhase}
+                sessionClosed={sessionClosed}
+              />
+              {feedbackHold && (
+                <button
+                  type="button"
+                  data-testid="presentation-feedback-continue"
+                  onClick={() => {
+                    setFeedbackHold(false);
+                    setItemResponse(null);
+                    setDeliveredItem(null);
+                    setSelectedOptionId(null);
+                    setTextAnswer("");
+                    setSelectedRubricLevel(null);
+                    loadNextTask();
+                  }}
+                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Continue
+                </button>
+              )}
+              </PresentationItemFrame>
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">

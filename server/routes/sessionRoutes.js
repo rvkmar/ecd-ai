@@ -61,6 +61,7 @@ import {
   seedSessionStudentModel,
 } from "../../src/utils/studentModelRecord.js";
 import {
+  presentationTimeMultiplier,
   selectPresentationModelIdForTaskModel,
   resolvePresentationModel,
 } from "../delivery/presentationModelResolution.js";
@@ -1000,9 +1001,11 @@ router.get("/:id/next-task", async (req, res) => {
     return res.json({ ...decision, stopped: session.stopped });
   }
 
-  // D114: attach the live Presentation Model overlay (pointer → live
-  // read). SessionPlayer does not yet obey these fields (D115); exposing
-  // them here is the delivery seam that unit will consume.
+  // D114: attach the live Presentation Model overlay (pointer to a live
+  // read). The student player applies layout, review, feedback, and the
+  // extra-time factor from this object. The session deadline stays the
+  // stored endTime. R2 multiplies timeLimitMinutes by overlay.timeMultiplier
+  // when it stamps that deadline.
   const presentation = attachPresentationOverlay(decision, session, db);
   return res.json(presentation ? { ...decision, presentation } : decision);
 });
@@ -1057,6 +1060,9 @@ function attachPresentationOverlay(decision, session, _db) {
   return {
     presentationModelId: resolved.presentationModelId,
     ...resolved.overlay,
+    // Same number R2 multiplies into the session deadline. Stamped here so
+    // the player can show the factor next to the server clock.
+    timeMultiplier: presentationTimeMultiplier(resolved.overlay),
   };
 }
 

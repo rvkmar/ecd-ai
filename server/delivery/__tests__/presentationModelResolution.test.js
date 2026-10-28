@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  presentationTimeMultiplier,
   selectPresentationModelIdForTaskModel,
   resolvePresentationModel,
 } from "../presentationModelResolution.js";
@@ -128,6 +129,20 @@ describe("resolvePresentationModel — live overlay", () => {
     });
     expect(second.overlay.accessibility.profile).toBe("high_contrast");
     expect(second.overlay.accessibility.fontScale).toBe(1.2);
+    expect(second.overlay.timeMultiplier).toBe(1.5);
+    expect(presentationTimeMultiplier(second.overlay)).toBe(1.5);
+  });
+
+  it("exposes a default multiplier of 1 when extra time is missing or out of range", () => {
+    expect(presentationTimeMultiplier(null)).toBe(1);
+    expect(presentationTimeMultiplier({ accessibility: {} })).toBe(1);
+    expect(presentationTimeMultiplier({ accessibility: { timeMultiplier: 9 } })).toBe(1);
+    expect(presentationTimeMultiplier({ timeMultiplier: 2 })).toBe(2);
+    const resolved = resolvePresentationModel(
+      { presentationModels: [makePm({ accessibility: { profile: "default" } })] },
+      { presentationModelId: "pm1", taskModelId: "tm1", taskModelVersion: 3 }
+    );
+    expect(resolved.overlay.timeMultiplier).toBe(1);
   });
 
   it("falls back to live select when the pointer is no longer linkable", () => {
