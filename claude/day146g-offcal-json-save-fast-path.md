@@ -51,4 +51,9 @@ These are this host's numbers, not a replay of the 288 ms profile. The profile m
 
 New tests: `server/utils/__tests__/jsonDbSaveCache.test.js`. Cache hit does not `readFileSync` during `saveDB`. An external rewrite is the audit baseline. In-place status, parameter set, job status, and `humanRatedAt` still diff. A district save keeps the other district's session. Throttle, retention, and non-matching names (including an `ecd-full-*.ecd.bak.enc` stand-in) are covered with an injected `now`.
 
-Full suite: recorded after this note if the close run finished in the same revision.
+```
+NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
+  2679 passed | 10 skipped (2689)
+```
+
+Node v24.22.1. The 10 skipped tests are the existing live-R cases. No new skips. `npm run build` is green on the same runtime.
