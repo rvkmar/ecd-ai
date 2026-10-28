@@ -1,8 +1,10 @@
 // server/services/generateTaskSpecFamily.js
 //
-// D152. First production caller of insertGeneratedTaskSpec. Loops the
-// D120 projector from the bound Task Model's settings. Authored POST
-// /api/taskSpecs stays 405. Regeneration of an existing family is D153.
+// D152 / D153. planTaskSpecFamily is the shared projector: preview and
+// generate must return the same assignment array. Generate inserts
+// those assignments; replace deletes the template's specs first;
+// retire deletes them without inserting. Authored POST /api/taskSpecs
+// stays 405.
 
 import { insertGeneratedTaskSpec } from "./insertGeneratedTaskSpec.js";
 import {
@@ -11,7 +13,7 @@ import {
   TASK_SPEC_FAMILY_MAX,
 } from "../../src/utils/taskModelVariableFamily.js";
 
-export function generateTaskSpecFamily(db, templateId, meta = {}) {
+export function planTaskSpecFamily(db, templateId) {
   const template = (db.templates || []).find((row) => row && row.id === templateId);
   if (!template) {
     return { ok: false, status: 404, error: "Template not found" };
@@ -25,18 +27,6 @@ export function generateTaskSpecFamily(db, templateId, meta = {}) {
   }
   if (!template.taskModelId) {
     return { ok: false, status: 400, error: "Template has no bound Task Model." };
-  }
-
-  const existing = (db.taskSpecs || []).filter(
-    (spec) => spec && spec.templateId === templateId
-  );
-  if (existing.length) {
-    return {
-      ok: false,
-      status: 409,
-      error: "This template already has generated task specs.",
-      citingIds: existing.map((spec) => spec.id),
-    };
   }
 
   const taskModel = (db.taskModels || []).find(
@@ -70,10 +60,10 @@ export function generateTaskSpecFamily(db, templateId, meta = {}) {
     };
   }
 
-  const family = projectTaskSpecFamily(settings, variables, {
+  const assignments = projectTaskSpecFamily(settings, variables, {
     max: TASK_SPEC_FAMILY_MAX,
   });
-  if (family.length !== size) {
+  if (assignments.length !== size) {
     return {
       ok: false,
       status: 500,
@@ -81,16 +71,53 @@ export function generateTaskSpecFamily(db, templateId, meta = {}) {
     };
   }
 
-  const start = (db.taskSpecs || []).length;
+  return { ok: true, template, assignments, count: assignments.length };
+}
+
+function specsForTemplate(db, templateId) {
+  return (db.taskSpecs || []).filter((spec) => spec && spec.templateId === templateId);
+}
+
+export function retireTaskSpecFamily(db, templateId) {
+  const template = (db.templates || []).find((row) => row && row.id === templateId);
+  if (!template) {
+    return { ok: false, status: 404, error: "Template not found" };
+  }
+  const existing = specsForTemplate(db, templateId);
+  db.taskSpecs = (db.taskSpecs || []).filter(
+    (spec) => !spec || spec.templateId !== templateId
+  );
+  return { ok: true, deleted: existing.length };
+}
+
+export function generateTaskSpecFamily(db, templateId, meta = {}, options = {}) {
+  const plan = planTaskSpecFamily(db, templateId);
+  if (!plan.ok) return plan;
+
+  const existing = specsForTemplate(db, templateId);
+  if (existing.length && !options.replace) {
+    return {
+      ok: false,
+      status: 409,
+      error: "This template already has generated task specs.",
+      citingIds: existing.map((spec) => spec.id),
+    };
+  }
+
+  const snapshot = (db.taskSpecs || []).slice();
+  if (existing.length && options.replace) {
+    db.taskSpecs = snapshot.filter((spec) => !spec || spec.templateId !== templateId);
+  }
+
   const specs = [];
-  for (const tmvAssignment of family) {
+  for (const tmvAssignment of plan.assignments) {
     const result = insertGeneratedTaskSpec(
       db,
       { templateId, tmvAssignment },
       meta
     );
     if (!result.ok) {
-      db.taskSpecs = (db.taskSpecs || []).slice(0, start);
+      db.taskSpecs = snapshot;
       return {
         ok: false,
         status: 400,

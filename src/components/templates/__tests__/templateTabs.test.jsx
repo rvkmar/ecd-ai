@@ -3,7 +3,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { useTemplates, useCreateTemplate, useUpdateTemplate, useConfirmTemplate, useDeleteTemplate } from "@/api/queries/templates";
+import {
+  useTemplates,
+  useCreateTemplate,
+  useUpdateTemplate,
+  useConfirmTemplate,
+  useDeleteTemplate,
+  useTaskSpecPreview,
+  useGenerateTaskSpecsFromTemplate,
+  useDeleteTaskSpecsForTemplate,
+} from "@/api/queries/templates";
+import { useTaskSpecs } from "@/api/queries/taskSpecs";
 import { useCompetencyModels, useCompetencies } from "@/api/queries/competencies";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { useTaskModels, useUpdateTaskModel } from "@/api/queries/taskModels";
@@ -30,6 +40,12 @@ vi.mock("@/api/queries/templates", () => ({
   useUpdateTemplate: vi.fn(),
   useConfirmTemplate: vi.fn(),
   useDeleteTemplate: vi.fn(),
+  useTaskSpecPreview: vi.fn(),
+  useGenerateTaskSpecsFromTemplate: vi.fn(),
+  useDeleteTaskSpecsForTemplate: vi.fn(),
+}));
+vi.mock("@/api/queries/taskSpecs", () => ({
+  useTaskSpecs: vi.fn(),
 }));
 vi.mock("@/api/queries/competencies", () => ({
   useCompetencyModels: vi.fn(),
@@ -87,6 +103,10 @@ describe("Template three-tab shell", () => {
     useConfirmTemplate.mockReturnValue(idleMutation());
     useDeleteTemplate.mockReturnValue(idleMutation());
     useUpdateTaskModel.mockReturnValue(idleMutation());
+    useTaskSpecs.mockReturnValue(query([]));
+    useTaskSpecPreview.mockReturnValue({ data: undefined, isLoading: false, error: null });
+    useGenerateTaskSpecsFromTemplate.mockReturnValue(idleMutation());
+    useDeleteTaskSpecsForTemplate.mockReturnValue(idleMutation());
   });
 
   it("opens on Dashboard and switches to Structure and Manage", async () => {

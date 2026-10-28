@@ -35,7 +35,12 @@ import {
   useUpdateTemplate,
   useConfirmTemplate,
   useDeleteTemplate,
+  useTaskSpecPreview,
+  useGenerateTaskSpecsFromTemplate,
+  useDeleteTaskSpecsForTemplate,
 } from "@/api/queries/templates";
+import { useTaskSpecs } from "@/api/queries/taskSpecs";
+import TaskSpecFamilyPanel from "./TaskSpecFamilyPanel";
 import { useCompetencyModels, useCompetencies } from "@/api/queries/competencies";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { useTaskModels, useUpdateTaskModel } from "@/api/queries/taskModels";
@@ -177,6 +182,15 @@ export function TemplateLibraryView({
   updatePending = false,
   confirmPending = false,
   deletePending = false,
+  generatePending = false,
+  retirePending = false,
+  familyPreview = null,
+  familyPreviewPending = false,
+  familyPreviewError = null,
+  taskSpecs = [],
+  onGenerateFamily = null,
+  onReplaceFamily = null,
+  onRetireFamily = null,
   onDismiss = null,
   initialForm = null,
 }) {
@@ -646,6 +660,23 @@ export function TemplateLibraryView({
               </div>
             )}
 
+            {editing?.status === "confirmed" && onGenerateFamily && (
+              <TaskSpecFamilyPanel
+                preview={familyPreview}
+                previewPending={familyPreviewPending}
+                previewError={familyPreviewError}
+                specs={(taskSpecs || []).filter(
+                  (spec) => spec.templateId === editingId
+                )}
+                variables={taskModelVariables}
+                onGenerate={onGenerateFamily}
+                onReplace={onReplaceFamily}
+                onRetire={onRetireFamily}
+                generatePending={generatePending}
+                retirePending={retirePending}
+              />
+            )}
+
             {serverError ? (
               <p
                 className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
@@ -772,12 +803,20 @@ function TemplateManage() {
   const { data: taskModels = [] } = useTaskModels();
   const { data: presentationModels = [] } = usePresentationModels();
   const { data: taskModelVariables = [] } = useTaskModelVariables();
+  const { data: taskSpecs = [] } = useTaskSpecs();
 
   const createMut = useCreateTemplate();
   const updateMut = useUpdateTemplate();
   const confirmMut = useConfirmTemplate();
   const deleteMut = useDeleteTemplate();
   const updateTmMut = useUpdateTaskModel();
+  const generateMut = useGenerateTaskSpecsFromTemplate();
+  const retireMut = useDeleteTaskSpecsForTemplate();
+
+  const focused = templates.find((row) => row.id === focusId);
+  const previewQuery = useTaskSpecPreview(
+    screen === "edit" && focused?.status === "confirmed" ? focusId : null
+  );
 
   useEffect(() => {
     if (focusId) setScreen("edit");
@@ -859,6 +898,57 @@ function TemplateManage() {
         updatePending={updateMut.isPending}
         confirmPending={confirmMut.isPending}
         deletePending={deleteMut.isPending}
+        generatePending={generateMut.isPending}
+        retirePending={retireMut.isPending}
+        familyPreview={previewQuery.data || null}
+        familyPreviewPending={previewQuery.isLoading}
+        familyPreviewError={previewQuery.error || null}
+        taskSpecs={taskSpecs}
+        onGenerateFamily={async () => {
+          try {
+            const created = await generateMut.mutateAsync(focusId);
+            toast.success(
+              `Generated ${created?.count ?? 0} task spec${
+                created?.count === 1 ? "" : "s"
+              }`
+            );
+            return created;
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Generate failed"));
+            throw err;
+          }
+        }}
+        onReplaceFamily={async () => {
+          try {
+            const created = await generateMut.mutateAsync({
+              id: focusId,
+              replace: true,
+            });
+            toast.success(
+              `Replaced family (${created?.count ?? 0} task spec${
+                created?.count === 1 ? "" : "s"
+              })`
+            );
+            return created;
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Replace failed"));
+            throw err;
+          }
+        }}
+        onRetireFamily={async () => {
+          try {
+            const result = await retireMut.mutateAsync(focusId);
+            toast.success(
+              `Retired ${result?.deleted ?? 0} task spec${
+                result?.deleted === 1 ? "" : "s"
+              }`
+            );
+            return result;
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Retire failed"));
+            throw err;
+          }
+        }}
         onCreate={async (payload) => {
           try {
             const created = await createMut.mutateAsync(payload);

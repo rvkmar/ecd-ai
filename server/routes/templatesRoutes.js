@@ -2,8 +2,10 @@
 // ------------------------------------------------------------------
 // Templates (D126 / W26 G14). Family-generating blueprint binding
 // Student + Evidence + Task + Presentation. D152 generates the family
-// via POST /:id/generate-task-specs. Confirm requires coherent four
-// bindings; PM↔TM mismatch is refused with the same rule
+// via POST /:id/generate-task-specs. D153 shares that plan on
+// GET /:id/task-spec-preview, regenerates with { replace: true }, and
+// retires the family on DELETE /:id/task-specs. Confirm requires
+// coherent four bindings; PM↔TM mismatch is refused with the same rule
 // compositeLibrary uses (ADR 0008).
 //
 // Admin-authored (system-level CAF blueprint). District may view.
@@ -15,7 +17,11 @@ import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { markTaskSpecsStaleForTemplate } from "../../src/utils/taskSpecReadiness.js";
-import { generateTaskSpecFamily } from "../services/generateTaskSpecFamily.js";
+import {
+  generateTaskSpecFamily,
+  planTaskSpecFamily,
+  retireTaskSpecFamily,
+} from "../services/generateTaskSpecFamily.js";
 
 const router = express.Router();
 
@@ -161,9 +167,32 @@ router.post("/:id/confirm", canAuthor, (req, res) => {
   res.json(updated);
 });
 
+router.get("/:id/task-spec-preview", (req, res) => {
+  const db = loadDB();
+  const result = planTaskSpecFamily(db, req.params.id);
+  if (!result.ok) {
+    return res.status(result.status || 400).json({
+      error: result.error,
+      details: result.details,
+      projectedSize: result.projectedSize,
+    });
+  }
+  const existingCount = (db.taskSpecs || []).filter(
+    (spec) => spec && spec.templateId === req.params.id
+  ).length;
+  res.json({
+    assignments: result.assignments,
+    count: result.count,
+    existingCount,
+  });
+});
+
 router.post("/:id/generate-task-specs", canAuthor, (req, res) => {
   const db = loadDB();
-  const result = generateTaskSpecFamily(db, req.params.id, authorTenancy(req));
+  const replace = req.body?.replace === true;
+  const result = generateTaskSpecFamily(db, req.params.id, authorTenancy(req), {
+    replace,
+  });
   if (!result.ok) {
     return res.status(result.status || 400).json({
       error: result.error,
@@ -174,6 +203,18 @@ router.post("/:id/generate-task-specs", canAuthor, (req, res) => {
   }
   saveDB(db);
   res.status(201).json({ specs: result.specs, count: result.count });
+});
+
+router.delete("/:id/task-specs", canDelete, (req, res) => {
+  const db = loadDB();
+  const result = retireTaskSpecFamily(db, req.params.id);
+  if (!result.ok) {
+    return res.status(result.status || 400).json({
+      error: result.error,
+    });
+  }
+  saveDB(db);
+  res.json({ deleted: result.deleted });
 });
 
 router.delete("/:id", canDelete, (req, res) => {
