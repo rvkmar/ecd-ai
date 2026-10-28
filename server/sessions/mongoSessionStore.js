@@ -65,9 +65,11 @@ async function getSessionModel() {
   return model;
 }
 
-export async function mongoFind(filter = {}) {
+export async function mongoFind(filter = {}, options = {}) {
   const model = await getSessionModel();
-  const rows = await model.find(filter).lean();
+  let query = model.find(filter);
+  if (options?.projection) query = query.select(options.projection);
+  const rows = await query.lean();
   return rows.map(plain).filter(Boolean);
 }
 
