@@ -13,6 +13,13 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
+import {
+  assignDomainAnalysisEntryIds,
+  citedEntryRemovals,
+  collectDomainEntryIds,
+  domainAnalysisDeleteConflict,
+  removalConflict,
+} from "../../src/utils/domainAnalysisEntries.js";
 
 const router = express.Router();
 
@@ -75,6 +82,7 @@ export function createDomainAnalysisRecord(body, db, req, { forceDraft = false, 
     createdAt: now,
     updatedAt: now,
   };
+  assignDomainAnalysisEntryIds(record, null, collectDomainEntryIds(db));
   const strict = record.status === "confirmed";
   const { valid, errors } = validateEntity("domainAnalyses", record, db, { strict });
   if (!valid) {
@@ -145,6 +153,9 @@ router.put("/:id", canAuthor, (req, res) => {
     createdAt: existing.createdAt,
     updatedAt: new Date().toISOString(),
   };
+  assignDomainAnalysisEntryIds(updated, existing, collectDomainEntryIds(db));
+  const conflict = removalConflict(citedEntryRemovals(existing, updated, db));
+  if (conflict) return res.status(409).json(conflict);
   if (rejectIfInvalid(res, updated, db)) return;
 
   db.domainAnalyses[idx] = updated;
@@ -175,6 +186,9 @@ router.delete("/:id", canAuthor, (req, res) => {
   const rows = db.domainAnalyses || [];
   const existing = rows.find((v) => v.id === req.params.id);
   if (!existing) return res.status(404).json({ error: "Domain Analysis not found" });
+
+  const conflict = domainAnalysisDeleteConflict(existing, db);
+  if (conflict) return res.status(409).json(conflict);
 
   db.domainAnalyses = rows.filter((v) => v.id !== existing.id);
   saveDB(db);

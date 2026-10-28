@@ -42,10 +42,50 @@ export function rowsToLines(rows) {
     .join("\n");
 }
 
+const IDENTIFIED_FIELDS = ["valuedKnowledge", "taskFeatures"];
+
+function idsForRows(rows) {
+  return (Array.isArray(rows) ? rows : [])
+    .filter((row) => row && String(row.label || "").trim())
+    .map((row) => (typeof row.id === "string" ? row.id : ""));
+}
+
+/**
+ * Keep statement ids aligned with textarea lines.
+ * Same line count keeps each id on its line, so editing the wording does
+ * not mint a new id. A new or removed line matches the lines whose text
+ * did not change and leaves a blank id on the new line.
+ */
+export function alignStatementIds(previousText, nextText, previousIds = []) {
+  const prevLines = String(previousText ?? "").split("\n");
+  const nextLines = String(nextText ?? "").split("\n");
+  const ids = previousIds || [];
+  if (prevLines.length === nextLines.length) {
+    return nextLines.map((_, index) => ids[index] || "");
+  }
+  const pool = prevLines.map((line, index) => ({
+    line,
+    id: ids[index] || "",
+    used: false,
+  }));
+  return nextLines.map((line) => {
+    const match = pool.find((item) => !item.used && item.line === line);
+    if (!match) return "";
+    match.used = true;
+    return match.id;
+  });
+}
+
 export function emptyForm() {
   const sections = {};
   for (const { field } of DOMAIN_ANALYSIS_ENTITIES) sections[field] = "";
-  return { name: "", psychologicalPerspective: "", ...sections };
+  return {
+    name: "",
+    psychologicalPerspective: "",
+    ...sections,
+    valuedKnowledgeIds: [],
+    taskFeaturesIds: [],
+  };
 }
 
 export function formFromRow(row) {
@@ -57,6 +97,8 @@ export function formFromRow(row) {
     name: row.name || "",
     psychologicalPerspective: row.psychologicalPerspective || "",
     ...sections,
+    valuedKnowledgeIds: idsForRows(row.valuedKnowledge),
+    taskFeaturesIds: idsForRows(row.taskFeatures),
   };
 }
 
@@ -66,7 +108,20 @@ export function payloadFromForm(form) {
     psychologicalPerspective: form.psychologicalPerspective || undefined,
   };
   for (const { field } of DOMAIN_ANALYSIS_ENTITIES) {
-    payload[field] = linesToRows(form[field]);
+    if (!IDENTIFIED_FIELDS.includes(field)) {
+      payload[field] = linesToRows(form[field]);
+      continue;
+    }
+    const ids = form[`${field}Ids`] || [];
+    payload[field] = String(form[field] || "")
+      .split("\n")
+      .map((line, index) => {
+        const label = line.trim();
+        if (!label) return null;
+        const id = String(ids[index] || "").trim();
+        return id ? { id, label } : { label };
+      })
+      .filter(Boolean);
   }
   return payload;
 }

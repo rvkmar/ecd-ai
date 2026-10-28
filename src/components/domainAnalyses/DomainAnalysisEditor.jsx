@@ -49,6 +49,7 @@ import DomainAnalysisTable, {
 import {
   SECTION_HINT,
   WORKSPACE_TABS,
+  alignStatementIds,
   emptyForm,
   formFromRow,
   inputClass,
@@ -191,7 +192,17 @@ export function DomainAnalysisWorkspace({
   const saving = createAnalysis.isPending || updateAnalysis.isPending;
 
   function setField(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      if (key !== "valuedKnowledge" && key !== "taskFeatures") {
+        return { ...current, [key]: value };
+      }
+      const idKey = `${key}Ids`;
+      return {
+        ...current,
+        [key]: value,
+        [idKey]: alignStatementIds(current[key], value, current[idKey]),
+      };
+    });
   }
 
   function startNew() {
@@ -422,6 +433,11 @@ export function DomainAnalysisWorkspace({
                 <p className="text-sm leading-6 text-slate-700">
                   One statement per line. Valued knowledge is not a curricular policy. Knowledge–task lines are not Q-matrix cells.
                 </p>
+                {activeSection.field === "valuedKnowledge" || activeSection.field === "taskFeatures" ? (
+                  <p className="text-sm leading-6 text-slate-600">
+                    Editing a line keeps that statement&apos;s id, so a design pattern or a task model variable can keep citing it.
+                  </p>
+                ) : null}
                 <label className="block text-sm font-medium text-slate-900">
                   {activeSection.padi}
                   <span className="mt-0.5 block text-xs font-normal text-slate-600">

@@ -66,6 +66,7 @@ import {
   focalKsaUnlinkedWarnings,
   suggestSeedFromFocalKsas,
 } from "@/utils/ksaStudentModelLink";
+import { domainEntryChoices } from "@/utils/domainAnalysisEntries";
 import { DESIGN_PATTERN_PADI_ATTRIBUTES } from "@/utils/schema";
 import PatternNeighbourhood from "./PatternNeighbourhood.jsx";
 import ModelTabShell from "@/components/shared/ModelTabShell";
@@ -157,8 +158,15 @@ const hintClass = "text-xs leading-5 text-slate-500";
 
 function labelledEntries(entries) {
   return (entries || [])
-    .map((entry) => ({ label: String(entry?.label || "").trim() }))
-    .filter((entry) => entry.label);
+    .map((entry) => {
+      const label = String(entry?.label || "").trim();
+      if (!label) return null;
+      const row = { label };
+      const taskFeatureId = String(entry?.taskFeatureId || "").trim();
+      if (taskFeatureId) row.taskFeatureId = taskFeatureId;
+      return row;
+    })
+    .filter(Boolean);
 }
 
 function ksaEntries(entries, { relationship = false } = {}) {
@@ -195,6 +203,10 @@ function libraryEntries(entries, idKey) {
       if (idKey === "workProductId" && entry?.workProductType) {
         row.workProductType = entry.workProductType;
       }
+      if (idKey === "taskModelVariableId") {
+        const taskFeatureId = String(entry?.taskFeatureId || "").trim();
+        if (taskFeatureId) row.taskFeatureId = taskFeatureId;
+      }
       return row;
     })
     .filter(Boolean);
@@ -226,6 +238,7 @@ export function formFromRow(row) {
       competencyId: entry.competencyId || "",
       competencyModelId: entry.competencyModelId || "",
       smvId: entry.smvId || "",
+      valuedKnowledgeId: entry.valuedKnowledgeId || "",
     })),
     additionalKsas: (row.additionalKsas || []).map((entry) => ({
       label: entry.label || "",
@@ -233,6 +246,7 @@ export function formFromRow(row) {
       competencyId: entry.competencyId || "",
       competencyModelId: entry.competencyModelId || "",
       smvId: entry.smvId || "",
+      valuedKnowledgeId: entry.valuedKnowledgeId || "",
     })),
     potentialObservations: (row.potentialObservations || []).map((entry) => ({
       label: entry.label || "",
@@ -249,10 +263,12 @@ export function formFromRow(row) {
     })),
     characteristicFeatures: (row.characteristicFeatures || []).map((entry) => ({
       label: entry.label || "",
+      taskFeatureId: entry.taskFeatureId || "",
     })),
     variableFeatures: (row.variableFeatures || []).map((entry) => ({
       label: entry.label || "",
       taskModelVariableId: entry.taskModelVariableId || "",
+      taskFeatureId: entry.taskFeatureId || "",
     })),
     relationships: (row.relationships || []).map((entry) => ({
       type: entry.type || "kind-of",
@@ -396,34 +412,53 @@ function PatternRelations({ patternId, patterns, relationships, references, onCh
   );
 }
 
-function LabelList({ legend, hint, hintId, values, onChange, example }) {
+function LabelList({ legend, hint, hintId, values, onChange, example, linkOptions = null }) {
   return (
     <fieldset className="space-y-2">
       <legend className="text-sm text-slate-700">{legend}</legend>
       <p id={hintId} className={hintClass}>
         {hint}
       </p>
+      {linkOptions ? (
+        <p className={hintClass}>
+          Task feature is optional. Leave it unset to keep the label only. When a Domain Analysis is cited, the list is that analysis.
+        </p>
+      ) : null}
       {example && listIsBlank(values) ? <FieldExample text={example} /> : null}
       {values.map((entry, index) => (
-        <div key={`${legend}-${index}`} className="flex gap-2">
-          <input
-            className={inputClass}
-            aria-label={`${legend} ${index + 1}`}
-            aria-describedby={hintId}
-            value={entry.label}
-            onChange={(event) => {
-              const next = values.slice();
-              next[index] = { label: event.target.value };
-              onChange(next);
-            }}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onChange(values.filter((_, i) => i !== index))}
-          >
-            Remove
-          </Button>
+        <div key={`${legend}-${index}`} className="space-y-2 rounded-md border border-slate-200 p-2">
+          <div className="flex gap-2">
+            <input
+              className={inputClass}
+              aria-label={`${legend} ${index + 1}`}
+              aria-describedby={hintId}
+              value={entry.label}
+              onChange={(event) => {
+                const next = values.slice();
+                next[index] = { ...entry, label: event.target.value };
+                onChange(next);
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onChange(values.filter((_, i) => i !== index))}
+            >
+              Remove
+            </Button>
+          </div>
+          {linkOptions ? (
+            <EntrySelect
+              label={`${legend} ${index + 1} task feature`}
+              value={entry.taskFeatureId || ""}
+              options={linkOptions}
+              onChange={(id) => {
+                const next = values.slice();
+                next[index] = { ...entry, taskFeatureId: id };
+                onChange(next);
+              }}
+            />
+          ) : null}
         </div>
       ))}
       <Button
@@ -469,7 +504,35 @@ function smvOptions(competencyModels) {
   return options;
 }
 
-function KsaLinkFields({ legend, index, entry, competencies, competencyModels, onChange }) {
+function EntrySelect({ label, value, options, onChange }) {
+  const known = (options || []).some((row) => row.id === value);
+  return (
+    <select
+      className={inputClass}
+      aria-label={label}
+      value={value || ""}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      <option value="">Not linked</option>
+      {value && !known ? <option value={value}>{value} (not found)</option> : null}
+      {(options || []).map((row) => (
+        <option key={row.id} value={row.id}>
+          {row.label || row.id}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function KsaLinkFields({
+  legend,
+  index,
+  entry,
+  competencies,
+  competencyModels,
+  valuedKnowledgeOptions,
+  onChange,
+}) {
   const options = smvOptions(competencyModels);
   const selectedKey =
     entry.competencyModelId && entry.smvId
@@ -518,11 +581,26 @@ function KsaLinkFields({ legend, index, entry, competencies, competencyModels, o
           </option>
         ))}
       </select>
+      <div className="sm:col-span-2">
+        <EntrySelect
+          label={`${legend} ${index + 1} valued knowledge`}
+          value={entry.valuedKnowledgeId || ""}
+          options={valuedKnowledgeOptions}
+          onChange={(valuedKnowledgeId) => onChange({ ...entry, valuedKnowledgeId })}
+        />
+      </div>
     </div>
   );
 }
 
-function FocalKsaList({ values, onChange, competencies, competencyModels, warnings }) {
+function FocalKsaList({
+  values,
+  onChange,
+  competencies,
+  competencyModels,
+  valuedKnowledgeOptions,
+  warnings,
+}) {
   return (
     <fieldset className="space-y-2">
       <legend className="text-sm text-slate-700">Focal KSAs</legend>
@@ -530,6 +608,9 @@ function FocalKsaList({ values, onChange, competencies, competencyModels, warnin
         {DESIGN_PATTERN_NARRATIVE_GUIDANCE.focalKsas}
       </p>
       <p className={hintClass}>{KSA_LINK_GUIDANCE}</p>
+      <p className={hintClass}>
+        Valued knowledge is optional. Leave it unset to keep the label only. When a Domain Analysis is cited, the list is that analysis.
+      </p>
       {listIsBlank(values) ? <FieldExample text={DESIGN_PATTERN_EXAMPLES.focalKsas} /> : null}
       {values.map((entry, index) => (
         <div key={`focal-${index}`} className="space-y-2 rounded-md border border-slate-200 p-2">
@@ -559,6 +640,7 @@ function FocalKsaList({ values, onChange, competencies, competencyModels, warnin
             entry={entry}
             competencies={competencies}
             competencyModels={competencyModels}
+            valuedKnowledgeOptions={valuedKnowledgeOptions}
             onChange={(nextEntry) => {
               const next = values.slice();
               next[index] = nextEntry;
@@ -573,7 +655,7 @@ function FocalKsaList({ values, onChange, competencies, competencyModels, warnin
         onClick={() =>
           onChange([
             ...values,
-            { label: "", competencyId: "", competencyModelId: "", smvId: "" },
+            { label: "", competencyId: "", competencyModelId: "", smvId: "", valuedKnowledgeId: "" },
           ])
         }
       >
@@ -594,6 +676,7 @@ function AdditionalKsaList({
   overlaps,
   competencies,
   competencyModels,
+  valuedKnowledgeOptions,
 }) {
   return (
     <div className="space-y-3">
@@ -603,6 +686,9 @@ function AdditionalKsaList({
           {DESIGN_PATTERN_NARRATIVE_GUIDANCE.additionalKsas}
         </p>
         <p className={hintClass}>{KSA_LINK_GUIDANCE}</p>
+        <p className={hintClass}>
+          Valued knowledge is optional. Leave it unset to keep the label only. When a Domain Analysis is cited, the list is that analysis.
+        </p>
         {listIsBlank(values) ? (
           <FieldExample text={DESIGN_PATTERN_EXAMPLES.additionalKsas} />
         ) : null}
@@ -651,6 +737,7 @@ function AdditionalKsaList({
               entry={entry}
               competencies={competencies}
               competencyModels={competencyModels}
+              valuedKnowledgeOptions={valuedKnowledgeOptions}
               onChange={(nextEntry) => {
                 const next = values.slice();
                 next[index] = nextEntry;
@@ -671,6 +758,7 @@ function AdditionalKsaList({
                 competencyId: "",
                 competencyModelId: "",
                 smvId: "",
+                valuedKnowledgeId: "",
               },
             ])
           }
@@ -705,6 +793,7 @@ function RefList({
   idKey,
   emptyOption,
   example,
+  linkOptions = null,
 }) {
   return (
     <fieldset className="space-y-2">
@@ -712,43 +801,65 @@ function RefList({
       <p id={hintId} className={hintClass}>
         {hint}
       </p>
+      {linkOptions ? (
+        <p className={hintClass}>
+          Task feature is optional. Leave it unset to keep the label only. When a Domain Analysis is cited, the list is that analysis.
+        </p>
+      ) : null}
       {example && listIsBlank(values) ? <FieldExample text={example} /> : null}
       {values.map((entry, index) => (
-        <div key={`${legend}-${index}`} className="flex gap-2">
-          <select
-            className={inputClass}
-            aria-label={`${legend} ${index + 1}`}
-            aria-describedby={hintId}
-            value={entry[idKey] || ""}
-            onChange={(event) => {
-              const id = event.target.value;
-              const option = options.find((row) => row.id === id);
-              const next = values.slice();
-              next[index] = {
-                ...entry,
-                [idKey]: id,
-                label: option ? option.name : entry.label,
-                ...(idKey === "workProductId"
-                  ? { workProductType: option?.type || "" }
-                  : {}),
-              };
-              onChange(next);
-            }}
-          >
-            <option value="">{emptyOption}</option>
-            {options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {optionLabel(option)}
-              </option>
-            ))}
-          </select>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onChange(values.filter((_, i) => i !== index))}
-          >
-            Remove
-          </Button>
+        <div
+          key={`${legend}-${index}`}
+          className={linkOptions ? "space-y-2 rounded-md border border-slate-200 p-2" : undefined}
+        >
+          <div className="flex gap-2">
+            <select
+              className={inputClass}
+              aria-label={`${legend} ${index + 1}`}
+              aria-describedby={hintId}
+              value={entry[idKey] || ""}
+              onChange={(event) => {
+                const id = event.target.value;
+                const option = options.find((row) => row.id === id);
+                const next = values.slice();
+                next[index] = {
+                  ...entry,
+                  [idKey]: id,
+                  label: option ? option.name : entry.label,
+                  ...(idKey === "workProductId"
+                    ? { workProductType: option?.type || "" }
+                    : {}),
+                };
+                onChange(next);
+              }}
+            >
+              <option value="">{emptyOption}</option>
+              {options.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {optionLabel(option)}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onChange(values.filter((_, i) => i !== index))}
+            >
+              Remove
+            </Button>
+          </div>
+          {linkOptions ? (
+            <EntrySelect
+              label={`${legend} ${index + 1} task feature`}
+              value={entry.taskFeatureId || ""}
+              options={linkOptions}
+              onChange={(id) => {
+                const next = values.slice();
+                next[index] = { ...entry, taskFeatureId: id };
+                onChange(next);
+              }}
+            />
+          ) : null}
         </div>
       ))}
       <Button
@@ -1211,6 +1322,16 @@ export function DesignPatternLibraryView({
     id: row.id,
     name: row.name || row.id,
   }));
+  const valuedKnowledgeOptions = domainEntryChoices(
+    domainAnalyses,
+    "valuedKnowledge",
+    form.domainAnalysisId
+  );
+  const taskFeatureOptions = domainEntryChoices(
+    domainAnalyses,
+    "taskFeatures",
+    form.domainAnalysisId
+  );
 
   function renderStep() {
     switch (steps[stepIndex].id) {
@@ -1297,6 +1418,7 @@ export function DesignPatternLibraryView({
             values={form.focalKsas}
             competencies={competencies}
             competencyModels={competencyModels}
+            valuedKnowledgeOptions={valuedKnowledgeOptions}
             warnings={focalKsaUnlinkedWarnings(payload)}
             onChange={(focalKsas) => patchForm({ focalKsas })}
           />
@@ -1308,6 +1430,7 @@ export function DesignPatternLibraryView({
             overlaps={focalOverlaps}
             competencies={competencies}
             competencyModels={competencyModels}
+            valuedKnowledgeOptions={valuedKnowledgeOptions}
             onChange={(additionalKsas) => patchForm({ additionalKsas })}
           />
         );
@@ -1358,6 +1481,7 @@ export function DesignPatternLibraryView({
               hintId="dp-cf-guidance"
               example={DESIGN_PATTERN_EXAMPLES.characteristicFeatures}
               values={form.characteristicFeatures}
+              linkOptions={taskFeatureOptions}
               onChange={(characteristicFeatures) => patchForm({ characteristicFeatures })}
             />
             <RefList
@@ -1370,6 +1494,7 @@ export function DesignPatternLibraryView({
               idKey="taskModelVariableId"
               emptyOption="Choose a task model variable"
               example={DESIGN_PATTERN_EXAMPLES.variableFeatures}
+              linkOptions={taskFeatureOptions}
             />
           </div>
         );

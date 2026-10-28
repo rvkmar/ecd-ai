@@ -47,6 +47,15 @@ export function seededModelsForPattern(patternId, evidenceModels = [], taskModel
   return [...evidence, ...tasks];
 }
 
+function statementLabel(analysesById, section, id) {
+  if (!id) return "";
+  for (const analysis of Object.values(analysesById || {})) {
+    const row = (analysis?.[section] || []).find((item) => item && item.id === id);
+    if (row) return row.label || id;
+  }
+  return id;
+}
+
 function labelledItems(entries, secondaryOf) {
   return (entries || []).map((entry, index) => {
     const item = { primary: entry.label || "Untitled" };
@@ -99,12 +108,18 @@ export function ingredientGroupsForPattern(record, context) {
     {
       key: "characteristicFeatures",
       label: "Characteristic features",
-      items: labelledItems(form.characteristicFeatures),
+      items: labelledItems(form.characteristicFeatures, (entry) =>
+        statementLabel(analysesById, "taskFeatures", entry.taskFeatureId)
+      ),
     },
     {
       key: "variableFeatures",
       label: "Variable features",
-      items: labelledItems(form.variableFeatures, (entry) => entry.taskModelVariableId),
+      items: labelledItems(form.variableFeatures, (entry) =>
+        [entry.taskModelVariableId, statementLabel(analysesById, "taskFeatures", entry.taskFeatureId)]
+          .filter(Boolean)
+          .join("; ")
+      ),
     },
     {
       key: "relationships",

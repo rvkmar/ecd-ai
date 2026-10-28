@@ -5,7 +5,7 @@
 // and an additional-KSA relationship. They do not require a student-model
 // id, and a pattern can be confirmed before that model exists.
 
-const LINK_FIELDS = ["competencyId", "competencyModelId", "smvId"];
+const LINK_FIELDS = ["competencyId", "competencyModelId", "smvId", "valuedKnowledgeId"];
 
 function readId(entry, field, where, errors) {
   if (!entry || typeof entry !== "object") return "";
@@ -243,6 +243,23 @@ export function ksaLinkText(entry = {}, context = {}) {
     const smv = (model?.smVariables || []).find((row) => row && row.id === smvId);
     const modelName = model?.name || competencyModelId;
     parts.push(smv?.label ? `${modelName}: ${smv.label}` : `${modelName}: ${smvId}`);
+  }
+  const valuedKnowledgeId =
+    typeof entry.valuedKnowledgeId === "string" ? entry.valuedKnowledgeId.trim() : "";
+  if (valuedKnowledgeId) {
+    const analyses = [
+      ...(context.domainAnalyses || []),
+      ...Object.values(context.analysesById || {}),
+    ];
+    let label = valuedKnowledgeId;
+    for (const analysis of analyses) {
+      const row = (analysis?.valuedKnowledge || []).find((item) => item && item.id === valuedKnowledgeId);
+      if (row) {
+        label = row.label || valuedKnowledgeId;
+        break;
+      }
+    }
+    parts.push(label);
   }
   if (parts.length === 0) return "Not linked";
   return parts.join("; ");

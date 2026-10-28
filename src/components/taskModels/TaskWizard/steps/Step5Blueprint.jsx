@@ -157,7 +157,12 @@ export default function Step5Blueprint({
                 >
                     <ul className="list-disc space-y-1 pl-5 text-sm text-slate-800">
                         {characteristicFeatures.map((feature, index) => (
-                            <li key={`${feature.label}-${index}`}>{feature.label}</li>
+                            <li key={`${feature.label}-${index}`}>
+                                {feature.label}
+                                {feature.taskFeatureId ? (
+                                    <span className="text-slate-500"> ({feature.taskFeatureId})</span>
+                                ) : null}
+                            </li>
                         ))}
                     </ul>
                 </Section>

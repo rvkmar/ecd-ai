@@ -28,10 +28,14 @@ import { randomBytes } from "crypto";
 import { unzipSafe, zipFiles, ZipError } from "../utils/safeZip.js";
 import {
   DESIGN_PATTERN_KSA_REF_PATHS,
+  DOMAIN_ANALYSIS_ENTRY_REF_PATHS,
+  SEEDED_DOMAIN_ENTRY_REF_PATHS,
   SEEDED_RUBRIC_REF_PATHS,
+  TASK_MODEL_VARIABLE_DOMAIN_REF_PATHS,
   createIdCatalog,
   sourceKeysFromRow,
 } from "./idCatalog.js";
+import { stampDomainAnalysisPlans } from "./stampDomainAnalysisEntries.js";
 import { createCurricularPolicyRecord } from "../routes/curricularPoliciesRoutes.js";
 import { createPolicyRecord } from "../routes/policiesRoutes.js";
 import { createDomainAnalysisRecord } from "../routes/domainAnalysesRoutes.js";
@@ -124,12 +128,14 @@ const REF_PATHS = {
     ["potentialRubrics[].rubricId", "rubrics"],
     ["variableFeatures[].taskModelVariableId", "taskModelVariables"],
     ...DESIGN_PATTERN_KSA_REF_PATHS,
+    ...DOMAIN_ANALYSIS_ENTRY_REF_PATHS,
   ],
   evidenceModels: [
     ["competencyId", "competencies"],
     ["warrants[].competencyId", "competencies"],
     ["seededFrom.designPatternId", "designPatterns"],
     ...SEEDED_RUBRIC_REF_PATHS,
+    ...SEEDED_DOMAIN_ENTRY_REF_PATHS,
     ["statisticalModels[].structureConfig.qMatrixId", "qMatrixModels"],
     ["evaluationProcedures[].workProductId", "workProducts"],
     ["evaluationProcedures[].rubricId", "rubrics"],
@@ -144,6 +150,7 @@ const REF_PATHS = {
     ["subTaskIds[]", "taskModels"],
     ["seededFrom.designPatternId", "designPatterns"],
     ...SEEDED_RUBRIC_REF_PATHS,
+    ...SEEDED_DOMAIN_ENTRY_REF_PATHS,
     ["parentModelId", "taskModels"],
   ],
   items: [
@@ -175,6 +182,7 @@ const REF_PATHS = {
     ["policyId", "policies"],
     ["presentationModelId", "presentationModels"],
   ],
+  taskModelVariables: [...TASK_MODEL_VARIABLE_DOMAIN_REF_PATHS],
   templates: [
     ["competencyModelId", "competencyModels"],
     ["evidenceModelId", "evidenceModels"],
@@ -764,6 +772,7 @@ export function importZipIntoDb(db, buffer, options = {}) {
         createPolicyRecord(row, db, "", { assignedId: opts.assignedId })
       );
     } else if (collection === "domainAnalyses") {
+      stampDomainAnalysisPlans(plans, ctx);
       results = importSimple(plans, collection, ctx, (row, opts) =>
         createDomainAnalysisRecord(row, db, req, {
           forceDraft: opts.forceDraft,
