@@ -104,6 +104,11 @@ function entityVersion(row) {
  * lifecycle / calibration / parameter-set / create events.
  * Does not mutate either argument.
  *
+ * `before` is either the full previous db or the structural snapshot from
+ * `auditBaseline`. If a new field is read off `before`, copy it there too.
+ * A missing field looks like a transition that did not happen, or like a
+ * create of a row that already existed.
+ *
  * @param {object} before
  * @param {object} after
  */
@@ -325,6 +330,105 @@ export function applySaveAudits(before, after, options = {}) {
     }
   }
   return after;
+}
+
+/**
+ * Unaliased copy of every field `collectSaveAudits` reads from `before`.
+ * saveDB caches this for unscoped writes. Callers mutate the object
+ * `loadDB` / `readRawDB` returned, so the cache cannot hold that object.
+ * A full clone of a multi-megabyte session file costs as much as the parse
+ * this cache exists to skip. Hidden tenant rows are not in this snapshot;
+ * scoped saves keep a full snapshot instead (see db-server.js).
+ *
+ * @param {object} db
+ */
+export function auditBaseline(db) {
+  const src = db && typeof db === "object" ? db : {};
+  const rowsOf = (collection) =>
+    Array.isArray(src[collection]) ? src[collection] : [];
+  const slim = (row) => {
+    if (!row || typeof row !== "object") return row;
+    return {
+      id: row.id,
+      status: row.status,
+      version: row.version,
+      versionNumber: row.versionNumber,
+    };
+  };
+
+  const out = {};
+  for (const collection of LIFECYCLE_ENTITY_COLLECTIONS) {
+    const rows = rowsOf(collection);
+    if (collection === "evidenceModels") {
+      out[collection] = rows.map((row) => {
+        if (!row || typeof row !== "object") return row;
+        return {
+          ...slim(row),
+          competencyId: row.competencyId,
+          statisticalModels: Array.isArray(row.statisticalModels)
+            ? row.statisticalModels.map((model) =>
+                model && typeof model === "object"
+                  ? {
+                      id: model.id,
+                      type: model.type,
+                      active: model.active,
+                      activeParameterSetId: model.activeParameterSetId,
+                    }
+                  : model
+              )
+            : [],
+        };
+      });
+    } else if (collection === "competencyModels") {
+      out[collection] = rows.map((row) => {
+        if (!row || typeof row !== "object") return row;
+        return {
+          ...slim(row),
+          domainAnalysisId: row.domainAnalysisId,
+          psychologicalPerspective: row.psychologicalPerspective,
+        };
+      });
+    } else {
+      out[collection] = rows.map(slim);
+    }
+  }
+
+  out.competencies = rowsOf("competencies").map((row) =>
+    row && typeof row === "object" ? { id: row.id, modelId: row.modelId } : row
+  );
+  out.domainAnalyses = rowsOf("domainAnalyses").map((row) =>
+    row && typeof row === "object"
+      ? {
+          id: row.id,
+          name: row.name,
+          psychologicalPerspective: row.psychologicalPerspective,
+        }
+      : row
+  );
+  out.calibrationJobs = rowsOf("calibrationJobs").map((row) =>
+    row && typeof row === "object"
+      ? {
+          id: row.id,
+          status: row.status,
+          ingestedParameterSetId: row.ingestedParameterSetId,
+          ingestedAnalysisArtefactId: row.ingestedAnalysisArtefactId,
+        }
+      : row
+  );
+  out.sessions = rowsOf("sessions").map((session) => {
+    if (!session || typeof session !== "object") return session;
+    return {
+      id: session.id,
+      responses: Array.isArray(session.responses)
+        ? session.responses.map((response) =>
+            response && typeof response === "object"
+              ? { humanRatedAt: response.humanRatedAt }
+              : response
+          )
+        : [],
+    };
+  });
+  return out;
 }
 
 /** Sync variant for paths that already hold a db and will saveDB themselves. */

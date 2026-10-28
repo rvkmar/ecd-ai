@@ -33,6 +33,10 @@ services:
       - ECD_BACKUP_ENABLED=1
       - ECD_BACKUP_CRON=20 2 * * *
       - ECD_BACKUP_RETENTION_DAYS=14
+      # saveDB crash copies (db.json.<timestamp>). Not the encrypted full
+      # backup above. 0 copies on every save. KEEP never deletes other names.
+      - ECD_SNAPSHOT_INTERVAL_MS=300000
+      - ECD_SNAPSHOT_KEEP=20
       - ECD_BACKUP_ENCRYPTION_KEY=${ECD_BACKUP_ENCRYPTION_KEY}
       - ALERT_BACKUP_MAX_AGE_MS=129600000
     depends_on:

@@ -4,11 +4,13 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import {
   applyTenancyToDb,
+  isTenantScopedCollection,
   mergeScopedDbSave,
 } from "../../server/utils/tenancyScope.js";
 import { getTenancyContext } from "../../server/utils/tenancyContext.js";
 import {
   applySaveAudits,
+  auditBaseline,
   pushAuditEvent,
 } from "../../server/utils/auditLog.js";
 
@@ -30,13 +32,91 @@ function atomicWrite(filePath, dataStr) {
   fs.renameSync(tmp, filePath);
 }
 
-function backupDB() {
-  const BACKUP_DIR = backupDirPath();
-  const DB_FILE = dbFilePath();
-  if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const backupFile = path.join(BACKUP_DIR, `db.json.${timestamp}`);
-  if (fs.existsSync(DB_FILE)) fs.copyFileSync(DB_FILE, backupFile);
+// db.json.<ISO> with ":" and "." written as "-". Same stamp saveDB has
+// always used. Other names in the backup folder are not snapshots.
+const SNAPSHOT_NAME = /^db\.json\.(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)$/;
+
+function envNonNegative(name, fallback) {
+  const raw = process.env[name];
+  if (raw == null || String(raw).trim() === "") return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return fallback;
+  return Math.floor(n);
+}
+
+function snapshotStamp(date) {
+  return date.toISOString().replace(/[:.]/g, "-");
+}
+
+function snapshotInstantMs(name) {
+  const match = SNAPSHOT_NAME.exec(name);
+  if (!match) return null;
+  const iso = match[1].replace(
+    /T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/,
+    "T$1:$2:$3.$4Z"
+  );
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function listCrashSnapshots(dir) {
+  if (!fs.existsSync(dir)) return [];
+  const out = [];
+  for (const name of fs.readdirSync(dir)) {
+    const ms = snapshotInstantMs(name);
+    if (ms == null) continue;
+    const full = path.join(dir, name);
+    let st;
+    try {
+      st = fs.statSync(full);
+    } catch {
+      continue;
+    }
+    if (!st.isFile()) continue;
+    out.push({ name, full, ms });
+  }
+  return out;
+}
+
+function snapshotNow(options = {}) {
+  if (options.now == null) return new Date();
+  const now = options.now instanceof Date ? options.now : new Date(options.now);
+  if (Number.isNaN(now.getTime())) return new Date();
+  return now;
+}
+
+/**
+ * Crash copy of the current db file. Cadence is ECD_SNAPSHOT_INTERVAL_MS
+ * (default 300000). Retention keeps the newest ECD_SNAPSHOT_KEEP files
+ * (default 20) whose names are db.json.<timestamp>. Encrypted full backups,
+ * meta sidecars, and any other name in the folder are left alone.
+ * runFullBackup does not call this; that path stays unthrottled.
+ *
+ * @param {{ now?: Date | number | string }} [options]
+ */
+function backupDB(options = {}) {
+  const dir = backupDirPath();
+  const dbFile = dbFilePath();
+  fs.mkdirSync(dir, { recursive: true });
+  const interval = envNonNegative("ECD_SNAPSHOT_INTERVAL_MS", 300_000);
+  const keep = envNonNegative("ECD_SNAPSHOT_KEEP", 20);
+  const now = snapshotNow(options);
+  const nowMs = now.getTime();
+  const existing = listCrashSnapshots(dir);
+  let newest = null;
+  for (const row of existing) {
+    if (newest == null || row.ms > newest) newest = row.ms;
+  }
+  const due = newest == null || nowMs - newest >= interval;
+  if (due && fs.existsSync(dbFile)) {
+    const dest = path.join(dir, `db.json.${snapshotStamp(now)}`);
+    fs.copyFileSync(dbFile, dest);
+  }
+  const after = due ? listCrashSnapshots(dir) : existing;
+  after.sort((a, b) => b.ms - a.ms || (a.name < b.name ? 1 : a.name > b.name ? -1 : 0));
+  for (const row of after.slice(keep)) {
+    fs.unlinkSync(row.full);
+  }
 }
 
 // ------------------------------
@@ -73,58 +153,226 @@ function defaultDB() {
 // Load & Save DB
 // ------------------------------
 
-/** Unscoped disk read — boot, merge-on-save, tests that need the full file. */
-export function readRawDB() {
-  const DB_FILE = dbFilePath();
-  if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(defaultDB(), null, 2));
+/**
+ * Previous-state cache so saveDB does not parse the file a second time.
+ *
+ * { obj, mtimeMs, size, file, kind }
+ * kind "baseline": obj is auditBaseline(db). Used when the caller is
+ *   unscoped (admin, cron, tests). applySaveAudits only reads those fields.
+ *   loadDB returns the parsed object itself for an admin, and routes mutate
+ *   it in place, so the cache must not be that reference.
+ * kind "full": obj is the whole pre-mutation file. Scoped saveDB passes
+ *   previous into mergeScopedDbSave, which copies hidden tenant rows onto
+ *   the write. A baseline would drop them. The parsed object is stored
+ *   here and is not returned. The caller gets a deep copy of the visible
+ *   graph (shareClone of applyTenancyToDb). Hidden rows stay only in obj.
+ *   Strings are shared; objects and arrays are not, so an in-place edit of
+ *   a visible row cannot change obj.
+ *
+ * A hit is fs.statSync mtimeMs and size still equal. Anything else re-reads.
+ * Two writes in the same millisecond with the same byte length can false-hit.
+ * That window is the stat check the save path was given.
+ */
+let rawCache = {
+  file: null,
+  mtimeMs: null,
+  size: null,
+  kind: null,
+  obj: null,
+};
+
+function isScopedTenancy(ctx = getTenancyContext()) {
+  return Boolean(ctx && !ctx.unscoped && ctx.role !== "admin");
+}
+
+function shareClone(value, seen = new WeakMap()) {
+  if (typeof value === "function" || value === undefined) return undefined;
+  if (value === null || typeof value !== "object") return value;
+  if (value instanceof Date) return value.toISOString();
+  const hit = seen.get(value);
+  if (hit) return hit;
+  if (Array.isArray(value)) {
+    const out = new Array(value.length);
+    seen.set(value, out);
+    for (let i = 0; i < value.length; i++) out[i] = shareClone(value[i], seen);
+    return out;
   }
-  const data = fs.readFileSync(DB_FILE);
-  const db = JSON.parse(data);
+  const out = {};
+  seen.set(value, out);
+  for (const key of Object.keys(value)) {
+    const child = shareClone(value[key], seen);
+    if (child !== undefined) out[key] = child;
+  }
+  return out;
+}
 
-  // Ensure required arrays exist (migration safety)
+function statOf(file) {
+  try {
+    const st = fs.statSync(file);
+    return { mtimeMs: st.mtimeMs, size: st.size };
+  } catch {
+    return null;
+  }
+}
+
+function cacheMatches(file) {
+  if (!rawCache.obj || rawCache.file !== file || rawCache.kind == null) return false;
+  const st = statOf(file);
+  if (!st) return false;
+  return st.mtimeMs === rawCache.mtimeMs && st.size === rawCache.size;
+}
+
+function fillDefaults(db) {
   const base = defaultDB();
-  Object.keys(base).forEach((key) => {
+  for (const key of Object.keys(base)) {
     if (!db[key]) db[key] = base[key];
-  });
+  }
+  return db;
+}
 
+function parseDbFile() {
+  const file = dbFilePath();
+  if (!fs.existsSync(file)) {
+    // Minified. Readers accept pretty and minified.
+    fs.writeFileSync(file, JSON.stringify(defaultDB()));
+  }
+  const db = JSON.parse(fs.readFileSync(file));
+  return { file, db: fillDefaults(db) };
+}
+
+function rememberRead(file, live) {
+  const st = statOf(file);
+  if (!st) return;
+  // Stat still matches the snapshot taken at the previous read or write.
+  if (cacheMatches(file)) return;
+  if (isScopedTenancy()) {
+    // readRawDB handed `live` to the caller. Keep a private full copy.
+    rawCache = {
+      file,
+      mtimeMs: st.mtimeMs,
+      size: st.size,
+      kind: "full",
+      obj: shareClone(live),
+    };
+    return;
+  }
+  rawCache = {
+    file,
+    mtimeMs: st.mtimeMs,
+    size: st.size,
+    kind: "baseline",
+    obj: auditBaseline(live),
+  };
+}
+
+function resealFullSnapshot(toWrite, ctx) {
+  // Visible rows are the caller's objects. Clone those. Hidden rows were
+  // taken from the previous snapshot and are not reachable by the caller.
+  const visible = applyTenancyToDb(toWrite, ctx);
+  const out = {};
+  for (const key of Object.keys(toWrite)) {
+    const value = toWrite[key];
+    if (isTenantScopedCollection(key) && Array.isArray(value)) {
+      const visibleRows = new Set(visible[key] || []);
+      out[key] = value.map((row) => (visibleRows.has(row) ? shareClone(row) : row));
+    } else {
+      out[key] = shareClone(value);
+    }
+  }
+  return out;
+}
+
+/** Unscoped disk read. Boot, merge-on-save, tests that need the full file. */
+export function readRawDB() {
+  const { file, db } = parseDbFile();
+  rememberRead(file, db);
   return db;
 }
 
 /**
- * D97 — tenant-scoped view of the JSON store.
+ * D97. Tenant-scoped view of the JSON store.
  * When ALS tenancy is bound, tenant-scoped collections are filtered (ADR 0006).
  * Cron / boot / tests with no ALS still see the full file.
+ *
+ * Scoped callers receive a deep copy of the visible graph. The cache keeps
+ * the parsed file so a later saveDB can merge hidden rows without parsing
+ * again and without seeing the caller's in-place edits.
  */
 export function loadDB() {
-  return applyTenancyToDb(readRawDB());
+  const ctx = getTenancyContext();
+  if (!isScopedTenancy(ctx)) return applyTenancyToDb(readRawDB());
+  const file = dbFilePath();
+  if (cacheMatches(file) && rawCache.kind === "full") {
+    return shareClone(applyTenancyToDb(rawCache.obj, ctx));
+  }
+  const { db } = parseDbFile();
+  const st = statOf(file);
+  rawCache = {
+    file,
+    mtimeMs: st ? st.mtimeMs : null,
+    size: st ? st.size : null,
+    kind: "full",
+    obj: db,
+  };
+  return shareClone(applyTenancyToDb(db, ctx));
 }
 
 /**
- * D97 — merge scoped writes back onto the full file so other tenants are not wiped.
- * D101 — before write, diff against the previous raw snapshot and append
+ * D97. Merge scoped writes back onto the full file so other tenants are not wiped.
+ * D101. Before write, diff against the previous raw snapshot and append
  * auditLog rows for lifecycle / ingest / parameter-set changes. Routes do
  * not import the audit module; a transition that is not logged is a
  * transition that did not happen (through this path).
  *
+ * The file is minified JSON. Pretty files still parse. exportDB stays
+ * indented for the download helper; that string is not the on-disk file.
+ *
  * @param {object} db
- * @param {{ skipAudit?: boolean }} [options]
+ * @param {{ skipAudit?: boolean, now?: Date | number | string }} [options]
+ *   `now` stamps the crash-copy filename. Tests inject it. Production omits it.
  */
 export function saveDB(db, options = {}) {
-  const previous = readRawDB();
+  const file = dbFilePath();
   const ctx = getTenancyContext();
-  let toWrite =
-    ctx && !ctx.unscoped && ctx.role !== "admin"
-      ? mergeScopedDbSave(previous, db, ctx)
-      : db;
+  const scoped = isScopedTenancy(ctx);
+
+  let previous;
+  if (cacheMatches(file) && (rawCache.kind === "full" || !scoped)) {
+    previous = rawCache.obj;
+  } else {
+    const disk = parseDbFile().db;
+    // Fresh parse, not the caller's object. Scoped merge needs every field.
+    // Unscoped only needs the audit fields.
+    previous = scoped ? disk : auditBaseline(disk);
+  }
+
+  let toWrite = scoped ? mergeScopedDbSave(previous, db, ctx) : db;
   toWrite = applySaveAudits(previous, toWrite, options);
   // When merge produced a new object, mirror auditLog onto the caller's
   // db so in-memory holders (tests, bulk handlers) see the new rows.
   if (toWrite !== db && Array.isArray(toWrite.auditLog)) {
     db.auditLog = toWrite.auditLog;
   }
-  backupDB();
-  atomicWrite(dbFilePath(), JSON.stringify(toWrite, null, 2));
+  backupDB({ now: options.now });
+  atomicWrite(file, JSON.stringify(toWrite));
+  const st = statOf(file);
+  if (scoped) {
+    rawCache = {
+      file,
+      mtimeMs: st ? st.mtimeMs : null,
+      size: st ? st.size : null,
+      kind: "full",
+      obj: resealFullSnapshot(toWrite, ctx),
+    };
+  } else {
+    rawCache = {
+      file,
+      mtimeMs: st ? st.mtimeMs : null,
+      size: st ? st.size : null,
+      kind: "baseline",
+      obj: auditBaseline(toWrite),
+    };
+  }
 }
 
 /**
@@ -141,6 +389,13 @@ export function recordAuditEvent(partial) {
 }
 
 export function clearDB() {
+  rawCache = {
+    file: null,
+    mtimeMs: null,
+    size: null,
+    kind: null,
+    obj: null,
+  };
   const DB_FILE = dbFilePath();
   if (fs.existsSync(DB_FILE)) {
     fs.unlinkSync(DB_FILE);
