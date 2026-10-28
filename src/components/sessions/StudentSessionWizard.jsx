@@ -229,6 +229,11 @@ export default function StudentSessionWizard({
   submittingSession = false,
   canEnterReview = false,
   stopHeading = null,
+  navigation = null,
+  allowItemNavigation = true,
+  showReviewScreen = true,
+  grouping = null,
+  sectionLabel = "Section",
   children,
 }) {
   const activePhase = sessionClosed ? WIZARD_PHASE.SUBMITTED : phase;
@@ -259,6 +264,14 @@ export default function StudentSessionWizard({
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Questions">
+          {grouping === "section" && taskIds.length > 0 && (
+            <div
+              className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+              data-testid="presentation-section"
+            >
+              {sectionLabel}
+            </div>
+          )}
           <ol className="space-y-1.5">
             {taskIds.map((tid, index) => {
               const state = questionNavState({
@@ -270,12 +283,24 @@ export default function StudentSessionWizard({
               });
               const style = QUESTION_STYLES[state];
               const selected = tid === currentTaskId;
+              const reviewLocked =
+                navigation === "reviewable" &&
+                activePhase === WIZARD_PHASE.DRAFT &&
+                tid !== currentTaskId;
+              const reviewOnlyAnswered =
+                navigation === "reviewable" &&
+                activePhase === WIZARD_PHASE.REVIEW &&
+                tid !== currentTaskId &&
+                !answeredIds.has(tid);
+              const forwardOnly = !allowItemNavigation && tid !== currentTaskId;
+              const closedLocked = sessionClosed && !answeredIds.has(tid);
               return (
                 <li key={tid}>
                   <button
                     type="button"
+                    data-testid={`question-nav-${tid}`}
                     onClick={() => onSelectTask?.(tid)}
-                    disabled={sessionClosed && !answeredIds.has(tid)}
+                    disabled={closedLocked || forwardOnly || reviewLocked || reviewOnlyAnswered}
                     className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition ${
                       selected ? "bg-slate-100" : "hover:bg-slate-50"
                     } disabled:cursor-default disabled:opacity-60`}
@@ -367,7 +392,7 @@ export default function StudentSessionWizard({
 
         <footer className="border-t border-slate-200 bg-white px-6 py-4">
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {activePhase === WIZARD_PHASE.DRAFT && (
+            {activePhase === WIZARD_PHASE.DRAFT && showReviewScreen && (
               <button
                 type="button"
                 onClick={onEnterReview}
@@ -377,8 +402,20 @@ export default function StudentSessionWizard({
                 Enter review
               </button>
             )}
+            {activePhase === WIZARD_PHASE.DRAFT && !showReviewScreen && !sessionClosed && (
+              <button
+                type="button"
+                onClick={onSubmitSession}
+                disabled={!canEnterReview || submittingSession}
+                data-testid="session-submit-without-review"
+                className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+              >
+                {submittingSession ? "Submitting…" : "Submit session"}
+              </button>
+            )}
             {activePhase === WIZARD_PHASE.REVIEW && (
               <>
+                {allowItemNavigation && (
                 <button
                   type="button"
                   onClick={() => onSelectTask?.(taskIds[0])}
@@ -386,6 +423,7 @@ export default function StudentSessionWizard({
                 >
                   Keep reviewing
                 </button>
+                )}
                 <button
                   type="button"
                   onClick={onMarkCompleted}

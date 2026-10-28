@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 import { seedActivePackages } from "../../test/seedActivePackage.js";
+import { presentationTimeMultiplier } from "../../delivery/presentationModelResolution.js";
+import { presentationPlayerPolicy } from "../../../src/components/sessions/presentationPlayer.js";
 
 const { authState } = vi.hoisted(() => ({
   authState: { user: { id: "teach1", username: "teach1", role: "teacher" } },
@@ -212,6 +214,26 @@ describe("POST /api/sessions stamps administration", () => {
     expect(stamped.body.deliveryTiming.remainingMs).toBeLessThanOrEqual(40 * 60 * 1000);
     expect(stamped.body.deliveryTiming.remainingMs).toBeGreaterThan(39 * 60 * 1000);
     expect(stamped.body.studentModel).toBeDefined();
+
+    const overlay = {
+      presentationModelId: "pm1",
+      accessibility: { timeMultiplier: 2 },
+      timeMultiplier: 2,
+      conditionalDisplay: { allowReview: true, showFeedback: "immediate" },
+    };
+    const factor = presentationTimeMultiplier(overlay);
+    expect(factor).toBe(2);
+    expect(Date.parse(stamped.body.endTime) - Date.parse(stamped.body.startedAt)).toBe(
+      20 * factor * 60 * 1000
+    );
+    const policy = presentationPlayerPolicy(overlay, stamped.body);
+    expect(policy.timeMultiplier).toBe(factor);
+    expect(policy.allowReview).toBe(false);
+    expect(policy.showReviewScreen).toBe(false);
+    expect(policy.serverFeedbackMode).toBe("none");
+    expect(policy.feedbackTiming).toBe("none");
+    const clockMs = Date.parse(stamped.body.endTime) - Date.parse(stamped.body.startedAt);
+    expect(clockMs).toBe(20 * 60 * 1000 * factor);
 
     const plain = await request(app)
       .post("/api/sessions")

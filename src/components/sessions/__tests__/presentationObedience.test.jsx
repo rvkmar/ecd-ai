@@ -79,7 +79,26 @@ describe("presentationChrome — pure surface from overlay", () => {
     expect(chrome.hasOverlay).toBe(false);
     expect(chrome.showProgress).toBe(true);
     expect(chrome.allowSkip).toBe(true);
+    expect(chrome.allowReview).toBe(true);
+    expect(chrome.showFeedback).toBe("none");
+    expect(chrome.itemOrder).toBeNull();
+    expect(chrome.grouping).toBeNull();
+    expect(chrome.navigation).toBeNull();
+    expect(chrome.timeMultiplier).toBe(1);
     expect(chrome.profile).toBe("default");
+  });
+
+  it("treats a missing allowReview key as review still open", () => {
+    const chrome = presentationChrome({
+      presentationModelId: "pm-partial",
+      layout: {},
+      conditionalDisplay: { showProgress: true },
+      accessibility: {},
+    });
+    expect(chrome.allowReview).toBe(true);
+    expect(chrome.showFeedback).toBe("none");
+    expect(chrome.itemOrder).toBeNull();
+    expect(chrome.navigation).toBeNull();
   });
 });
 

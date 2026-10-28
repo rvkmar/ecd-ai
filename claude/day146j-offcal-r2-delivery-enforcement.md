@@ -27,7 +27,7 @@ At session create, when the cited delivery model has any of these rules, the ses
 
 A positive `timeLimitMinutes` starts the clock at create, from `startedAt`. The presentation factor is read once, through `presentationTimeMultiplier`.
 
-That function lives on R3's branch in `server/delivery/presentationModelResolution.js` and returns a factor in [1, 3], or 1 when the model or the field is missing. This branch does not edit that file. `sessionRoutes.js` calls the export when it is present, and otherwise uses the same rule. The factor is stored on the stamp as `timeMultiplier` and passed into `computeEffectiveDeadline` once.
+`presentationTimeMultiplier` in `server/delivery/presentationModelResolution.js` returns a factor in [1, 3], or 1 when the model or the field is missing. Session create calls that function. The factor is stored on the stamp as `timeMultiplier` and passed into `computeEffectiveDeadline` once.
 
 If the delivery model cites a presentation model and that record still resolves, its factor is the one used. Otherwise each task's linkable presentation model is read and the largest factor is used.
 
@@ -71,8 +71,8 @@ Removed fields are `activated`, `direction`, `strength`, `rationale`, `scoredVal
 
 ## What was not preserved
 
-- The player is not updated. R3 reads `endTime` and `administration`. This branch does not rescale the clock in the client.
-- `presentationModelResolution.js` is not edited. Until PR #120 is merged, the shim in `sessionRoutes.js` is the factor. After that merge, the same call uses R3's export.
+- The player is R3 (PR #120). It reads `endTime` and `administration`. This branch does not rescale the clock in the client.
+- The deadline calls `presentationTimeMultiplier` from `presentationModelResolution.js`. There is no second copy of that rule.
 - In-flight sessions are not backfilled. No migration.
 - `extraTimeMinutes` is stored as 0. It is the hook for a later minute-based accommodation. The presentation factor does not go through that argument.
 - CI does not start Mongo. One new round trip is skipped unless `MONGO_URI` is set. The catalog list projection includes `deliveryAdministration` and `administration`. `endTime` was already on that projection.
@@ -85,10 +85,10 @@ Revert this change. Session documents created after it carry `deliveryAdministra
 
 ```
 NODE_OPTIONS=--max-old-space-size=3072 npx vitest run
-  2735 passed | 13 skipped (2748)
+  2756 passed | 13 skipped (2769)
 
 npm run build
-  green (1.33s). Largest JS chunk EvidenceModelBuilder 374.61 kB (gzip 83.05 kB).
+  green (1.38s). Largest JS chunk EvidenceModelBuilder 374.61 kB (gzip 83.05 kB).
 
 npm audit --audit-level=high
   found 0 vulnerabilities
