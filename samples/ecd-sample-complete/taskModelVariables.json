@@ -3,6 +3,8 @@
     "id": "tmv-diagram",
     "name": "Plant diagram",
     "description": "Which labelled plant diagram the task shows.",
+    "domainAnalysisId": "da-plant",
+    "taskFeatureId": "tf-plant-diagram",
     "type": "categorical",
     "possibleValues": [
       {

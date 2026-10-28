@@ -43,6 +43,32 @@ export const SEEDED_RUBRIC_REF_PATHS = Object.freeze([
   ["seededFrom.declined.potentialRubrics[].rubricId", "rubrics"],
 ]);
 
+// Nested statement ids. They are not collection ids. Import registers
+// them while reading domainAnalyses, then rewrites these citations.
+export const VALUED_KNOWLEDGE_ENTRIES = "valuedKnowledgeEntries";
+export const TASK_FEATURE_ENTRIES = "taskFeatureEntries";
+
+export const DOMAIN_ANALYSIS_ENTRY_REF_PATHS = Object.freeze([
+  ["focalKsas[].valuedKnowledgeId", VALUED_KNOWLEDGE_ENTRIES],
+  ["additionalKsas[].valuedKnowledgeId", VALUED_KNOWLEDGE_ENTRIES],
+  ["characteristicFeatures[].taskFeatureId", TASK_FEATURE_ENTRIES],
+  ["variableFeatures[].taskFeatureId", TASK_FEATURE_ENTRIES],
+]);
+
+export const SEEDED_DOMAIN_ENTRY_REF_PATHS = Object.freeze([
+  ["blueprintConstraints.characteristicFeatures[].taskFeatureId", TASK_FEATURE_ENTRIES],
+  ["seededFrom.valuedKnowledge[].valuedKnowledgeId", VALUED_KNOWLEDGE_ENTRIES],
+  ["seededFrom.accepted.characteristicFeatures[].taskFeatureId", TASK_FEATURE_ENTRIES],
+  ["seededFrom.declined.characteristicFeatures[].taskFeatureId", TASK_FEATURE_ENTRIES],
+  ["seededFrom.accepted.variableFeatures[].taskFeatureId", TASK_FEATURE_ENTRIES],
+  ["seededFrom.declined.variableFeatures[].taskFeatureId", TASK_FEATURE_ENTRIES],
+]);
+
+export const TASK_MODEL_VARIABLE_DOMAIN_REF_PATHS = Object.freeze([
+  ["domainAnalysisId", "domainAnalyses"],
+  ["taskFeatureId", TASK_FEATURE_ENTRIES],
+]);
+
 export function createIdCatalog() {
   const entries = [];
 

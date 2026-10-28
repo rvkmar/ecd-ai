@@ -11,6 +11,7 @@
     ],
     "taskFeatures": [
       {
+        "id": "tf-diagram-labelled",
         "label": "A figure whose parts are already labelled"
       }
     ],
@@ -26,6 +27,7 @@
     ],
     "valuedKnowledge": [
       {
+        "id": "vk-diagram-fit",
         "label": "How parts, relations, and the whole fit together"
       }
     ],
@@ -52,6 +54,7 @@
     ],
     "taskFeatures": [
       {
+        "id": "tf-plant-diagram",
         "label": "A labelled diagram of a flowering plant, with one part called out"
       }
     ],
@@ -67,6 +70,7 @@
     ],
     "valuedKnowledge": [
       {
+        "id": "vk-plant-parts",
         "label": "Leaf, root, stem, and flower, and the job each one does"
       }
     ],
@@ -93,6 +97,7 @@
     ],
     "taskFeatures": [
       {
+        "id": "tf-frac-pair",
         "label": "Two fractions written in lowest or non-lowest terms"
       }
     ],
@@ -108,6 +113,7 @@
     ],
     "valuedKnowledge": [
       {
+        "id": "vk-frac-equiv",
         "label": "Equivalence of fractions that simplify to the same value"
       }
     ],

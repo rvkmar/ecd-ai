@@ -3,6 +3,9 @@
 // the shared back-link. Existing confirm rules are the substance gate.
 // A focal KSA that cites a competency or a student model variable
 // pre-fills that link. The request body still wins when it sends one.
+// A valued-knowledge id on a KSA is copied onto seededFrom. A task
+// feature id on an accepted characteristic feature is copied onto the
+// task blueprint. Variable-feature rows already keep their own ids.
 
 import { resolveSeedStudentModel } from "../../src/utils/ksaStudentModelLink.js";
 
@@ -58,10 +61,15 @@ function featureLabel(row) {
   return String(row?.label || "").trim();
 }
 
+function optionalId(row, field) {
+  if (!row || typeof row !== "object") return "";
+  return typeof row[field] === "string" ? row[field].trim() : "";
+}
+
 /**
  * Accepted characteristic features are labels. blueprintConstraints has no
- * other field for that text, so the label is the constraint. A row with no
- * label cannot be copied.
+ * other field for that text, so the label is the constraint. A task feature
+ * id is copied when the row has one. A row with no label cannot be copied.
  */
 function characteristicFeatureConstraints(rows, warnings) {
   const features = [];
@@ -73,9 +81,26 @@ function characteristicFeatureConstraints(rows, warnings) {
       );
       return;
     }
-    features.push({ label });
+    const feature = { label };
+    const taskFeatureId = optionalId(row, "taskFeatureId");
+    if (taskFeatureId) feature.taskFeatureId = taskFeatureId;
+    features.push(feature);
   });
   return features.length ? { characteristicFeatures: features } : {};
+}
+
+function valuedKnowledgeSnapshot(pattern) {
+  const rows = [...(pattern?.focalKsas || []), ...(pattern?.additionalKsas || [])];
+  const cited = [];
+  for (const row of rows) {
+    const valuedKnowledgeId = optionalId(row, "valuedKnowledgeId");
+    if (!valuedKnowledgeId) continue;
+    const entry = { valuedKnowledgeId };
+    const label = featureLabel(row);
+    if (label) entry.label = label;
+    cited.push(entry);
+  }
+  return cited;
 }
 
 function freshProcedureId(index) {
@@ -191,6 +216,9 @@ export function seedFromDesignPattern({
       ...(smvId ? { smvId } : {}),
     },
   };
+
+  const valuedKnowledge = valuedKnowledgeSnapshot(pattern);
+  if (valuedKnowledge.length) seededFrom.valuedKnowledge = valuedKnowledge;
 
   const warnings = [];
   const evaluationProcedures = evaluationProceduresFromRubrics(

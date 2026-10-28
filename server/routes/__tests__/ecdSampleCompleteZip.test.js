@@ -228,6 +228,22 @@ describe("ecd-sample-complete.zip", () => {
     expect(pattern.focalKsas[0].smvId).toBe("smv-names-part");
     expect(plantModel.smVariables.some((row) => row.id === "smv-names-part")).toBe(true);
     expect(pattern.focalKsas[0].label).toBe("Plant-part vocabulary");
+    const plantAnalysis = db.domainAnalyses.find((row) => row.name === "Plant structure");
+    const diagramAnalysis = db.domainAnalyses.find((row) => row.name === "Explaining a labelled scientific diagram");
+    const diagramVariable = db.taskModelVariables.find((row) => row.name === "Plant diagram");
+    expect(pattern.focalKsas[0].valuedKnowledgeId).toBe(plantAnalysis.valuedKnowledge[0].id);
+    expect(pattern.characteristicFeatures[0].taskFeatureId).toBe(plantAnalysis.taskFeatures[0].id);
+    expect(parent.focalKsas[0].valuedKnowledgeId).toBe(diagramAnalysis.valuedKnowledge[0].id);
+    expect(parent.characteristicFeatures[0].taskFeatureId).toBe(diagramAnalysis.taskFeatures[0].id);
+    expect(diagramVariable.taskFeatureId).toBe(plantAnalysis.taskFeatures[0].id);
+    expect(diagramVariable.domainAnalysisId).toBe(plantAnalysis.id);
+    if (keepOriginalIds) {
+      expect(plantAnalysis.valuedKnowledge[0].id).toBe("vk-plant-parts");
+      expect(plantAnalysis.taskFeatures[0].id).toBe("tf-plant-diagram");
+    } else {
+      expect(plantAnalysis.valuedKnowledge[0].id).not.toBe("vk-plant-parts");
+      expect(pattern.focalKsas[0].valuedKnowledgeId).not.toBe("vk-plant-parts");
+    }
 
     expect(pattern.potentialWorkProducts[0].workProductId).toBe(partName.id);
     expect(pattern.potentialWorkProducts[0].workProductType).toBe("selected_response");

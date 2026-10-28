@@ -8,7 +8,8 @@
     "domainAnalysisId": "da-diagram",
     "focalKsas": [
       {
-        "label": "Model-based explanation"
+        "label": "Model-based explanation",
+        "valuedKnowledgeId": "vk-diagram-fit"
       }
     ],
     "additionalKsas": [
@@ -24,7 +25,8 @@
     ],
     "characteristicFeatures": [
       {
-        "label": "Uses a labelled diagram"
+        "label": "Uses a labelled diagram",
+        "taskFeatureId": "tf-diagram-labelled"
       }
     ],
     "variableFeatures": [
@@ -64,7 +66,8 @@
         "label": "Plant-part vocabulary",
         "competencyId": "c-plant",
         "competencyModelId": "cm-plant",
-        "smvId": "smv-names-part"
+        "smvId": "smv-names-part",
+        "valuedKnowledgeId": "vk-plant-parts"
       }
     ],
     "additionalKsas": [
@@ -80,7 +83,8 @@
     ],
     "characteristicFeatures": [
       {
-        "label": "One part is called out on a flowering-plant diagram"
+        "label": "One part is called out on a flowering-plant diagram",
+        "taskFeatureId": "tf-plant-diagram"
       }
     ],
     "variableFeatures": [

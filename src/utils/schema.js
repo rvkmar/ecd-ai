@@ -65,6 +65,12 @@ import {
 } from "./ecdVocabulary.js";
 import { ADDITIONAL_KSA_RELATIONSHIP_VALUES } from "./additionalKsaAdvisory.js";
 import { ksaStudentModelLinkErrors } from "./ksaStudentModelLink.js";
+import {
+  domainAnalysisEntryIdErrors,
+  domainEntryCitationErrors,
+  duplicateDomainEntryIdErrors,
+  taskModelVariableDomainErrors,
+} from "./domainAnalysisEntries.js";
 import { qMatrixEntryErrors } from "./qMatrixEntries.js";
 import {
   designFeatureContextFromTaskModel,
@@ -475,9 +481,10 @@ export const schema = {
       },
       allowedInteractionTypes: 'array',
       allowedScoringMethods: 'array',
-      // Accepted design-pattern characteristic features. Labels, not
-      // collection ids. Absent when the task model was not seeded from them.
-      characteristicFeatures: [{ label: 'string' }],
+      // Accepted design-pattern characteristic features. The label is the
+      // constraint. taskFeatureId is optional and cites a Domain Analysis
+      // task feature. Absent when the task model was not seeded from them.
+      characteristicFeatures: [{ label: 'string', taskFeatureId: 'string' }],
     },
 
     /* ---------------------------------------------
@@ -613,6 +620,10 @@ export const schema = {
     possibleValues: 'array',
     range: 'object',
     valueSet: 'string',
+    // Optional citation of one Domain Analysis task feature. Scoped to
+    // domainAnalysisId when that id is set. Both fields may be absent.
+    taskFeatureId: 'string',
+    domainAnalysisId: 'string',
     districtId: 'string',
     schoolId: 'string',
     createdBy: 'string',
@@ -989,8 +1000,10 @@ export const schema = {
   },
 
   // domainAnalyses — D141 (W29 G10), ADR 0010. One record for PADI
-  // Layer 1. The seven entities are labelled statements, not foreign
-  // keys. D143 (ADR 0011) nests a curricular policy as contentStandards.
+  // Layer 1. The seven entities are labelled statements. valuedKnowledge
+  // and taskFeatures may carry a stable id so a later record can cite
+  // that statement. The other five stay labels. D143 (ADR 0011) nests a
+  // curricular policy as contentStandards.
   // That object keeps goals → competencies → learning outcomes. It is
   // not copied into valuedKnowledge. qMatrixModels stay where they are.
   // Named `domainAnalyses` so the collection matches the calendar;
@@ -1406,6 +1419,7 @@ export function domainAnalysisSectionErrors(obj = {}, { claimComplete = false } 
         }
       }
     });
+    errors.push(...domainAnalysisEntryIdErrors(rows, field));
     const named = rows.some(
       (row) => row && typeof row === "object" && String(row.label || "").trim() !== ""
     );
@@ -1444,10 +1458,6 @@ const DESIGN_PATTERN_MENU_KEYS = DESIGN_PATTERN_PADI_ATTRIBUTES
   .map((row) => row.field)
   .filter((field) => field !== "name" && field !== "summary" && field !== "rationale");
 
-const DESIGN_PATTERN_LABEL_ONLY_MENUS = Object.freeze([
-  "characteristicFeatures",
-]);
-
 function idsInCollection(rows, id) {
   if (!id) return false;
   return (rows || []).some((row) => row && row.id === id);
@@ -1474,9 +1484,10 @@ function knownObservationIds(db) {
 /**
  * Menu entries are labelled objects. Library menus (work products, rubrics,
  * TMVs) must cite a real collection id when a row is present. Observations
- * may copy an existing observable id; characteristic features stay labels.
- * Focal and additional KSAs keep the label. competencyId and the
- * competencyModelId + smvId pair are optional, and a present id must exist.
+ * may copy an existing observable id. Characteristic and variable
+ * features may cite a task feature. Focal and additional KSAs keep the
+ * label. competencyId, the competencyModelId + smvId pair, and
+ * valuedKnowledgeId are optional, and a present id must exist.
  * Empty menus are allowed. A non-array is already caught by the generic
  * shape check.
  */
@@ -1513,10 +1524,32 @@ export function designPatternMenuErrors(obj = {}, db = null, { claimComplete = f
 
       if (key === "focalKsas" || key === "additionalKsas") {
         errors.push(...ksaStudentModelLinkErrors(entry, `${key}[${i}]`, db));
+        errors.push(
+          ...domainEntryCitationErrors({
+            entry,
+            field: "valuedKnowledgeId",
+            section: "valuedKnowledge",
+            where: `${key}[${i}]`,
+            domainAnalysisId: obj.domainAnalysisId,
+            db,
+          })
+        );
         return;
       }
 
-      if (DESIGN_PATTERN_LABEL_ONLY_MENUS.includes(key)) return;
+      if (key === "characteristicFeatures") {
+        errors.push(
+          ...domainEntryCitationErrors({
+            entry,
+            field: "taskFeatureId",
+            section: "taskFeatures",
+            where: `${key}[${i}]`,
+            domainAnalysisId: obj.domainAnalysisId,
+            db,
+          })
+        );
+        return;
+      }
 
       if (key === "potentialObservations") {
         const observationId = entry.observationId && String(entry.observationId).trim();
@@ -1573,13 +1606,21 @@ export function designPatternMenuErrors(obj = {}, db = null, { claimComplete = f
           entry.taskModelVariableId && String(entry.taskModelVariableId).trim();
         if (!taskModelVariableId) {
           errors.push(`${key}[${i}].taskModelVariableId is required.`);
-          return;
-        }
-        if (db && !idsInCollection(db.taskModelVariables, taskModelVariableId)) {
+        } else if (db && !idsInCollection(db.taskModelVariables, taskModelVariableId)) {
           errors.push(
             `${key}[${i}].taskModelVariableId '${taskModelVariableId}' was not found.`
           );
         }
+        errors.push(
+          ...domainEntryCitationErrors({
+            entry,
+            field: "taskFeatureId",
+            section: "taskFeatures",
+            where: `${key}[${i}]`,
+            domainAnalysisId: obj.domainAnalysisId,
+            db,
+          })
+        );
       }
     });
   }
@@ -4995,6 +5036,16 @@ export function validateEntity(collection, obj, db = null, options = {}) {
               `blueprintConstraints.characteristicFeatures[${index}].label is required.`
             );
           }
+          errors.push(
+            ...domainEntryCitationErrors({
+              entry,
+              field: "taskFeatureId",
+              section: "taskFeatures",
+              where: `blueprintConstraints.characteristicFeatures[${index}]`,
+              domainAnalysisId: "",
+              db,
+            })
+          );
         });
       }
 
@@ -6616,6 +6667,7 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
     const claimComplete = strict || obj.status === "confirmed";
     errors.push(...domainAnalysisSectionErrors(obj, { claimComplete }));
+    errors.push(...duplicateDomainEntryIdErrors(obj, db));
 
     for (const key of ["curricularPolicyId", "qMatrixId", "competencyModelId"]) {
       if (obj[key] != null && obj[key] !== "") {
@@ -6816,6 +6868,8 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         );
       }
     }
+
+    errors.push(...taskModelVariableDomainErrors(obj, db));
   }
 
   /* =====================================================

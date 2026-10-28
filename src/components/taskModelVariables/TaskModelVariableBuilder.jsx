@@ -31,6 +31,8 @@ import {
 } from "@/api/queries/taskModelVariables";
 import { useTaskModels } from "@/api/queries/taskModels";
 import { useDesignPatterns } from "@/api/queries/designPatterns";
+import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import { domainEntryChoices } from "@/utils/domainAnalysisEntries";
 import {
   TMV_TYPES,
   TMV_VALUE_SET_KEYS,
@@ -81,6 +83,8 @@ const emptyForm = () => ({
   possibleValuesText: "",
   rangeMin: "",
   rangeMax: "",
+  domainAnalysisId: "",
+  taskFeatureId: "",
 });
 
 function formFromVariable(row) {
@@ -97,6 +101,8 @@ function formFromVariable(row) {
       : "",
     rangeMin: row.range?.min ?? "",
     rangeMax: row.range?.max ?? "",
+    domainAnalysisId: row.domainAnalysisId || "",
+    taskFeatureId: row.taskFeatureId || "",
   };
 }
 
@@ -120,6 +126,8 @@ function buildPayload(form) {
       .filter(Boolean)
       .map((value) => ({ value, label: value }));
   }
+  payload.domainAnalysisId = String(form.domainAnalysisId || "").trim();
+  payload.taskFeatureId = String(form.taskFeatureId || "").trim();
   return payload;
 }
 
@@ -133,6 +141,63 @@ function taskModelConsumerText(taskModels, variableId) {
   return consumers
     .map((model) => `${model.name || model.id}${model.status ? ` (${model.status})` : ""}`)
     .join("; ");
+}
+
+function TaskFeatureFields({ domainAnalyses, domainAnalysisId, taskFeatureId, onChange }) {
+  const choices = domainEntryChoices(domainAnalyses, "taskFeatures", domainAnalysisId);
+  const known = choices.some((row) => row.id === taskFeatureId);
+  return (
+    <div className="space-y-2">
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-300">Domain Analysis</span>
+          <select
+            className={inputClass}
+            aria-label="Domain Analysis"
+            value={domainAnalysisId || ""}
+            onChange={(event) => {
+              const nextId = event.target.value;
+              const nextChoices = domainEntryChoices(domainAnalyses, "taskFeatures", nextId);
+              const stillThere = !taskFeatureId || nextChoices.some((row) => row.id === taskFeatureId);
+              onChange({
+                domainAnalysisId: nextId,
+                taskFeatureId: stillThere ? taskFeatureId : "",
+              });
+            }}
+          >
+            <option value="">No Domain Analysis cited</option>
+            {(domainAnalyses || []).map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.name || row.id}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-300">Task feature</span>
+          <select
+            className={inputClass}
+            aria-label="Task feature"
+            value={taskFeatureId || ""}
+            onChange={(event) => onChange({ taskFeatureId: event.target.value })}
+          >
+            <option value="">Not linked</option>
+            {taskFeatureId && !known ? (
+              <option value={taskFeatureId}>{taskFeatureId} (not found)</option>
+            ) : null}
+            {choices.map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.label || row.id}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        Optional. Leave both unset to keep this variable as it is. When a Domain Analysis is chosen, the task feature list is that analysis.
+      </p>
+    </div>
+  );
 }
 
 function TaskModelVariableExample() {
@@ -162,6 +227,7 @@ export function TaskModelVariableLibraryView({
   variables = [],
   taskModels = [],
   designPatterns = [],
+  domainAnalyses = [],
   onCreate,
   onUpdate,
   createPending = false,
@@ -337,6 +403,13 @@ export function TaskModelVariableLibraryView({
           />
         </label>
 
+        <TaskFeatureFields
+          domainAnalyses={domainAnalyses}
+          domainAnalysisId={form.domainAnalysisId}
+          taskFeatureId={form.taskFeatureId}
+          onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+        />
+
         {form.type === "categorical" && !editingValueSetLocked && (
           <label className="block text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-300">
@@ -457,6 +530,7 @@ function TaskModelVariableManage() {
   const { data: variables = [], isLoading, error } = useTaskModelVariables();
   const { data: taskModels = [] } = useTaskModels();
   const { data: designPatterns = [] } = useDesignPatterns();
+  const { data: domainAnalyses = [] } = useDomainAnalyses();
   const createMut = useCreateTaskModelVariable();
   const updateMut = useUpdateTaskModelVariable();
   const deleteMut = useDeleteTaskModelVariable();
@@ -547,6 +621,7 @@ function TaskModelVariableManage() {
         variables={variables}
         taskModels={taskModels}
         designPatterns={designPatterns}
+        domainAnalyses={domainAnalyses}
         focusId={screen === "edit" ? focusId : null}
         initialForm={screen === "create" ? seedForm : null}
         onDismiss={backToList}

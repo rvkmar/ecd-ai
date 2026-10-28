@@ -28,7 +28,16 @@ router.use(sanitizeRequestInputs);
 const canAuthor = authorizeRole(["admin", "district"]);
 const canDelete = authorizeRole(["admin"]);
 
-const WRITE_KEYS = ["name", "description", "type", "possibleValues", "range", "valueSet"];
+const WRITE_KEYS = [
+  "name",
+  "description",
+  "type",
+  "possibleValues",
+  "range",
+  "valueSet",
+  "taskFeatureId",
+  "domainAnalysisId",
+];
 
 let idCounter = 0;
 const genId = () => `tmv${Date.now()}${(idCounter++ % 1000).toString().padStart(3, "0")}`;
@@ -47,6 +56,12 @@ function pickWrites(body = {}) {
     if (Object.prototype.hasOwnProperty.call(body, key)) out[key] = body[key];
   }
   return out;
+}
+
+function unsetBlankCitations(record) {
+  if (!String(record.domainAnalysisId || "").trim()) delete record.domainAnalysisId;
+  if (!String(record.taskFeatureId || "").trim()) delete record.taskFeatureId;
+  return record;
 }
 
 function rejectIfInvalid(res, record, db) {
@@ -96,6 +111,7 @@ export function createTaskModelVariableRecord(payload = {}, db, req, { assignedI
     createdAt: now,
     updatedAt: now,
   };
+  unsetBlankCitations(record);
 
   const { valid, errors } = validateEntity("taskModelVariables", record, db);
   if (!valid) {
@@ -138,6 +154,7 @@ router.put("/:id", canAuthor, (req, res) => {
     createdAt: existing.createdAt,
     updatedAt: new Date().toISOString(),
   };
+  unsetBlankCitations(updated);
 
   if (rejectIfInvalid(res, updated, db)) return;
 
