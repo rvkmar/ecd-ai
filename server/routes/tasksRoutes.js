@@ -3,6 +3,7 @@ import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB, readRawDB } from "../../src/utils/db-server.js";
+import { deleteSessionsWithTask, querySessions, sessionsUseExternalStore } from "../sessions/sessionRepository.js";
 import { sessionAssignedToStudent } from "../../src/utils/sessionPlay.js";
 import { validateEntity } from "../../src/utils/schema.js";
 
@@ -59,11 +60,14 @@ function rejectIfInvalid(res, record, db) {
  * player never mounts ItemPresenter (D115 live walk). Allow the raw row
  * when the caller is assigned a session that includes this taskId.
  */
-function taskOnAssigneeSession(taskId, user, rawDb) {
+async function taskOnAssigneeSession(taskId, user, rawDb) {
   if (!user || user.role !== "student") return false;
   const students = rawDb.students || [];
   const users = rawDb.users || [];
-  return (rawDb.sessions || []).some(
+  const sessions = sessionsUseExternalStore()
+    ? await querySessions(rawDb, { taskId })
+    : rawDb.sessions || [];
+  return sessions.some(
     (s) =>
       (s.taskIds || []).includes(taskId) &&
       sessionAssignedToStudent(s, user, students, users)
@@ -81,7 +85,7 @@ router.get("/", (req, res) => {
 // ------------------------------
 // GET /api/tasks/:id
 // ------------------------------
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
   const db = loadDB();
   let task = (db.tasks || []).find((t) => t.id === req.params.id);
   if (!task) {
@@ -90,7 +94,7 @@ router.get("/:id", (req, res) => {
     if (
       candidate &&
       (req.user?.role === "admin" ||
-        taskOnAssigneeSession(candidate.id, req.user, raw))
+        (await taskOnAssigneeSession(candidate.id, req.user, raw)))
     ) {
       task = candidate;
     }
@@ -186,7 +190,7 @@ router.put("/:id", canAuthor, (req, res) => {
 // the player walks. Leaving a deleted taskId on a session 404s GET
 // /api/tasks/:id and breaks /next-task. Keep the existing filter — sessions
 // that listed this task are removed with it. Not a CAF archive.
-router.delete("/:id", canDelete, (req, res) => {
+router.delete("/:id", canDelete, async (req, res) => {
   const db = loadDB();
   const before = (db.tasks || []).length;
   db.tasks = (db.tasks || []).filter((t) => t.id !== req.params.id);
@@ -194,9 +198,7 @@ router.delete("/:id", canDelete, (req, res) => {
     return res.status(404).json({ error: "Task not found" });
   }
 
-  db.sessions = (db.sessions || []).filter(
-    (s) => !(s.taskIds || []).includes(req.params.id)
-  );
+  await deleteSessionsWithTask(db, req.params.id);
 
   saveDB(db);
   res.json({ success: true });

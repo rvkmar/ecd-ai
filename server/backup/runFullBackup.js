@@ -9,6 +9,7 @@ import path from "path";
 import zlib from "zlib";
 import { backupDirPath } from "../../src/utils/db-server.js";
 import { dbAdapter } from "../utils/dbAdapter.js";
+import { exportAllSessions, sessionsUseExternalStore } from "../sessions/sessionRepository.js";
 import { BACKUP_INVENTORY, inventoryIncluded, inventoryExcluded, BACKUP_FILE_PREFIX, BACKUP_FILE_SUFFIX } from "./inventory.js";
 import {
   decryptBackupBlob,
@@ -67,17 +68,35 @@ function readTreeFiles(root) {
 /**
  * @param {{ listCollection?: (name: string) => Promise<unknown[]> }} [deps]
  */
-async function exportMongoCollections(deps = {}) {
+function sessionsInEcdBuffer(buf) {
+  try {
+    const db = JSON.parse(buf.toString("utf8"));
+    return Array.isArray(db?.sessions) ? db.sessions : [];
+  } catch {
+    return [];
+  }
+}
+
+async function exportMongoCollections(deps = {}, ecdBytes = null) {
   const list =
     deps.listCollection || ((name) => dbAdapter.list(name));
   const users = await list("users");
   const questions = await list("questions");
+  let sessions;
+  if (typeof deps.listSessions === "function") {
+    sessions = await deps.listSessions();
+  } else if (sessionsUseExternalStore()) {
+    sessions = (await exportAllSessions()) || [];
+  } else {
+    sessions = ecdBytes ? sessionsInEcdBuffer(ecdBytes) : [];
+  }
   return {
     "mongo/users.json": Buffer.from(JSON.stringify(users ?? [], null, 2), "utf8"),
     "mongo/questions.json": Buffer.from(
       JSON.stringify(questions ?? [], null, 2),
       "utf8"
     ),
+    "mongo/sessions.json": Buffer.from(JSON.stringify(sessions ?? [], null, 2), "utf8"),
   };
 }
 
@@ -124,7 +143,7 @@ export async function runFullBackup(options = {}) {
     files["ecd/db.json"] = Buffer.from("{}", "utf8");
   }
 
-  Object.assign(files, await exportMongoCollections(options));
+  Object.assign(files, await exportMongoCollections(options, files["ecd/db.json"]));
 
   const matDir = options.materialsDir !== undefined
     ? options.materialsDir
@@ -147,6 +166,7 @@ export async function runFullBackup(options = {}) {
     filePaths: Object.keys(files).sort(),
     notes: [
       "calibrationJobs and analysisArtefacts are inside ecd/db.json",
+      "sessions are in mongo/sessions.json; the JSON harness also keeps them inside ecd/db.json",
       "uploaded task materials are inline on items unless ECD_MATERIALS_DIR is set",
     ],
   };

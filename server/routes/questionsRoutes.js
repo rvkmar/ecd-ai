@@ -1,5 +1,6 @@
 import express from "express";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
+import { querySessions, replaceStoredSession, sessionsUseExternalStore } from "../sessions/sessionRepository.js";
 import { validateEntity } from "../../src/utils/schema.js";  // ✅ schema with metadata-based a/b/c
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
@@ -387,7 +388,7 @@ router.post("/:id/sync-irt", canAuthor, async (req, res) => {
 // ------------------------------
 // DELETE /api/questions/:id
 // ------------------------------
-router.delete("/:id", canAuthor, (req, res) => {
+router.delete("/:id", canAuthor, async (req, res) => {
   const { id } = req.params;
   const db = loadDB();
 
@@ -407,10 +408,18 @@ router.delete("/:id", canAuthor, (req, res) => {
   }
 
   // Cascade: clean sessions with references
-  if (db.sessions) {
-    db.sessions = db.sessions.map((s) => ({
-      ...s,
-      responses: (s.responses || []).filter((r) => r.questionId !== id),
+  if (sessionsUseExternalStore()) {
+    const hits = await querySessions(db, { questionId: id });
+    for (const session of hits) {
+      await replaceStoredSession(db, {
+        ...session,
+        responses: (session.responses || []).filter((response) => response.questionId !== id),
+      });
+    }
+  } else if (db.sessions) {
+    db.sessions = db.sessions.map((session) => ({
+      ...session,
+      responses: (session.responses || []).filter((response) => response.questionId !== id),
     }));
   }
 

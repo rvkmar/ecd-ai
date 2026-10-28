@@ -98,7 +98,13 @@ records like seed users that have no synthetic `id`), and switches its implement
   have explicit schemas because their fields need real validation/uniqueness.
 
 Collection name → Mongoose model name is singularized by naively stripping a trailing "s"
-(`capitalize()` in `dbAdapter.js`) — keep collection names simple plurals for this to work.
+(`capitalize()` in `dbAdapter.js`). Keep collection names simple plurals for this to work.
+
+Sessions are the exception to the single JSON document. Production
+(`NODE_ENV=production`, or storage mode mongo) keeps them in the Mongo
+`sessions` collection via `server/sessions/sessionRepository.js`. The JSON
+harness used by Vitest and `npm run dev` without that mode still stores
+them in the ECD file. `auditLog` stays in that file.
 
 ### Auth and permissions
 

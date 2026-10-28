@@ -7,6 +7,7 @@ import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
+import { querySessions } from "../sessions/sessionRepository.js";
 import { getAuditRequestId } from "../utils/auditContext.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { validateCalibrationJobLifecycle } from "../utils/lifecycleValidation.js";
@@ -109,8 +110,9 @@ router.get("/queue-metrics", canView, (_req, res) => {
 });
 
 // Completed-session item analysis for one evidence model. Does not enqueue.
-router.get("/session-item-analysis", canView, (req, res) => {
+router.get("/session-item-analysis", canView, async (req, res) => {
   const db = loadDB();
+  db.sessions = await querySessions(db, { closed: true });
   const kind = typeof req.query.kind === "string" ? req.query.kind.trim() : "";
   const statisticalModelId =
     typeof req.query.statisticalModelId === "string" ? req.query.statisticalModelId.trim() : "";
@@ -164,8 +166,9 @@ router.get("/:id", canView, (req, res) => {
 // POST /api/calibrationJobs
 // Enqueue. Server-authoritative id / status / timestamps.
 // ------------------------------
-router.post("/", canAuthor, (req, res) => {
+router.post("/", canAuthor, async (req, res) => {
   const db = loadDB();
+  db.sessions = await querySessions(db, { closed: true });
   const now = new Date().toISOString();
   const id = genId();
 

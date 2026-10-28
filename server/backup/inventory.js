@@ -65,9 +65,10 @@ export const BACKUP_INVENTORY = Object.freeze([
   },
   {
     id: "sessions",
-    store: "ecd-json",
-    pathInArchive: "ecd/db.json",
-    reason: "Included — examinee responses cannot be rebuilt.",
+    store: "mongo-or-ecd-json",
+    pathInArchive: "mongo/sessions.json",
+    reason:
+      "Included. Mongo (or memory) sessions are exported as mongo/sessions.json. The JSON harness still keeps them inside ecd/db.json as well, so a harness backup remains complete. Examinee responses cannot be rebuilt.",
   },
   {
     id: "studentModelRecords",

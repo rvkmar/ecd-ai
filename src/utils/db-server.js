@@ -13,6 +13,7 @@ import {
   auditBaseline,
   pushAuditEvent,
 } from "../../server/utils/auditLog.js";
+import { sessionsUseExternalStore } from "../../server/sessions/sessionBackend.js";
 
 function dbFilePath() {
   return process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
@@ -265,6 +266,14 @@ function rememberRead(file, live) {
   };
 }
 
+function omitSessions(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
+  if (!Object.prototype.hasOwnProperty.call(obj, "sessions")) return obj;
+  const copy = { ...obj };
+  delete copy.sessions;
+  return copy;
+}
+
 function resealFullSnapshot(toWrite, ctx) {
   // Visible rows are the caller's objects. Clone those. Hidden rows were
   // taken from the previous snapshot and are not reachable by the caller.
@@ -347,14 +356,25 @@ export function saveDB(db, options = {}) {
   }
 
   let toWrite = scoped ? mergeScopedDbSave(previous, db, ctx) : db;
-  toWrite = applySaveAudits(previous, toWrite, options);
+  const externalSessions = sessionsUseExternalStore();
+  if (externalSessions) {
+    // Session bytes stay in the session store. The audit diff must not
+    // treat a hydrated array as the file's session collection, or a
+    // human rating recorded on the store would be logged twice.
+    const auditPrev = omitSessions(previous);
+    const auditNext = omitSessions(toWrite);
+    toWrite = applySaveAudits(auditPrev, auditNext, options);
+  } else {
+    toWrite = applySaveAudits(previous, toWrite, options);
+  }
   // When merge produced a new object, mirror auditLog onto the caller's
   // db so in-memory holders (tests, bulk handlers) see the new rows.
   if (toWrite !== db && Array.isArray(toWrite.auditLog)) {
     db.auditLog = toWrite.auditLog;
   }
+  const diskWrite = externalSessions ? omitSessions(toWrite) : toWrite;
   backupDB({ now: options.now });
-  atomicWrite(file, JSON.stringify(toWrite));
+  atomicWrite(file, JSON.stringify(diskWrite));
   const st = statOf(file);
   if (scoped) {
     rawCache = {
@@ -362,7 +382,7 @@ export function saveDB(db, options = {}) {
       mtimeMs: st ? st.mtimeMs : null,
       size: st ? st.size : null,
       kind: "full",
-      obj: resealFullSnapshot(toWrite, ctx),
+      obj: resealFullSnapshot(diskWrite, ctx),
     };
   } else {
     rawCache = {
@@ -370,9 +390,20 @@ export function saveDB(db, options = {}) {
       mtimeMs: st ? st.mtimeMs : null,
       size: st ? st.size : null,
       kind: "baseline",
-      obj: auditBaseline(toWrite),
+      obj: auditBaseline(diskWrite),
     };
   }
+}
+
+/** Drop the previous-state cache after an out-of-band rewrite of the file. */
+export function forgetDbCache() {
+  rawCache = {
+    file: null,
+    mtimeMs: null,
+    size: null,
+    kind: null,
+    obj: null,
+  };
 }
 
 /**

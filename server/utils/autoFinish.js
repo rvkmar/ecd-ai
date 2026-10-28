@@ -2,6 +2,7 @@
   // Utility to auto-finish sessions whose deadlines have passed.
   
   import { loadDB, saveDB } from "../../src/utils/db-server.js";
+  import { querySessions, replaceStoredSession, sessionsUseExternalStore } from "../sessions/sessionRepository.js";
   import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
   import { commitFinishedSession } from "../../src/utils/studentModelRecord.js";
   
@@ -20,14 +21,16 @@
    *
    * Returns array of session IDs changed.
    */
-  export function autoFinishDueSessions() {
+  export async function autoFinishDueSessions() {
     const db = loadDB();
     const now = new Date();
   
     const changed = [];
-    db.sessions = db.sessions || [];
+    const sessions = sessionsUseExternalStore()
+      ? await querySessions(db, { unscoped: true })
+      : db.sessions || [];
   
-    for (let session of db.sessions) {
+    for (let session of sessions) {
       if (!session) continue;
   
       // Only consider sessions in progress/reopened
@@ -78,6 +81,7 @@
         }
   
         commitFinishedSession(db, session, { now: session.finishedAt });
+        if (sessionsUseExternalStore()) await replaceStoredSession(db, session);
         changed.push(session.id);
       }
     }

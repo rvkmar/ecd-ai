@@ -26,8 +26,9 @@ Summary:
 
 | Included | How |
 |---|---|
-| ECD entities (items, models including presentationModels, sessions, tasks, students, policies, …) | `ecd/db.json` snapshot |
-| `calibrationJobs`, `analysisArtefacts`, `auditLog` | Inside `ecd/db.json` (must not be skipped) |
+| ECD entities (items, models including presentationModels, tasks, students, policies, …) | `ecd/db.json` snapshot |
+| `sessions` | `mongo/sessions.json` from the session store. The JSON harness also keeps them inside `ecd/db.json`. |
+| `calibrationJobs`, `analysisArtefacts`, `auditLog` | Inside `ecd/db.json` (must not be skipped). `auditLog` stays in the JSON file in this change. |
 | Task materials | Inline on `items.stimulus` today; optional `ECD_MATERIALS_DIR` → `materials/` |
 | `users`, `questions` | `mongo/users.json`, `mongo/questions.json` via `dbAdapter` |
 
