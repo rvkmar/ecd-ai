@@ -35,8 +35,9 @@ nginx serves the built frontend and proxies `/api` to the node container — the
 itself does not serve static files (see the comment at the bottom of `server/index.js`).
 
 Local env vars go in `.env` (copy from `.env.example`, gitignored). Notably: `JWT_SECRET` (server
-refuses to start without one ≥32 chars — see `server/config/jwt.js`), `DB_MODE` (`json` or
-`mongo`), `MONGO_URI`, `VITE_AUTH_URL`.
+refuses to start without one ≥32 chars, see `server/config/jwt.js`), `DB_MODE` (`json` or
+`mongo`), `MONGO_URI`, `VITE_AUTH_URL`. JSON crash copies: `ECD_SNAPSHOT_INTERVAL_MS` (default
+300000) and `ECD_SNAPSHOT_KEEP` (default 20).
 
 ### Docker
 

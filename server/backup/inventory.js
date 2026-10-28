@@ -172,7 +172,7 @@ export const BACKUP_INVENTORY = Object.freeze([
     id: "opportunistic-db-json-copies",
     store: "excluded-as-primary",
     pathInArchive: null,
-    reason: "Excluded as the *scheduled* backup — saveDB still writes unencrypted db.json.* crash copies; health prefers encrypted ecd-full-*.ecd.bak.enc.",
+    reason: "Excluded as the scheduled backup. saveDB still writes unencrypted db.json.<timestamp> crash copies, throttled by ECD_SNAPSHOT_INTERVAL_MS and capped by ECD_SNAPSHOT_KEEP. Health prefers encrypted ecd-full-*.ecd.bak.enc.",
   },
   {
     id: "mongo-volume-raw",

@@ -11,6 +11,14 @@ Default schedule: `20 2 * * *` UTC (`ECD_BACKUP_CRON`). Retention: 14 days
 `/api/metrics` as `backup.ageMs` (prefers encrypted full backups) and
 alarmed as `backup.age` (D105).
 
+`saveDB` also writes unencrypted `db.json.<timestamp>` crash copies into
+`ECD_BACKUP_DIR`. Those are not the scheduled backup. A copy is written
+only when the newest crash copy is at least `ECD_SNAPSHOT_INTERVAL_MS`
+old (default 300000, five minutes; 0 copies on every save). Retention
+keeps the newest `ECD_SNAPSHOT_KEEP` files (default 20) and does not
+delete encrypted archives, meta sidecars, or any other name in the folder.
+`runFullBackup` does not use that throttle.
+
 ## Collection coverage
 
 The authoritative list is `server/backup/inventory.js` (`BACKUP_INVENTORY`).
@@ -26,7 +34,7 @@ Summary:
 | Excluded | Why |
 |---|---|
 | R image / node_modules / frontend build | Rebuildable |
-| Opportunistic `db.json.*` crash copies | Not the scheduled encrypted set |
+| Opportunistic `db.json.<timestamp>` crash copies | Not the scheduled encrypted set. Throttled (`ECD_SNAPSHOT_INTERVAL_MS`, default 5 minutes) and capped (`ECD_SNAPSHOT_KEEP`, default 20). |
 | Raw `mongo_data` volume dump | Optional ops snapshot; app export covers roster for this unit |
 
 ## Restore
