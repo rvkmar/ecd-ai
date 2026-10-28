@@ -6,6 +6,9 @@
 // list reads response counts and finish eligibility (response.taskId), the
 // carried-forward line, and the evidence inspector reads smvPosteriors.
 // studentId and studentIds are what tenancy uses to resolve a district.
+// deliveryAdministration is the stamped time, attempt, review, and feedback
+// record. administration is the player ceiling (allowedReview, feedbackMode).
+// endTime is the deadline the player counts down. Lists keep both.
 //
 // The rating queue does not send the session. It sends blindedQueueRow.
 // Tenancy still needs the assignee ids. Response subfields are only the ones
@@ -28,6 +31,8 @@ export const CATALOG_LIST_PROJECTION = Object.freeze({
   selectionStrategy: 1,
   nextTaskPolicy: 1,
   deliveryModelId: 1,
+  deliveryAdministration: 1,
+  administration: 1,
   assemblyProgress: 1,
   carryForward: 1,
   status: 1,

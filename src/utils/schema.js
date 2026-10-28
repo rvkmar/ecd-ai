@@ -25,6 +25,7 @@ import { intendedDifficultyPlacement } from "./intendedDifficulty.js";
 // confirm-time gate and attributeAccumulation.js's scoring-time gate
 // unable to disagree.
 import { dinaParametersAreUsable } from "../../server/delivery/attributeAccumulation.js";
+import { deliveryAdministrationErrors } from "../../server/delivery/deliveryAdministration.js";
 import { bayesianNetworkAuthoringErrors } from "../../server/delivery/bayesianNetwork.js";
 import { evaluateAssemblySufficiency } from "./assemblySufficiency.js";
 import { parameterSetStorageErrors } from "./parameterSetRecord.js";
@@ -741,6 +742,18 @@ export const schema = {
     // that policy drives selection. Absent means the session keeps the
     // inferred assembly model and its own selectionStrategy.
     deliveryModelId: 'string',
+    // Stamped at session create from the cited delivery model's administration
+    // and the presentation model resolved then. Absent on older sessions and
+    // on sessions whose delivery model saved none of these rules. Enforcement
+    // reads this object only. A later edit of the delivery model does not rewrite it.
+    deliveryAdministration: 'object',
+    // Player ceiling. allowedReview is the stricter of the delivery flag and
+    // the presentation allowReview read at create. feedbackMode is the
+    // delivery model's mode. Absent when those rules were not saved.
+    administration: 'object',
+    // Effective deadline once a delivery time limit is stamped. The player
+    // reads this and does not apply the presentation factor again.
+    endTime: 'date',
     // Written on submit when an assembly model governs the session.
     // Counts of delivered tasks, SMV targets, and content constraints.
     // The submit response's assemblyProgress array is a different value:
@@ -5413,6 +5426,29 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         errors.push("deliveryModelId should be string");
       } else if (db && !(db.deliveryModels || []).some((row) => row && row.id === obj.deliveryModelId)) {
         errors.push(`Invalid deliveryModelId: ${obj.deliveryModelId}`);
+      }
+    }
+
+    if (obj.deliveryAdministration != null) {
+      errors.push(...deliveryAdministrationErrors(obj.deliveryAdministration));
+    }
+
+    if (obj.administration != null) {
+      const ceiling = obj.administration;
+      if (typeof ceiling !== "object" || Array.isArray(ceiling)) {
+        errors.push("administration must be an object.");
+      } else {
+        if (ceiling.allowedReview != null && typeof ceiling.allowedReview !== "boolean") {
+          errors.push("administration.allowedReview must be a boolean when present.");
+        }
+        if (
+          ceiling.feedbackMode != null &&
+          !PRESENTATION_FEEDBACK_TIMING_VALUES.includes(ceiling.feedbackMode)
+        ) {
+          errors.push(
+            `Invalid administration.feedbackMode '${ceiling.feedbackMode}'. Must be one of: ${PRESENTATION_FEEDBACK_TIMING_VALUES.join(", ")}.`
+          );
+        }
       }
     }
 
