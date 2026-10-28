@@ -69,6 +69,10 @@ A direct save that renamed that statement and kept `vk-plant-parts` returned 200
 - The evidence step still edits one procedure per observation. Extra procedures on that observation are kept and listed, and they are not separate form rows.
 - Deleting a Design Pattern can still drop a seed back-link (D150).
 
+## Remote
+
+Draft pull request #111 against `main`: https://github.com/rvkmar/ecd-ai/pull/111. Branch `cursor/domain-analysis-entry-citations-c8ca`. Product commit `e75e0f0`.
+
 ## Compression debt
 
 None new.
