@@ -7,9 +7,36 @@
 // display into compositeLibrary.items[]. Live delivery re-reads the
 // authored record so a confirmed edit takes effect without recompile.
 //
-// SessionPlayer obedience (applying these fields in the examinee UI) is
-// D115. This module only resolves which record applies and what its
-// overlay fields currently are.
+// SessionPlayer reads layout, review, feedback, and the extra-time factor
+// from the overlay this module returns. timeMultiplier is additive: R2's
+// deadline helper should multiply administration.timeLimitMinutes by
+// presentationTimeMultiplier(overlay). The player does not multiply the
+// clock. It shows the deadline the server stored.
+
+/**
+ * Extra-time factor for a presentation record or a resolved overlay.
+ * Accepts the authored accessibility.timeMultiplier or the additive
+ * overlay.timeMultiplier field. Out of range, missing, or no model is 1,
+ * which leaves a deadline unchanged.
+ *
+ * R2's deadline helper should consume it once, at session create:
+ *   effectiveMinutes = timeLimitMinutes * presentationTimeMultiplier(overlay)
+ *   endTime = startedAt + effectiveMinutes
+ * Persist that endTime on the session. The player displays endTime as the
+ * remaining time. The default return is 1, so a missing model leaves the
+ * time limit unchanged.
+ */
+export function presentationTimeMultiplier(source) {
+  const raw =
+    source?.timeMultiplier ??
+    source?.accessibility?.timeMultiplier ??
+    source?.overlay?.timeMultiplier ??
+    source?.overlay?.accessibility?.timeMultiplier;
+  if (typeof raw === "number" && Number.isFinite(raw) && raw >= 1 && raw <= 3) {
+    return raw;
+  }
+  return 1;
+}
 
 /** Statuses that may be pointed at by a compiled package / delivery. */
 const LINKABLE_PRESENTATION_STATUSES = Object.freeze([
@@ -86,6 +113,7 @@ export function selectPresentationModelIdForTaskModel(db, taskModelId, taskModel
  *     layout: object,
  *     conditionalDisplay: object,
  *     accessibility: object,
+ *     timeMultiplier: number,
  *     name: string,
  *     status: string,
  *     taskModelId: string,
@@ -151,6 +179,7 @@ export function resolvePresentationModel(db, options = {}) {
       layout: pm.layout ? { ...pm.layout } : {},
       conditionalDisplay: pm.conditionalDisplay ? { ...pm.conditionalDisplay } : {},
       accessibility: pm.accessibility ? { ...pm.accessibility } : {},
+      timeMultiplier: presentationTimeMultiplier(pm),
     },
   };
 }
