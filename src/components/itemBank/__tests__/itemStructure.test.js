@@ -508,6 +508,7 @@ describe("itemCompatibilityNotes", () => {
             responsePattern: { equalsCorrect: false },
             score: 0,
             activatesObservable: false,
+            strengthOverride: 2,
             rationale: "…",
           },
         ],

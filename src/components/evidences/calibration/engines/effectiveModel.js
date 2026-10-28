@@ -181,7 +181,8 @@ export function computeReadiness(evidenceModel, taskModels = null) {
             id: "activeParameterSet",
             label: "Active parameter set designated",
             ok: !!activeStatModel?.activeParameterSetId,
-            remedy: "Activate one parameter set in the Parameter Sets tab.",
+            remedy:
+                "Activate one parameter set. Scoring and adaptive selection read the active set. A confirmed model may hold candidates until then.",
         },
         {
             id: "decisionRule",

@@ -125,10 +125,14 @@ function readinessErrorsFor(model, db) {
     errors.push("An active statistical model is required.");
   } else {
     if (!activeModel.parameterSets?.length) {
-      errors.push("Active statistical model requires calibrated parameter sets.");
+      errors.push(
+        "Active statistical model requires a calibrated parameter set before operational scoring and adaptive selection. A confirmed model may ingest a candidate first."
+      );
     }
     if (!activeModel.activeParameterSetId) {
-      errors.push("An active parameter set must be selected.");
+      errors.push(
+        "An active parameter set must be selected before this model can score operational sessions or drive adaptive selection. Candidate sets do not count until one is activated."
+      );
     }
   }
 
@@ -670,7 +674,12 @@ router.post("/:id/confirm", canAuthor, (req, res) => {
     });
   }
 
-  const { valid, errors } = validateEntity("evidenceModels", model, db);
+  // Validate the model as it will be locked. Status-gated rules (decision
+  // rule, assembly floors, the rest of the confirmed audits) do not run
+  // while status is still reviewed, which is how a model used to reach
+  // confirmed and then fail the same rules on a later save.
+  const prospective = { ...model, status: "confirmed", locked: true };
+  const { valid, errors } = validateEntity("evidenceModels", prospective, db);
   if (!valid) return res.status(400).json({ errors });
 
   model.status = "confirmed";
@@ -1035,9 +1044,19 @@ const TRANSITION_HANDLERS = {
   },
 
   /* ---------- submitted for review: draft → reviewed ---------- */
-  reviewed: (model, now) => {
+  reviewed: (model, now, prevStatus, db) => {
     // Review is a structural gate, not a governance lock: the model stays
     // editable so the reviewer's findings can actually be acted on.
+    // fairnessNotes (and every other reviewed-onward rule in schema.js)
+    // is checked here, on the status the model is about to have, so a
+    // later ingest or confirm is not the first time the gap is named.
+    if ((prevStatus || "draft") === "draft") {
+      const prospective = { ...model, status: "reviewed", locked: false };
+      const { valid, errors } = validateEntity("evidenceModels", prospective, db, {
+        strict: false,
+      });
+      if (!valid) return { status: 400, body: { errors } };
+    }
     model.status = "reviewed";
     model.locked = false;
     void now;

@@ -111,7 +111,9 @@ describe("recordItemUsage — only an operational item accrues exposure", () => 
     const item = makeItem({ status: "draft" });
     const result = recordItemUsage(item, makeDb([item]));
     expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/Only an operational item accrues exposure/);
+    expect(result.accrued).toBe(false);
+    expect(result.error).toMatch(/Operational exposure counts only an operational item/);
+    expect(result.error).toMatch(/does not increment usageCount/);
   });
 
   it("is a no-op for a suspended item (already retired)", () => {

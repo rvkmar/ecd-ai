@@ -26,12 +26,12 @@ import { validateEntity } from "../../src/utils/schema.js";
 /**
  * Increment an item's usage counter and auto-suspend it if that pushes it
  * to or past its exposure ceiling. Only an `operational` item accrues
- * exposure -- delivering a draft/confirmed item in a preview or test
- * context is not "real" exposure, so this is a no-op (not an error) for
- * any other status, matching the existing route's semantics before this
- * extraction (that route also refused non-operational items, with a 409;
- * callers other than the HTTP route can decide for themselves whether a
- * no-op is fine or something worth surfacing).
+ * operational exposure. A confirmed item can still be delivered as a
+ * pilot: the response is stored and feeds calibration, but usageCount is
+ * the operational retirement ceiling and must not be spent during the
+ * pilot. Draft and preview deliveries are the same non-increment. The
+ * result is a no-op with a note, not a scoring failure. Callers other
+ * than the HTTP route can decide whether to surface that note.
  *
  * @param {object} item - a full items record
  * @param {object} db - the full db snapshot (needed for validateEntity's
@@ -50,7 +50,8 @@ export function recordItemUsage(item, db, { count } = {}) {
   if (item.status !== "operational") {
     return {
       ok: false,
-      error: `Only an operational item accrues exposure (this one is '${item.status}').`,
+      accrued: false,
+      error: `Operational exposure counts only an operational item (this one is '${item.status}'). A confirmed or pilot administration is stored for calibration and does not increment usageCount.`,
     };
   }
 

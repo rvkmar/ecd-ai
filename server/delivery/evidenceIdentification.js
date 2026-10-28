@@ -100,17 +100,51 @@ function patternResolvingEqualsCorrect(pattern, sets) {
   return { ...rest, selected: ids.length === 1 ? ids[0] : ids };
 }
 
-function dichotomousMiss(activationMap, sets, workProduct) {
-  if (!sets) return false;
-  const usesEqualsCorrect = activationMap.some(
-    (row) => typeof row?.responsePattern?.equalsCorrect === "boolean"
-  );
-  if (!usesEqualsCorrect) return false;
+function isSkippedWorkProduct(workProduct) {
+  if (workProduct == null || typeof workProduct !== "object" || Array.isArray(workProduct)) {
+    return true;
+  }
+  return workProduct.skipped === true;
+}
+
+/**
+ * A keyed dichotomous item has a defined correct selection: options marked
+ * isCorrect, an equalsCorrect rule, or an activating pattern that names
+ * selected option ids. A response that chooses something else is the
+ * observable's 0, an observation, not a missing cell. An empty selection
+ * or an explicit skip stays missing. A selection outside the declared
+ * option list, when that list exists, stays missing too: it is not one of
+ * this item's options.
+ */
+function observedKeyedMiss(item, activationMap, resolvedMap, optionSets, workProduct) {
+  if (isSkippedWorkProduct(workProduct)) return false;
   const chosen = selectedIds(workProduct);
   if (chosen.length === 0) return false;
-  const known = new Set([...sets.correct, ...sets.incorrect]);
-  if (!chosen.every((id) => known.has(id))) return false;
-  return chosen.every((id) => !sets.correct.includes(id));
+
+  const method = item?.scoring?.method || null;
+  const dichotomous =
+    method === "dichotomous" ||
+    (activationMap || []).some((row) => typeof row?.responsePattern?.equalsCorrect === "boolean");
+  if (!dichotomous) return false;
+
+  const key = new Set(optionSets?.correct || []);
+  for (const row of resolvedMap || []) {
+    if (row?.activatesObservable !== true) continue;
+    const selected = row?.responsePattern?.selected;
+    if (selected == null || selected === "") continue;
+    const ids = Array.isArray(selected) ? selected : [selected];
+    for (const id of ids) {
+      if (id != null && id !== "") key.add(id);
+    }
+  }
+  if (key.size === 0) return false;
+
+  if (optionSets) {
+    const known = new Set([...(optionSets.correct || []), ...(optionSets.incorrect || [])]);
+    if (!chosen.every((id) => known.has(id))) return false;
+  }
+
+  return chosen.every((id) => !key.has(id));
 }
 
 function emptyIdentification(observationId, extras = {}) {
@@ -187,7 +221,11 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
   const evidenceRule = entry.evidenceRule || null;
   const evaluationProcedure = entry.evaluationProcedure || null;
   const activationMap = entry.scoring?.evidenceActivationMap || [];
-  const optionSets = componentSets(item);
+  const scoringSource = {
+    interaction: entry.interactionParams || null,
+    scoring: { method: entry.scoring?.method ?? null },
+  };
+  const optionSets = componentSets(scoringSource);
   const resolvedMap = activationMap.map((row) => ({
     ...row,
     responsePattern: patternResolvingEqualsCorrect(row.responsePattern, optionSets),
@@ -197,13 +235,13 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
   // the baked evaluationProcedure artifact (EM-R1: key | rubric | auto |
   // process_log). A non-empty map that fails to match stays a "no pattern"
   // warning — do not reinterpret it as artifact-based non-activation.
-  // A resolved equalsCorrect rule is the exception: a known distractor is
-  // a scored non-activation, not an unscored miss.
+  // A keyed dichotomous miss is a scored 0. An empty or skipped work
+  // product stays unmatched (activated null) so calibration can keep it NA.
   let matchedEntry = resolvedMap.find((entryRow) =>
     matchesResponsePattern(entryRow.responsePattern, workProduct)
   );
 
-  if (!matchedEntry && dichotomousMiss(activationMap, optionSets, workProduct)) {
+  if (!matchedEntry && observedKeyedMiss(scoringSource, activationMap, resolvedMap, optionSets, workProduct)) {
     matchedEntry = {
       activatesObservable: false,
       rationale: "The selected response is not the keyed option.",

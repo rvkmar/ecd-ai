@@ -27,7 +27,7 @@ import { intendedDifficultyPlacement } from "./intendedDifficulty.js";
 import { dinaParametersAreUsable } from "../../server/delivery/attributeAccumulation.js";
 import { bayesianNetworkAuthoringErrors } from "../../server/delivery/bayesianNetwork.js";
 import { evaluateAssemblySufficiency } from "./assemblySufficiency.js";
-import { isParameterSetStatus } from "./parameterSetStatus.js";
+import { parameterSetStorageErrors } from "./parameterSetRecord.js";
 import { assemblyConstraintErrors } from "./assemblyConstraints.js";
 
 // The shared ECD response vocabulary. Imported rather than restated so the
@@ -48,9 +48,9 @@ import {
   priorDistributionParamsAreValid,
   isSmVariablePriorComplete,
   PSYCHOLOGICAL_PERSPECTIVE_VALUES,
-  CALIBRATION_FILE_KIND_VALUES,
-  statisticalModelTypesForCalibrationKind,
   CALIBRATION_JOB_KIND_VALUES,
+  nonActivationIsCounterEvidence,
+  SUPPORTS_COUNTER_EVIDENCE_MESSAGE,
   ANALYSIS_ARTEFACT_KIND_VALUES,
   BLOOM_LEVEL_VALUES,
   REASONING_TYPE_VALUES,
@@ -2701,87 +2701,38 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         errors.push(`Draft evidence model cannot contain parameterSets.`);
       }
 
-      /* PROVENANCE — Day 19. Mandatory on every parameterSet, at every
-         status (never gated by `strict`): a calibration run whose package
+      /* PROVENANCE. Mandatory on every parameterSet, at every status
+         (never gated by `strict`): a calibration run whose package
          version and convergence cannot be stated is not defensible, and a
          run that did not converge must be refused outright rather than
-         stored as though it were usable. */
+         stored as though it were usable. Ingest calls the same function
+         on the new row alone. */
       for (const ps of sm.parameterSets || []) {
-        const psTag = ps.parameterSetId || "(missing id)";
-
-        if (!ps.packageVersion) {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} requires packageVersion.`);
-        }
-        if (typeof ps.sampleSize !== "number" || ps.sampleSize <= 0) {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} requires a positive sampleSize.`);
-        }
-        if (!ps.calibratedAt) {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} requires calibratedAt.`);
-        }
-        if (typeof ps.converged !== "boolean") {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} must declare converged.`);
-        } else if (!ps.converged) {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} did not converge and cannot be stored as a parameter set.`);
-        }
-
-        if (ps.calibrationKind !== undefined && ps.calibrationKind !== null) {
-          if (!CALIBRATION_FILE_KIND_VALUES.includes(ps.calibrationKind)) {
-            errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid calibrationKind '${ps.calibrationKind}'. Must be one of: ${CALIBRATION_FILE_KIND_VALUES.join(", ")}.`);
-          } else if (!statisticalModelTypesForCalibrationKind(ps.calibrationKind).includes(sm.type)) {
-            errors.push(`Parameter set ${psTag} on model ${sm.id} declares calibrationKind '${ps.calibrationKind}', which does not apply to statistical model type '${sm.type}'.`);
-          }
-        }
-
-        // ADR 0002: optional, but if present must actually be the object
-        // shape the contract describes -- not required of every run.
-        if (ps.standardErrors !== undefined && ps.standardErrors !== null) {
-          if (typeof ps.standardErrors !== "object" || Array.isArray(ps.standardErrors)) {
-            errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid standardErrors: should be object.`);
-          }
-        }
-        if (ps.fitStatistics !== undefined && ps.fitStatistics !== null) {
-          if (typeof ps.fitStatistics !== "object" || Array.isArray(ps.fitStatistics)) {
-            errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid fitStatistics: should be object.`);
-          }
-        }
-        if (ps.qMatrixId != null && typeof ps.qMatrixId !== "string") {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid qMatrixId: should be string.`);
-        }
-        if (ps.responseSource != null && typeof ps.responseSource !== "string") {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid responseSource: should be string.`);
-        }
-        if (ps.sourceSessionIds != null && !Array.isArray(ps.sourceSessionIds)) {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid sourceSessionIds: should be array.`);
-        }
-        if (ps.sourceSessionCount != null && typeof ps.sourceSessionCount !== "number") {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid sourceSessionCount: should be number.`);
-        }
-        if (ps.sourceSessionIdsHash != null && typeof ps.sourceSessionIdsHash !== "string") {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid sourceSessionIdsHash: should be string.`);
-        }
-        if (ps.status != null && ps.status !== "" && !isParameterSetStatus(ps.status)) {
-          errors.push(
-            `Parameter set ${psTag} on model ${sm.id} has invalid status '${ps.status}'. Use 'candidate' or 'active'.`
-          );
-        } else if (ps.status === "active" && sm.activeParameterSetId !== ps.parameterSetId) {
-          errors.push(
-            `Parameter set ${psTag} on model ${sm.id} is marked active but is not activeParameterSetId.`
-          );
-        }
-        if (ps.activatedBy != null && typeof ps.activatedBy !== "string") {
-          errors.push(`Parameter set ${psTag} on model ${sm.id} has invalid activatedBy: should be string.`);
-        }
+        errors.push(...parameterSetStorageErrors(ps, sm));
       }
 
-      if (obj.status === "confirmed") {
+      if (sm.activeParameterSetId) {
+        const exists = (sm.parameterSets || []).some(
+          (p) => p.parameterSetId === sm.activeParameterSetId
+        );
+        if (!exists) errors.push(`Invalid activeParameterSetId in model ${sm.id}.`);
+      }
+
+      /* A confirmed model is locked structure. It may still be waiting
+         for its first calibration: ingest stores a candidate and does not
+         move the pointer. Scoring and adaptive selection read
+         activeParameterSetId, so the pointer is required when the model
+         is operational, not merely confirmed. */
+      if (obj.status === "operational") {
         if (!Array.isArray(sm.parameterSets) || sm.parameterSets.length === 0) {
-          errors.push(`Confirmed model ${sm.id} must contain at least one parameterSet.`);
+          errors.push(
+            `Operational model ${sm.id} must contain at least one parameterSet. Scoring and adaptive selection read a live set. A confirmed model may hold only candidates until one is activated.`
+          );
         }
         if (!sm.activeParameterSetId) {
-          errors.push(`Confirmed model ${sm.id} must specify activeParameterSetId.`);
-        } else {
-          const exists = sm.parameterSets.find(p => p.parameterSetId === sm.activeParameterSetId);
-          if (!exists) errors.push(`Invalid activeParameterSetId in model ${sm.id}.`);
+          errors.push(
+            `Operational model ${sm.id} must specify activeParameterSetId. Scoring and adaptive selection use that set. Candidate ingest does not move it.`
+          );
         }
       }
     }
@@ -4549,14 +4500,12 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         }
 
         if (observable?.evidenceRule?.direction === "supports") {
-          const negativeActivation = (obj.scoring?.evidenceActivationMap || []).some(
-            m => m.activatesObservable === false
+          const negativeActivation = (obj.scoring?.evidenceActivationMap || []).some((m) =>
+            nonActivationIsCounterEvidence(m, obj.scoring?.method)
           );
 
           if (negativeActivation) {
-            errors.push(
-              "This observable's evidence rule is directional ('supports'), but the scoring map contains a rule that explicitly does not activate it — which reads as counter-evidence the rule does not permit."
-            );
+            errors.push(SUPPORTS_COUNTER_EVIDENCE_MESSAGE);
           }
         }
 
