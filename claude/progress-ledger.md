@@ -245,6 +245,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-10-27 G19 | Product `d611394` on draft PR #107. Handoff: `claude/day145w-offcal-assembly-policy.md`. Suite **2511 passed / 9 skipped** (291 files). Build green. Audit high clean. **Not D146.** Calendar next stays D151 alone. |
 | HEAD at 2026-10-27 G20 | Product `cfbacc1` on draft PR #108. Handoff: `claude/day145x-offcal-activity-selection.md`. Suite **2527 passed / 9 skipped** (291 files). Build green. Audit high clean. **Not D146.** Calendar next stays D151 alone. |
 | HEAD at 2026-10-28 D151 not started | tip **`77fafb9`** ≡ `main/master` before this close + `claude/day151-not-started-session-close.md`. Full suite first pass **2 failed / 2582 passed / 10 skipped** (303 files, 391.75s); the two failures are D133/D134 confirm timeouts that pass isolated (8/8, 19.07s). Build green (1m 2s; largest chunk EvidenceModelBuilder 371.68 kB). D151 calendar not marked. W29 stays open. Next: D151 alone. |
+| HEAD at 2026-10-28 calibrate | **`0784c83`** ≡ `main/master`. Tree clean. D151 premises still hold: `taskSpecs` absent; items still authored; `deliveryModels` is the D48 sibling to copy, not this collection. Suite not re-run; the product tree is the not-started close. Next: D151 alone. |
 
 
 
@@ -585,6 +586,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-27 | off-calendar | G21 | Seeding copies characteristic-feature labels onto the task blueprint and turns a live rubric id into a draft evaluation procedure. ~~G15~~ through ~~G20~~ and ~~F24~~ were already closed. Draft PR #110. **Not D146.** Suite **2561 passed / 10 skipped** (296 files). Build green. Audit high clean. Handoff: `claude/day145z-offcal-pattern-task-features.md`. Calendar next stays D151. |
 | 2026-10-28 | off-calendar | G22 | Valued knowledge and task features gain stable ids; KSAs and features may cite them. Draft PR #111. **Not D146.** Suite **2584 passed / 10 skipped** (303 files) at that close. Handoff: `claude/day146a-offcal-domain-analysis-citations.md`. Calendar next stays D151. |
 | 2026-10-28 | close | — | D151 was calibrated and not started. `taskSpecs` is still absent. Textbook-audit G15 (Delivery Model) is not the conformance G15 that D151 closes. Close re-run: 2 D133/D134 confirm timeouts under load, both pass isolated. Build green. D151 calendar not marked. W29 stays open. |
+| 2026-10-28 | calibrate | — | D151 premise re-checked at `0784c83`. Collection still absent. The 2026-10-26 rewrite still holds. Copy the D48 surface from `deliveryModels` (mount + admin write + district view); do not reuse that collection. Work order: D151 alone. No D152. D155 stays never-compress. Suite not re-run. |
 
 
 
