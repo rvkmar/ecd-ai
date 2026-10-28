@@ -2,6 +2,7 @@
   // Utility to auto-finish sessions whose deadlines have passed.
   
   import { loadDB, saveDB } from "../../src/utils/db-server.js";
+  import { bindSessions, commitSessions } from "../sessions/sessionRepository.js";
   import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
   import { commitFinishedSession } from "../../src/utils/studentModelRecord.js";
   
@@ -20,8 +21,9 @@
    *
    * Returns array of session IDs changed.
    */
-  export function autoFinishDueSessions() {
+  export async function autoFinishDueSessions() {
     const db = loadDB();
+    await bindSessions(db);
     const now = new Date();
   
     const changed = [];
@@ -83,6 +85,7 @@
     }
   
     if (changed.length > 0) {
+      await commitSessions(db);
       saveDB(db);
     }
   

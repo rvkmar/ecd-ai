@@ -3,6 +3,7 @@ import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB } from "../../src/utils/db-server.js";
+import { bindSessions } from "../sessions/sessionRepository.js";
 import { sessionMeasurementReport } from "../delivery/sessionReportMeasurement.js";
 import { taskIdsIncludingDelivered } from "../delivery/activitySelection.js";
 import { studentForbiddenFromSession } from "../../src/utils/sessionPlay.js";
@@ -102,9 +103,10 @@ function responseLines(db, session) {
 // ------------------------------
 // GET /api/reports/session/:id
 // ------------------------------
-router.get("/session/:id", (req, res) => {
+router.get("/session/:id", async (req, res) => {
   const { id } = req.params;
   const db = loadDB();
+  await bindSessions(db);
   const session = db.sessions.find(s => s.id === id);
   if (!session) return res.status(404).json({ error: "Session not found" });
   if (
@@ -264,9 +266,10 @@ router.get("/session/:id", (req, res) => {
 // ------------------------------
 // GET /api/reports/session/:id/learner-feedback
 // ------------------------------
-router.get("/session/:id/learner-feedback", (req, res) => {
+router.get("/session/:id/learner-feedback", async (req, res) => {
   const { id } = req.params;
   const db = loadDB();
+  await bindSessions(db);
   const session = db.sessions.find(s => s.id === id);
   if (!session) return res.status(404).json({ error: "Session not found" });
   if (
@@ -370,9 +373,10 @@ router.get("/session/:id/learner-feedback", (req, res) => {
 // ------------------------------
 // GET /api/reports/session/:id/teacher-report
 // ------------------------------
-router.get("/session/:id/teacher-report", canViewTeacherReports, (req, res) => {
+router.get("/session/:id/teacher-report", canViewTeacherReports, async (req, res) => {
   const { id } = req.params;
   const db = loadDB();
+  await bindSessions(db);
   const session = db.sessions.find(s => s.id === id);
   if (!session) return res.status(404).json({ error: "Session not found" });
   if (
@@ -536,9 +540,10 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, (req, res) => {
 // ------------------------------
 // GET /api/reports/teacher/class/:classId
 // ------------------------------
-router.get("/teacher/class/:classId", canViewTeacherReports, (req, res) => {
+router.get("/teacher/class/:classId", canViewTeacherReports, async (req, res) => {
   const { classId } = req.params;
   const db = loadDB();
+  await bindSessions(db);
 
   // find students in class
   const students = db.students?.filter(stu => stu.classId === classId) || [];
@@ -735,7 +740,7 @@ function suppressCountSafe(n) {
 // ------------------------------
 // GET /api/reports/teacher/district/:districtId
 // ------------------------------
-router.get("/teacher/district/:districtId", canViewTeacherReports, (req, res) => {
+router.get("/teacher/district/:districtId", canViewTeacherReports, async (req, res) => {
   const { districtId } = req.params;
   try {
     assertCallerMayAccessDistrict(districtId);
@@ -746,6 +751,7 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, (req, res) =>
     throw err;
   }
   const db = loadDB();
+  await bindSessions(db);
 
   // Find all students in district
   const students = db.students?.filter(stu => stu.districtId === districtId) || [];
@@ -993,6 +999,7 @@ router.get("/dashboard", async (req, res) => {
     // the JSON file. Reading mongo here showed an empty dashboard beside
     // sessions that had just been completed.
     const db = loadDB();
+    await bindSessions(db);
     const sessions = db.sessions || [];
     const tasks = db.tasks || [];
     const students = db.students || [];

@@ -1,5 +1,6 @@
 import express from "express";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
+import { bindSessions, commitSessions } from "../sessions/sessionRepository.js";
 import { validateEntity } from "../../src/utils/schema.js";  // ✅ schema with metadata-based a/b/c
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
@@ -387,7 +388,7 @@ router.post("/:id/sync-irt", canAuthor, async (req, res) => {
 // ------------------------------
 // DELETE /api/questions/:id
 // ------------------------------
-router.delete("/:id", canAuthor, (req, res) => {
+router.delete("/:id", canAuthor, async (req, res) => {
   const { id } = req.params;
   const db = loadDB();
 
@@ -407,12 +408,14 @@ router.delete("/:id", canAuthor, (req, res) => {
   }
 
   // Cascade: clean sessions with references
+  await bindSessions(db);
   if (db.sessions) {
     db.sessions = db.sessions.map((s) => ({
       ...s,
       responses: (s.responses || []).filter((r) => r.questionId !== id),
     }));
   }
+  await commitSessions(db);
 
   saveDB(db);
   res.json({ success: true });

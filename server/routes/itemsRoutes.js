@@ -48,6 +48,7 @@ import {
 import { validateItemLifecycle } from "../utils/lifecycleValidation.js";
 import { canTransition, TRANSITIONS } from "../utils/lifecycleMatrix.js";
 import { liveSessionsForItem } from "../utils/sessionDependencies.js";
+import { bindSessions, ensureSessionCache } from "../sessions/sessionRepository.js";
 import { recordItemUsage } from "../utils/itemExposure.js";
 import {
   maySeeGlobalExposure,
@@ -672,7 +673,8 @@ function applyLifecycle(req, res, db, items, index, nextStatus, options = {}) {
   return res.json(compositeLibrary ? { ...updated, compositeLibrary } : updated);
 }
 
-router.patch("/:id/lifecycle", canAuthor, (req, res) => {
+router.patch("/:id/lifecycle", canAuthor, async (req, res) => {
+  await ensureSessionCache();
   const db = loadDB();
   const items = db.items || [];
   const index = items.findIndex((i) => i.id === req.params.id);
@@ -695,8 +697,9 @@ router.patch("/:id/lifecycle", canAuthor, (req, res) => {
 /* GET /api/items/:id/dependents
    What a suspension or archival would break. The UI asks before it
    offers the force option, so the warning names real sessions. */
-router.get("/:id/dependents", (req, res) => {
+router.get("/:id/dependents", async (req, res) => {
   const db = loadDB();
+  await bindSessions(db);
   const item = db.items?.find((i) => i.id === req.params.id);
 
   if (!item) return res.status(404).json({ error: "Item not found." });
@@ -954,8 +957,9 @@ router.post("/:id/record-usage", canAuthor, (req, res) => {
    DELETE
 ============================================================= */
 
-router.delete("/:id", canAuthor, (req, res) => {
+router.delete("/:id", canAuthor, async (req, res) => {
   const db = loadDB();
+  await bindSessions(db);
   const items = db.items || [];
   const item = items.find((i) => i.id === req.params.id);
 

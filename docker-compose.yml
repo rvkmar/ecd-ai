@@ -27,6 +27,8 @@ services:
       - CALIBRATION_QUEUE_DEPTH_ALARM=20
       - R_WORKERS=1
       - ECD_DB_FILE=/data/db.json
+      # Sessions leave /data/db.json for the Mongo `sessions` collection on boot.
+      - SESSIONS_BACKEND=mongo
       - ECD_BACKUP_DIR=/data/backups
       # D107: scheduled encrypted full backup. Set ECD_BACKUP_ENCRYPTION_KEY
       # in the host .env / secret manager — never commit the key value here.

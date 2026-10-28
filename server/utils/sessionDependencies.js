@@ -9,6 +9,7 @@
 // ------------------------------------------------------------
 
 import { SESSION_STATUS, LIVE_SESSION_STATUSES } from "../../src/utils/sessionStatus.js";
+import { sessionsForDependencyCheck } from "../sessions/sessionRepository.js";
 
 export { LIVE_SESSION_STATUSES };
 
@@ -48,7 +49,7 @@ export function sessionsDependingOnTaskModel(taskModelId, db) {
     items.filter((i) => i?.taskModelId === taskModelId).map((i) => i.id)
   );
 
-  return (db?.sessions || []).filter((session) => {
+  return sessionsForDependencyCheck(db).filter((session) => {
     if (!session) return false;
 
     const viaTasks = (session.taskIds || []).some((id) => taskIdsForModel.has(id));
@@ -92,7 +93,7 @@ export function sessionsDependingOnItem(itemId, db) {
     tasks.filter((t) => t?.taskModelId === item.taskModelId).map((t) => t.id)
   );
 
-  return (db?.sessions || []).filter((session) => {
+  return sessionsForDependencyCheck(db).filter((session) => {
     if (!session) return false;
 
     const answered = (session.responses || []).some((r) => r && r.itemId === itemId);

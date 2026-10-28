@@ -8,8 +8,9 @@
 // A migration is `{ id, description, run({ dryRun }) }`. `run` does its
 // own reading and writing and must itself skip writing when `dryRun` is
 // true -- the runner does not own a data source, because this app has
-// two: some collections (sessions, via server/routes/sessionRoutes.js)
-// live in src/utils/db-server.js's flat JSON file, while the governed
+// two: sessions live in the session repository (Mongo in production,
+// the JSON file in the harness; see server/sessions/sessionRepository.js),
+// while the governed
 // entities (competencyModels, evidenceModels, taskModels, items, ...)
 // live behind server/utils/dbAdapter.js, which is dual-mode (json or
 // Mongo) and async. A migration touching a dbAdapter-backed collection

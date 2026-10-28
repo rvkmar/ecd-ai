@@ -8,6 +8,7 @@
  import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
  import { autoFinishDueSessions } from "../utils/autoFinish.js";
  import { loadDB, saveDB } from "../../src/utils/db-server.js";
+ import { bindSessions, commitSessions } from "../sessions/sessionRepository.js";
  import { commitFinishedSession } from "../../src/utils/studentModelRecord.js";
 
  const router = express.Router();
@@ -17,9 +18,9 @@
  // POST /api/admin/auto-finish/run
  // Run sweeping job immediately (admin only)
  // ------------------------------
- router.post("/admin/auto-finish/run", authorizeRole(["admin"]), (req, res) => {
+ router.post("/admin/auto-finish/run", authorizeRole(["admin"]), async (req, res) => {
    try {
-     const changed = autoFinishDueSessions();
+     const changed = await autoFinishDueSessions();
      res.json({ success: true, changed });
    } catch (err) {
      console.error(err);
@@ -31,9 +32,10 @@
  // POST /api/sessions/:id/force-finish
  // Teacher/admin can force finish a session
  // ------------------------------
- router.post("/sessions/:id/force-finish", authorizeRole(["admin", "teacher"]), (req, res) => {
+ router.post("/sessions/:id/force-finish", authorizeRole(["admin", "teacher"]), async (req, res) => {
    const { id } = req.params;
    const db = loadDB();
+   await bindSessions(db);
  
    const idx = (db.sessions || []).findIndex((s) => s.id === id);
    if (idx === -1) {
@@ -61,6 +63,7 @@
  
    db.sessions[idx] = session;
    commitFinishedSession(db, session, { now: session.finishedAt });
+   await commitSessions(db);
    saveDB(db);
  
    res.json({ success: true, id });

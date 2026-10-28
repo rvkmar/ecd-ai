@@ -56,6 +56,7 @@ import auditLogRoutes from "./routes/auditLogRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import opsRoutes from "./routes/opsRoutes.js";
 import dataZipRoutes from "./routes/dataZipRoutes.js";
+import { bootSessionStore } from "./sessions/bootSessionStore.js";
 
 const app = express();
 app.use(express.json());
@@ -158,6 +159,18 @@ app.use((err, req, res, next) => {
 // No static serving here! Nginx handles frontend build
 // ------------------------------
 const PORT = process.env.PORT || 3000;
+
+async function main() {
+  try {
+    const sessionsBoot = await bootSessionStore();
+    if (sessionsBoot && !sessionsBoot.skipped && sessionsBoot.summary) {
+      console.log(sessionsBoot.summary);
+    }
+  } catch (err) {
+    console.error("session store boot failed:", err);
+    process.exit(1);
+  }
+
 app.listen(PORT, () => {
   console.log(`✅ ECD Assessment API running at http://localhost:${PORT}`);
   try {
@@ -198,3 +211,6 @@ app.listen(PORT, () => {
     }
   }
 });
+}
+
+main();

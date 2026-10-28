@@ -11,6 +11,7 @@ applied version (`GET /api/metrics` → `migrations`, D104).
 | `003-backfill-lifecycle-audit` | Reversible | Delete `auditLog` rows with `detail.reconstructed === true` (ids `aud-recon-*`). Source entity fields are unchanged by this migration. |
 | `004-preview-remove-lifecycle-meta` | Forward-only (no-op) | Never mutates data; applied mark is bookkeeping. Clear the log entry to re-preview. |
 | `005-remove-lifecycle-meta` | **Forward-only** | Fields are denormalized copies of `auditLog`. **Rollback = restore ECD JSON from a D107 encrypted backup taken before 005.** Do not invent blobs from audit rows. |
+| `011-sessions-to-mongo` | Reversible | JSON harness: no-op, sessions stay in `db.json`. Mongo or memory: copy sessions into the store, verify every file id is present, then delete the `sessions` array. A pre-migration copy is `backups/db.json.pre-sessions-mongo` (and a `db.json.<timestamp>` crash copy). Rollback: stop node, copy that file over `ECD_DB_FILE`, restore or drop the Mongo `sessions` collection from the pre-deploy `mongodump`, start the previous build. Safe to re-run. A second run with an empty file leaves store documents in place. |
 
 ## Rehearsal procedure
 

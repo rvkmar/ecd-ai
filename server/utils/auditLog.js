@@ -290,6 +290,23 @@ function collectSaveAudits(before, after) {
 }
 
 /**
+ * Same human-rating diff saveDB runs, for one session document.
+ * External session writes do not leave the session on the ECD file, so
+ * the whole-db diff would not see the change. Callers append the
+ * returned entries onto auditLog and save that file.
+ *
+ * @param {object | null} before
+ * @param {object | null} after
+ */
+export function auditsForSessionChange(before, after) {
+  if (!after) return [];
+  return collectSaveAudits(
+    { sessions: before ? [before] : [] },
+    { sessions: [after] }
+  );
+}
+
+/**
  * Append collected audits onto `db.auditLog` (mutates db).
  * @param {object} db
  * @param {object[]} entries

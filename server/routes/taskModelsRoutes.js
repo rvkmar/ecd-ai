@@ -6,6 +6,7 @@ import express from "express";
 import { authenticateToken } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
+import { bindSessions, commitSessions, ensureSessionCache } from "../sessions/sessionRepository.js";
 import { validateEntity, isLinkableEvidenceModel } from "../../src/utils/schema.js";
 import { validateTaskModelLifecycle } from "../utils/lifecycleValidation.js";
 import {
@@ -392,8 +393,9 @@ router.post("/bulk", canAuthor, (req, res) => {
    the body, so a stale or hostile client payload cannot smuggle a
    structural edit in alongside the transition.
 ===================================================== */
-router.put("/:id", canAuthor, (req, res) => {
+router.put("/:id", canAuthor, async (req, res) => {
 
+  await ensureSessionCache();
   const db = loadDB();
 
   // `db.taskModels?.findIndex(...)` yields undefined when the collection
@@ -579,8 +581,9 @@ router.put("/:id", canAuthor, (req, res) => {
 /* =====================================================
    🔹 CONFIRM (Reviewed → Confirmed)
 ===================================================== */
-router.post("/:id/confirm", canAuthor, (req, res) => {
+router.post("/:id/confirm", canAuthor, async (req, res) => {
 
+  await ensureSessionCache();
   const db = loadDB();
   const model = db.taskModels?.find(m => m.id === req.params.id);
 
@@ -631,9 +634,10 @@ router.post("/:id/confirm", canAuthor, (req, res) => {
    Deactivate dialog reads this so it can state the cost BEFORE the user
    commits, rather than reporting it afterwards.
 ===================================================== */
-router.get("/:id/dependents", (req, res) => {
+router.get("/:id/dependents", async (req, res) => {
 
   const db = loadDB();
+  await bindSessions(db);
   const model = db.taskModels?.find(m => m.id === req.params.id);
 
   if (!model) return res.status(404).json({ error: "TaskModel not found" });
@@ -676,9 +680,10 @@ router.get("/:id/dependents", (req, res) => {
    the closure still validates, still scores and still reports. See
    forceCloseSession() in server/utils/sessionDependencies.js.
 ===================================================== */
-router.post("/:id/force-deactivate", authorizeRole(["admin", "district"]), (req, res) => {
+router.post("/:id/force-deactivate", authorizeRole(["admin", "district"]), async (req, res) => {
 
   const db = loadDB();
+  await bindSessions(db);
   const idx = (db.taskModels || []).findIndex(m => m.id === req.params.id);
 
   if (idx === -1) return res.status(404).json({ error: "TaskModel not found" });
@@ -737,6 +742,7 @@ router.post("/:id/force-deactivate", authorizeRole(["admin", "district"]), (req,
   // D109: force-deactivate detail stays in the HTTP response + structured
   // log; deactivation blob removed by 005 / no longer written.
 
+  await commitSessions(db);
   saveDB(db);
 
   logger.warn("taskModel.force_deactivate", {

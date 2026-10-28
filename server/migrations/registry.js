@@ -11,6 +11,7 @@ import qMatrixDomainAnalysisLink from "./migrations/007-qmatrix-domain-analysis-
 import perspectiveInheritance from "./migrations/008-perspective-inheritance.js";
 import domainAnalysisEntryIds from "./migrations/009-domain-analysis-entry-ids.js";
 import parameterSetStatus from "./migrations/010-parameter-set-status.js";
+import sessionsToMongo from "./migrations/011-sessions-to-mongo.js";
 
 export const MIGRATION_REGISTRY = [
   normalizeSessionStatus,
@@ -23,6 +24,7 @@ export const MIGRATION_REGISTRY = [
   perspectiveInheritance,
   domainAnalysisEntryIds,
   parameterSetStatus,
+  sessionsToMongo,
 ];
 
 export function migrationRegistryIds() {

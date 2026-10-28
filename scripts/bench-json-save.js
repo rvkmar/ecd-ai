@@ -27,6 +27,8 @@ const targetBytes = Number(flag("--bytes", 5 * 1024 * 1024));
 const saves = Number(flag("--saves", 30));
 const warmup = Number(flag("--warmup", 2));
 const mode = flag("--mode", "scoped");
+const sessionCap = Number(flag("--sessions", 0));
+const compare = args.includes("--compare");
 
 if (!Number.isFinite(targetBytes) || targetBytes < 1024) {
   console.error("--bytes must be a number of bytes >= 1024");
@@ -75,9 +77,23 @@ function buildDb(target) {
       status: "completed",
     });
     guard += 1;
+    if (sessionCap > 0 && sessions.length >= sessionCap) break;
     if (sessions.length % 200 !== 0) continue;
     const pretty = JSON.stringify(shell(sessions), null, 2);
     if (Buffer.byteLength(pretty) >= target) break;
+  }
+  if (sessionCap > 0 && sessions.length > sessionCap) {
+    sessions.length = sessionCap;
+  }
+  if (sessionCap > 0 && sessions.length > 1) {
+    const current = Buffer.byteLength(JSON.stringify(shell(sessions)));
+    if (current < target) {
+      const each = Math.floor((target - current) / sessions.length);
+      const pad = "p".repeat(Math.max(0, Math.min(each, 80000)));
+      if (pad) {
+        for (const row of sessions) row.pad = pad;
+      }
+    }
   }
   return shell(sessions);
 }
@@ -178,22 +194,78 @@ try {
   const result =
     mode === "scoped" ? runWithTenancy(student, runLoop) : runLoop();
   const endBytes = fs.statSync(process.env.ECD_DB_FILE).size;
-  console.log(
-    JSON.stringify(
-      {
-        mode,
-        targetBytes,
-        startBytes,
-        endBytes,
-        warmup,
-        saves,
-        meanSaveMs: Number(result.meanSaveMs.toFixed(2)),
-        meanSubmitMs: Number(result.meanSubmitMs.toFixed(2)),
-      },
-      null,
-      2
-    )
-  );
+  const report = {
+    mode,
+    targetBytes,
+    sessionCount: db.sessions.length,
+    startBytes,
+    endBytes,
+    warmup,
+    saves,
+    before: {
+      meanSaveMs: Number(result.meanSaveMs.toFixed(2)),
+      meanSubmitMs: Number(result.meanSubmitMs.toFixed(2)),
+    },
+    meanSaveMs: Number(result.meanSaveMs.toFixed(2)),
+    meanSubmitMs: Number(result.meanSubmitMs.toFixed(2)),
+  };
+
+  if (compare) {
+    const { forgetDbCache } = await import("../src/utils/db-server.js");
+    const sessions = JSON.parse(fs.readFileSync(process.env.ECD_DB_FILE, "utf8")).sessions;
+    const shellOnly = JSON.parse(fs.readFileSync(process.env.ECD_DB_FILE, "utf8"));
+    delete shellOnly.sessions;
+    fs.writeFileSync(process.env.ECD_DB_FILE, JSON.stringify(shellOnly));
+    forgetDbCache();
+    process.env.SESSIONS_BACKEND = "memory";
+    const repo = await import("../server/sessions/sessionRepository.js");
+    repo.resetSessionStoreForTests();
+    await repo.upsertSessions(sessions);
+
+    async function oneExternal(i) {
+      const started = performance.now();
+      const live = loadDB();
+      const session = await repo.getSessionById(live, "s-me");
+      session.responses.push({
+        taskId: "t0",
+        rawAnswer: { selected: i % 2 === 0 ? "A" : "B" },
+        timestamp: new Date(1_700_000_000_000 + i).toISOString(),
+      });
+      const saveStarted = performance.now();
+      await repo.replaceStoredSession(live, session);
+      saveDB(live);
+      const saveEnded = performance.now();
+      return {
+        saveMs: saveEnded - saveStarted,
+        submitMs: saveEnded - started,
+      };
+    }
+
+    async function externalLoop() {
+      const samples = [];
+      const total = warmup + saves;
+      for (let i = 0; i < total; i++) {
+        const sample = await oneExternal(i);
+        if (i >= warmup) samples.push(sample);
+      }
+      const mean = (key) =>
+        samples.reduce((sum, row) => sum + row[key], 0) / samples.length;
+      return { meanSaveMs: mean("saveMs"), meanSubmitMs: mean("submitMs") };
+    }
+
+    const after =
+      mode === "scoped" ? await runWithTenancy(student, externalLoop) : await externalLoop();
+    const afterBytes = fs.statSync(process.env.ECD_DB_FILE).size;
+    report.after = {
+      meanSaveMs: Number(after.meanSaveMs.toFixed(2)),
+      meanSubmitMs: Number(after.meanSubmitMs.toFixed(2)),
+      fileBytes: afterBytes,
+      store: "memory",
+    };
+    delete process.env.SESSIONS_BACKEND;
+  }
+
+  console.log(JSON.stringify(report, null, 2));
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });
 }
