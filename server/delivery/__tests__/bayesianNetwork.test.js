@@ -214,6 +214,41 @@ describe("accumulateEvidence writes the Bayesian network posterior", () => {
     expect(validateEntity("sessions", { ...session, status: "ready", responses: [] }, db).valid).toBe(true);
   });
 
+  it("R10: Bayesian network ignores jointPrior on continuous SMVs and still writes bnPosteriors", () => {
+    const db = bnDb({ cpt: { o1: { not_mastered: 0.2, mastered: 0.8 } } });
+    db.competencyModels[0].smVariables.push(
+      {
+        id: "theta-a",
+        type: "continuous",
+        scale: { min: -4, max: 4 },
+        priorDistribution: { family: "normal", params: { mean: 0, sd: 1 } },
+      },
+      {
+        id: "theta-b",
+        type: "continuous",
+        scale: { min: -4, max: 4 },
+        priorDistribution: { family: "normal", params: { mean: 0, sd: 1 } },
+      }
+    );
+    db.competencyModels[0].jointPrior = {
+      family: "multivariate_normal",
+      parameterization: "covariance",
+      smvIds: ["theta-a", "theta-b"],
+      matrix: [[1, 0.6], [0.6, 1]],
+    };
+
+    const session = { id: "s1", status: "in_progress", responses: [response()] };
+    const accumulation = accumulateEvidence(session, db);
+    expect(accumulation.posteriors[0].supported).toBe(true);
+    expect(accumulation.posteriors[0].modelFamily).toBe("bayesian_network");
+    expect(accumulation.posteriors[0].method).toBe("exact-bayes");
+    expect(accumulation.posteriors[0].estimate).toBeCloseTo(0.8, 12);
+
+    applyPosteriorsToSession(session, accumulation, { now: "2026-10-27T00:00:00.000Z" });
+    expect(session.studentModel.bnPosteriors.smv1).toBeCloseTo(0.8, 12);
+    expect(session.studentModel.smvPosteriors["theta-a"]).toBeUndefined();
+  });
+
   it("refuses a continuous student model variable instead of scoring it", () => {
     const db = bnDb({
       smv: {

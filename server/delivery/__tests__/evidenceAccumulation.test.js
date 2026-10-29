@@ -760,6 +760,53 @@ describe("accumulateEvidence — refuses rather than guessing", () => {
     expect(posteriors[0].smvId).toBe("attr-a");
   });
 
+  it("R10: DINA ignores jointPrior on continuous SMVs and still reports attribute mastery", () => {
+    const db = {
+      competencyModels: [{
+        id: "cm1", versionNumber: 1,
+        smVariables: [
+          { id: "attr-a", type: "binary", priorDistribution: { family: "bernoulli", params: { p: 0.5 } } },
+          { id: "theta-a", type: "continuous", priorDistribution: { family: "normal", params: { mean: 0, sd: 1 } } },
+          { id: "theta-b", type: "continuous", priorDistribution: { family: "normal", params: { mean: 0, sd: 1 } } },
+        ],
+        jointPrior: {
+          family: "multivariate_normal",
+          parameterization: "covariance",
+          smvIds: ["theta-a", "theta-b"],
+          matrix: [[1, 0.6], [0.6, 1]],
+        },
+      }],
+      competencies: [{ id: "c1", modelId: "cm1" }],
+      evidenceModels: [{
+        id: "em1", competencyId: "c1", versionNumber: 1,
+        observables: [{ id: "o1", evidenceRule: { direction: "supports", strengthLevel: 4 } }],
+        statisticalModels: [{
+          id: "sm1", type: "dina", active: true,
+          structureConfig: { qMatrixId: "qm1" }, parameterSets: [],
+        }],
+      }],
+      qMatrixModels: [{
+        id: "qm1", competencyModelId: "cm1", attributeIds: ["attr-a"],
+        entries: [{ itemId: "item1", attributeId: "attr-a" }],
+      }],
+    };
+
+    const response = {
+      taskId: "t1", itemId: "item1", evidenceModelId: "em1",
+      parameterSetId: null, parameterSource: "pilot",
+      pilotParams: { slip: 0.1, guess: 0.2 },
+      observationId: "o1", observableId: "o1", activated: true, direction: "supports", strength: 4,
+    };
+
+    const { posteriors } = accumulateEvidence(sessionWith([response]), db);
+    expect(posteriors).toHaveLength(1);
+    expect(posteriors[0].supported).toBe(true);
+    expect(posteriors[0].modelFamily).toBe("dina");
+    expect(posteriors[0].method).toBe("attribute-mastery-posterior");
+    expect(posteriors[0].smvId).toBe("attr-a");
+    expect(posteriors[0].method).not.toBe("eap-joint");
+  });
+
   it("dispatches a 'gdina' group with no parameterSetId but a pinned conjunctive table to the attribute-mastery branch", () => {
     const db = {
       competencyModels: [{
@@ -1719,6 +1766,29 @@ describe("accumulateEvidence — the raw-score family end to end", () => {
     const up = accumulateEvidence(sessionWith([makeResponse({ activated: true })]), db);
     const down = accumulateEvidence(sessionWith([makeResponse({ activated: false })]), db);
     expect(up.posteriors[0].estimate).toBeGreaterThan(down.posteriors[0].estimate);
+  });
+
+  it("R10: CTT ignores jointPrior and still reports a raw score, not a joint EAP", () => {
+    const thetaA = { id: "theta-a", type: "continuous", priorDistribution: { family: "normal", params: { mean: 0, sd: 1 } } };
+    const thetaB = { id: "theta-b", type: "continuous", priorDistribution: { family: "normal", params: { mean: 0, sd: 1 } } };
+    const db = rawScoreDb({ type: "ctt", smv: thetaA });
+    db.competencyModels[0].smVariables = [thetaA, thetaB];
+    db.competencyModels[0].jointPrior = {
+      family: "multivariate_normal",
+      parameterization: "covariance",
+      smvIds: ["theta-a", "theta-b"],
+      matrix: [[1, 0.6], [0.6, 1]],
+    };
+    db.evidenceModels[0].statisticalModels[0].structureConfig = { smvId: "theta-a" };
+
+    const { posteriors } = accumulateEvidence(sessionWith([makeResponse()]), db);
+    expect(posteriors).toHaveLength(1);
+    expect(posteriors[0].supported).toBe(true);
+    expect(posteriors[0].modelFamily).toBe("ctt");
+    expect(posteriors[0].method).toBe("weighted-proportion");
+    expect(posteriors[0].smvId).toBe("theta-a");
+    const expected = estimateRawScore([{ u: 1, weight: 1 }]);
+    expect(posteriors[0].estimate).toBeCloseTo(expected.estimate, 15);
   });
 });
 

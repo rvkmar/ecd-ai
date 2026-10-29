@@ -272,4 +272,31 @@ describe("accumulateEvidence — D129 joint dispatch", () => {
     expect(posteriors[0].reason).toMatch(/correlated with 2 other/);
     expect(posteriors[0]).not.toHaveProperty("estimate");
   });
+
+  it("R10: disjoint pairs in a larger matrix still update the one partner", () => {
+    const db = dbWithJoint({
+      family: "multivariate_normal",
+      parameterization: "covariance",
+      smvIds: ["theta-a", "theta-b", "theta-c", "theta-d"],
+      matrix: [
+        [1, 0.6, 0, 0],
+        [0.6, 1, 0, 0],
+        [0, 0, 1, 0.6],
+        [0, 0, 0.6, 1],
+      ],
+    });
+    db.competencyModels[0].smVariables.push(continuous("theta-c"), continuous("theta-d"));
+
+    const { posteriors } = accumulateEvidence(
+      { id: "s1", status: "in_progress", responses: [response()] },
+      db
+    );
+    const byId = Object.fromEntries(posteriors.map((p) => [p.smvId, p]));
+    expect(byId["theta-a"].supported).toBe(true);
+    expect(byId["theta-b"].supported).toBe(true);
+    expect(byId["theta-a"].method).toBe("eap-joint");
+    expect(byId["theta-b"].jointRole).toBe("correlated");
+    expect(byId["theta-c"]).toBeUndefined();
+    expect(byId["theta-d"]).toBeUndefined();
+  });
 });

@@ -1,13 +1,15 @@
 // src/utils/__tests__/d128JointPrior.test.js
 //
 // D128: continuous joint prior schema — shape, defaults, PSD refusal.
-// Does not touch accumulation (D129).
+// R10: one correlated partner is the design limit (confirm/strict).
+// Scoring of that partner is D129 and is not reopened here.
 
 import { describe, it, expect } from "vitest";
 import { validateEntity } from "../schema.js";
 import {
   defaultIndependentJointPrior,
   jointPriorErrors,
+  jointPriorPartnerLimitErrors,
   isPositiveSemiDefinite,
 } from "../jointPrior.js";
 
@@ -217,5 +219,69 @@ describe("jointPriorErrors / validateEntity (D128)", () => {
         draftModel().smVariables
       ).some((m) => /must be 1 for a correlation/i.test(m))
     ).toBe(true);
+  });
+});
+
+describe("R10 — one correlated partner is the design limit", () => {
+  const three = [continuous("thetaA"), continuous("thetaB"), continuous("thetaC")];
+  const four = [...three, continuous("thetaD")];
+
+  const threeWay = {
+    family: "multivariate_normal",
+    parameterization: "covariance",
+    smvIds: ["thetaA", "thetaB", "thetaC"],
+    matrix: [
+      [1, 0.4, 0.4],
+      [0.4, 1, 0],
+      [0.4, 0, 1],
+    ],
+  };
+
+  const disjointPairs = {
+    family: "multivariate_normal",
+    parameterization: "covariance",
+    smvIds: ["thetaA", "thetaB", "thetaC", "thetaD"],
+    matrix: [
+      [1, 0.4, 0, 0],
+      [0.4, 1, 0, 0],
+      [0, 0, 1, 0.4],
+      [0, 0, 0.4, 1],
+    ],
+  };
+
+  it("shape still accepts a well-formed three-way joint (draft can hold it)", () => {
+    expect(jointPriorErrors(threeWay, three)).toEqual([]);
+    const { errors } = validateEntity(
+      "competencyModels",
+      draftModel({ smVariables: three, jointPrior: threeWay }),
+      {},
+      { strict: false }
+    );
+    expect(errors.some((m) => /correlated with 2 other/.test(m))).toBe(false);
+  });
+
+  it("strict/confirm refuses an SMV correlated with two partners", () => {
+    expect(
+      jointPriorPartnerLimitErrors(threeWay).some((m) =>
+        /thetaA' is correlated with 2 other continuous SMVs \(thetaB, thetaC\)/.test(m)
+      )
+    ).toBe(true);
+    const { errors } = validateEntity(
+      "competencyModels",
+      draftModel({ smVariables: three, jointPrior: threeWay }),
+      {}
+    );
+    expect(errors.some((m) => /correlated with 2 other/.test(m))).toBe(true);
+  });
+
+  it("accepts a larger matrix of disjoint pairs under strict", () => {
+    expect(jointPriorErrors(disjointPairs, four)).toEqual([]);
+    expect(jointPriorPartnerLimitErrors(disjointPairs)).toEqual([]);
+    const { errors } = validateEntity(
+      "competencyModels",
+      draftModel({ smVariables: four, jointPrior: disjointPairs }),
+      {}
+    );
+    expect(errors).toEqual([]);
   });
 });

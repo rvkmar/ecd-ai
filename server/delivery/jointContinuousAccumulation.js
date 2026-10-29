@@ -1,18 +1,25 @@
 // server/delivery/jointContinuousAccumulation.js
 //
-// D129 / W26. Continuous SMVs that share a D128 jointPrior are updated
-// together: evidence about the measured variable moves a correlated
-// partner. This is not the DINA 2^K attribute-profile joint.
+// D129 / W26 / R10. Continuous SMVs that share a D128 jointPrior are
+// updated together: evidence about the measured variable moves a
+// correlated partner. This is not the DINA 2^K attribute-profile joint.
 //
-// Scope is one correlated partner (a 2×2 block). A measured SMV correlated
-// with two or more others is refused — dropping a dimension would look
-// like a posterior and be wrong. Zero off-diagonal covariance is not
-// handled here; the caller keeps the existing one-dimensional EAP so a
-// diagonal joint prior is byte-identical to independent marginals.
+// Scope is one correlated partner (a 2×2 block) — a recorded design
+// limit, not a full multivariate EAP, and not a reopen of D129. A
+// measured SMV correlated with two or more others is refused — dropping
+// a dimension would look like a posterior and be wrong. The partner cap
+// is JOINT_PRIOR_MAX_CORRELATED_PARTNERS in jointPrior.js, shared with
+// schema confirm. Zero off-diagonal covariance is not handled here; the
+// caller keeps the existing one-dimensional EAP so a diagonal joint
+// prior is byte-identical to independent marginals.
 
-import { jointPriorErrors } from "../../src/utils/jointPrior.js";
+import {
+  correlatedPartnerIndexes,
+  jointPriorErrors,
+  jointPriorPartnerLimitMessage,
+  JOINT_PRIOR_MAX_CORRELATED_PARTNERS,
+} from "../../src/utils/jointPrior.js";
 
-const ZERO_COVARIANCE = 1e-12;
 const P_EPSILON = 1e-12;
 
 /* Same coverage rules as evidenceAccumulation's one-dimensional grid.
@@ -62,19 +69,17 @@ export function decideJointContinuousUpdate(competencyModel, measuredSmvId) {
   }
 
   const idx = joint.smvIds.indexOf(measuredSmvId);
-  const partnerIndexes = [];
-  for (let j = 0; j < joint.smvIds.length; j += 1) {
-    if (j === idx) continue;
-    if (Math.abs(cov.matrix[idx][j]) > ZERO_COVARIANCE) partnerIndexes.push(j);
-  }
+  const partnerIndexes = correlatedPartnerIndexes(cov.matrix, idx);
 
   if (partnerIndexes.length === 0) return { action: "independent" };
 
-  if (partnerIndexes.length > 1) {
-    const names = partnerIndexes.map((j) => joint.smvIds[j]).join(", ");
+  if (partnerIndexes.length > JOINT_PRIOR_MAX_CORRELATED_PARTNERS) {
     return {
       action: "refuse",
-      reason: `Student Model Variable '${measuredSmvId}' is correlated with ${partnerIndexes.length} other continuous SMVs (${names}). Joint accumulation updates one partner; refusing rather than dropping a dimension.`,
+      reason: jointPriorPartnerLimitMessage(
+        measuredSmvId,
+        partnerIndexes.map((j) => joint.smvIds[j])
+      ),
     };
   }
 

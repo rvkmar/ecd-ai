@@ -1,8 +1,9 @@
 // src/utils/jointPrior.js
 //
-// D128 / W26 / G14 (schema half). A Competency Model may declare a joint
-// prior over two or more *continuous* Student Model Variables — a
-// multivariate normal with an authored covariance or correlation matrix.
+// D128 / W26 / G14 (schema half) and R10 (design limit). A Competency
+// Model may declare a joint prior over two or more *continuous* Student
+// Model Variables — a multivariate normal with an authored covariance or
+// correlation matrix.
 //
 // This is deliberately NOT the DINA/G-DINA attribute-profile joint
 // (server/delivery/attributeAccumulation.js), which already maintains a
@@ -10,14 +11,22 @@
 // is how the highest-risk accumulation code gets confused; binary SMVs
 // are refused here.
 //
-// Accumulation that *uses* this joint prior is D129 (never-compress).
-// Today: shape, defaults, and validation only.
+// Scoring (D129, never-compress) consumes this field for continuous
+// IRT/Rasch with at most one correlated partner. A full multivariate EAP
+// is out of scope and is not a reopen of D129. BN, DINA, and CTT do not
+// read this field. An n-dimensional matrix of disjoint pairs is still
+// valid; an SMV with two or more non-zero off-diagonals is refused at
+// confirm and at scoring rather than dropping a dimension.
 
 export const JOINT_PRIOR_FAMILIES = Object.freeze(["multivariate_normal"]);
 export const JOINT_PRIOR_PARAMETERIZATIONS = Object.freeze([
   "covariance",
   "correlation",
 ]);
+
+/** Scoring and confirm share this cap so they cannot drift. */
+export const JOINT_PRIOR_MAX_CORRELATED_PARTNERS = 1;
+export const JOINT_PRIOR_ZERO_COVARIANCE = 1e-12;
 
 const SYMMETRY_EPS = 1e-9;
 const PSD_EPS = 1e-10;
@@ -209,6 +218,64 @@ export function jointPriorErrors(jointPrior, smVariables) {
     );
   }
 
+  return errors;
+}
+
+/**
+ * Off-diagonal indexes whose absolute value exceeds the zero cutoff.
+ * Used on the authored matrix (schema) and on the converted covariance
+ * (scoring); zeros stay zeros under correlation → covariance.
+ */
+export function correlatedPartnerIndexes(
+  matrix,
+  idx,
+  eps = JOINT_PRIOR_ZERO_COVARIANCE
+) {
+  const partners = [];
+  if (!Array.isArray(matrix) || !Array.isArray(matrix[idx])) return partners;
+  for (let j = 0; j < matrix.length; j += 1) {
+    if (j === idx) continue;
+    const v = matrix[idx][j];
+    if (typeof v === "number" && Number.isFinite(v) && Math.abs(v) > eps) {
+      partners.push(j);
+    }
+  }
+  return partners;
+}
+
+export function jointPriorPartnerLimitMessage(smvId, partnerIds) {
+  const names = Array.isArray(partnerIds) ? partnerIds.join(", ") : "";
+  const n = Array.isArray(partnerIds) ? partnerIds.length : 0;
+  return `Student Model Variable '${smvId}' is correlated with ${n} other continuous SMVs (${names}). Joint accumulation updates one partner; refusing rather than dropping a dimension.`;
+}
+
+/**
+ * R10 design limit. Empty when every SMV has at most one correlated
+ * partner (including a larger matrix of disjoint pairs). Shape errors
+ * stay in jointPriorErrors so a draft can still hold a well-formed
+ * three-way joint while it is being edited; confirm (strict) and scoring
+ * refuse it.
+ */
+export function jointPriorPartnerLimitErrors(jointPrior) {
+  const errors = [];
+  if (!jointPrior || typeof jointPrior !== "object" || Array.isArray(jointPrior)) {
+    return errors;
+  }
+  const { smvIds, matrix } = jointPrior;
+  if (!Array.isArray(smvIds) || !Array.isArray(matrix) || matrix.length !== smvIds.length) {
+    return errors;
+  }
+  for (let i = 0; i < smvIds.length; i += 1) {
+    const partners = correlatedPartnerIndexes(matrix, i);
+    if (partners.length > JOINT_PRIOR_MAX_CORRELATED_PARTNERS) {
+      errors.push(
+        jointPriorPartnerLimitMessage(
+          smvIds[i],
+          partners.map((j) => smvIds[j])
+        )
+      );
+    }
+  }
   return errors;
 }
 

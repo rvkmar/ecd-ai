@@ -37,7 +37,8 @@ import { entriesForResponse } from "../../src/utils/qMatrixEntries.js";
 // 2. THE PRIOR ASSUMES ATTRIBUTE INDEPENDENCE; THE POSTERIOR DOES NOT.
 //    Competency models declare a prior per binary SMV, one at a time --
 //    there is nowhere to author a joint distribution over profiles, and
-//    inventing correlations that nobody stated would be a fabrication. So
+//    inventing correlations that nobody stated would be a fabrication.
+//    D128 jointPrior is a continuous MVN and is not read here (R10). So
 //    the prior is the product of the marginals. The POSTERIOR is computed
 //    over all 2^K profiles jointly and only then marginalised, so the
 //    dependence the data induces between attributes is preserved. This is

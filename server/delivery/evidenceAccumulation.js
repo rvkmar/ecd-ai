@@ -82,7 +82,8 @@ export function calibratedIrtParams(parameterSet, { observableId, itemId } = {})
    posterior_threshold") and permits them on any ORDERED Student Model
    Variable -- continuous, binary or ordinal, but never categorical, since
    a total presupposes that more evidence means further along the
-   construct, which is meaningless for an unordered set of states. */
+   construct, which is meaningless for an unordered set of states.
+   jointPrior is not an input (R10): a raw score is not a latent EAP. */
 export const RAW_SCORE_MODEL_FAMILIES = ["ctt", "sum", "threshold"];
 const RAW_SCORE_SMV_TYPES = ["continuous", "binary", "ordinal"];
 
@@ -1199,10 +1200,12 @@ export function accumulateEvidence(session, db, options = {}) {
       continue;
     }
 
-    /* D129: a non-zero continuous joint prior updates the measured SMV and
-       its one correlated partner together. A zero off-diagonal (or no
-       jointPrior) falls through to the 1D EAP below, which is the
-       byte-identical independent-marginal path. */
+    /* D129 / R10: a non-zero continuous joint prior updates the measured
+       SMV and its one correlated partner together. Two or more partners
+       are refused rather than dropping a dimension. A zero off-diagonal
+       (or no jointPrior) falls through to the 1D EAP below, which is the
+       byte-identical independent-marginal path. A full multivariate EAP
+       is out of scope and does not reopen D129. */
     const competencyModel = (db.competencyModels || []).find((m) => m.id === competencyModelId);
     const jointDecision = decideJointContinuousUpdate(competencyModel, smVariable.id);
 

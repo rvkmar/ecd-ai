@@ -80,7 +80,7 @@ import {
   vocabularyValuesForDesignFeature,
 } from "./taskModelDesignFeatureRegistry.js";
 import { exemplarCount, levelValues } from "./rubricDelivery.js";
-import { jointPriorErrors } from "./jointPrior.js";
+import { jointPriorErrors, jointPriorPartnerLimitErrors } from "./jointPrior.js";
 import { deliveryModelBindingErrors } from "./deliveryModelReadiness.js";
 import { studentModelRecordErrors } from "./studentModelRecord.js";
 import { taskSpecErrors } from "./taskSpecReadiness.js";
@@ -246,12 +246,15 @@ export const schema = {
     // is a vector of `binary`-type entries.
     smVariables: 'array',
 
-    // D128 / G14 (schema). Optional joint prior over ≥2 continuous SMVs:
-    // { family: "multivariate_normal", parameterization: "covariance"|
-    // "correlation", smvIds, matrix }. Absent ⇒ independent marginals
-    // (today's behaviour). Binary attribute-profile joints stay in DINA
-    // accumulation — see jointPrior.js. Using the joint at score time is
-    // D129 (never-compress); this field is validation + shape only.
+    // D128 / G14 (schema) + R10. Optional joint prior over ≥2 continuous
+    // SMVs: { family: "multivariate_normal", parameterization:
+    // "covariance"|"correlation", smvIds, matrix }. Absent ⇒ independent
+    // marginals. Binary attribute-profile joints stay in DINA
+    // accumulation — see jointPrior.js. D129 scores at most one
+    // correlated partner (continuous IRT/Rasch). Confirm refuses an SMV
+    // with two or more non-zero off-diagonals; disjoint pairs in a larger
+    // matrix are still valid. BN, DINA, and CTT ignore this field. A full
+    // multivariate EAP is out of scope and does not reopen D129.
     jointPrior: 'object',
 
     // See ecdVocabulary.js §7. Optional single enum, validated if present.
@@ -6092,11 +6095,18 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       });
     }
 
-    // D128: optional continuous joint prior. Validated whenever present so a
-    // malformed covariance cannot sit on a draft and become nonsense later.
+    // D128: optional continuous joint prior. Shape is validated whenever
+    // present so a malformed covariance cannot sit on a draft. R10's
+    // one-partner cap is a confirm/strict gate: a draft may still hold a
+    // well-formed three-way joint while it is being edited.
     if (obj.jointPrior !== undefined && obj.jointPrior !== null) {
       for (const msg of jointPriorErrors(obj.jointPrior, obj.smVariables)) {
         errors.push(msg);
+      }
+      if (strict) {
+        for (const msg of jointPriorPartnerLimitErrors(obj.jointPrior)) {
+          errors.push(msg);
+        }
       }
     }
   }
