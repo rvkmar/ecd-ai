@@ -54,7 +54,7 @@
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.544.0",
     "mathjs": "^15.2.0",
-    "mongoose": "^8.19.1",
+    "mongoose": "^9.11.2",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
     "react": "^19.3.1",
