@@ -102,6 +102,10 @@ export const schema = {
     taskModelId: 'string',        // REQUIRED
     taskModelVersion: 'number',   // version lock
     observationId: 'string',      // must be declared in TaskModel.expectedObservations
+    // D155: optional citation of a generated task spec. Stimulus and
+    // scoring stay authored — this is not AIG. When set it must name a
+    // spec whose template is bound to this item's Task Model.
+    taskSpecId: 'string',
     evidenceModelId: 'string',    // derived via TaskModel → Observable
     evidenceModelVersion: 'number',
 
@@ -4265,6 +4269,27 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           );
           if (placement.applicable && !placement.ok) {
             errors.push(placement.message);
+          }
+        }
+      }
+    }
+
+    if (obj.taskSpecId != null && String(obj.taskSpecId).trim() !== "") {
+      const specId = String(obj.taskSpecId).trim();
+      if (db) {
+        const spec = (db.taskSpecs || []).find((row) => row && row.id === specId);
+        if (!spec) {
+          errors.push(`taskSpecId '${specId}' does not match a generated task spec.`);
+        } else {
+          const tpl = (db.templates || []).find((row) => row && row.id === spec.templateId);
+          if (!tpl) {
+            errors.push(
+              `taskSpecId '${specId}' cites a spec whose template '${spec.templateId}' is missing.`
+            );
+          } else if (obj.taskModelId && tpl.taskModelId !== obj.taskModelId) {
+            errors.push(
+              `taskSpecId '${specId}' was generated from Task Model '${tpl.taskModelId}', not this item's '${obj.taskModelId}'.`
+            );
           }
         }
       }

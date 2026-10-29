@@ -244,6 +244,7 @@ export function ItemWizardProvider({ children, initialItem }) {
         taskModelId: tm?.id ?? null,
         taskModelVersion: tm?.versionNumber ?? null,
         observationId: null,
+        taskSpecId: null,
         evidenceModelId: null,
         evidenceModelVersion: null,
         interaction: { type: "", responseComponents: [], config: {} },
@@ -311,6 +312,18 @@ export function ItemWizardProvider({ children, initialItem }) {
       }));
     },
     [isLocked, safeSetItem, taskModel]
+  );
+
+  const bindTaskSpec = useCallback(
+    (taskSpecId) => {
+      if (isLocked) return;
+      const next = String(taskSpecId || "").trim();
+      safeSetItem((prev) => ({
+        ...prev,
+        taskSpecId: next || null,
+      }));
+    },
+    [isLocked, safeSetItem]
   );
 
   /* =====================================================
@@ -592,6 +605,7 @@ export function ItemWizardProvider({ children, initialItem }) {
     mergeObject,
     bindTaskModel,
     bindObservation,
+    bindTaskSpec,
 
     readiness,
     failing,

@@ -28,9 +28,18 @@ import { useItemWizard } from "../ItemWizardContext";
 import { useTaskModels } from "@/api/queries/taskModels";
 import { useEvidenceModels } from "@/api/queries/evidenceModels";
 import { useCompetencies } from "@/api/queries/competencies";
+import { useTemplates } from "@/api/queries/templates";
+import { useTaskSpecs } from "@/api/queries/taskSpecs";
 import { isInstantiableTaskModel } from "@/utils/schema";
 import { versionLabel, interactionLabel } from "../../itemConstants";
 import { interactionCompatibilityMessage } from "@/utils/ecdVocabulary";
+
+function specAssignmentLabel(spec) {
+  const parts = (spec?.tmvAssignment || [])
+    .map((row) => row?.value)
+    .filter((value) => value != null && String(value).trim() !== "");
+  return parts.length ? parts.join(" · ") : spec?.id;
+}
 
 function Field({ label, value, mono = false }) {
   return (
@@ -58,10 +67,24 @@ export default function Step1Instantiation() {
     chainLoading,
     bindTaskModel,
     bindObservation,
+    bindTaskSpec,
     canEdit,
   } = useItemWizard();
 
   const { data: allTaskModels = [], isLoading } = useTaskModels();
+  const { data: templates = [] } = useTemplates();
+  const { data: taskSpecs = [] } = useTaskSpecs();
+  const specsForTaskModel = useMemo(() => {
+    if (!item.taskModelId) return [];
+    const templateIds = new Set(
+      (templates || [])
+        .filter((row) => row && row.taskModelId === item.taskModelId)
+        .map((row) => row.id)
+    );
+    return (taskSpecs || []).filter(
+      (spec) => spec && templateIds.has(spec.templateId)
+    );
+  }, [item.taskModelId, templates, taskSpecs]);
 
   /* The observation picker needs each observable's STATEMENT to be
      readable, and the statement lives on the Evidence Model. The wizard
@@ -222,6 +245,33 @@ export default function Step1Instantiation() {
               nothing for an item to elicit. Add one on the Task Model first.
             </div>
           )}
+        </div>
+      )}
+
+      {taskModel && (
+        <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <label htmlFor="item-wizard-task-spec" className="mb-1.5 block text-sm font-medium text-slate-700">
+            Generated task spec (optional)
+          </label>
+          <select
+            id="item-wizard-task-spec"
+            value={item.taskSpecId || ""}
+            disabled={!canEdit}
+            onChange={(e) => bindTaskSpec(e.target.value || null)}
+            className={selectClasses}
+          >
+            <option value="">— None — authored item, not from a spec —</option>
+            {specsForTaskModel.map((spec) => (
+              <option key={spec.id} value={spec.id}>
+                {specAssignmentLabel(spec)}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-slate-500">
+            Cites a spec generated from a template bound to this Task Model.
+            Stimulus and scoring stay authored. Generate the family on the
+            template first.
+          </p>
         </div>
       )}
 

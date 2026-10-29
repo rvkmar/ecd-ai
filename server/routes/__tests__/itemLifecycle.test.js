@@ -241,6 +241,49 @@ describe("POST /api/items", () => {
       .expect(400);
   });
 
+  it("copies an optional taskSpecId that belongs to this Task Model", () => {
+    loadDB.mockReturnValue(
+      makeDB({
+        templates: [
+          {
+            id: "tpl1",
+            status: "confirmed",
+            taskModelId: "tm1",
+            competencyModelId: "cm1",
+            evidenceModelId: "em1",
+            presentationModelId: "pm1",
+          },
+        ],
+        taskSpecs: [
+          {
+            id: "tspec1",
+            templateId: "tpl1",
+            tmvAssignment: [{ taskModelVariableId: "tmv-bloom", value: "remember" }],
+            stale: false,
+          },
+        ],
+      })
+    );
+
+    return request(makeApp())
+      .post("/api/items")
+      .send({ taskModelId: "tm1", observationId: "o1", taskSpecId: "tspec1" })
+      .expect(201)
+      .then((res) => expect(res.body.taskSpecId).toBe("tspec1"));
+  });
+
+  it("refuses a taskSpecId that is not a generated spec", () => {
+    loadDB.mockReturnValue(makeDB({ templates: [], taskSpecs: [] }));
+
+    return request(makeApp())
+      .post("/api/items")
+      .send({ taskModelId: "tm1", observationId: "o1", taskSpecId: "tspec-missing" })
+      .expect(400)
+      .then((res) =>
+        expect(JSON.stringify(res.body)).toMatch(/does not match a generated task spec/)
+      );
+  });
+
   it("is closed to non-authoring roles", () => {
     currentRole = "student";
     loadDB.mockReturnValue(makeDB());

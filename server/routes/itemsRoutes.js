@@ -369,6 +369,10 @@ export function createItemRecord(payload = {}, db, creatorId = "system", options
     taskModelId: taskModel.id,
     taskModelVersion: taskModel.versionNumber,
     observationId: payload.observationId || null,
+    // D155: optional citation of a generated spec. Empty is absent.
+    ...(String(payload.taskSpecId || "").trim()
+      ? { taskSpecId: String(payload.taskSpecId).trim() }
+      : {}),
     // Derived below; never read from the payload.
     evidenceModelId: null,
     evidenceModelVersion: null,

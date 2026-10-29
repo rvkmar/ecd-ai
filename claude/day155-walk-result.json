@@ -1,0 +1,19 @@
+﻿{
+    "host":  "http://localhost:6060",
+    "bloomTmv":  "tmv1793288918280000",
+    "registerTmv":  "tmv1793288978015002",
+    "stimulusTmv":  "tmv1793288978048003",
+    "cloneTaskModelId":  "tm1793288978071000",
+    "presentationModelId":  "pm1793289069185000",
+    "templateId":  "tpl1793289069252000",
+    "generatedCount":  10,
+    "citedSpecId":  "tspec1793289069305000",
+    "citedAssignment":  "remember,formal,static",
+    "itemId":  "it_mvtq0dnj_000",
+    "taskId":  "t1793289069498",
+    "sessionId":  "s1793289069569",
+    "studentId":  "stud1",
+    "activated":  true,
+    "evidenceModelId":  "emmvrvcqgr9d3318",
+    "observationId":  "obs-plant-name"
+}
