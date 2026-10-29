@@ -499,6 +499,8 @@ export function assessLiveResponseMatrix(db, options = {}) {
         observableId: response.observableId,
         evidenceModelId: response.evidenceModelId,
         activated: response.activated,
+        category: response.category,
+        value: response.value,
         timestamp: response.timestamp || "",
         selected: selectedOptionId(response),
       });
@@ -641,10 +643,15 @@ export function assessLiveResponseMatrix(db, options = {}) {
     });
   }
 
+  const polytomous = subtype === "GRM" || subtype === "GPCM" || subtype === "PCM";
   const data = studentIds.map((studentId) =>
     itemIds.map((itemId) => {
       const cell = byCell.get(`${studentId}\0${itemId}`);
       if (!cell) return null;
+      if (polytomous) {
+        if (Number.isInteger(cell.category) && cell.category >= 0) return cell.category;
+        if (Number.isInteger(cell.value) && cell.value >= 0) return cell.value;
+      }
       return cell.activated === true ? 1 : 0;
     })
   );

@@ -160,12 +160,16 @@ describe("evaluationArtifacts — rubric", () => {
     const result = applyEvaluationArtifact(proc(), { dimensions: { accuracy: 1 } });
     expect(result.matched).toBe(true);
     expect(result.activatesObservable).toBe(true);
+    expect(result.value).toBe(1);
+    expect(result.category).toBe(1);
   });
 
   it("does not activate on zero when activatesAt defaults to 1", () => {
     const result = applyEvaluationArtifact(proc(), { dimensions: { accuracy: 0 } });
     expect(result.matched).toBe(true);
     expect(result.activatesObservable).toBe(false);
+    expect(result.value).toBe(0);
+    expect(result.category).toBe(0);
   });
 
   it("accepts SessionPlayer rubricLevel on a single-dimension rubric", () => {
@@ -218,6 +222,8 @@ describe("identifyEvidence — EM-R1 artifact fallback (empty activation map)", 
     );
     expect(result.refused).toBeUndefined();
     expect(result.activated).toBe(true);
+    expect(result.value).toBe(2);
+    expect(result.category).toBe(2);
     expect(result.strength).toBe(4);
     expect(result.evaluationMethod).toBe("rubric");
     expect(result.evaluationProcedureId).toBe("ep-rubric");

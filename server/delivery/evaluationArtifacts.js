@@ -126,15 +126,52 @@ function matchRubricArtifact(artifact, workProduct, procedure = {}) {
     }
   }
 
+  const ordinal = ordinalFromRubric(dimensions, ratings);
   return {
     matched: true,
     activatesObservable: activated,
+    ...(ordinal.value != null ? { value: ordinal.value } : {}),
+    ...(ordinal.category != null ? { category: ordinal.category } : {}),
     rationale:
       procedure.description ||
       (activated
         ? "Rubric ratings meet dimension activate thresholds."
         : "Rubric ratings below dimension activate thresholds."),
   };
+}
+
+/**
+ * One observable gets one ordinal. A single dimension keeps the rating
+ * and its index in declared levels. Several numeric dimensions keep the
+ * minimum (the same conservative AND as activation).
+ */
+function ordinalFromRubric(dimensions, ratings) {
+  if (!Array.isArray(dimensions) || dimensions.length === 0 || !ratings) {
+    return { value: null, category: null };
+  }
+  if (dimensions.length === 1) {
+    const dim = dimensions[0];
+    const level = ratings[dim.id];
+    const levels = Array.isArray(dim.levels) ? dim.levels : [];
+    const category = levels.indexOf(level);
+    const value =
+      typeof level === "number" && Number.isFinite(level)
+        ? level
+        : category >= 0
+          ? category
+          : null;
+    return {
+      value,
+      category: category >= 0 ? category : Number.isInteger(value) && value >= 0 ? value : null,
+    };
+  }
+  const numeric = dimensions
+    .map((dim) => ratings[dim.id])
+    .filter((v) => typeof v === "number" && Number.isFinite(v));
+  if (numeric.length === dimensions.length) {
+    return { value: Math.min(...numeric), category: null };
+  }
+  return { value: null, category: null };
 }
 
 function eventType(ev) {

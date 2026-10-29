@@ -266,4 +266,25 @@ describe("D123 exit check — multi-phase evaluation", () => {
     expect(db.sessions[0].responses[0].evaluationStatus).toBe("complete");
     expect(db.sessions[0].responses[0].activated).toBe(false);
   });
+
+  it("human-rating accepts a numeric level", async () => {
+    const db = makeDb();
+    const app = buildApp(db);
+
+    await request(app)
+      .post("/api/sessions/s1/submit")
+      .send({ taskId: "t1", itemId: "item1", rawAnswer: "opt_a" });
+
+    const rated = await request(app)
+      .post("/api/sessions/s1/human-rating")
+      .set("x-test-role", "teacher")
+      .send({ responseIndex: 0, level: 2, rationale: "full credit" });
+
+    expect(rated.status).toBe(200);
+    expect(rated.body.evaluationStatus).toBe("complete");
+    expect(rated.body.activated).toBe(true);
+    expect(rated.body.value).toBe(2);
+    expect(rated.body.category).toBe(2);
+    expect(db.sessions[0].responses[0].value).toBe(2);
+  });
 });

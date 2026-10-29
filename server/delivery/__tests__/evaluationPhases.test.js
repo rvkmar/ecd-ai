@@ -86,4 +86,24 @@ describe("completeHumanEvaluation + pendingHumanRatingsFromSession", () => {
     expect(done.activated).toBeNull();
     expect(done.evaluationStatus).toBe(EVALUATION_STATUS.PENDING_ADJUDICATION);
   });
+
+  it("accepts a numeric level without an activated flag", () => {
+    const pending = applyPhaseGate(
+      { activated: true, value: 1, category: 1, strength: 3 },
+      {
+        phases: [
+          { order: 1, kind: "automated" },
+          { order: 2, kind: "human", adjudicationRule: "human_wins" },
+        ],
+      }
+    );
+    expect(pending.activated).toBeNull();
+    expect(pending.value).toBeNull();
+
+    const done = completeHumanEvaluation(pending, { level: 2, rationale: "full credit" });
+    expect(done.evaluationStatus).toBe(EVALUATION_STATUS.COMPLETE);
+    expect(done.activated).toBe(true);
+    expect(done.value).toBe(2);
+    expect(done.category).toBe(2);
+  });
 });

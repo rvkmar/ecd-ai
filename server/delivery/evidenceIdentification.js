@@ -215,6 +215,8 @@ function identifyObservable({
           responsePattern: artifactResult.responsePattern ?? null,
           activatesObservable: artifactResult.activatesObservable,
           rationale: artifactResult.rationale,
+          ...(artifactResult.value != null ? { value: artifactResult.value } : {}),
+          ...(artifactResult.category != null ? { category: artifactResult.category } : {}),
         };
       }
     } else if (artifactResult?.warning) {
@@ -272,6 +274,7 @@ function identifyObservable({
     );
   }
 
+  const ordinal = ordinalFromMatchedEntry(matchedEntry);
   return applyPhaseGate(
     {
       observationId,
@@ -286,10 +289,33 @@ function identifyObservable({
         null,
       evaluationMethod: evaluationProcedure?.method ?? null,
       evaluationProcedureId: evaluationProcedure?.id ?? null,
+      ...ordinal,
       ...workProductMeta(item, evaluationProcedure, db),
     },
     evaluationProcedure
   );
+}
+
+function ordinalFromMatchedEntry(matchedEntry) {
+  const fromPattern = matchedEntry?.responsePattern?.categoryValue;
+  const value =
+    matchedEntry?.value != null
+      ? matchedEntry.value
+      : typeof fromPattern === "number" && Number.isFinite(fromPattern)
+        ? fromPattern
+        : typeof matchedEntry?.score === "number" && Number.isFinite(matchedEntry.score)
+          ? matchedEntry.score
+          : null;
+  const category =
+    Number.isInteger(matchedEntry?.category) && matchedEntry.category >= 0
+      ? matchedEntry.category
+      : Number.isInteger(value) && value >= 0
+        ? value
+        : null;
+  return {
+    ...(value != null ? { value } : {}),
+    ...(category != null ? { category } : {}),
+  };
 }
 
 /**

@@ -52,9 +52,50 @@ function firstPendingHumanPhase(phases) {
   return (phases || []).find((p) => p.kind === "human" || p.kind === "hybrid") || null;
 }
 
+function parseOrdinalRating(rating = {}) {
+  const raw = rating.value ?? rating.level ?? rating.category;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function attachOrdinal(target, source) {
+  if (!source) return target;
+  if (source.value != null) target.value = source.value;
+  if (Number.isInteger(source.category) && source.category >= 0) {
+    target.category = source.category;
+  } else if (Number.isInteger(source.value) && source.value >= 0) {
+    target.category = source.value;
+  }
+  return target;
+}
+
+function humanRatingFields(humanRating) {
+  const ordinal = parseOrdinalRating(humanRating);
+  const hasActivated = typeof humanRating.activated === "boolean";
+  if (!hasActivated && ordinal == null) {
+    throw new Error("Human rating requires activated: true | false, or a numeric value or level.");
+  }
+  const fields = {
+    activated: hasActivated ? humanRating.activated : ordinal > 0,
+    strength: humanRating.strength ?? null,
+    rationale: humanRating.rationale ?? null,
+  };
+  if (ordinal != null) {
+    fields.value = ordinal;
+    if (Number.isInteger(ordinal) && ordinal >= 0) fields.category = ordinal;
+  }
+  return fields;
+}
+
 /**
  * Apply adjudication between an automated boolean result and a human one.
- * @returns {{ activated: boolean|null, status: string, strength: number|null, rationale: string|null, adjudicationApplied: string|null }}
+ * When both sides carry a numeric value, require_agreement compares those
+ * levels; otherwise it compares the booleans.
+ * @returns {{ activated: boolean|null, status: string, strength: number|null, rationale: string|null, adjudicationApplied: string|null, value?: number|null, category?: number|null }}
  */
 function adjudicatePhaseResults(automated, human, rule) {
   const a = automated?.activated;
@@ -72,59 +113,78 @@ function adjudicatePhaseResults(automated, human, rule) {
   }
 
   if (typeof a !== "boolean") {
-    return {
-      activated: h,
-      status: EVALUATION_STATUS.COMPLETE,
-      strength: human.strength ?? null,
-      rationale: human.rationale ?? "Human phase completed (no automated boolean).",
-      adjudicationApplied: null,
-    };
+    return attachOrdinal(
+      {
+        activated: h,
+        status: EVALUATION_STATUS.COMPLETE,
+        strength: human.strength ?? null,
+        rationale: human.rationale ?? "Human phase completed (no automated boolean).",
+        adjudicationApplied: null,
+      },
+      human
+    );
   }
 
   if (effectiveRule === "require_agreement") {
-    if (a === h) {
-      return {
-        activated: h,
-        status: EVALUATION_STATUS.COMPLETE,
-        strength: human.strength ?? automated.strength ?? null,
-        rationale:
-          human.rationale ||
-          automated.rationale ||
-          "Automated and human phases agree.",
-        adjudicationApplied: "require_agreement",
-      };
+    const aVal = parseOrdinalRating(automated);
+    const hVal = parseOrdinalRating(human);
+    const agree =
+      aVal != null && hVal != null ? aVal === hVal : a === h;
+    if (agree) {
+      return attachOrdinal(
+        {
+          activated: h,
+          status: EVALUATION_STATUS.COMPLETE,
+          strength: human.strength ?? automated.strength ?? null,
+          rationale:
+            human.rationale ||
+            automated.rationale ||
+            "Automated and human phases agree.",
+          adjudicationApplied: "require_agreement",
+        },
+        human.value != null ? human : automated
+      );
     }
     return {
       activated: null,
       status: EVALUATION_STATUS.PENDING_ADJUDICATION,
       strength: null,
-      rationale: `Automated (${a}) and human (${h}) disagree; require_agreement holds.`,
+      rationale:
+        aVal != null && hVal != null
+          ? `Automated (value ${aVal}) and human (value ${hVal}) disagree; require_agreement holds.`
+          : `Automated (${a}) and human (${h}) disagree; require_agreement holds.`,
       adjudicationApplied: "require_agreement",
     };
   }
 
   if (effectiveRule === "automated_wins") {
-    return {
-      activated: a,
-      status: EVALUATION_STATUS.COMPLETE,
-      strength: automated.strength ?? human.strength ?? null,
-      rationale:
-        automated.rationale ||
-        `Adjudication automated_wins (human was ${h}).`,
-      adjudicationApplied: "automated_wins",
-    };
+    return attachOrdinal(
+      {
+        activated: a,
+        status: EVALUATION_STATUS.COMPLETE,
+        strength: automated.strength ?? human.strength ?? null,
+        rationale:
+          automated.rationale ||
+          `Adjudication automated_wins (human was ${h}).`,
+        adjudicationApplied: "automated_wins",
+      },
+      automated
+    );
   }
 
   // human_wins (default)
-  return {
-    activated: h,
-    status: EVALUATION_STATUS.COMPLETE,
-    strength: human.strength ?? automated.strength ?? null,
-    rationale:
-      human.rationale ||
-      `Adjudication human_wins (automated was ${a}).`,
-    adjudicationApplied: "human_wins",
-  };
+  return attachOrdinal(
+    {
+      activated: h,
+      status: EVALUATION_STATUS.COMPLETE,
+      strength: human.strength ?? automated.strength ?? null,
+      rationale:
+        human.rationale ||
+        `Adjudication human_wins (automated was ${a}).`,
+      adjudicationApplied: "human_wins",
+    },
+    human
+  );
 }
 
 /**
@@ -154,15 +214,20 @@ export function applyPhaseGate(identificationResult, evaluationProcedure) {
     direction: identificationResult.direction,
     strength: identificationResult.strength,
     rationale: identificationResult.rationale,
+    ...(identificationResult.value != null ? { value: identificationResult.value } : {}),
+    ...(identificationResult.category != null ? { category: identificationResult.category } : {}),
   };
 
   return {
     ...identificationResult,
     // Honest: not final until human (and adjudication) complete.
     activated: null,
+    value: null,
+    category: null,
     strength: null,
     provisionalActivated: automatedPhaseResult.activated,
     provisionalStrength: automatedPhaseResult.strength,
+    ...(automatedPhaseResult.value != null ? { provisionalValue: automatedPhaseResult.value } : {}),
     evaluationStatus: EVALUATION_STATUS.PENDING_HUMAN,
     pendingPhase: pendingPhase
       ? {
@@ -193,23 +258,24 @@ export function completeHumanEvaluation(pendingResponse, humanRating = {}) {
       "completeHumanEvaluation requires a pending_human or pending_adjudication response."
     );
   }
-  if (typeof humanRating.activated !== "boolean") {
-    throw new Error("Human rating requires activated: true | false.");
-  }
+  const rating = humanRatingFields(humanRating);
 
   // After require_agreement held, a second staff write is the adjudication.
   if (status === EVALUATION_STATUS.PENDING_ADJUDICATION) {
-    return {
-      ...pendingResponse,
-      activated: humanRating.activated,
-      strength: humanRating.strength ?? pendingResponse.strength ?? null,
-      rationale: humanRating.rationale ?? pendingResponse.rationale ?? null,
-      evaluationStatus: EVALUATION_STATUS.COMPLETE,
-      adjudicationApplied: "manual_adjudication",
-      pendingPhase: null,
-      humanRatedAt: new Date().toISOString(),
-      humanRatedBy: humanRating.ratedBy ?? pendingResponse.humanRatedBy ?? null,
-    };
+    return attachOrdinal(
+      {
+        ...pendingResponse,
+        activated: rating.activated,
+        strength: rating.strength ?? pendingResponse.strength ?? null,
+        rationale: rating.rationale ?? pendingResponse.rationale ?? null,
+        evaluationStatus: EVALUATION_STATUS.COMPLETE,
+        adjudicationApplied: "manual_adjudication",
+        pendingPhase: null,
+        humanRatedAt: new Date().toISOString(),
+        humanRatedBy: humanRating.ratedBy ?? pendingResponse.humanRatedBy ?? null,
+      },
+      rating
+    );
   }
 
   const rule =
@@ -220,31 +286,33 @@ export function completeHumanEvaluation(pendingResponse, humanRating = {}) {
   const automated = pendingResponse.automatedPhaseResult || {
     activated: pendingResponse.provisionalActivated,
     strength: pendingResponse.provisionalStrength,
+    ...(pendingResponse.provisionalValue != null
+      ? { value: pendingResponse.provisionalValue }
+      : {}),
   };
 
-  const human = {
-    activated: humanRating.activated,
-    strength: humanRating.strength ?? null,
-    rationale: humanRating.rationale ?? null,
-  };
+  const human = { ...rating };
 
   const decided = adjudicatePhaseResults(automated, human, rule);
 
-  return {
-    ...pendingResponse,
-    activated: decided.activated,
-    strength: decided.strength,
-    rationale: decided.rationale,
-    evaluationStatus: decided.status,
-    adjudicationApplied: decided.adjudicationApplied,
-    humanPhaseResult: human,
-    pendingPhase:
-      decided.status === EVALUATION_STATUS.COMPLETE
-        ? null
-        : pendingResponse.pendingPhase,
-    humanRatedAt: new Date().toISOString(),
-    humanRatedBy: humanRating.ratedBy ?? null,
-  };
+  return attachOrdinal(
+    {
+      ...pendingResponse,
+      activated: decided.activated,
+      strength: decided.strength,
+      rationale: decided.rationale,
+      evaluationStatus: decided.status,
+      adjudicationApplied: decided.adjudicationApplied,
+      humanPhaseResult: human,
+      pendingPhase:
+        decided.status === EVALUATION_STATUS.COMPLETE
+          ? null
+          : pendingResponse.pendingPhase,
+      humanRatedAt: new Date().toISOString(),
+      humanRatedBy: humanRating.ratedBy ?? null,
+    },
+    decided.status === EVALUATION_STATUS.COMPLETE ? decided : null
+  );
 }
 
 /**

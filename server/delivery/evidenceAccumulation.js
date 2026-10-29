@@ -196,9 +196,31 @@ function normalLogDensity(x, mean, sd) {
  * reported theta = -2.214; c >= 1 makes the response certain regardless of
  * ability, again returning the prior. Excluded and warned about instead.
  */
+/**
+ * Samejima GRM thresholds: `thresholds` or an array `b`. A scalar `b` is
+ * dichotomous 2PL/3PL and is not returned here.
+ */
+function grmThresholds(params) {
+  if (!params || typeof params !== "object") return null;
+  if (Array.isArray(params.thresholds) && params.thresholds.length > 0) {
+    return params.thresholds;
+  }
+  if (Array.isArray(params.b) && params.b.length > 0) return params.b;
+  return null;
+}
+
 export function itemParametersAreUsable(params) {
   if (!params || typeof params !== "object") return false;
   if (params.a !== undefined && !(Number.isFinite(params.a) && params.a > 0)) return false;
+  const thresholds = grmThresholds(params);
+  if (thresholds) {
+    let prev = -Infinity;
+    for (const edge of thresholds) {
+      if (!Number.isFinite(edge) || !(edge > prev)) return false;
+      prev = edge;
+    }
+    return true;
+  }
   if (params.b !== undefined && !Number.isFinite(params.b)) return false;
   if (params.c !== undefined && !(Number.isFinite(params.c) && params.c >= 0 && params.c < 1)) return false;
   return true;
@@ -209,18 +231,43 @@ export function itemParametersAreUsable(params) {
  * 1PL/Rasch (c = 0, a = 1). Missing parameters take those defaults, so a
  * Rasch parameter set carrying only `b` behaves exactly as Rasch.
  */
+function logisticSuccess(x) {
+  // 1 / (1 + exp(-x)) written this way so a large positive exponent
+  // saturates to 0 instead of producing Infinity/Infinity = NaN.
+  return x >= 0 ? 1 / (1 + Math.exp(-x)) : Math.exp(x) / (1 + Math.exp(x));
+}
+
 function itemProbability(theta, params) {
   const a = Number.isFinite(params?.a) ? params.a : 1;
   const b = Number.isFinite(params?.b) ? params.b : 0;
   const c = Number.isFinite(params?.c) ? params.c : 0;
-
-  // 1 / (1 + exp(-x)) is written this way rather than via Math.exp(-x)
-  // alone so that a large positive exponent saturates to 0 instead of
-  // producing Infinity/Infinity = NaN.
-  const x = a * (theta - b);
-  const p = x >= 0 ? 1 / (1 + Math.exp(-x)) : Math.exp(x) / (1 + Math.exp(x));
-
+  const p = logisticSuccess(a * (theta - b));
   return c + (1 - c) * p;
+}
+
+/**
+ * P(U = u | theta). Dichotomous 3PL when there are no GRM thresholds
+ * (u is 0 or 1). Samejima graded response when `thresholds` or array `b`
+ * lists strictly increasing category boundaries: P*(k) = logistic(a(θ-b_k))
+ * is P(U >= k), and P(U = k) = P*(k) - P*(k+1) for k = 0..m.
+ */
+function categoryProbability(theta, params, u) {
+  const thresholds = grmThresholds(params);
+  if (thresholds) {
+    const a = Number.isFinite(params?.a) ? params.a : 1;
+    const m = thresholds.length;
+    if (!Number.isInteger(u) || u < 0 || u > m) return 0;
+    const cumulative = (k) => {
+      if (k <= 0) return 1;
+      if (k > m) return 0;
+      return logisticSuccess(a * (theta - thresholds[k - 1]));
+    };
+    return cumulative(u) - cumulative(u + 1);
+  }
+  const p = itemProbability(theta, params);
+  if (u === 1) return p;
+  if (u === 0) return 1 - p;
+  return 0;
 }
 
 /**
@@ -488,18 +535,29 @@ function estimateWithAdaptiveGrid(scoredObservations, smVariable, options = {}) 
  * -- this is where direction is honoured and unmatched responses are
  * excluded rather than counted as wrong.
  */
+function storedCategory(response) {
+  if (Number.isInteger(response?.category) && response.category >= 0) {
+    return response.category;
+  }
+  if (Number.isInteger(response?.value) && response.value >= 0) {
+    return response.value;
+  }
+  return null;
+}
+
 function scoreResponse(response) {
+  const category = storedCategory(response);
   if (response?.activated !== true && response?.activated !== false) {
-    return { u: null, reason: "indeterminate" };
+    return { u: null, category, reason: "indeterminate" };
   }
 
   const direction = response.direction;
 
-  if (direction === "supports") return { u: response.activated ? 1 : 0 };
-  if (direction === "weakens") return { u: response.activated ? 0 : 1 };
-  if (direction === "neutral") return { u: null, reason: "neutral" };
+  if (direction === "supports") return { u: response.activated ? 1 : 0, category };
+  if (direction === "weakens") return { u: response.activated ? 0 : 1, category };
+  if (direction === "neutral") return { u: null, category, reason: "neutral" };
 
-  return { u: null, reason: "unknown-direction" };
+  return { u: null, category, reason: "unknown-direction" };
 }
 
 /**
@@ -625,9 +683,9 @@ function estimateContinuousPosterior(scoredObservations, quadrature) {
 
   const logLikelihood = nodes.map((theta) =>
     scoredObservations.reduce((acc, obs) => {
-      const p = itemProbability(theta, obs.params);
+      const p = categoryProbability(theta, obs.params, obs.u);
       const clamped = Math.min(Math.max(p, P_EPSILON), 1 - P_EPSILON);
-      return acc + (obs.u === 1 ? Math.log(clamped) : Math.log(1 - clamped));
+      return acc + Math.log(clamped);
     }, 0)
   );
 
@@ -1047,7 +1105,7 @@ export function accumulateEvidence(session, db, options = {}) {
     const itemKeyedIrt = new Set();
 
     for (const r of group) {
-      const { u, reason } = scoreResponse(r);
+      const { u, category, reason } = scoreResponse(r);
 
       if (u === null) {
         excluded += 1;
@@ -1115,7 +1173,18 @@ export function accumulateEvidence(session, db, options = {}) {
         continue;
       }
 
-      scoredObservations.push({ u, params, observableId: r.observableId, itemId: r.itemId });
+      const thresholds = grmThresholds(params);
+      let scoredU = u;
+      if (thresholds) {
+        scoredU = category;
+        if (!Number.isInteger(scoredU) || scoredU < 0 || scoredU > thresholds.length) {
+          excluded += 1;
+          warnings.push(`Observable '${r.observableId}' on item '${r.itemId}' has GRM parameters but no ordinal category in 0..${thresholds.length}; that response was excluded.`);
+          continue;
+        }
+      }
+
+      scoredObservations.push({ u: scoredU, params, observableId: r.observableId, itemId: r.itemId });
     }
 
     if (scoredObservations.length === 0) {
@@ -1151,7 +1220,14 @@ export function accumulateEvidence(session, db, options = {}) {
       continue;
     }
 
-    if (jointDecision.action === "joint") {
+    /* GRM is one-dimensional Samejima. D129's joint path still uses the
+       dichotomous P(u=1) likelihood, so a polytomous item falls through
+       to the 1D EAP rather than being scored as 0/1 under a partner. */
+    const useJoint =
+      jointDecision.action === "joint" &&
+      !scoredObservations.some((obs) => grmThresholds(obs.params));
+
+    if (useJoint) {
       const joint = estimateJointContinuousPosterior({
         scoredObservations,
         itemProbability,
@@ -1559,6 +1635,8 @@ function accumulateRawScoreFamily({ evidenceModelId, parameterSetId, parameterSo
    invisible at every layer above. */
 export const __testing__ = {
   itemProbability,
+  categoryProbability,
+  grmThresholds,
   itemParametersAreUsable,
   buildQuadrature,
   scoreResponse,

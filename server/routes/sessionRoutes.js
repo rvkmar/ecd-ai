@@ -795,6 +795,8 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
         observationId: identified.observationId,
         observableId: identified.observableId,
         activated: identified.activated,
+        ...(identified.value != null ? { value: identified.value } : {}),
+        ...(identified.category != null ? { category: identified.category } : {}),
         direction: identified.direction,
         strength: identified.strength,
         rationale: identified.rationale,
@@ -1033,7 +1035,8 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
 // POST /api/sessions/:id/human-rating
 // ------------------------------
 // D123/D124: complete a pending_human Identification. Body:
-//   { responseIndex?: number, taskId?: string, activated: boolean,
+//   { responseIndex?: number, taskId?: string, activated?: boolean,
+//     value?: number, level?: number, category?: number,
 //     strength?: number, rationale?: string, adjudicationRule?: string }
 // Staff only — students must not finalize their own OV.
 // Tenant scope: loadDB hides other districts; missing session → 404.
@@ -1042,7 +1045,7 @@ router.post("/:id/human-rating", staffRater, async (req, res) => {
   const session = await getSessionById(db, req.params.id);
   if (!session) return res.status(404).json({ error: "Session not found" });
 
-  const { responseIndex, taskId, activated, strength, rationale, adjudicationRule } =
+  const { responseIndex, taskId, activated, value, level, category, strength, rationale, adjudicationRule } =
     req.body || {};
 
   let index = typeof responseIndex === "number" ? responseIndex : -1;
@@ -1064,6 +1067,9 @@ router.post("/:id/human-rating", staffRater, async (req, res) => {
   try {
     completed = completeHumanEvaluation(session.responses[index], {
       activated,
+      value,
+      level,
+      category,
       strength,
       rationale,
       adjudicationRule,
@@ -1106,6 +1112,8 @@ router.post("/:id/human-rating", staffRater, async (req, res) => {
     responseIndex: index,
     evaluationStatus: completed.evaluationStatus,
     activated: completed.activated,
+    ...(completed.value != null ? { value: completed.value } : {}),
+    ...(completed.category != null ? { category: completed.category } : {}),
     adjudicationApplied: completed.adjudicationApplied ?? null,
     humanRatedBy: completed.humanRatedBy ?? null,
     humanRatedAt: completed.humanRatedAt ?? null,

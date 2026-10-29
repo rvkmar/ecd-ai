@@ -21,7 +21,7 @@ import { describe, it, expect } from "vitest";
 import { accumulateEvidence, applyPosteriorsToSession, __testing__ } from "../evidenceAccumulation.js";
 import { validateEntity } from "../../../src/utils/schema.js";
 
-const { estimateContinuousPosterior, buildQuadrature, itemProbability, scoreResponse } = __testing__;
+const { estimateContinuousPosterior, buildQuadrature, itemProbability, categoryProbability, scoreResponse } = __testing__;
 
 const RASCH = { a: 1, b: 0 };
 
@@ -85,6 +85,49 @@ describe("estimateContinuousPosterior — hand-computed fixture", () => {
     // A missing `a` must default to 1 (Rasch), not 0 -- an a of 0 would
     // make every item carry no information at all, silently.
     expect(itemProbability(1, { b: 0 })).toBeCloseTo(0.731058578630005, 15);
+  });
+});
+
+describe("categoryProbability — Samejima GRM", () => {
+  const grm = { a: 1, thresholds: [-1, 1] };
+
+  it("reduces to 2PL when there is one threshold", () => {
+    expect(categoryProbability(0, { a: 1, thresholds: [0] }, 1)).toBe(0.5);
+    expect(categoryProbability(1, { a: 1, thresholds: [0] }, 1)).toBeCloseTo(
+      itemProbability(1, { a: 1, b: 0 }),
+      15
+    );
+    expect(
+      estimateContinuousPosterior([{ u: 1, params: { a: 1, thresholds: [0] } }], {
+        nodes: [-1, 0, 1],
+        weights: [0.25, 0.5, 0.25],
+      }).estimate
+    ).toBeCloseTo(0.231058578630005, 15);
+  });
+
+  it("returns known category probabilities at theta = 0", () => {
+    // P*(k) = logistic(θ - b_k). At θ = 0, b = [-1, 1]:
+    // P*(1) = logistic(1) = 0.7310585786300049
+    // P*(2) = logistic(-1) = 0.2689414213699951
+    expect(categoryProbability(0, grm, 0)).toBeCloseTo(0.2689414213699951, 15);
+    expect(categoryProbability(0, grm, 1)).toBeCloseTo(0.4621171572600098, 15);
+    expect(categoryProbability(0, grm, 2)).toBeCloseTo(0.2689414213699951, 15);
+    expect(
+      categoryProbability(0, grm, 0) +
+        categoryProbability(0, grm, 1) +
+        categoryProbability(0, grm, 2)
+    ).toBeCloseTo(1, 15);
+  });
+
+  it("scores the top category above the middle on a symmetric GRM item", () => {
+    const quadrature = { nodes: [-1, 0, 1], weights: [0.25, 0.5, 0.25] };
+    const middle = estimateContinuousPosterior([{ u: 1, params: grm }], quadrature);
+    const top = estimateContinuousPosterior([{ u: 2, params: grm }], quadrature);
+    const bottom = estimateContinuousPosterior([{ u: 0, params: grm }], quadrature);
+    expect(middle.estimate).toBeCloseTo(0, 12);
+    expect(top.estimate).toBeCloseTo(0.3291, 4);
+    expect(bottom.estimate + top.estimate).toBeCloseTo(0, 12);
+    expect(top.estimate).toBeGreaterThan(middle.estimate);
   });
 });
 
@@ -426,6 +469,7 @@ describe("scoreResponse — direction is honoured, not assumed", () => {
   it("scores a supports-direction activation as evidence FOR", () => {
     expect(scoreResponse({ activated: true, direction: "supports" }).u).toBe(1);
     expect(scoreResponse({ activated: false, direction: "supports" }).u).toBe(0);
+    expect(scoreResponse({ activated: true, value: 2, direction: "supports" }).category).toBe(2);
   });
 
   it("scores a weakens-direction activation as evidence AGAINST", () => {
@@ -1773,5 +1817,60 @@ describe("applyPosteriorsToSession — persisting the result onto the session", 
   it("throws for programmer errors (no session, no result), never silently no-ops", () => {
     expect(() => applyPosteriorsToSession(null, accumulationResult())).toThrow();
     expect(() => applyPosteriorsToSession({ id: "s1" }, null)).toThrow();
+  });
+});
+
+describe("accumulateEvidence — R5 GRM ordinal", () => {
+  function grmDb() {
+    return makeDb({
+      evidenceModels: [{
+        id: "em1",
+        competencyId: "c1",
+        versionNumber: 1,
+        observables: [{ id: "o1", evidenceRule: { direction: "supports", strengthLevel: 4 } }],
+        statisticalModels: [{
+          id: "sm1",
+          type: "irt",
+          subtype: "grm",
+          active: true,
+          structureConfig: {},
+          parameterSets: [{
+            parameterSetId: "ps1",
+            parameters: { o1: { a: 1, thresholds: [-1, 1] } },
+            packageVersion: "pilot-1",
+            converged: true,
+            sampleSize: 500,
+            calibratedAt: "2026-01-01T00:00:00.000Z",
+          }],
+          activeParameterSetId: "ps1",
+        }],
+      }],
+    });
+  }
+
+  it("scores a middle category differently from the top, and leaves dichotomous Rasch unchanged", () => {
+    const db = grmDb();
+    const middle = accumulateEvidence(
+      sessionWith([makeResponse({ activated: true, value: 1, category: 1 })]),
+      db
+    ).posteriors[0];
+    const top = accumulateEvidence(
+      sessionWith([makeResponse({ activated: true, value: 2, category: 2 })]),
+      db
+    ).posteriors[0];
+    const bottom = accumulateEvidence(
+      sessionWith([makeResponse({ activated: false, value: 0, category: 0 })]),
+      db
+    ).posteriors[0];
+
+    expect(middle.supported).toBe(true);
+    expect(top.supported).toBe(true);
+    expect(middle.estimate).toBeCloseTo(0, 8);
+    expect(top.estimate).toBeGreaterThan(middle.estimate);
+    expect(bottom.estimate).toBeLessThan(middle.estimate);
+
+    const rasch = accumulateEvidence(sessionWith([makeResponse()]), makeDb()).posteriors[0];
+    expect(rasch.supported).toBe(true);
+    expect(rasch.estimate).toBeGreaterThan(0);
   });
 });

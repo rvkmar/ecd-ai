@@ -95,6 +95,32 @@ describe("live response matrix", () => {
     expect(validateCalibrationRequest({ ...assessed.request, contractVersion: "1.0", jobId: "job-live" })).toEqual([]);
   });
 
+  it("encodes GRM cells as ordinal categories, not 0/1", () => {
+    const sessions = students(2, (i) =>
+      i === 0
+        ? [
+            scored("item-a", true, { category: 2, value: 2 }),
+            scored("item-b", false, { category: 0, value: 0 }),
+            scored("item-c", true, { category: 1, value: 1 }),
+          ]
+        : [
+            scored("item-a", true, { category: 1, value: 1 }),
+            scored("item-b", true, { category: 2, value: 2 }),
+            scored("item-c", false, { category: 0, value: 0 }),
+          ]
+    );
+    const assessed = assessLiveResponseMatrix(
+      { ...irtModel("grm"), sessions },
+      { evidenceModelId: "em1", statisticalModelId: "sm1", kind: "irt-parameters" }
+    );
+    expect(assessed.ok).toBe(true);
+    expect(assessed.request.model.subtype).toBe("GRM");
+    expect(assessed.request.responseMatrix.data).toEqual([
+      [2, 0, 1],
+      [1, 2, 0],
+    ]);
+  });
+
   it("maps a Rasch statistical model onto the Rasch subtype", () => {
     const assessed = assessLiveResponseMatrix(
       {
