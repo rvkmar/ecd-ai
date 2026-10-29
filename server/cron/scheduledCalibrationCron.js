@@ -8,6 +8,10 @@ import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { querySessions } from "../sessions/sessionRepository.js";
 import { kickQueue } from "../r/calibrationWorker.js";
 import { runScheduledCalibrationEnqueue } from "../r/scheduledCalibrationEnqueue.js";
+import {
+  calibrationJobsUseExternalStore,
+  persistAppendedCalibrationJobs,
+} from "../calibrationJobs/calibrationJobRepository.js";
 
 /**
  * @param {{ schedule?: string, run?: Function }} [options]
@@ -51,7 +55,9 @@ async function runScheduledTick() {
     );
   }
 
-  if (result.enqueued.length > 0 || result.errors.length > 0) {
+  if (calibrationJobsUseExternalStore()) {
+    if (result.enqueued.length > 0) await persistAppendedCalibrationJobs(db);
+  } else if (result.enqueued.length > 0 || result.errors.length > 0) {
     saveDB(db);
   }
 

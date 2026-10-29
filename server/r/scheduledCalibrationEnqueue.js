@@ -17,6 +17,7 @@ import {
 } from "./calibrationContract.js";
 import { applyNamedCalibrationFixture } from "./calibrationFixtures.js";
 import { assessLiveResponseMatrix } from "./liveResponseMatrix.js";
+import { appendQueuedCalibrationJob } from "../calibrationJobs/calibrationJobRepository.js";
 
 const SCHEDULED_CALIBRATION_REQUESTED_BY = "scheduled-calibration-cron";
 
@@ -291,8 +292,7 @@ export function runScheduledCalibrationEnqueue(
       continue;
     }
 
-    db.calibrationJobs = db.calibrationJobs || [];
-    db.calibrationJobs.push(built.job);
+    appendQueuedCalibrationJob(db, built.job);
     enqueued.push({
       jobId: built.job.id,
       kind: built.job.kind,

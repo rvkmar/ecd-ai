@@ -8,6 +8,7 @@ import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB } from "../../src/utils/db-server.js";
+import { queryCalibrationJobs } from "../calibrationJobs/calibrationJobRepository.js";
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -16,9 +17,9 @@ router.use(sanitizeRequestInputs);
 const canAuthor = authorizeRole(["admin"]);
 const canView = authorizeRole(["admin", "district"]);
 
-router.get("/logs", canView, (req, res) => {
+router.get("/logs", canView, async (req, res) => {
   const db = loadDB();
-  res.json(db.calibrationJobs || []);
+  res.json(await queryCalibrationJobs(db, {}));
 });
 
 router.post("/:evidenceModelId", canAuthor, (req, res) => {

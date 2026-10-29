@@ -58,6 +58,7 @@ import opsRoutes from "./routes/opsRoutes.js";
 import dataZipRoutes from "./routes/dataZipRoutes.js";
 import { bootSessionStore } from "./sessions/bootSessionStore.js";
 import { bootAuditStore } from "./auditLog/bootAuditStore.js";
+import { bootCalibrationStore } from "./calibrationData/bootCalibrationStore.js";
 
 const app = express();
 app.use(express.json());
@@ -181,14 +182,31 @@ async function main() {
     console.error("audit store boot failed:", err);
     process.exit(1);
   }
+  try {
+    const calibrationBoot = await bootCalibrationStore();
+    if (calibrationBoot && !calibrationBoot.skipped && calibrationBoot.summary) {
+      console.log(calibrationBoot.summary);
+    }
+  } catch (err) {
+    console.error("calibration store boot failed:", err);
+    process.exit(1);
+  }
 
 app.listen(PORT, () => {
   console.log(`✅ ECD Assessment API running at http://localhost:${PORT}`);
-  try {
-    recoverRunningJobs();
-  } catch (err) {
-    console.error("calibration job recovery failed:", err);
-  }
+  Promise.resolve()
+    .then(() => recoverRunningJobs())
+    .catch((err) => {
+      console.error("calibration job recovery failed:", err);
+    })
+    .then(() => {
+      if (process.env.CALIBRATION_QUEUE_AUTORUN === "1") {
+        return processQueuedJobs().catch((err) => {
+          console.error("calibration queue start failed:", err);
+        });
+      }
+      return undefined;
+    });
   getRHealth()
     .then((h) => {
       console.log(`R backend ${rBackendUrl()} /health -> ${h.status}${h.ok ? "" : " (unreachable)"}`);
@@ -196,11 +214,6 @@ app.listen(PORT, () => {
     .catch((err) => {
       console.error(`R backend ${rBackendUrl()} probe failed:`, err?.message || err);
     });
-  if (process.env.CALIBRATION_QUEUE_AUTORUN === "1") {
-    processQueuedJobs().catch((err) => {
-      console.error("calibration queue start failed:", err);
-    });
-  }
   // D80: enqueue-only recalibration/analysis schedule. Opt-in so a timer
   // never surprises a deployment that has not authored scheduledEnqueue.
   if (process.env.SCHEDULED_CALIBRATION_ENABLED === "1") {

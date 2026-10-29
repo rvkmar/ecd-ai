@@ -14,6 +14,14 @@ import {
   exportAllAuditEntries,
   auditLogUseExternalStore,
 } from "../auditLog/auditRepository.js";
+import {
+  exportAllCalibrationJobs,
+  calibrationJobsUseExternalStore,
+} from "../calibrationJobs/calibrationJobRepository.js";
+import {
+  exportAllAnalysisArtefacts,
+  analysisArtefactsUseExternalStore,
+} from "../analysisArtefacts/analysisArtefactRepository.js";
 import { BACKUP_INVENTORY, inventoryIncluded, inventoryExcluded, BACKUP_FILE_PREFIX, BACKUP_FILE_SUFFIX } from "./inventory.js";
 import {
   decryptBackupBlob,
@@ -90,6 +98,15 @@ function auditLogInEcdBuffer(buf) {
   }
 }
 
+function collectionInEcdBuffer(buf, key) {
+  try {
+    const db = JSON.parse(buf.toString("utf8"));
+    return Array.isArray(db?.[key]) ? db[key] : [];
+  } catch {
+    return [];
+  }
+}
+
 async function exportMongoCollections(deps = {}, ecdBytes = null) {
   const list =
     deps.listCollection || ((name) => dbAdapter.list(name));
@@ -111,6 +128,22 @@ async function exportMongoCollections(deps = {}, ecdBytes = null) {
   } else {
     auditLog = ecdBytes ? auditLogInEcdBuffer(ecdBytes) : [];
   }
+  let calibrationJobs;
+  if (typeof deps.listCalibrationJobs === "function") {
+    calibrationJobs = await deps.listCalibrationJobs();
+  } else if (calibrationJobsUseExternalStore()) {
+    calibrationJobs = (await exportAllCalibrationJobs()) || [];
+  } else {
+    calibrationJobs = ecdBytes ? collectionInEcdBuffer(ecdBytes, "calibrationJobs") : [];
+  }
+  let analysisArtefacts;
+  if (typeof deps.listAnalysisArtefacts === "function") {
+    analysisArtefacts = await deps.listAnalysisArtefacts();
+  } else if (analysisArtefactsUseExternalStore()) {
+    analysisArtefacts = (await exportAllAnalysisArtefacts()) || [];
+  } else {
+    analysisArtefacts = ecdBytes ? collectionInEcdBuffer(ecdBytes, "analysisArtefacts") : [];
+  }
   return {
     "mongo/users.json": Buffer.from(JSON.stringify(users ?? [], null, 2), "utf8"),
     "mongo/questions.json": Buffer.from(
@@ -119,6 +152,14 @@ async function exportMongoCollections(deps = {}, ecdBytes = null) {
     ),
     "mongo/sessions.json": Buffer.from(JSON.stringify(sessions ?? [], null, 2), "utf8"),
     "mongo/auditLog.json": Buffer.from(JSON.stringify(auditLog ?? [], null, 2), "utf8"),
+    "mongo/calibrationJobs.json": Buffer.from(
+      JSON.stringify(calibrationJobs ?? [], null, 2),
+      "utf8"
+    ),
+    "mongo/analysisArtefacts.json": Buffer.from(
+      JSON.stringify(analysisArtefacts ?? [], null, 2),
+      "utf8"
+    ),
   };
 }
 
@@ -187,7 +228,8 @@ export async function runFullBackup(options = {}) {
     excludedIds: inventoryExcluded().map((r) => r.id),
     filePaths: Object.keys(files).sort(),
     notes: [
-      "calibrationJobs and analysisArtefacts are inside ecd/db.json",
+      "calibrationJobs are in mongo/calibrationJobs.json; the JSON harness also keeps them inside ecd/db.json",
+      "analysisArtefacts are in mongo/analysisArtefacts.json; the JSON harness also keeps them inside ecd/db.json",
       "sessions are in mongo/sessions.json; the JSON harness also keeps them inside ecd/db.json",
       "uploaded task materials are inline on items unless ECD_MATERIALS_DIR is set",
     ],
