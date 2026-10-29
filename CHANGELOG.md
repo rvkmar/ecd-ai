@@ -453,13 +453,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   guessed at, so those sessions get no stopping rules at all. A draft or
   archived sibling no longer vetoes the unique governing model (D60).
 - Dual-attribute diagnostic *stopping* will not fire on a one-attribute
-  slice of a two-attribute Assembly Model. Dual-attribute *selection* still
-  cannot rank an item whose required attributes have no persisted posterior
-  yet; leftover items for already-measured attributes win until those are
-  exhausted (D60 P1, held — using the SMV prior is a psychometric change).
-- BayesianNetwork selection for a G-DINA evidence model cannot rank
-  candidates (information gain is DINA slip/guess only) and falls back to
-  first-unanswered with a warning.
+  slice of a two-attribute Assembly Model. Dual-attribute *selection*
+  ranks an unmeasured attribute at the SMV's authored masteryPrior
+  (Wave 2B / D60 P1-4). A missing SMV, or a declared but invalid prior,
+  is still refused.
+- BayesianNetwork selection for G-DINA ranks a calibrated table by
+  expected posterior entropy (R7) and an uncalibrated item from the
+  conjunctive slip/guess table (R8). Missing slip/guess still falls
+  back to pool order with a warning.
 - ~~Stop reason missing from learner/teacher reports~~ closed D59.
 - Adaptive selection still picks the item whose difficulty sits closest to
   the current estimate rather than the one carrying most information at it.

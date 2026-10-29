@@ -250,7 +250,7 @@ function reducedPatternIndex(profile, requiredIndices) {
  * declared-but-invalid standard deviation: substituting a default there
  * would report a posterior against a prior the author never wrote.
  */
-function masteryPrior(smVariable) {
+export function masteryPrior(smVariable) {
   const prior = smVariable?.priorDistribution;
 
   // Absent entirely -- the documented default.

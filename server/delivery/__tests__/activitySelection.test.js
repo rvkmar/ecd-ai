@@ -822,9 +822,7 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
     expect(selectNextActivity(s, dinaDb()).taskId).toBe("tA");
   });
 
-  it("an attribute with no live belief yet contributes nothing rather than a phantom 0.5", () => {
-    // The pre-D56 branch's `?? 0.5` is exactly how a strategy comes to look
-    // like it is computing something when it is not.
+  it("an unmeasured attribute ranks at masteryPrior, not as a phantom skip", () => {
     const s = session({
       taskIds: ["tA", "tB"],
       selectionStrategy: "BayesianNetwork",
@@ -837,28 +835,98 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
 
     const result = selectNextActivity(s, dinaDb());
 
-    expect(result.taskId).toBe("tA");
-    expect(result.debug.unrankable).toEqual([
-      { taskId: "tB", reason: expect.stringContaining("No live posterior exists yet") },
+    expect(result.taskId).toBe("tB");
+    expect(result.debug.fallback).toBeUndefined();
+    expect(result.debug.attributes).toEqual([
+      expect.objectContaining({
+        attributeId: "attrB",
+        prior: 0.5,
+        priorSource: "masteryPrior",
+      }),
     ]);
   });
 
-  it("with no diagnostic data at all it degrades to pool order and SAYS SO", () => {
+  it("uses the authored bernoulli prior, not an invented 0.5", () => {
+    const db = dinaDb();
+    db.competencyModels[0].smVariables = [
+      { id: "attrA", type: "binary" },
+      { id: "attrB", type: "binary", priorDistribution: { family: "bernoulli", params: { p: 0.05 } } },
+    ];
+    const s = session({
+      taskIds: ["tA", "tB"],
+      selectionStrategy: "BayesianNetwork",
+      studentModel: {
+        smvPosteriors: {
+          attrA: smvPosterior({ smvId: "attrA", evidenceModelId: "emD", method: "map", estimate: 0.5 }),
+        },
+      },
+    });
 
-    // Nothing here can be ranked. Pool order is the seed, then task id.
+    const result = selectNextActivity(s, db);
 
+    expect(result.taskId).toBe("tA");
+    expect(result.debug.fallback).toBeUndefined();
+    expect(result.debug.unrankable).toEqual([]);
+    const tB = selectNextActivity(
+      session({
+        taskIds: ["tB"],
+        selectionStrategy: "BayesianNetwork",
+      }),
+      db
+    );
+    expect(tB.debug.attributes[0]).toMatchObject({
+      attributeId: "attrB",
+      prior: 0.05,
+      priorSource: "masteryPrior",
+    });
+  });
+
+  it("refuses a declared invalid prior instead of defaulting", () => {
+    const db = dinaDb();
+    db.competencyModels[0].smVariables = [
+      { id: "attrA", type: "binary" },
+      { id: "attrB", type: "binary", priorDistribution: { family: "bernoulli", params: { p: 1.5 } } },
+    ];
+    const s = session({
+      taskIds: ["tA", "tB"],
+      selectionStrategy: "BayesianNetwork",
+      studentModel: {
+        smvPosteriors: {
+          attrA: smvPosterior({ smvId: "attrA", evidenceModelId: "emD", method: "map", estimate: 0.6 }),
+        },
+      },
+    });
+
+    const result = selectNextActivity(s, db);
+
+    expect(result.taskId).toBe("tA");
+    expect(result.debug.unrankable).toEqual([
+      { taskId: "tB", reason: expect.stringContaining("invalid p") },
+    ]);
+  });
+
+  it("with no live posterior it still ranks from masteryPrior", () => {
     const s = session({ taskIds: ["tA", "tB"], selectionStrategy: "BayesianNetwork" });
-
     const result = selectNextActivity(s, dinaDb());
 
     expect(result.taskId).toBe("tA");
+    expect(result.debug.fallback).toBeUndefined();
+    expect(result.debug.attributes[0]).toMatchObject({
+      prior: 0.5,
+      priorSource: "masteryPrior",
+    });
+  });
 
+  it("with no SMV and no posterior it degrades to pool order and SAYS SO", () => {
+    const db = dinaDb();
+    db.competencyModels[0].smVariables = [];
+    const s = session({ taskIds: ["tA", "tB"], selectionStrategy: "BayesianNetwork" });
+    const result = selectNextActivity(s, db);
+
+    expect(result.taskId).toBe("tA");
     expect(result.debug.fallback).toBe("pool-order");
-
     expect(result.debug.totalGain).toBeNull();
-
     expect(result.warnings[0]).toContain("pool order");
-
   });
 
   it("an item requiring no attributes is not rankable", () => {
@@ -933,7 +1001,7 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
     expect(result.debug.totalGain).toBeCloseTo(computeExpectedInformationGain(0.5, 0.1, 0.2), 10);
   });
 
-  it("does not invent a G-DINA ranking from missing slip/guess or a missing posterior", () => {
+  it("does not invent a G-DINA ranking from missing slip/guess", () => {
     const db = dinaDb();
     db.evidenceModels[0].statisticalModels[0].type = "gdina";
     db.items = db.items.map((it) => ({ ...it, psychometrics: {} }));
@@ -965,8 +1033,9 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
       session({ taskIds: ["tA", "tB"], selectionStrategy: "BayesianNetwork" }),
       db
     );
-    expect(noBelief.debug.fallback).toBe("pool-order");
+    expect(noBelief.debug.fallback).toBeUndefined();
     expect(noBelief.taskId).toBe("tA");
+    expect(noBelief.debug.family).toBe("gdina");
   });
 
   it("ranks an observable-keyed row from the item's observation", () => {

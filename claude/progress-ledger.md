@@ -87,6 +87,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Off-calendar (2026-10-29, Wave 1) | Standing walks **partial**. ~~D115b Instantiated tasks~~ passed on `:6060`. Announcements create/delete work; teacher visibility fails (no `districtId`). CM archive blocked by Step 9 `CheckCircle2`. D68, Continue, Newtonian not walked (no in-flight session / no Newtonian EMs). Handoff: `claude/day146z-offcal-wave1-standing-walks.md`. **Not D146.** |
 | Off-calendar (2026-10-29, Wave 2 walk-fails) | ~~Step 9 `CheckCircle2`~~ closed. ~~Home announcement tenancy~~ closed. Clone Step 9 Version History renders. `teach1` Home lists admin public and teachers-only posts. D129 stays closed. Handoff: `claude/day146aa-offcal-wave2-walk-fixes.md`. **Not D146.** |
 | Off-calendar (2026-10-29, Wave 2A) | ~~D65 parameter-set diff~~ closed. Helper sorts largest \|Δ\| first. Same table on Evidence Model Parameter Sets Compare and D65 console inspect vs the current active set. Live inspect `job1793177974633000` vs `ps1793177976685`. D129 stays closed. Handoff: `claude/day146ab-offcal-wave2a-parameter-set-diff.md`. **Not D146.** |
+| Off-calendar (2026-10-29, Wave 2B) | ~~D60 P1-4 dual-attribute selection~~ closed. Unmeasured attributes rank at authored `masteryPrior`. Missing SMV or invalid declared prior still unrankable. Wave 2A leftovers: inspect missing-active copy; walk debris deleted; G-DINA characterisation no longer sequential. D129 stays closed. Handoff: `claude/day146ac-offcal-wave2b-dual-attribute-selection.md`. **Not D146.** |
 | Next queued | **D155**, alone, never-compress. Re-calibrate first. Generate the D120 ten-spec family end to end and deliver one spec as an item that scores. W31 gate. Do not start from this close. W29 stays open. |
 
 | Block | **W31 started** 2026-10-28 (D151–D154 done; D155 remains). Conformance G15 closed by D151. W31 gate (ten specs from one template, one delivered and scored) is D155. **W30 closed** 2026-10-17 (D146–D150). Gate held as restated: a trait Student Model scored with DINA or G-DINA raises an advisory sourced from the Domain Analysis, and confirm is not blocked. “Visible at every layer” was not the gate. **W29 open** (D141–D145 done; D145 is a walk, not the gate). Gate not held: an author cannot yet start at a Domain Analysis and reach a Competency Model. **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
@@ -287,7 +288,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-10-29 Wave 0 | **`79ea093`** ≡ `main/master`. Live `:6060` `ecd-node` + `ecd-nginx` force-recreated from current context (compose build fully CACHED). Index `/assets/index-BdsKVPkN.js`. Health ok; R reachable. `admin1` login and DA / Design Pattern / Student Model match git. **Not D146.** D155 not started. W29 stays open. |
 | HEAD at 2026-10-29 Wave 1 | **`de44c60`** ≡ `main/master`. No product. Instantiated tasks walked. Announcement tenancy and Step 9 `CheckCircle2` become Wave 2. D68 / Continue / Newtonian still open. **Not D146.** D155 not started. W29 stays open. |
 | HEAD at 2026-10-29 Wave 2 walk-fails | product **`758c3e1`** ≡ `main/master` before Wave 2A. Handoff: `claude/day146aa-offcal-wave2-walk-fixes.md`. Suite **2869 passed / 4 skipped** (330 files). Build green (EvidenceModelBuilder 372.26 kB gzip 87.78 kB). Live `:6060` index `/assets/index-BDA9pVz6.js`. **Not D146.** D155 not started. W29 stays open. |
-| HEAD at 2026-10-29 Wave 2A | Last committed tip **`758c3e1`**. Product uncommitted at close. Handoff: `claude/day146ab-offcal-wave2a-parameter-set-diff.md`. Suite **2874 passed / 5 skipped** (332 files). Build green (EvidenceModelBuilder 369.20 kB gzip 87.23 kB; ParameterSetDiff 5.73 kB gzip 1.87 kB). Live `:6060` index `/assets/index-Cdv-oe6_.js`. **Not D146.** D155 not started. W29 stays open. |
+| HEAD at 2026-10-29 Wave 2A | product **`6cc96bf`** ≡ `main/master` before Wave 2B. Handoff: `claude/day146ab-offcal-wave2a-parameter-set-diff.md`. Suite **2874 passed / 5 skipped** (332 files). Build green (EvidenceModelBuilder 369.20 kB gzip 87.23 kB; ParameterSetDiff 5.73 kB gzip 1.87 kB). Live `:6060` index `/assets/index-Cdv-oe6_.js`. **Not D146.** D155 not started. W29 stays open. |
+| HEAD at 2026-10-29 Wave 2B | Last committed tip **`6cc96bf`**. Product uncommitted at close. Handoff: `claude/day146ac-offcal-wave2b-dual-attribute-selection.md`. Suite **2879 passed / 4 skipped** (332 files, 2883). Build green (EvidenceModelBuilder 369.20 kB gzip 87.22 kB). Live `:6060` index `/assets/index-B94H1MXV.js`. **Not D146.** D155 not started. W29 stays open. |
 
 
 
@@ -654,6 +656,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-29 | off-calendar | Wave 1 | Instantiated tasks walked. Announcements: create/delete yes, teacher visibility no. Archive: Step 9 crash. D68, Continue, Newtonian not walked. **Not D146.** Handoff: `claude/day146z-offcal-wave1-standing-walks.md`. |
 | 2026-10-29 | off-calendar | Wave 2 walk-fails | Import lucide on VersionHistoryViewer. Stamp announcement tenancy; admin unscoped posts visible to tenant readers. Clone Step 9 Current; `teach1` Home lists both posts. **Not D146.** Handoff: `claude/day146aa-offcal-wave2-walk-fixes.md`. |
 | 2026-10-29 | off-calendar | Wave 2A | Parameter-set diff helper sorts largest \|Δ\| first. Same table on Parameter Sets Compare and D65 console inspect. Live inspect `job1793177974633000` vs activated `ps1793177976685`. **Not D146.** Handoff: `claude/day146ab-offcal-wave2a-parameter-set-diff.md`. |
+| 2026-10-29 | off-calendar | Wave 2B | Dual-attribute selection ranks unmeasured attributes at authored `masteryPrior`. Inspect missing-active copy on Fraction IRT `job1793184918746000`. Deleted draft clone and two walk announcements. **Not D146.** Handoff: `claude/day146ac-offcal-wave2b-dual-attribute-selection.md`. |
 
 
 
@@ -705,7 +708,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | D70 | Live known-equating not executed against Hub `rvkmar/r-backend:latest` | Local `:4000` has equate 2.0.9 / plink 1.5.1; CI still pulls Hub | Docker Hub push of the rebuilt image | **closed D88** — Hub `latest` reports plink 1.5.1; CI package gate fails loudly if missing |
 
-| CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open — standing risk** 2026-10-29 Wave 2: Step 9 crash closed (`CheckCircle2` imported). Clone Step 9 Version History renders Current. Did not archive the live confirmed parent. Did not confirm the leftover clone. |
+| CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open — standing risk** 2026-10-29 Wave 2: Step 9 crash closed (`CheckCircle2` imported). Wave 2B deleted leftover draft clone `cm1793267236887`. Did not archive the live confirmed parents. |
 
 | D115 | Live `:6060` two-PM / one-item browser walk | Tests proved chrome flip; seeded dual-PM session not walked end-to-end | next live student/admin walk | **closed** — 2026-09-21 live walk on `s1789988990327` / `tm-d56` / `itemA`; student tenancy bugs fixed (presentation attach + task GET); chrome flipped `large_text` → `high_contrast` without item edits |
 
@@ -748,6 +751,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | R12 | Migrate legacy questions to items and remove the nearest-difficulty path | Player, submit, and the task XOR still depend on `selectLegacyQuestionCandidate`. Item IRT is already max Fisher. Fisher on b-only rows is a no-op and still uses `irtTheta` | Record nearest-difficulty as the design limit. Do not delete the path. |
 | R13 | Build fixed forms from the pool, and add randomesque or Sympson-Hetter exposure control | G20 already builds the package pool for adaptive IRT/BN. Fixed with a cited delivery model still walked the seed. `usageCount` increments on operational submit and was not a ranking input | Authoritative fixed walks remaining pool ids. Adaptive ranking takes top-N then lowest `usageCount`. No P(A) table. D56 roster fixed is unchanged. |
 | Wave 2A / D65 leftover | Parameter-set diff UI was never built | Registry already compared active vs another set without sorting by movement. D65 console inspect had no diff | Extract `diffParameterSets`, sort by max(\|Δa\|,\|Δb\|,\|Δslip\|,\|Δguess\|), share `ParameterSetDiff` on Compare and console inspect. Do not start Wave 2B or D155. |
+| Wave 2B / D60 P1-4 | Dual-attribute selection skipped attributes with no live posterior | Stopping already closed. D56 refused `?? 0.5`. Accumulation already had `masteryPrior` (absent → 0.5; invalid declared prior refused). True BN already used `network.prior` | Rank at live posterior else authored `masteryPrior`. Missing SMV or invalid prior still unrankable. Do not start D155. |
 
 | D59 | Split reports by role; attribute-profile UI; close teacher-report leak | One stack (`reportsRoutes` + `SessionReport`); teacher-report was authenticate-only; classification already computed, not shown on reports | Gate teacher routes with `authorizeRole`; stop the client fetching them as a student; attach `stopped` + `attributeProfile` to existing payloads/surfaces |
 
@@ -935,9 +939,9 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - Dual-attribute *targetsMet* early stop ("1 of 1") — **closed** (D57 join + D60 re-run)
 
-- Dual-attribute *selection*: items for an attribute with no persisted posterior stay unrankable while measured-attribute items remain (D60 P1-4). Wave 2B.
+- ~~Dual-attribute *selection*: items for an attribute with no persisted posterior stay unrankable while measured-attribute items remain (D60 P1-4)~~ closed 2026-10-29 Wave 2B. Live posterior else authored `masteryPrior`. Missing SMV or invalid declared prior still unrankable.
 
-- ~~D65 parameter-set diff (largest movements first)~~ closed 2026-10-29 Wave 2A. Registry Compare and D65 console inspect share `ParameterSetDiff`, sorted by max |Δ|. Bayesian CPTs stay inspect-both.
+- ~~D65 parameter-set diff (largest movements first)~~ closed 2026-10-29 Wave 2A. Registry Compare and D65 console inspect share `ParameterSetDiff`, sorted by max |Δ|. Bayesian CPTs stay inspect-both. Inspect with no active set now names that state (Wave 2B leftover).
 
 - ~~Chunk >500 kB — D74~~ closed D74 (warning cleared; max JS chunk 446.89 kB recharts)
 

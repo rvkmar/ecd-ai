@@ -127,26 +127,26 @@
 // machinery that actually exists and actually produces live beliefs:
 // attributeAccumulation.js's per-attribute mastery posteriors (DINA/G-DINA,
 // keyed by Q-matrix attribute, landing in `smvPosteriors`). Where a session
-// carries no diagnostic data at all, the strategy DEGRADES to pool order
-// (the session seed, then task id) and says so in `debug.fallback` and a
-// warning, rather than presenting an accidental default as a computed
-// choice. On a roster session that order is the old first unanswered task.
-// G-DINA with a calibrated probability table is ranked by expected
-// posterior entropy over the reduced attribute pattern (R7). Without
-// a calibrated set, R8 derives a conjunctive table from the item's
-// dinaParams slip/guess (the DINA identity [g, …, 1−s]) and ranks
-// that the same way. Missing slip/guess, a missing Q-vector, or a
-// missing posterior still uses this fallback.
+// carries no live posterior, DINA and G-DINA rank the unmeasured
+// attribute at the Student Model Variable's authored masteryPrior
+// (absent priorDistribution is 0.5, the same default accumulation
+// uses). That is Wave 2B / D60 P1-4. Inventing 0.5 when the SMV is
+// missing, or when a declared prior is invalid, is still refused.
+// Missing slip/guess or a missing Q-vector still falls back to pool
+// order and says so. On a roster session that order is the old first
+// unanswered task. G-DINA with a calibrated probability table is
+// ranked by expected posterior entropy over the reduced attribute
+// pattern (R7). Without a calibrated set, R8 derives a conjunctive
+// table from the item's dinaParams slip/guess.
 //
 // F24 (off calendar). Evidence Accumulation now writes bnPosteriors and
 // the distribution on smvPosteriors for a bayesian_network statistical
 // model. This strategy ranks that family by expected information gain.
 // The belief is the live distribution when its states match, else a
 // carried-forward prior, else the model prior, so the first item can be
-// ranked. DINA still requires a live posterior and does not invent 0.5.
-// jointPrior is not read. G-DINA ranks from a calibrated table and
-// live attribute posteriors; it has no pilot path (R8). When nothing
-// can be ranked, the fallback is still pool order plus a warning.
+// ranked. DINA and G-DINA use a live posterior when one exists, else
+// masteryPrior. jointPrior is not read. When nothing can be ranked, the
+// fallback is still pool order plus a warning.
 //
 // ------------------------------------------------------------------
 // WHAT THIS MODULE DELIBERATELY DOES NOT DO
@@ -196,6 +196,7 @@ import {
   dinaParametersAreUsable,
   gdinaParametersAreUsable,
   computeGdinaExpectedInformationGain,
+  masteryPrior,
 } from "./attributeAccumulation.js";
 import { attributeIdsForDeliveryItem } from "../../src/utils/qMatrixEntries.js";
 import { assemblyConstraintsActive } from "../../src/utils/assemblyConstraints.js";
@@ -1258,6 +1259,36 @@ function selectIrt(session, db, warnings) {
   return { taskId: best.taskId, strategy: "IRT", debug: { ...best.debug, skipped } };
 }
 
+function smVariableById(db, attributeId) {
+  for (const model of db?.competencyModels || []) {
+    const smv = (model.smVariables || []).find((variable) => variable.id === attributeId);
+    if (smv) return smv;
+  }
+  return null;
+}
+
+// Live posterior wins. Otherwise the SMV's authored masteryPrior — the
+// same prior accumulation uses, including the documented 0.5 default
+// when priorDistribution is absent. A missing SMV, or a declared but
+// invalid prior, is still refused. That is not the pre-D56 `?? 0.5`.
+function diagnosticBeliefForAttribute(session, db, attributeId) {
+  const live = session?.studentModel?.smvPosteriors?.[attributeId]?.estimate;
+  if (Number.isFinite(live)) {
+    return { p: live, source: "posterior" };
+  }
+  const smv = smVariableById(db, attributeId);
+  if (!smv) {
+    return {
+      reason: `No live posterior exists yet for attribute '${attributeId}', and no Student Model Variable of that id is declared.`,
+    };
+  }
+  const prior = masteryPrior(smv);
+  if (prior.reason) {
+    return { reason: prior.reason };
+  }
+  return { p: prior.p, source: "masteryPrior" };
+}
+
 /**
  * BayesianNetwork: the candidate with the greatest expected reduction in
  * uncertainty about the attributes it measures, given current beliefs.
@@ -1267,13 +1298,12 @@ function selectIrt(session, db, warnings) {
  * given. On a roster session that list is the seed, so the task is the
  * same one the old first-unanswered rule returned. The fallback name and
  * the warning say that this was not an information-gain ranking. G-DINA
- * without a calibrated table still uses this fallback (R8).
+ * without slip/guess or a usable table still uses this fallback.
  */
 function selectBayesianNetwork(session, db, warnings) {
   let candidates = candidatesFor(session, db);
   const gated = applyPrerequisiteGating(candidates, session, db, warnings);
   candidates = gated.candidates;
-  const posteriors = session.studentModel?.smvPosteriors || {};
 
   const ranked = [];
   const unrankable = gated.blocked.map((b) => ({ taskId: b.taskId, reason: b.reason }));
@@ -1430,16 +1460,16 @@ function selectBayesianNetwork(session, db, warnings) {
       const priors = [];
       const missing = [];
       for (const attributeId of requiredAttributeIds) {
-        const prior = posteriors[attributeId]?.estimate;
-        if (!Number.isFinite(prior)) missing.push(attributeId);
-        else priors.push(prior);
+        const belief = diagnosticBeliefForAttribute(session, db, attributeId);
+        if (belief.reason) missing.push({ attributeId, reason: belief.reason });
+        else priors.push(belief.p);
       }
       if (missing.length > 0) {
         unrankable.push({
           taskId,
           reason: missing.length === requiredAttributeIds.length
-            ? `No live posterior exists yet for any attribute item '${task.itemId}' requires.`
-            : `No live posterior exists yet for ${missing.length === 1 ? "attribute" : "attributes"} ${missing.join(", ")} that item '${task.itemId}' requires.`,
+            ? missing[0].reason
+            : `No evaluable belief for ${missing.map((row) => row.attributeId).join(", ")} that item '${task.itemId}' requires.`,
         });
         continue;
       }
@@ -1476,27 +1506,28 @@ function selectBayesianNetwork(session, db, warnings) {
     const perAttribute = [];
 
     for (const attributeId of requiredAttributeIds) {
-      const posterior = posteriors[attributeId];
-      const prior = posterior?.estimate;
+      const belief = diagnosticBeliefForAttribute(session, db, attributeId);
 
-      if (!Number.isFinite(prior)) {
-        // No live belief about this attribute yet. Contributing a default
-        // 0.5 here would let an item score information gain purely from an
-        // assumption nobody made -- exactly the `?? 0.5` shortcut that made
-        // the pre-D56 branch look like it was computing something.
-        perAttribute.push({ attributeId, skipped: "No live posterior for this attribute yet." });
+      if (belief.reason) {
+        perAttribute.push({ attributeId, skipped: belief.reason });
         continue;
       }
 
-      const attributeGain = computeExpectedInformationGain(prior, slip, guess);
+      const attributeGain = computeExpectedInformationGain(belief.p, slip, guess);
       gain += attributeGain;
-      perAttribute.push({ attributeId, prior, gain: attributeGain });
+      perAttribute.push({
+        attributeId,
+        prior: belief.p,
+        priorSource: belief.source,
+        gain: attributeGain,
+      });
     }
 
     if (perAttribute.every((a) => a.skipped)) {
       unrankable.push({
         taskId,
-        reason: `No live posterior exists yet for any attribute item '${task.itemId}' requires.`,
+        reason: perAttribute[0]?.skipped
+          || `No evaluable belief for any attribute item '${task.itemId}' requires.`,
       });
       continue;
     }
@@ -1718,6 +1749,7 @@ export const __testing__ = {
   noteDeliveredTask,
   taskIdsIncludingDelivered,
   applyPrerequisiteGating,
+  diagnosticBeliefForAttribute,
   resolveGatingPolicy,
   selectionPolicyForDelivery,
   liveThetaFor,

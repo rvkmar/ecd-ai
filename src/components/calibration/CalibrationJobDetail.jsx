@@ -399,6 +399,12 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
                 otherLabel={otherSet.parameterSetId}
               />
             )}
+            {otherSet && !activeSet && (
+              <p className="text-sm text-muted-foreground" data-testid="parameter-set-diff-missing-active">
+                No active parameter set to compare against this run. Activate a
+                candidate, or compare two sets on Parameter Sets.
+              </p>
+            )}
             <div>
               <h4 className="mb-1 text-caption font-medium text-muted-foreground">Parameters</h4>
               <JsonBlock value={response.parameters} empty="No parameters on this response." />

@@ -15,8 +15,10 @@
 //
 // Characterisation (deferred P1/P2 — pin today's behaviour so a later
 // unit cannot "fix" them by accident without noticing):
-//   unmeasured-attribute items stay unrankable; G-DINA falls back to
-//   pool order; IRT ranks max Fisher information, not nearest b.
+//   G-DINA with no usable probabilities table falls back to pool order;
+//   IRT ranks max Fisher information, not nearest b.
+// Wave 2B closed D60 P1-4: unmeasured attributes rank at masteryPrior.
+// R7 closed D60 P1-5: a calibrated G-DINA probabilities table ranks.
 
 import { describe, it, expect } from "vitest";
 import { selectNextActivity, __testing__ } from "../activitySelection.js";
@@ -427,7 +429,7 @@ describe("D60: classification accuracy is not a CTT proportion", () => {
    Dual-attribute: stopping is closed; selection-side hole remains
 ------------------------------------------------------------------ */
 
-describe("D60: dual-attribute — stopping closed, selection hole remains", () => {
+describe("D60: dual-attribute — stopping closed, selection ranks unmeasured at masteryPrior", () => {
   function twoAttributeAm() {
     return dinaDb({
       assemblyModels: [
@@ -448,13 +450,13 @@ describe("D60: dual-attribute — stopping closed, selection hole remains", () =
     expect(result.stopped).toBeUndefined();
   });
 
-  it("P1 characterisation: an unmeasured-attribute item stays unrankable while an attrA item remains", () => {
+  it("P1-4: an unmeasured-attribute item ranks at masteryPrior and can beat a settled attrA item", () => {
     // Production /submit writes smvPosteriors via applyPosteriorsToSession;
     // BayesianNetwork ranks those persisted beliefs, it does not re-run
     // accumulation. After tA, attrA is on the session and attrB is not.
-    // itemB cannot compete (D56 refused to invent a 0.5 prior). Remaining
-    // attrA items win. Combined with a tight maxItems this can exhaust
-    // the form without ever measuring attrB. Held — a prior-choice change.
+    // Wave 2B ranks attrB at the SMV's authored masteryPrior (here the
+    // accumulation default 0.5). Expected information is higher at 0.5
+    // than at 0.82, so tB is presented instead of another attrA item.
     const s = diagnosticSession({
       studentModel: {
         smvPosteriors: {
@@ -470,14 +472,18 @@ describe("D60: dual-attribute — stopping closed, selection hole remains", () =
     });
     const result = selectNextActivity(s, twoAttributeAm());
 
-    expect(result.taskId).toBe("tA2");
+    expect(result.taskId).toBe("tB");
     expect(result.debug.fallback).toBeUndefined();
-    expect(result.debug.unrankable).toEqual([
-      { taskId: "tB", reason: expect.stringContaining("No live posterior exists yet") },
+    expect(result.debug.attributes).toEqual([
+      expect.objectContaining({
+        attributeId: "attrB",
+        prior: 0.5,
+        priorSource: "masteryPrior",
+      }),
     ]);
   });
 
-  it("once only the unmeasured-attribute item remains, pool-order fallback presents it", () => {
+  it("once only the unmeasured-attribute item remains, it is ranked at masteryPrior", () => {
     const s = diagnosticSession({
       taskIds: ["tA", "tB"],
       responses: [diagnosticResponse("tA", "itemA", "oA")],
@@ -486,8 +492,14 @@ describe("D60: dual-attribute — stopping closed, selection hole remains", () =
 
     expect(result.stopped).toBeUndefined();
     expect(result.taskId).toBe("tB");
-    expect(result.debug.fallback).toBe("pool-order");
-    expect(result.warnings[0]).toContain("pool order");
+    expect(result.debug.fallback).toBeUndefined();
+    expect(result.debug.attributes).toEqual([
+      expect.objectContaining({
+        attributeId: "attrB",
+        prior: 0.5,
+        priorSource: "masteryPrior",
+      }),
+    ]);
   });
 });
 
@@ -495,13 +507,11 @@ describe("D60: dual-attribute — stopping closed, selection hole remains", () =
    Characterisation of held / remaining gaps
 ------------------------------------------------------------------ */
 
-describe("D60 characterisation: G-DINA BayesianNetwork is sequential", () => {
-  it("a calibrated G-DINA item cannot be ranked and falls back with a warning", () => {
-    // resolveDinaParameters requires family === "dina" AND slip/guess.
-    // A G-DINA probability table is never usable there, so every
-    // candidate is unrankable. F24-shaped: strategy name says
-    // BayesianNetwork; the choice is pool order. Held. Real
-    // G-DINA information gain is its own unit.
+describe("D60 characterisation: G-DINA BayesianNetwork ranks a probabilities table", () => {
+  it("a calibrated G-DINA item ranks; a `table` field is still not a usable set", () => {
+    // R7 closed the sequential pin. Production G-DINA parameters are
+    // `{ probabilities }`. The old `{ table }` key is still refused, so
+    // that shape stays pool-order — not a reopen of P1-5.
     const db = dinaDb();
     db.evidenceModels[0].statisticalModels[0] = {
       id: "smG",
@@ -520,7 +530,7 @@ describe("D60 characterisation: G-DINA BayesianNetwork is sequential", () => {
       ],
     };
 
-    const s = session({
+    const refused = session({
       taskIds: ["tA", "tB"],
       selectionStrategy: "BayesianNetwork",
       studentModel: {
@@ -539,12 +549,19 @@ describe("D60 characterisation: G-DINA BayesianNetwork is sequential", () => {
       },
     });
 
-    const result = selectNextActivity(s, db);
+    const refusedResult = selectNextActivity(refused, db);
+    expect(refusedResult.debug.fallback).toBe("pool-order");
+    expect(refusedResult.debug.unrankable[0].reason).toMatch(/no usable 'gdina' parameters/);
 
-    expect(result.taskId).toBe("tA");
-    expect(result.debug.fallback).toBe("pool-order");
-    expect(result.warnings[0]).toContain("pool order");
-    expect(result.debug.unrankable[0].reason).toMatch(/no usable 'gdina' parameters/);
+    db.evidenceModels[0].statisticalModels[0].parameterSets[0].parameters = {
+      itemA: { probabilities: [0.2, 0.9] },
+      itemB: { probabilities: [0.2, 0.9] },
+    };
+    const ranked = selectNextActivity(refused, db);
+    expect(ranked.taskId).toBeDefined();
+    expect(ranked.debug.fallback).toBeUndefined();
+    expect(ranked.debug.family).toBe("gdina");
+    expect(ranked.debug.unrankable).toEqual([]);
   });
 });
 

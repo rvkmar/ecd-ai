@@ -418,6 +418,7 @@ describe("admin start → process → watch → ingest", () => {
     expect(screen.getAllByText(/"Item\.1"/).length).toBeGreaterThan(0);
     expect(screen.getByText(/"logLik"/)).toBeInTheDocument();
     expect(screen.getByTestId("parameter-set-diff")).toBeInTheDocument();
+    expect(screen.queryByTestId("parameter-set-diff-missing-active")).not.toBeInTheDocument();
     const driftRows = screen.getAllByTestId(/parameter-set-diff-row-/);
     expect(driftRows[0]).toHaveAttribute("data-testid", "parameter-set-diff-row-Item.5");
     expect(driftRows[1]).toHaveAttribute("data-testid", "parameter-set-diff-row-Item.1");
@@ -438,6 +439,29 @@ describe("admin start → process → watch → ingest", () => {
       },
     ]);
     expect(screen.getByText(/Activated/)).toBeInTheDocument();
+  });
+
+  it("inspect of a run with no active set tells the operator there is nothing to diff against", async () => {
+    const user = userEvent.setup();
+    fx.setJobs([
+      queuedJob({
+        id: "job-no-active",
+        evidenceModelId: "em-gdina",
+        statisticalModelId: "sm-gdina",
+        status: "succeeded",
+        finishedAt: "2026-09-13T12:01:00.000Z",
+        ingestedParameterSetId: "ps-frac",
+        response: succeededResponse(),
+      }),
+    ]);
+
+    render(<CalibrationConsole />);
+    await user.click(screen.getByRole("button", { name: /^inspect$/i }));
+
+    expect(screen.getByTestId("parameter-set-diff-missing-active")).toHaveTextContent(
+      /No active parameter set to compare against this run/
+    );
+    expect(screen.queryByTestId("parameter-set-diff")).not.toBeInTheDocument();
   });
 
   it("enqueues sim10GDINA bound to a G-DINA statistical model", async () => {
