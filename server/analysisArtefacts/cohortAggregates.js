@@ -140,6 +140,34 @@ function fmt(n, digits = 3) {
   return n.toFixed(digits);
 }
 
+const DISTRICT_REPORT_CSS = `@import url("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap");
+:root{color-scheme:light;--ink:#1c1917;--ink-muted:#57534e;--paper:#e8e4dc;--raised:#fbfaf6;--rule:#d0c8b8;--rule-strong:#5c5346;--accent:#3f4a3a;--flag-bg:#efe4cc;--flag-ink:#7a3e09;--thead:#ece6d8;--row-alt:#f6f3ea;--font-display:"Source Serif 4","Palatino Linotype",Palatino,Georgia,serif;--font-ui:"Source Sans 3","Segoe UI",Calibri,system-ui,sans-serif}
+*{box-sizing:border-box}html{background:var(--paper)}
+body{margin:0;color:var(--ink);font-family:var(--font-ui);font-size:16px;line-height:1.55;background:var(--paper);-webkit-font-smoothing:antialiased}
+::selection{background:var(--flag-bg);color:var(--ink)}
+.report{max-width:52rem;margin:0 auto;padding:2.75rem 2.35rem 3.5rem;background:var(--raised);min-height:100vh;box-shadow:0 18px 48px -24px rgba(28,25,23,.35)}
+h1{font-family:var(--font-display);font-size:2.2rem;font-weight:700;line-height:1.12;letter-spacing:-.022em;margin:0 0 .8rem}
+h2{font-family:var(--font-display);font-size:1.28rem;font-weight:600;margin:2.5rem 0 .7rem;padding-bottom:.38rem;border-bottom:1px solid var(--rule)}
+.cover{padding-bottom:1.35rem;margin-bottom:.35rem;border-bottom:2.5px solid var(--ink)}
+.cover::after{content:"";display:block;margin-top:.4rem;border-bottom:1px solid var(--ink)}
+.lede{color:var(--ink-muted);max-width:66ch;font-size:.98rem;line-height:1.5;margin-bottom:1.2rem}
+.meta,.stamp{display:grid;grid-template-columns:repeat(auto-fit,minmax(10.25rem,1fr));gap:.9rem 1.35rem;margin:0;padding:1.1rem 0 0}
+.meta dt,.stamp dt{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 .18rem}
+.meta dd,.stamp dd{margin:0;font-size:.92rem;font-variant-numeric:tabular-nums;word-break:break-word}
+.note{font-size:.94rem;color:var(--ink-muted);max-width:68ch;white-space:pre-wrap}
+.table-wrap{overflow-x:auto;margin:.45rem 0 1.55rem}
+table{width:100%;border-collapse:collapse;margin:0;font-size:.84rem;font-variant-numeric:tabular-nums lining-nums}
+caption{caption-side:top;text-align:left;font-size:.78rem;font-weight:600;color:var(--ink-muted);margin:0 0 .45rem}
+th,td{border:none;border-bottom:1px solid var(--rule);padding:.45rem .6rem;text-align:left;vertical-align:top}
+thead th{background:var(--thead);font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);border-bottom:1.5px solid var(--rule-strong)}
+tbody tr:nth-child(even) td,tbody tr:nth-child(even) th{background:var(--row-alt)}
+td.n,th.n{text-align:right}td.muted{color:var(--ink-muted)}
+table.kv th{width:44%;font-size:.88rem;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink);background:transparent}
+table.kv td{text-align:right}table.compact{width:auto;min-width:16rem}
+pre.credits{font-size:.8rem;line-height:1.5;background:var(--paper);border:1px solid var(--rule);padding:1rem 1.15rem;overflow:auto;white-space:pre-wrap}
+.colophon{margin-top:2.25rem;padding-top:.85rem;border-top:1px solid var(--rule);font-size:.75rem;color:var(--ink-muted)}
+@media print{html,body{background:#fff}.report{max-width:none;padding:0;box-shadow:none;background:#fff}}`;
+
 export function buildDistrictAggregateHtml(artefact, aggregate, { snapshot } = {}) {
   const tpl = snapshot || artefact?.payload?.reportTemplate || null;
   const show = (chapter) => templateHonoursChapter(tpl, chapter);
@@ -147,63 +175,67 @@ export function buildDistrictAggregateHtml(artefact, aggregate, { snapshot } = {
   const cells = aggregate?.cells || {};
   const cellRows = Object.entries(cells).map(([id, cell]) => {
     if (cell?.suppressed) {
-      return `<tr><td>${esc(id)}</td><td colspan="4">Suppressed (${esc(cell.reason)})</td></tr>`;
+      return `<tr><td>${esc(id)}</td><td class="muted" colspan="4">Suppressed (${esc(cell.reason)})</td></tr>`;
     }
-    return `<tr><td>${esc(id)}</td><td>${esc(cell.n)}</td><td>${esc(fmt(cell.meanRaw))}</td><td>${esc(fmt(cell.sdRaw))}</td><td>${esc(fmt(cell.meanTheta))}</td></tr>`;
+    return `<tr><td>${esc(id)}</td><td class="n">${esc(cell.n)}</td><td class="n">${esc(fmt(cell.meanRaw))}</td><td class="n">${esc(fmt(cell.sdRaw))}</td><td class="n">${esc(fmt(cell.meanTheta))}</td></tr>`;
   });
   const flagRows = Object.entries(aggregate?.flagCounts || {}).map(
-    ([code, n]) => `<tr><td>${esc(code)}</td><td>${esc(n)}</td></tr>`
+    ([code, n]) => `<tr><td>${esc(code)}</td><td class="n">${esc(n)}</td></tr>`
   );
   const domainRows = (aggregate?.domains || []).map(
     (d) =>
-      `<tr><td>${esc(d.id)}</td><td>${esc(d.nItems)}</td><td>${esc(fmt(d.mean))}</td><td>${esc(fmt(d.sd))}</td></tr>`
+      `<tr><td>${esc(d.id)}</td><td class="n">${esc(d.nItems)}</td><td class="n">${esc(fmt(d.mean))}</td><td class="n">${esc(fmt(d.sd))}</td></tr>`
   );
   const rel = aggregate?.reliability || {};
   const credits = artefact?.payload?.credits;
   const creditHtml = credits
-    ? `<h2>Software and packages</h2><pre class="note">${esc(
+    ? `<section class="credits-block"><h2>Software and packages</h2><pre class="credits">${esc(
         [credits.rVersion, credits.r, ...(credits.packages || [])].filter(Boolean).join("\n\n")
-      )}</pre>`
+      )}</pre></section>`
     : "";
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${esc(title)}</title>
-<style>
-body{font-family:system-ui,sans-serif;margin:24px;color:#1a1a1a;line-height:1.45}
-table{border-collapse:collapse;margin:12px 0 24px;font-size:14px}
-th,td{border:1px solid #ccc;padding:4px 8px;text-align:left}
-th{background:#f4f4f4}
-.note{font-size:13px;color:#444;max-width:72ch;white-space:pre-wrap}
-.stamp{font-size:12px;color:#444;margin-bottom:16px}
-</style></head><body>
+<style>${DISTRICT_REPORT_CSS}</style></head><body>
+<main class="report">
+<header class="cover">
 <h1>${esc(title)}</h1>
-<div class="stamp">artefact ${esc(artefact?.id)} | job ${esc(artefact?.jobId)} | ${esc(artefact?.packageVersion)} | n gated at ${esc(aggregate?.minCellSize)}</div>
-<p class="note">District/cohort view. Person rows are omitted. Cells below MIN_CELL_SIZE (${esc(aggregate?.minCellSize)}) are suppressed. Student-facing item keys live on the Session report, not here.</p>
+<p class="lede">District/cohort view. Person rows are omitted. Cells below MIN_CELL_SIZE (${esc(aggregate?.minCellSize)}) are suppressed. Student-facing item keys live on the Session report, not here.</p>
+<dl class="meta stamp">
+<div><dt>Artefact</dt><dd>${esc(artefact?.id)}</dd></div>
+<div><dt>Job</dt><dd>${esc(artefact?.jobId)}</dd></div>
+<div><dt>Engine</dt><dd>${esc(artefact?.packageVersion)}</dd></div>
+<div><dt>n gated at</dt><dd>${esc(aggregate?.minCellSize)}</dd></div>
+</dl>
+</header>
 ${
   show("reliability")
-    ? `<h2>Reliability</h2><table><tbody>
-<tr><th>KR-20</th><td>${esc(fmt(rel.kr20 ?? rel.cronbachAlpha, 4))}</td></tr>
-<tr><th>Cronbach alpha</th><td>${esc(fmt(rel.cronbachAlpha, 4))}</td></tr>
-<tr><th>SEM</th><td>${esc(fmt(rel.sem))}</td></tr>
-</tbody></table>`
+    ? `<h2>Reliability</h2><div class="table-wrap"><table class="kv"><caption>Internal consistency for this aggregate</caption><tbody>
+<tr><th>KR-20</th><td class="n">${esc(fmt(rel.kr20 ?? rel.cronbachAlpha, 4))}</td></tr>
+<tr><th>Cronbach alpha</th><td class="n">${esc(fmt(rel.cronbachAlpha, 4))}</td></tr>
+<tr><th>SEM</th><td class="n">${esc(fmt(rel.sem))}</td></tr>
+</tbody></table></div>`
     : ""
 }
 <h2>${esc(aggregate?.level === "cohort" ? "Cohort cells" : "District cells")}</h2>
-<table><thead><tr><th>Cell</th><th>n</th><th>Mean raw</th><th>SD raw</th><th>Mean theta</th></tr></thead><tbody>
+<div class="table-wrap"><table><caption>Cell means with suppression below the privacy floor</caption><thead><tr><th>Cell</th><th class="n">n</th><th class="n">Mean raw</th><th class="n">SD raw</th><th class="n">Mean theta</th></tr></thead><tbody>
 ${cellRows.join("") || "<tr><td colspan='5'>No scores sidecar on this artefact.</td></tr>"}
-</tbody></table>
+</tbody></table></div>
 ${
   show("flags")
-    ? `<h2>Flag counts</h2><table><thead><tr><th>Flag</th><th>Items</th></tr></thead><tbody>${
+    ? `<h2>Flag counts</h2><div class="table-wrap"><table><caption>Review flags across items in this aggregate</caption><thead><tr><th>Flag</th><th class="n">Items</th></tr></thead><tbody>${
         flagRows.join("") || "<tr><td colspan='2'>None</td></tr>"
-      }</tbody></table>`
+      }</tbody></table></div>`
     : ""
 }
 ${
   domainRows.length
-    ? `<h2>Domain means</h2><table><thead><tr><th>Domain</th><th>Items</th><th>Mean</th><th>SD</th></tr></thead><tbody>${domainRows.join("")}</tbody></table>`
+    ? `<h2>Domain means</h2><div class="table-wrap"><table><caption>Domain means for this aggregate</caption><thead><tr><th>Domain</th><th class="n">Items</th><th class="n">Mean</th><th class="n">SD</th></tr></thead><tbody>${domainRows.join("")}</tbody></table></div>`
     : ""
 }
 ${show("credits") ? creditHtml : ""}
+<footer class="colophon">ECD Assessment Platform · psychometric analysis bureau</footer>
+</main>
 </body></html>`;
 }

@@ -1,15 +1,19 @@
 # Iteman-class HTML skin (classical technical report).
 SKIN_TITLE <- "Classical item analysis"
 SKIN_CSS <- paste(
-  "body{font-family:Georgia,serif;margin:24px;color:#1a1a1a;line-height:1.45}",
-  "h1,h2,h3{font-family:system-ui,sans-serif}",
-  "table{border-collapse:collapse;margin:12px 0 24px;font-size:14px}",
-  "th,td{border:1px solid #ccc;padding:4px 8px;text-align:left}",
-  "th{background:#f4f4f4}",
-  ".stamp{font-size:12px;color:#444;margin-bottom:16px}",
-  ".flag{color:#8a4b08}",
-  ".note{font-size:13px;color:#444;max-width:72ch;white-space:pre-wrap}",
-  "svg{display:block;margin:8px 0 16px}",
-  "pre.credits{font-size:12px;background:#f8f8f8;padding:12px;overflow:auto}",
+  ":root{",
+  "--ink:#1c1917;",
+  "--ink-muted:#57534e;",
+  "--paper:#ebe4d6;",
+  "--raised:#fffcf7;",
+  "--rule:#d4c6b0;",
+  "--rule-strong:#6b4f32;",
+  "--accent:#6b2d2d;",
+  "--flag-bg:#f3e4c8;",
+  "--flag-ink:#7a3e09;",
+  "--thead:#efe6d6;",
+  "--row-alt:#faf6ef;",
+  "--plot:#6b2d2d;",
+  "}",
   sep = "\n"
 )

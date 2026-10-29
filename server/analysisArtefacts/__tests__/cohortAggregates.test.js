@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { MIN_CELL_SIZE } from "../../utils/aggregatePrivacy.js";
-import { aggregateArtefactScores } from "../cohortAggregates.js";
+import { aggregateArtefactScores, buildDistrictAggregateHtml } from "../cohortAggregates.js";
 
 describe("cohort / district score aggregates", () => {
   it("suppresses cells below MIN_CELL_SIZE", () => {
@@ -35,5 +35,26 @@ describe("cohort / district score aggregates", () => {
     expect(agg.cells.d1.n).toBe(6);
     expect(agg.flagCounts.tooHard).toBe(1);
     expect(agg.domains[0].id).toBe("math");
+  });
+
+  it("renders a technical-report HTML shell for a district aggregate", () => {
+    const artefact = {
+      id: "aa1",
+      jobId: "job1",
+      packageVersion: "mirt 1.48",
+      payload: { scores: [] },
+    };
+    const html = buildDistrictAggregateHtml(artefact, {
+      level: "district",
+      minCellSize: MIN_CELL_SIZE,
+      cells: {},
+      flagCounts: {},
+      domains: [],
+      reliability: { kr20: 0.8, cronbachAlpha: 0.81, sem: 1.2 },
+    });
+    expect(html).toMatch(/class="report"/);
+    expect(html).toMatch(/<header class="cover">/);
+    expect(html).toMatch(/District \/ cohort summary/);
+    expect(html).toMatch(/psychometric analysis bureau/);
   });
 });

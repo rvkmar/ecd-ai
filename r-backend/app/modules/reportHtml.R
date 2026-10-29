@@ -20,21 +20,87 @@
   formatC(v, digits = digits, format = "f")
 }
 
-.html_css <- function(skin = NULL) {
-  if (is.list(skin) && !is.null(skin$css) && nzchar(as.character(skin$css)[[1]])) return(skin$css)
+.report_layout_css <- function() {
+  candidates <- c(
+    file.path(.report_skins_dir(), "_layout.css"),
+    file.path("reports", "_layout.css")
+  )
+  for (path in candidates) {
+    if (file.exists(path)) {
+      return(paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = "\n"))
+    }
+  }
   paste(
-    "body{font-family:Georgia,serif;margin:24px;color:#1a1a1a;line-height:1.45}",
-    "h1,h2,h3{font-family:system-ui,sans-serif}",
-    "table{border-collapse:collapse;margin:12px 0 24px;font-size:14px}",
-    "th,td{border:1px solid #ccc;padding:4px 8px;text-align:left}",
-    "th{background:#f4f4f4}",
-    ".stamp{font-size:12px;color:#444;margin-bottom:16px}",
-    ".flag{color:#8a4b08}",
-    ".note{font-size:13px;color:#444;max-width:72ch;white-space:pre-wrap}",
-    "svg{display:block;margin:8px 0 16px}",
-    "pre.credits{font-size:12px;background:#f8f8f8;padding:12px;overflow:auto}",
+    "body{margin:0;font-family:Georgia,serif;color:#1c1917;line-height:1.5;background:#ebe4d6}",
+    ".report{max-width:52rem;margin:0 auto;padding:2.5rem;background:#fffcf7}",
+    "table{border-collapse:collapse;width:100%;font-size:14px}",
+    "th,td{border-bottom:1px solid #d4c6b0;padding:.45rem .6rem;text-align:left}",
+    "td.n{text-align:right}",
     sep = "\n"
   )
+}
+
+.html_css <- function(skin = NULL) {
+  tokens <- if (is.list(skin) && !is.null(skin$css) && nzchar(as.character(skin$css)[[1]])) {
+    as.character(skin$css)[[1]]
+  } else {
+    ""
+  }
+  paste(.report_layout_css(), tokens, sep = "\n")
+}
+
+.html_document <- function(title, css, body) {
+  paste0(
+    "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'/>",
+    "<meta name='viewport' content='width=device-width, initial-scale=1'/>",
+    "<title>", .html_escape(title), "</title>",
+    "<style>", css, "</style></head><body><main class='report'>",
+    body,
+    "<footer class='colophon'>ECD Assessment Platform &middot; psychometric analysis bureau</footer>",
+    "</main></body></html>"
+  )
+}
+
+.cover_html <- function(title, lede, job_id, package_version, sample_size, calibrated_at, tpl_name = "") {
+  fields <- list(
+    Job = job_id,
+    Engine = package_version,
+    N = as.character(sample_size),
+    Computed = calibrated_at
+  )
+  if (!is.null(tpl_name) && nzchar(as.character(tpl_name)[[1]])) {
+    fields$Template <- as.character(tpl_name)[[1]]
+  }
+  items <- vapply(names(fields), function(nm) {
+    sprintf("<div><dt>%s</dt><dd>%s</dd></div>", .html_escape(nm), .html_escape(fields[[nm]]))
+  }, character(1), USE.NAMES = FALSE)
+  paste0(
+    "<header class='cover'>",
+    "<h1>", .html_escape(title), "</h1>",
+    if (!is.null(lede) && nzchar(lede)) paste0("<p class='lede'>", lede, "</p>") else "",
+    "<dl class='meta stamp'>", paste(items, collapse = ""), "</dl>",
+    "</header>"
+  )
+}
+
+.tdn <- function(x, digits = 3) sprintf("<td class='n'>%s</td>", .fmt(x, digits))
+
+.table_wrap <- function(..., caption = NULL, class = NULL) {
+  cap <- if (!is.null(caption) && nzchar(caption)) sprintf("<caption>%s</caption>", .html_escape(caption)) else ""
+  cls <- if (!is.null(class) && nzchar(class)) sprintf(" class='%s'", class) else ""
+  paste0("<div class='table-wrap'><table", cls, ">", cap, paste0(..., collapse = ""), "</table></div>")
+}
+
+.inline_svg <- function(raw, caption = NULL) {
+  txt <- paste(raw, collapse = "\n")
+  txt <- sub("^\\s*<\\?xml[^>]*\\?>", "", txt, perl = TRUE)
+  txt <- sub("<!DOCTYPE[^>]*>", "", txt, perl = TRUE)
+  cap <- if (!is.null(caption) && nzchar(caption)) {
+    paste0("<figcaption>", .html_escape(caption), "</figcaption>")
+  } else {
+    ""
+  }
+  paste0("<figure class='plot'>", txt, cap, "</figure>")
 }
 
 .report_skins_dir <- function() {
@@ -81,9 +147,11 @@
   if (is.null(credits) || !is.list(credits)) return("")
   body <- paste(c(credits$rVersion, credits$r, unlist(credits$packages, use.names = FALSE)), collapse = "\n\n")
   paste0(
+    "<section class='credits-block' id='credits'>",
     "<h2>Software and packages</h2>",
     "<p class='note'>This report was produced by the ECD R bureau. It is not Iteman or Xcalibre software.</p>",
-    "<pre class='credits'>", .html_escape(body), "</pre>"
+    "<pre class='credits'>", .html_escape(body), "</pre>",
+    "</section>"
   )
 }
 
@@ -91,22 +159,34 @@
   if (!is.list(by_score) || !length(by_score)) return("")
   rows <- character(0)
   for (row in by_score) {
-    rows <- c(rows, sprintf("<tr><td>%s</td><td>%s</td></tr>", .fmt(row$score, 0), .fmt(row$csem)))
+    rows <- c(rows, sprintf("<tr>%s%s</tr>", .tdn(row$score, 0), .tdn(row$csem)))
   }
   paste0(
     "<h2>CSEM by score</h2>",
-    "<table><thead><tr><th>Score</th><th>CSEM</th></tr></thead><tbody>",
-    paste(rows, collapse = ""),
-    "</tbody></table>"
+    .table_wrap(
+      "<thead><tr><th class='n'>Score</th><th class='n'>CSEM</th></tr></thead><tbody>",
+      paste(rows, collapse = ""),
+      "</tbody>",
+      caption = "Conditional standard error of measurement by raw score",
+      class = "compact"
+    )
   )
 }
 
+.flag_list_html <- function(flags) {
+  if (!is.list(flags) || !length(flags)) return("")
+  items <- vapply(flags, function(f) {
+    sprintf("<li><b>%s</b> %s</li>", .html_escape(f$code), .html_escape(f$message))
+  }, character(1))
+  paste0("<ul class='flags flag'>", paste(items, collapse = ""), "</ul>")
+}
+
 .polyline_svg <- function(xs, ys, title, xlab, ylab, series = NULL) {
-  w <- 420
-  h <- 220
-  pad_l <- 42
-  pad_b <- 32
-  pad_t <- 22
+  w <- 480
+  h <- 240
+  pad_l <- 48
+  pad_b <- 42
+  pad_t <- 12
   pad_r <- 12
   inner_w <- w - pad_l - pad_r
   inner_h <- h - pad_t - pad_b
@@ -121,17 +201,30 @@
   sx <- function(x) pad_l + (x - xr[1]) / diff(xr) * inner_w
   sy <- function(y) pad_t + (1 - (y - yr[1]) / diff(yr)) * inner_h
   pts <- paste(sprintf("%.1f,%.1f", sx(xs[finite]), sy(ys[finite])), collapse = " ")
-  paste0(
+  xt <- seq(xr[1], xr[2], length.out = 5)
+  yt <- seq(yr[1], yr[2], length.out = 5)
+  grid <- paste(c(
+    vapply(xt, function(v) sprintf("<line x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='#d4c6b0' stroke-width='0.6'/>", sx(v), pad_t, sx(v), pad_t + inner_h), character(1)),
+    vapply(yt, function(v) sprintf("<line x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='#d4c6b0' stroke-width='0.6'/>", pad_l, sy(v), pad_l + inner_w, sy(v)), character(1))
+  ), collapse = "")
+  xlab_txt <- paste(vapply(xt, function(v) {
+    sprintf("<text x='%.1f' y='%.1f' text-anchor='middle' font-size='9' fill='#57534e'>%s</text>", sx(v), h - 10, .fmt(v, 2))
+  }, character(1)), collapse = "")
+  ylab_txt <- paste(vapply(yt, function(v) {
+    sprintf("<text x='%.1f' y='%.1f' text-anchor='end' font-size='9' fill='#57534e'>%s</text>", pad_l - 6, sy(v) + 3, .fmt(v, 2))
+  }, character(1)), collapse = "")
+  .inline_svg(paste0(
     "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h, "' role='img' aria-label='",
     .html_escape(title), "'>",
-    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fff' stroke='#ddd'/>",
-    "<text x='", w / 2, "' y='16' text-anchor='middle' font-size='12'>", .html_escape(title), "</text>",
-    "<text x='", w / 2, "' y='", h - 6, "' text-anchor='middle' font-size='10'>", .html_escape(xlab), "</text>",
-    "<text x='12' y='", h / 2, "' text-anchor='middle' font-size='10' transform='rotate(-90 12,", h / 2, ")'>",
+    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fffcf7' stroke='#d4c6b0'/>",
+    grid,
+    xlab_txt, ylab_txt,
+    "<text x='", w / 2, "' y='", h - 1, "' text-anchor='middle' font-size='10' fill='#57534e'>", .html_escape(xlab), "</text>",
+    "<text x='11' y='", h / 2, "' text-anchor='middle' font-size='10' fill='#57534e' transform='rotate(-90 11,", h / 2, ")'>",
     .html_escape(ylab), "</text>",
-    "<polyline fill='none' stroke='#1d4ed8' stroke-width='1.5' points='", pts, "'/>",
+    "<polyline fill='none' stroke='#1e3a5f' stroke-width='1.6' points='", pts, "'/>",
     "</svg>"
-  )
+  ), title)
 }
 
 .quantile_svg <- function(item_id, distractors) {
@@ -170,21 +263,19 @@
       col, dash, paste(pts, collapse = " ")
     ))
     legend <- c(legend, sprintf(
-      "<text x='%d' y='%d' font-size='10' fill='%s'>%s%s</text>",
+      "<text x='%d' y='%d' font-size='10' fill='%s' font-family='Segoe UI, sans-serif'>%s%s</text>",
       pad_l + (i - 1L) * 48, h - 8, col, .html_escape(nm),
       if (isTRUE(d$keyed)) "*" else ""
     ))
   }
-  paste0(
+  .inline_svg(paste0(
     "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h, "' role='img' aria-label='Quantile plot ",
     .html_escape(item_id), "'>",
-    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fff' stroke='#ddd'/>",
-    "<text x='", w / 2, "' y='16' text-anchor='middle' font-size='12'>Quantile plot -- ",
-    .html_escape(item_id), "</text>",
+    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fffcf7' stroke='#d4c6b0'/>",
     lines,
     legend,
     "</svg>"
-  )
+  ), paste("Quantile plot --", item_id))
 }
 
 .try_ggplot_quantile <- function(item_id, distractors) {
@@ -210,12 +301,19 @@
     ggplot2::geom_line() +
     ggplot2::geom_point() +
     ggplot2::ylim(0, 1) +
-    ggplot2::labs(title = paste("Quantile plot --", item_id), x = "Score quantile", y = "Proportion") +
-    ggplot2::theme_minimal(base_size = 11)
+    ggplot2::labs(x = "Score quantile", y = "Proportion", linetype = NULL, colour = "Option") +
+    ggplot2::scale_linetype_manual(values = c("FALSE" = "dashed", "TRUE" = "solid"), labels = c("FALSE" = "distractor", "TRUE" = "key"), name = NULL) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(
+      panel.grid.minor = ggplot2::element_blank(),
+      panel.grid.major = ggplot2::element_line(colour = "#e6ddd0", linewidth = 0.3),
+      text = ggplot2::element_text(colour = "#1c1917"),
+      legend.position = "bottom"
+    )
   tmp <- tempfile(fileext = ".svg")
   ok <- try(ggplot2::ggsave(tmp, p, width = 5.5, height = 3.2, device = svglite::svglite), silent = TRUE)
   if (inherits(ok, "try-error") || !file.exists(tmp)) return(.quantile_svg(item_id, distractors))
-  paste(readLines(tmp, warn = FALSE), collapse = "\n")
+  .inline_svg(paste(readLines(tmp, warn = FALSE), collapse = "\n"), paste("Quantile plot --", item_id))
 }
 
 irt_curve_payload <- function(params, theta = seq(-3, 3, by = 0.1), person_theta = NULL) {
@@ -308,15 +406,14 @@ irt_curve_payload <- function(params, theta = seq(-3, 3, by = 0.1), person_theta
   if (diff(yr) == 0) yr <- yr + c(-0.2, 0.2)
   sx <- function(x) pad_l + (x - xr[1]) / diff(xr) * inner_w
   sy <- function(y) pad_t + (1 - (y - yr[1]) / diff(yr)) * inner_h
-  dots <- paste(sprintf("<circle cx='%.1f' cy='%.1f' r='3' fill='#1d4ed8'/>", sx(b), sy(a)), collapse = "")
-  paste0(
+  dots <- paste(sprintf("<circle cx='%.1f' cy='%.1f' r='3' fill='#1e3a5f'/>", sx(b), sy(a)), collapse = "")
+  .inline_svg(paste0(
     "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h,
     "' role='img' aria-label='a versus b'><rect x='0' y='0' width='", w, "' height='", h,
-    "' fill='#fff' stroke='#ddd'/>",
-    "<text x='", w / 2, "' y='16' text-anchor='middle' font-size='12'>a vs b</text>",
+    "' fill='#fffcf7' stroke='#d4c6b0'/>",
     dots,
-    "<text x='", w / 2, "' y='", h - 6, "' text-anchor='middle' font-size='10'>b</text></svg>"
-  )
+    "<text x='", w / 2, "' y='", h - 6, "' text-anchor='middle' font-size='10' fill='#57534e'>b</text></svg>"
+  ), "Item discrimination (a) against difficulty (b)")
 }
 
 .hist_svg <- function(hist, title) {
@@ -333,16 +430,15 @@ irt_curve_payload <- function(params, theta = seq(-3, 3, by = 0.1), person_theta
     bh <- counts[[i]] / max_c * inner_h
     x <- pad_l + (i - 1) * bw
     y <- pad_t + inner_h - bh
-    bars <- c(bars, sprintf("<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' fill='#1d4ed8'/>", x, y, bw - 1, bh))
+    bars <- c(bars, sprintf("<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' fill='#1e3a5f'/>", x, y, bw - 1.5, bh))
   }
-  paste0(
+  .inline_svg(paste0(
     "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h,
     "' role='img' aria-label='", .html_escape(title), "'>",
-    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fff' stroke='#ddd'/>",
-    "<text x='", w / 2, "' y='16' text-anchor='middle' font-size='12'>", .html_escape(title), "</text>",
+    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fffcf7' stroke='#d4c6b0'/>",
     paste(bars, collapse = ""),
     "</svg>"
-  )
+  ), title)
 }
 
 .empirical_irf_svg <- function(item) {
@@ -367,14 +463,13 @@ irt_curve_payload <- function(params, theta = seq(-3, 3, by = 0.1), person_theta
     sx(th), sy(lo), sx(th), sy(hi)
   ), collapse = "")
   dots <- paste(sprintf("<circle cx='%.1f' cy='%.1f' r='3' fill='#b45309'/>", sx(th), sy(p)), collapse = "")
-  paste0(
+  .inline_svg(paste0(
     "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h,
     "' role='img' aria-label='empirical IRF'><rect x='0' y='0' width='", w, "' height='", h,
-    "' fill='#fff' stroke='#ddd'/>",
-    "<text x='", w / 2, "' y='16' text-anchor='middle' font-size='12'>Empirical IRF with 2 SE</text>",
-    "<polyline fill='none' stroke='#1d4ed8' stroke-width='1.5' points='", model_pts, "'/>",
+    "' fill='#fffcf7' stroke='#d4c6b0'/>",
+    "<polyline fill='none' stroke='#1e3a5f' stroke-width='1.6' points='", model_pts, "'/>",
     bands, dots, "</svg>"
-  )
+  ), "Empirical IRF with 2 SE")
 }
 
 .tif_csv <- function(plots) {
@@ -429,7 +524,7 @@ irt_curve_payload <- function(params, theta = seq(-3, 3, by = 0.1), person_theta
     x1 <- sx(breaks[[i + 1L]])
     bh <- (counts[[i]] / max_c) * 90
     bars <- c(bars, sprintf(
-      "<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' fill='#1d4ed8' fill-opacity='0.55'/>",
+      "<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' fill='#1e3a5f' fill-opacity='0.55'/>",
       x0, mid - 8 - bh, max(1, x1 - x0 - 1), bh
     ))
   }
@@ -446,17 +541,16 @@ irt_curve_payload <- function(params, theta = seq(-3, 3, by = 0.1), person_theta
       x, mid + 42, x, mid + 42, .html_escape(ids[[i]])
     ))
   }
-  paste0(
+  .inline_svg(paste0(
     "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h,
     "' role='img' aria-label='Wright map'>",
-    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fff' stroke='#ddd'/>",
-    "<text x='", w / 2, "' y='16' text-anchor='middle' font-size='12'>Wright map (persons above, items below)</text>",
-    "<line x1='", pad_l, "' y1='", mid, "' x2='", w - pad_r, "' y2='", mid, "' stroke='#444'/>",
+    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fffcf7' stroke='#d4c6b0'/>",
+    "<line x1='", pad_l, "' y1='", mid, "' x2='", w - pad_r, "' y2='", mid, "' stroke='#57534e'/>",
     bars,
     ticks,
-    "<text x='", w / 2, "' y='", h - 8, "' text-anchor='middle' font-size='10'>theta / b</text>",
+    "<text x='", w / 2, "' y='", h - 8, "' text-anchor='middle' font-size='10' fill='#57534e'>theta / b</text>",
     "</svg>"
-  )
+  ), "Wright map (persons above, items below)")
 }
 
 .irt_chapter_html <- function(plots) {
@@ -510,19 +604,22 @@ build_item_analysis_html <- function(job_id, package_version, sample_size, calib
   rows <- character(0)
   for (id in names(parameters)) {
     p <- parameters[[id]]
-    flag_txt <- if (is.list(p$flags) && length(p$flags)) {
+    flagged <- is.list(p$flags) && length(p$flags)
+    flag_txt <- if (flagged) {
       paste(vapply(p$flags, function(f) f$code, character(1)), collapse = ", ")
     } else {
-      "none"
+      ""
     }
     rows <- c(rows, sprintf(
-      "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
+      "<tr%s><td>%s</td>%s%s%s%s<td class='%s'>%s</td></tr>",
+      if (flagged) " class='flagged'" else "",
       .html_escape(id),
-      .fmt(p$pValue),
-      .fmt(p$pointBiserial),
-      .fmt(p$n, 0),
-      .fmt(p$alphaWithout),
-      .html_escape(flag_txt)
+      .tdn(p$pValue),
+      .tdn(p$pointBiserial),
+      .tdn(p$n, 0),
+      .tdn(p$alphaWithout),
+      if (flagged) "flag" else "muted",
+      if (flagged) .html_escape(flag_txt) else "&mdash;"
     ))
   }
   item_pages <- character(0)
@@ -533,44 +630,40 @@ build_item_analysis_html <- function(job_id, package_version, sample_size, calib
       drows <- character(0)
       for (oid in names(p$distractors)) {
         d <- p$distractors[[oid]]
+        role <- if (!is.null(d$role)) d$role else if (isTRUE(d$keyed)) "key" else "distractor"
         drows <- c(drows, sprintf(
-          "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
+          "<tr class='role-%s'><td>%s</td><td class='role'>%s</td>%s%s%s%s%s</tr>",
+          if (identical(role, "key") || isTRUE(d$keyed)) "key" else "option",
           .html_escape(oid),
-          .html_escape(if (!is.null(d$role)) d$role else if (isTRUE(d$keyed)) "key" else "distractor"),
-          .fmt(d$n, 0),
-          .fmt(d$proportion),
-          .fmt(d$pointBiserial),
-          .fmt(d$mean),
-          .fmt(d$sd)
+          .html_escape(role),
+          .tdn(d$n, 0),
+          .tdn(d$proportion),
+          .tdn(d$pointBiserial),
+          .tdn(d$mean),
+          .tdn(d$sd)
         ))
       }
       dist_html <- paste0(
-        "<table><thead><tr><th>Option</th><th>Role</th><th>n</th><th>Proportion</th><th>rpb</th><th>Mean</th><th>SD</th></tr></thead><tbody>",
-        paste(drows, collapse = ""),
-        "</tbody></table>",
+        .table_wrap(
+          "<thead><tr><th>Option</th><th>Role</th><th class='n'>n</th><th class='n'>Proportion</th><th class='n'>rpb</th><th class='n'>Mean</th><th class='n'>SD</th></tr></thead><tbody>",
+          paste(drows, collapse = ""),
+          "</tbody>",
+          caption = paste("Option analysis --", id)
+        ),
         .try_ggplot_quantile(id, p$distractors)
       )
     } else {
       dist_html <- "<p class='note'>No option-level distractors (dichotomous 0/1 matrix).</p>"
     }
-    flag_html <- ""
-    if (is.list(p$flags) && length(p$flags)) {
-      flag_html <- paste0(
-        "<ul class='flag'>",
-        paste(vapply(p$flags, function(f) {
-          sprintf("<li>[%s] %s</li>", .html_escape(f$code), .html_escape(f$message))
-        }, character(1)), collapse = ""),
-        "</ul>"
-      )
-    }
     item_pages <- c(item_pages, paste0(
+      "<article class='item-page'>",
       "<h3>", .html_escape(id), "</h3>",
-      "<p>p = ", .fmt(p$pValue), ", rpb = ", .fmt(p$pointBiserial),
-      ", biserial = ", .fmt(p$biserial), ", n = ", .fmt(p$n, 0),
-      ", alpha-without = ", .fmt(p$alphaWithout),
+      "<p class='item-stats'>p = ", .fmt(p$pValue), " &middot; rpb = ", .fmt(p$pointBiserial),
+      " &middot; biserial = ", .fmt(p$biserial), " &middot; n = ", .fmt(p$n, 0),
+      " &middot; alpha-without = ", .fmt(p$alphaWithout),
       if (is.list(p$domainPointBiserial) && length(p$domainPointBiserial)) {
         paste0(
-          ", domain rpb: ",
+          " &middot; domain rpb: ",
           paste(vapply(names(p$domainPointBiserial), function(did) {
             sprintf("%s=%s", did, .fmt(p$domainPointBiserial[[did]]$pointBiserial))
           }, character(1)), collapse = "; ")
@@ -579,17 +672,15 @@ build_item_analysis_html <- function(job_id, package_version, sample_size, calib
         ""
       },
       "</p>",
-      flag_html,
-      dist_html
+      .flag_list_html(p$flags),
+      dist_html,
+      "</article>"
     ))
   }
   freq_rows <- character(0)
   if (is.list(test_level$scoreFrequency)) {
     for (row in test_level$scoreFrequency) {
-      freq_rows <- c(freq_rows, sprintf(
-        "<tr><td>%s</td><td>%s</td></tr>",
-        .fmt(row$score, 0), .fmt(row$n, 0)
-      ))
+      freq_rows <- c(freq_rows, sprintf("<tr>%s%s</tr>", .tdn(row$score, 0), .tdn(row$n, 0)))
     }
   }
   domain_html <- ""
@@ -598,15 +689,18 @@ build_item_analysis_html <- function(job_id, package_version, sample_size, calib
     for (did in names(test_level$domains)) {
       d <- test_level$domains[[did]]
       drows <- c(drows, sprintf(
-        "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
-        .html_escape(did), .fmt(d$nItems, 0), .fmt(d$mean), .fmt(d$sd), .fmt(d$alpha)
+        "<tr><td>%s</td>%s%s%s%s</tr>",
+        .html_escape(did), .tdn(d$nItems, 0), .tdn(d$mean), .tdn(d$sd), .tdn(d$alpha)
       ))
     }
     domain_html <- paste0(
       "<h2>Domain / subscore analysis</h2>",
-      "<table><thead><tr><th>Domain</th><th>Items</th><th>Mean</th><th>SD</th><th>Alpha</th></tr></thead><tbody>",
-      paste(drows, collapse = ""),
-      "</tbody></table>"
+      .table_wrap(
+        "<thead><tr><th>Domain</th><th class='n'>Items</th><th class='n'>Mean</th><th class='n'>SD</th><th class='n'>Alpha</th></tr></thead><tbody>",
+        paste(drows, collapse = ""),
+        "</tbody>",
+        caption = "Domain means and internal consistency"
+      )
     )
   }
   cut_html <- ""
@@ -614,70 +708,76 @@ build_item_analysis_html <- function(job_id, package_version, sample_size, calib
     cs <- test_level$cutScore
     cut_html <- paste0(
       "<h2>Mastery / cutscore</h2>",
-      "<p>Cut score ", .fmt(cs$cutScore, 1), ": pass rate ", .fmt(cs$passRate),
+      "<p class='note'>Cut score ", .fmt(cs$cutScore, 1), ": pass rate ", .fmt(cs$passRate),
       " (nPass = ", .fmt(cs$nPass, 0), " of ", .fmt(cs$n, 0), ").</p>"
     )
   }
   skin_obj <- if (is.null(skin)) .load_report_skin(if (!is.null(template)) template$skinId else "iteman-classic") else skin
   tpl_name <- if (!is.null(template) && !is.null(template$name)) template$name else ""
-  paste0(
-    "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'/>",
-    "<title>Item analysis ", .html_escape(job_id), "</title>",
-    "<style>", .html_css(skin_obj), "</style></head><body>",
-    if (.chapter_on(template, "cover")) paste0(
-      "<h1>", .html_escape(if (nzchar(skin_obj$title)) skin_obj$title else "Classical item analysis technical report"), "</h1>",
-      "<div class='stamp'>jobId ", .html_escape(job_id),
-      " | ", .html_escape(package_version),
-      " | n = ", .html_escape(as.character(sample_size)),
-      " | ", .html_escape(calibrated_at),
-      if (nzchar(tpl_name)) paste0(" | template ", .html_escape(tpl_name)) else "",
-      "</div>",
-      "<p class='note'>Statistics are TAM / classical formulas with provenance on this page. ",
-      "This is not an Iteman file; it reports the same statistic classes (reliability, ",
-      "score distribution, option analysis, quantile plots, flags).</p>"
+  title <- if (nzchar(skin_obj$title)) skin_obj$title else "Classical item analysis technical report"
+  body <- paste0(
+    if (.chapter_on(template, "cover")) .cover_html(
+      title,
+      "Statistics are TAM / classical formulas with provenance on this page. This is not an Iteman file; it reports the same statistic classes (reliability, score distribution, option analysis, quantile plots, flags).",
+      job_id, package_version, sample_size, calibrated_at, tpl_name
     ) else "",
     if (.chapter_on(template, "test-summary")) paste0(
       "<h2>Test-level summary</h2>",
-      "<table><tbody>",
-      "<tr><th>N persons</th><td>", .fmt(test_level$nPersons, 0), "</td></tr>",
-      "<tr><th>k items</th><td>", .fmt(test_level$nItems, 0), "</td></tr>",
-      "<tr><th>Mean</th><td>", .fmt(test_level$mean), "</td></tr>",
-      "<tr><th>SD</th><td>", .fmt(test_level$sd), "</td></tr>",
-      "<tr><th>Skew</th><td>", .fmt(test_level$skew), "</td></tr>",
-      "<tr><th>Kurtosis (excess)</th><td>", .fmt(test_level$kurtosis), "</td></tr>",
-      "</tbody></table>"
+      .table_wrap(
+        "<tbody>",
+        "<tr><th>N persons</th>", .tdn(test_level$nPersons, 0), "</tr>",
+        "<tr><th>k items</th>", .tdn(test_level$nItems, 0), "</tr>",
+        "<tr><th>Mean</th>", .tdn(test_level$mean), "</tr>",
+        "<tr><th>SD</th>", .tdn(test_level$sd), "</tr>",
+        "<tr><th>Skew</th>", .tdn(test_level$skew), "</tr>",
+        "<tr><th>Kurtosis (excess)</th>", .tdn(test_level$kurtosis), "</tr>",
+        "</tbody>",
+        caption = "Form length, central tendency, and shape",
+        class = "kv"
+      )
     ) else "",
     if (.chapter_on(template, "reliability")) paste0(
       "<h2>Reliability</h2>",
-      "<table><tbody>",
-      "<tr><th>KR-20</th><td>", .fmt(rel$kr20), "</td></tr>",
-      "<tr><th>KR-21</th><td>", .fmt(rel$kr21), "</td></tr>",
-      "<tr><th>Cronbach alpha</th><td>", .fmt(rel$cronbachAlpha), "</td></tr>",
-      "<tr><th>Guttman lambda-2</th><td>", .fmt(rel$guttmanLambda2), "</td></tr>",
-      "<tr><th>Spearman-Brown split-half</th><td>", .fmt(rel$spearmanBrownSplitHalf), "</td></tr>",
-      "<tr><th>SEM</th><td>", .fmt(rel$sem), "</td></tr>",
-      "</tbody></table>"
+      .table_wrap(
+        "<tbody>",
+        "<tr><th>KR-20</th>", .tdn(rel$kr20), "</tr>",
+        "<tr><th>KR-21</th>", .tdn(rel$kr21), "</tr>",
+        "<tr><th>Cronbach alpha</th>", .tdn(rel$cronbachAlpha), "</tr>",
+        "<tr><th>Guttman lambda-2</th>", .tdn(rel$guttmanLambda2), "</tr>",
+        "<tr><th>Spearman-Brown split-half</th>", .tdn(rel$spearmanBrownSplitHalf), "</tr>",
+        "<tr><th>SEM</th>", .tdn(rel$sem), "</tr>",
+        "</tbody>",
+        caption = "Internal consistency and standard error of measurement",
+        class = "kv"
+      )
     ) else "",
     if (.chapter_on(template, "distribution")) paste0(
       "<h2>Score distribution</h2>",
-      "<table><thead><tr><th>Score</th><th>n</th></tr></thead><tbody>",
-      paste(freq_rows, collapse = ""),
-      "</tbody></table>"
+      .table_wrap(
+        "<thead><tr><th class='n'>Score</th><th class='n'>n</th></tr></thead><tbody>",
+        paste(freq_rows, collapse = ""),
+        "</tbody>",
+        caption = "Frequency of raw scores",
+        class = "compact"
+      )
     ) else "",
     if (.chapter_on(template, "csem")) .csem_table_html(test_level$csemByScore) else "",
     domain_html,
     cut_html,
     if (.chapter_on(template, "flags") || .chapter_on(template, "item-pages")) paste0(
       "<h2>Item summary</h2>",
-      "<table><thead><tr><th>Item</th><th>p</th><th>rpb</th><th>n</th><th>alpha-without</th><th>Flags</th></tr></thead><tbody>",
-      paste(rows, collapse = ""),
-      "</tbody></table>"
+      .table_wrap(
+        "<thead><tr><th>Item</th><th class='n'>p</th><th class='n'>rpb</th><th class='n'>n</th><th class='n'>alpha w/o</th><th>Flags</th></tr></thead><tbody>",
+        paste(rows, collapse = ""),
+        "</tbody>",
+        caption = "Classical item statistics and review flags"
+      )
     ) else "",
     if (.chapter_on(template, "item-pages")) paste0("<h2>Item pages</h2>", paste(item_pages, collapse = "\n")) else "",
     if (.chapter_on(template, "irt-plots")) .irt_chapter_html(irt_plots) else "",
-    if (.chapter_on(template, "credits")) .credits_html(credits) else "",
-    "</body></html>"
+    if (.chapter_on(template, "credits")) .credits_html(credits) else ""
   )
+  .html_document(paste("Item analysis", job_id), .html_css(skin_obj), body)
 }
 
 build_irt_html <- function(job_id, package_version, sample_size, calibrated_at,
@@ -687,64 +787,63 @@ build_irt_html <- function(job_id, package_version, sample_size, calibrated_at,
   for (id in names(parameters)) {
     p <- parameters[[id]]
     se <- if (!is.null(standard_errors[[id]])) standard_errors[[id]] else list()
+    b_val <- if (length(unlist(p$b)) == 1) p$b else unlist(p$b)[[1]]
     rows <- c(rows, sprintf(
-      "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
+      "<tr><td>%s</td>%s%s%s%s%s%s%s</tr>",
       .html_escape(id),
-      .fmt(p$a), .fmt(se$a),
-      .fmt(if (length(unlist(p$b)) == 1) p$b else unlist(p$b)[[1]]),
-      .fmt(se$b),
-      .fmt(p$c), .fmt(se$c),
-      .fmt(p$thetaPointBiserial)
+      .tdn(p$a), .tdn(se$a),
+      .tdn(b_val),
+      .tdn(se$b),
+      .tdn(p$c), .tdn(se$c),
+      .tdn(p$thetaPointBiserial)
     ))
+  }
+  fit_html <- ""
+  if (is.list(fit_statistics$itemFit) && length(fit_statistics$itemFit)) {
+    fit_rows <- character(0)
+    for (id in names(fit_statistics$itemFit)) {
+      f <- fit_statistics$itemFit[[id]]
+      fit_rows <- c(fit_rows, sprintf(
+        "<tr><td>%s</td>%s%s%s</tr>",
+        .html_escape(id),
+        .tdn(f$S_X2),
+        .tdn(f[["p.S_X2"]], 4),
+        .tdn(f$outfit)
+      ))
+    }
+    fit_html <- paste0(
+      "<h2>Item fit</h2>",
+      .table_wrap(
+        "<thead><tr><th>Item</th><th class='n'>S-X2</th><th class='n'>p</th><th class='n'>outfit</th></tr></thead><tbody>",
+        paste(fit_rows, collapse = ""),
+        "</tbody>",
+        caption = "Item-level S-X2 and outfit"
+      )
+    )
   }
   skin_obj <- if (is.null(skin)) .load_report_skin(if (!is.null(template)) template$skinId else "xcalibre-classic") else skin
   tpl_name <- if (!is.null(template) && !is.null(template$name)) template$name else ""
-  paste0(
-    "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'/>",
-    "<title>IRT calibration ", .html_escape(job_id), "</title>",
-    "<style>", .html_css(skin_obj), "</style></head><body>",
-    if (.chapter_on(template, "cover")) paste0(
-      "<h1>", .html_escape(if (nzchar(skin_obj$title)) skin_obj$title else "IRT calibration technical report"), "</h1>",
-      "<div class='stamp'>jobId ", .html_escape(job_id),
-      " | ", .html_escape(package_version),
-      " | n = ", .html_escape(as.character(sample_size)),
-      " | ", .html_escape(calibrated_at),
-      if (nzchar(tpl_name)) paste0(" | template ", .html_escape(tpl_name)) else "",
-      "</div>",
-      "<p class='note'>Unidimensional mirt calibration. Standard errors, item fit, and ",
-      "person scores are reported when the fit produced them. Not an Xcalibre file; ",
-      "the statistic classes match (a/b/c or thresholds, SEs, IRF/IIF, TIF/CSEM).</p>"
+  title <- if (nzchar(skin_obj$title)) skin_obj$title else "IRT calibration technical report"
+  body <- paste0(
+    if (.chapter_on(template, "cover")) .cover_html(
+      title,
+      "Unidimensional mirt calibration. Standard errors, item fit, and person scores are reported when the fit produced them. Not an Xcalibre file; the statistic classes match (a/b/c or thresholds, SEs, IRF/IIF, TIF/CSEM).",
+      job_id, package_version, sample_size, calibrated_at, tpl_name
     ) else "",
     if (.chapter_on(template, "item-pages") || .chapter_on(template, "test-summary")) paste0(
-    "<h2>Item parameters</h2>",
-    "<table><thead><tr><th>Item</th><th>a</th><th>SE(a)</th><th>b</th><th>SE(b)</th><th>c</th><th>SE(c)</th><th>T-Rpbis</th></tr></thead><tbody>",
-    paste(rows, collapse = ""),
-    "</tbody></table>") else "",
-    if (is.list(fit_statistics$itemFit) && length(fit_statistics$itemFit)) {
-      fit_rows <- character(0)
-      for (id in names(fit_statistics$itemFit)) {
-        f <- fit_statistics$itemFit[[id]]
-        fit_rows <- c(fit_rows, sprintf(
-          "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
-          .html_escape(id),
-          .fmt(f$S_X2),
-          .fmt(f[["p.S_X2"]], 4),
-          .fmt(f$outfit)
-        ))
-      }
-      paste0(
-        "<h2>Item fit</h2>",
-        "<table><thead><tr><th>Item</th><th>S-X2</th><th>p</th><th>outfit</th></tr></thead><tbody>",
-        paste(fit_rows, collapse = ""),
-        "</tbody></table>"
+      "<h2>Item parameters</h2>",
+      .table_wrap(
+        "<thead><tr><th>Item</th><th class='n'>a</th><th class='n'>SE(a)</th><th class='n'>b</th><th class='n'>SE(b)</th><th class='n'>c</th><th class='n'>SE(c)</th><th class='n'>T-Rpbis</th></tr></thead><tbody>",
+        paste(rows, collapse = ""),
+        "</tbody>",
+        caption = "Estimated item parameters and standard errors"
       )
-    } else {
-      ""
-    },
+    ) else "",
+    fit_html,
     if (.chapter_on(template, "irt-plots")) .irt_chapter_html(plots) else "",
-    if (.chapter_on(template, "credits")) .credits_html(credits) else "",
-    "</body></html>"
+    if (.chapter_on(template, "credits")) .credits_html(credits) else ""
   )
+  .html_document(paste("IRT calibration", job_id), .html_css(skin_obj), body)
 }
 
 build_testinfo_html <- function(job_id, package_version, sample_size, calibrated_at, parameters,
@@ -754,24 +853,17 @@ build_testinfo_html <- function(job_id, package_version, sample_size, calibrated
   sem <- suppressWarnings(as.numeric(parameters$conditionalSEM))
   skin_obj <- if (is.null(skin)) .load_report_skin(if (!is.null(template)) template$skinId else "xcalibre-classic") else skin
   tpl_name <- if (!is.null(template) && !is.null(template$name)) template$name else ""
-  paste0(
-    "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'/>",
-    "<title>Test information ", .html_escape(job_id), "</title>",
-    "<style>", .html_css(skin_obj), "</style></head><body>",
-    if (.chapter_on(template, "cover")) paste0(
-      "<h1>Test information technical report</h1>",
-      "<div class='stamp'>jobId ", .html_escape(job_id),
-      " | ", .html_escape(package_version),
-      " | n = ", .html_escape(as.character(sample_size)),
-      " | ", .html_escape(calibrated_at),
-      if (nzchar(tpl_name)) paste0(" | template ", .html_escape(tpl_name)) else "",
-      "</div>"
+  body <- paste0(
+    if (.chapter_on(template, "cover")) .cover_html(
+      "Test information technical report",
+      "Test information function and conditional SEM across theta. Generated by the ECD R bureau.",
+      job_id, package_version, sample_size, calibrated_at, tpl_name
     ) else "",
     if (.chapter_on(template, "irt-plots")) paste0(
       .polyline_svg(th, info, "Test information", "theta", "I(theta)"),
       .polyline_svg(th, sem, "Conditional SEM", "theta", "CSEM")
     ) else "",
-    if (.chapter_on(template, "credits")) .credits_html(credits) else "",
-    "</body></html>"
+    if (.chapter_on(template, "credits")) .credits_html(credits) else ""
   )
+  .html_document(paste("Test information", job_id), .html_css(skin_obj), body)
 }
