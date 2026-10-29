@@ -22,7 +22,7 @@ production**.
 
 | Path | Mechanism | What lives there in practice |
 |---|---|---|
-| **ECD file store** | `loadDB` / `saveDB` (`src/utils/db-server.js`), path `ECD_DB_FILE` (compose: `/data/db.json`) | Competency / evidence / task models, items, tasks, students, announcements, `calibrationJobs`, `analysisArtefacts`, composite libraries, policies, … — almost all ECD routes. Production keeps `sessions` and `auditLog` in Mongo (see below). |
+| **ECD file store** | `loadDB` / `saveDB` (`src/utils/db-server.js`), path `ECD_DB_FILE` (compose: `/data/db.json`) | Competency / evidence / task models, items, tasks, students, announcements, composite libraries, policies, … — almost all ECD routes. Production keeps `sessions`, `auditLog`, `calibrationJobs`, and `analysisArtefacts` in Mongo (see below). |
 | **dbAdapter** | `DB_MODE` = `mongo` (default) or `json` (`./data/db.json`) | Users (auth/roster) and questions; optional Mongo models via `ensureMongoModel` |
 
 Compose already pins `NODE_ENV=production` and `DB_MODE=mongo`, and still mounts
@@ -121,6 +121,10 @@ are cutover / D107–D109 work guided by this ADR.
   used by Vitest and `npm run dev` still keeps the array in the ECD file.
 - Optional `AUDITLOG_RETENTION_DAYS` TTL is off by default.
 - Admin-global (not tenant-scoped) read policy is unchanged.
+- `calibrationJobs` and `analysisArtefacts` follow the same split
+  (`server/calibrationJobs/`, `server/analysisArtefacts/`, migration
+  `013-calibration-data-to-mongo`). Worker claims are a single-document
+  status update. Response and payload bytes are retained.
 
 ### Ops / threat model
 

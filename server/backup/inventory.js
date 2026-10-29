@@ -120,15 +120,17 @@ export const BACKUP_INVENTORY = Object.freeze([
   },
   {
     id: "calibrationJobs",
-    store: "ecd-json",
-    pathInArchive: "ecd/db.json",
-    reason: "Included — ADR 0002 provenance; must not be dropped from backup.",
+    store: "mongo-or-ecd-json",
+    pathInArchive: "mongo/calibrationJobs.json",
+    reason:
+      "Included. Mongo (or memory) calibrationJobs are exported as mongo/calibrationJobs.json. The JSON harness still keeps them inside ecd/db.json as well, so a harness backup remains complete. ADR 0002 provenance; request and response stay on the job.",
   },
   {
     id: "analysisArtefacts",
-    store: "ecd-json",
-    pathInArchive: "ecd/db.json",
-    reason: "Included — DIF/equating/CTT artefacts; must not be dropped from backup.",
+    store: "mongo-or-ecd-json",
+    pathInArchive: "mongo/analysisArtefacts.json",
+    reason:
+      "Included. Mongo (or memory) analysisArtefacts are exported as mongo/analysisArtefacts.json. The JSON harness still keeps them inside ecd/db.json as well, so a harness backup remains complete. DIF, equating, and CTT payloads must not be dropped.",
   },
   {
     id: "auditLog",

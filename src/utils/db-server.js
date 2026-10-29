@@ -19,6 +19,8 @@ import {
   appendAuditEntries,
   auditLogUseExternalStore,
 } from "../../server/auditLog/auditRepository.js";
+import { calibrationJobsUseExternalStore } from "../../server/calibrationJobs/calibrationJobBackend.js";
+import { analysisArtefactsUseExternalStore } from "../../server/analysisArtefacts/analysisArtefactBackend.js";
 
 function dbFilePath() {
   return process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
@@ -287,10 +289,28 @@ function omitAuditLog(obj) {
   return copy;
 }
 
+function omitCalibrationJobs(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
+  if (!Object.prototype.hasOwnProperty.call(obj, "calibrationJobs")) return obj;
+  const copy = { ...obj };
+  delete copy.calibrationJobs;
+  return copy;
+}
+
+function omitAnalysisArtefacts(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
+  if (!Object.prototype.hasOwnProperty.call(obj, "analysisArtefacts")) return obj;
+  const copy = { ...obj };
+  delete copy.analysisArtefacts;
+  return copy;
+}
+
 function omitExternalCollections(obj) {
   let next = obj;
   if (sessionsUseExternalStore()) next = omitSessions(next);
   if (auditLogUseExternalStore()) next = omitAuditLog(next);
+  if (calibrationJobsUseExternalStore()) next = omitCalibrationJobs(next);
+  if (analysisArtefactsUseExternalStore()) next = omitAnalysisArtefacts(next);
   return next;
 }
 
@@ -383,16 +403,26 @@ export async function saveDB(db, options = {}) {
   let toWrite = scoped ? mergeScopedDbSave(previous, db, ctx) : db;
   const externalSessions = sessionsUseExternalStore();
   const externalAudit = auditLogUseExternalStore();
+  const externalJobs = calibrationJobsUseExternalStore();
+  const externalArtefacts = analysisArtefactsUseExternalStore();
+  // External collections stay in their own stores. The audit diff must
+  // not treat a hydrated array as the file's collection, or a job
+  // already recorded on the store would be logged again.
+  let auditPrev = previous;
+  let auditNext = toWrite;
   if (externalSessions) {
-    // Session bytes stay in the session store. The audit diff must not
-    // treat a hydrated array as the file's session collection, or a
-    // human rating recorded on the store would be logged twice.
-    const auditPrev = omitSessions(previous);
-    const auditNext = omitSessions(toWrite);
-    toWrite = applySaveAudits(auditPrev, auditNext, options);
-  } else {
-    toWrite = applySaveAudits(previous, toWrite, options);
+    auditPrev = omitSessions(auditPrev);
+    auditNext = omitSessions(auditNext);
   }
+  if (externalJobs) {
+    auditPrev = omitCalibrationJobs(auditPrev);
+    auditNext = omitCalibrationJobs(auditNext);
+  }
+  if (externalArtefacts) {
+    auditPrev = omitAnalysisArtefacts(auditPrev);
+    auditNext = omitAnalysisArtefacts(auditNext);
+  }
+  toWrite = applySaveAudits(auditPrev, auditNext, options);
   // When merge produced a new object, mirror auditLog onto the caller's
   // db so in-memory holders (tests, bulk handlers) see the new rows.
   if (toWrite !== db && Array.isArray(toWrite.auditLog)) {

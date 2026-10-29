@@ -154,12 +154,12 @@ describe("D87 exit check — excess stays queued under concurrency bound", () =>
 
     // Wait until job a is running.
     for (let i = 0; i < 50; i++) {
-      const m = getCalibrationQueueMetrics();
+      const m = await getCalibrationQueueMetrics();
       if (m.running === 1) break;
       await new Promise((r) => setTimeout(r, 10));
     }
 
-    const mid = getCalibrationQueueMetrics();
+    const mid = await getCalibrationQueueMetrics();
     expect(mid.running).toBe(1);
     expect(mid.queued).toBe(2);
     expect(mid.maxConcurrent).toBe(1);
@@ -171,8 +171,8 @@ describe("D87 exit check — excess stays queued under concurrency bound", () =>
     releaseA();
     const processed = await runPromise;
     expect(processed).toHaveLength(3);
-    expect(getCalibrationQueueMetrics().queued).toBe(0);
-    expect(getCalibrationQueueMetrics().running).toBe(0);
+    expect((await getCalibrationQueueMetrics()).queued).toBe(0);
+    expect((await getCalibrationQueueMetrics()).running).toBe(0);
   });
 
   it("a second concurrent dispatcher is refused while the first holds the lock", async () => {

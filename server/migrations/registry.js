@@ -13,6 +13,7 @@ import domainAnalysisEntryIds from "./migrations/009-domain-analysis-entry-ids.j
 import parameterSetStatus from "./migrations/010-parameter-set-status.js";
 import sessionsToMongo from "./migrations/011-sessions-to-mongo.js";
 import auditLogToMongo from "./migrations/012-auditlog-to-mongo.js";
+import calibrationDataToMongo from "./migrations/013-calibration-data-to-mongo.js";
 
 export const MIGRATION_REGISTRY = [
   normalizeSessionStatus,
@@ -27,6 +28,7 @@ export const MIGRATION_REGISTRY = [
   parameterSetStatus,
   sessionsToMongo,
   auditLogToMongo,
+  calibrationDataToMongo,
 ];
 
 export function migrationRegistryIds() {

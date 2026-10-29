@@ -1,8 +1,9 @@
 // server/r/calibrationWorker.js
-// Node-side queue runner. Jobs live in calibrationJobs via loadDB/saveDB
-// so they survive a process restart. A job left `running` at boot is
-// marked failed with an inspectable reason -- it must not stay running
-// forever.
+// Node-side queue runner. Jobs live in calibrationJobs. The JSON harness
+// still uses loadDB/saveDB. memory and mongo claim with a compare-and-swap
+// on status=queued and write later status as a single-document update, so
+// a second worker or a requeue cannot double-claim and a full db.json
+// rewrite is not required for each status change.
 
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { canTransitionCalibrationJob } from "../utils/lifecycleMatrix.js";
@@ -20,17 +21,32 @@ import {
   runAttributeProfileSummaryJob,
 } from "../delivery/attributeProfileCohortSummary.js";
 import { runWithAudit } from "../utils/auditContext.js";
+import { calibrationJobsUseExternalStore } from "../calibrationJobs/calibrationJobBackend.js";
+import {
+  claimQueuedCalibrationJob,
+  finishRunningCalibrationJob,
+  queryCalibrationJobs,
+} from "../calibrationJobs/calibrationJobRepository.js";
 
 function nowIso() {
   return new Date().toISOString();
 }
 
-function findJob(db, id) {
-  return (db.calibrationJobs || []).find((j) => j.id === id);
+function byQueueOrder(a, b) {
+  const av = a?.createdAt || a?.requestedAt || "";
+  const bv = b?.createdAt || b?.requestedAt || "";
+  if (av < bv) return -1;
+  if (av > bv) return 1;
+  return 0;
 }
 
-export function getCalibrationQueueMetrics(db = loadDB()) {
-  return computeQueueMetrics(db.calibrationJobs || []);
+async function jobsForMetrics(db) {
+  if (!calibrationJobsUseExternalStore()) return db?.calibrationJobs || [];
+  return queryCalibrationJobs(db, {}, { unscoped: true });
+}
+
+export async function getCalibrationQueueMetrics(db = loadDB()) {
+  return computeQueueMetrics(await jobsForMetrics(db));
 }
 
 /** Single dispatcher — concurrent kickQueue must not double-dispatch. */
@@ -84,30 +100,112 @@ function withWallClockTimeout(work, timeoutMs) {
   });
 }
 
-export function recoverRunningJobs() {
+function restartFailure(job, db) {
+  const finishedAt = nowIso();
+  const error = {
+    message:
+      "Node process restarted while this job was running. The job was marked failed so it cannot stay running forever.",
+    rClass: "RestartRecovery",
+    stderr: "",
+  };
+  const draft = {
+    ...job,
+    status: "failed",
+    finishedAt,
+    updatedAt: finishedAt,
+    error,
+  };
+  const life = validateCalibrationJobLifecycle(draft, db);
+  if (life.length) {
+    error.message = `${error.message} Lifecycle: ${life.join(" ")}`;
+  }
+  return { finishedAt, error };
+}
+
+function recoverRunningJobsJson() {
   const db = loadDB();
   db.calibrationJobs = db.calibrationJobs || [];
   let changed = false;
   for (const job of db.calibrationJobs) {
     if (job.status !== "running") continue;
     if (!canTransitionCalibrationJob(job.status, "failed")) continue;
+    const { finishedAt, error } = restartFailure(job, db);
     job.status = "failed";
-    job.finishedAt = nowIso();
-    job.updatedAt = job.finishedAt;
-    job.error = {
-      message:
-        "Node process restarted while this job was running. The job was marked failed so it cannot stay running forever.",
-      rClass: "RestartRecovery",
-      stderr: "",
-    };
-    const life = validateCalibrationJobLifecycle(job, db);
-    if (life.length) {
-      job.error.message = `${job.error.message} Lifecycle: ${life.join(" ")}`;
-    }
+    job.finishedAt = finishedAt;
+    job.updatedAt = finishedAt;
+    job.error = error;
     changed = true;
   }
   if (changed) saveDB(db);
   return db.calibrationJobs.filter((j) => j.error?.rClass === "RestartRecovery");
+}
+
+async function recoverRunningJobsExternal() {
+  const db = loadDB();
+  const running = await queryCalibrationJobs(db, { status: "running" }, { unscoped: true });
+  const recovered = [];
+  for (const job of running) {
+    if (!canTransitionCalibrationJob(job.status, "failed")) continue;
+    const { finishedAt, error } = restartFailure(job, db);
+    const updated = await finishRunningCalibrationJob(db, job.id, {
+      status: "failed",
+      finishedAt,
+      updatedAt: finishedAt,
+      error,
+    });
+    if (updated) recovered.push(updated);
+  }
+  return recovered;
+}
+
+export function recoverRunningJobs() {
+  if (calibrationJobsUseExternalStore()) return recoverRunningJobsExternal();
+  return recoverRunningJobsJson();
+}
+
+function outcomePatch(result, finishedAt) {
+  const patch = { finishedAt, updatedAt: finishedAt };
+  if (!result.ok || result.error) {
+    patch.status = "failed";
+    patch.error = result.error || {
+      message: result.text || `R returned HTTP ${result.status}`,
+      rClass: "HttpError",
+      stderr: result.text || "",
+    };
+    return patch;
+  }
+
+  const body = result.json;
+  const responseErrors = validateCalibrationResponse(body);
+  if (responseErrors.length > 0) {
+    patch.status = "failed";
+    patch.error = {
+      message: `R response failed the ADR 0002 contract: ${responseErrors.join("; ")}`,
+      rClass: "ContractError",
+      stderr: result.text || "",
+    };
+    patch.response = body;
+    return patch;
+  }
+
+  if (body.converged === false) {
+    patch.status = "not-converged";
+    patch.response = body;
+    patch.error = body.error || {
+      message: "R reported converged: false.",
+      rClass: "NotConverged",
+      stderr: "",
+    };
+    if (!patch.error.message) {
+      patch.error = { ...patch.error, message: "R reported converged: false." };
+    }
+    return patch;
+  }
+
+  patch.response = body;
+  patch.error = null;
+  patch.status = "succeeded";
+  return patch;
 }
 
 export async function processJobById(
@@ -115,19 +213,20 @@ export async function processJobById(
   { client = { postCalibration }, timeoutMs, killer } = {}
 ) {
   const db = loadDB();
-  const job = findJob(db, jobId);
-  if (!job) return { ok: false, error: "Calibration job not found." };
-  if (job.status !== "queued") {
-    return { ok: false, error: `Job is '${job.status}', not queued.` };
+  const startedAt = nowIso();
+  const claim = await claimQueuedCalibrationJob(db, jobId, {
+    startedAt,
+    finishedAt: null,
+    updatedAt: startedAt,
+    error: null,
+  });
+  if (claim.missing) return { ok: false, error: "Calibration job not found." };
+  if (!claim.claimed) {
+    return { ok: false, error: `Job is '${claim.job?.status}', not queued.` };
   }
+  if (!calibrationJobsUseExternalStore()) saveDB(db);
 
-  job.status = "running";
-  job.startedAt = nowIso();
-  job.finishedAt = null;
-  job.updatedAt = job.startedAt;
-  job.error = null;
-  saveDB(db);
-
+  const job = claim.job;
   const resolvedTimeoutMs = jobTimeoutMsForKind(job.kind, timeoutMs);
   // D103: restore the enqueue request id so R client headers + logs join.
   const result = await runWithAudit(
@@ -149,67 +248,22 @@ export async function processJobById(
           })
   );
 
-  const after = loadDB();
-  const live = findJob(after, jobId);
-  if (!live) return { ok: false, error: "Calibration job disappeared while running." };
-
-  live.finishedAt = nowIso();
-  live.updatedAt = live.finishedAt;
-
-  if (!result.ok || result.error) {
-    live.status = "failed";
-    live.error = result.error || {
-      message: result.text || `R returned HTTP ${result.status}`,
-      rClass: "HttpError",
-      stderr: result.text || "",
-    };
-    saveDB(after);
-    return { ok: false, job: live };
-  }
-
-  const body = result.json;
-  const responseErrors = validateCalibrationResponse(body);
-  if (responseErrors.length > 0) {
-    live.status = "failed";
-    live.error = {
-      message: `R response failed the ADR 0002 contract: ${responseErrors.join("; ")}`,
-      rClass: "ContractError",
-      stderr: result.text || "",
-    };
-    live.response = body;
-    saveDB(after);
-    return { ok: false, job: live };
-  }
-
-  if (body.converged === false) {
-    live.status = "not-converged";
-    live.response = body;
-    live.error = body.error || {
-      message: "R reported converged: false.",
-      rClass: "NotConverged",
-      stderr: "",
-    };
-    if (!live.error.message) {
-      live.error = { ...live.error, message: "R reported converged: false." };
-    }
-    saveDB(after);
-    return { ok: false, job: live };
-  }
-
-  live.response = body;
-  live.error = null;
-  live.status = "succeeded";
-  saveDB(after);
-  return { ok: true, job: live };
+  const after = calibrationJobsUseExternalStore() ? db : loadDB();
+  const patch = outcomePatch(result, nowIso());
+  const updated = await finishRunningCalibrationJob(after, jobId, patch);
+  if (!updated) return { ok: false, error: "Calibration job disappeared while running." };
+  if (!calibrationJobsUseExternalStore()) saveDB(after);
+  return { ok: patch.status === "succeeded", job: updated };
 }
 
 export async function processQueuedJobs(options = {}) {
   if (dispatcherActive) {
-    maybeEmitQueueDepthAlarm(getCalibrationQueueMetrics());
+    maybeEmitQueueDepthAlarm(await getCalibrationQueueMetrics());
     return [];
   }
   dispatcherActive = true;
   const processed = [];
+  const skipped = new Set();
   try {
     const max = Number.isFinite(options.maxConcurrent)
       ? Math.max(1, Math.floor(options.maxConcurrent))
@@ -217,24 +271,27 @@ export async function processQueuedJobs(options = {}) {
 
     while (true) {
       const db = loadDB();
-      const metrics = computeQueueMetrics(db.calibrationJobs || []);
+      const jobs = await jobsForMetrics(db);
+      const metrics = computeQueueMetrics(jobs);
       maybeEmitQueueDepthAlarm(metrics);
       if (metrics.running >= max) break;
 
       const slots = max - metrics.running;
-      const batch = (db.calibrationJobs || [])
-        .filter((j) => j.status === "queued")
+      const batch = jobs
+        .filter((j) => j.status === "queued" && !skipped.has(j.id))
+        .sort(byQueueOrder)
         .slice(0, slots);
       if (batch.length === 0) break;
 
-      if (batch.length === 1) {
-        processed.push(await processJobById(batch[0].id, options));
-      } else {
-        const results = await Promise.all(
-          batch.map((job) => processJobById(job.id, options))
-        );
-        processed.push(...results);
+      const runOne = (job) => processJobById(job.id, options);
+      const results =
+        batch.length === 1 ? [await runOne(batch[0])] : await Promise.all(batch.map(runOne));
+      for (let i = 0; i < results.length; i += 1) {
+        if (!results[i].job && String(results[i].error || "").includes("not queued")) {
+          skipped.add(batch[i].id);
+        }
       }
+      processed.push(...results);
     }
 
     return processed;

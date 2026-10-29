@@ -389,8 +389,16 @@ describe("SessionPlayer presentation settings", () => {
       task: { id: "t1" },
     });
     renderPlayer();
-    const banner = await screen.findByTestId("session-time-remaining");
-    expect(banner).toHaveAttribute("data-presentation-time-multiplier", "2");
+    // The countdown banner mounts from session.endTime before /next-task
+    // attaches the presentation overlay. Waiting for the element alone
+    // reads the default multiplier of 1.
+    await waitFor(() => {
+      expect(screen.getByTestId("session-time-remaining")).toHaveAttribute(
+        "data-presentation-time-multiplier",
+        "2"
+      );
+    });
+    const banner = screen.getByTestId("session-time-remaining");
     expect(banner).toHaveTextContent(/40m|39m/);
     expect(banner).not.toHaveTextContent(/1h 20m/);
     expect(banner).not.toHaveTextContent(/80m/);

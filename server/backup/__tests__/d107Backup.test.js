@@ -61,7 +61,9 @@ describe("D107 backup inventory", () => {
     expect(ids).toContain("auditLog");
     expect(ids).toContain("presentationModels");
     const jobs = BACKUP_INVENTORY.find((r) => r.id === "calibrationJobs");
-    expect(jobs.pathInArchive).toBe("ecd/db.json");
+    expect(jobs.pathInArchive).toBe("mongo/calibrationJobs.json");
+    const artefacts = BACKUP_INVENTORY.find((r) => r.id === "analysisArtefacts");
+    expect(artefacts.pathInArchive).toBe("mongo/analysisArtefacts.json");
     const audit = BACKUP_INVENTORY.find((r) => r.id === "auditLog");
     expect(audit.pathInArchive).toBe("mongo/auditLog.json");
   });
@@ -149,6 +151,12 @@ describe("D107 runFullBackup", () => {
     const ecd = JSON.parse(opened.files["ecd/db.json"].toString("utf8"));
     expect(ecd.calibrationJobs[0].id).toBe("job1");
     expect(ecd.analysisArtefacts[0].id).toBe("art1");
+    const jobsExport = JSON.parse(opened.files["mongo/calibrationJobs.json"].toString("utf8"));
+    const artefactsExport = JSON.parse(
+      opened.files["mongo/analysisArtefacts.json"].toString("utf8")
+    );
+    expect(jobsExport[0].id).toBe("job1");
+    expect(artefactsExport[0].id).toBe("art1");
     const users = JSON.parse(opened.files["mongo/users.json"].toString("utf8"));
     expect(users[0].username).toBe("admin1");
     expect(opened.files["mongo/auditLog.json"]).toBeTruthy();

@@ -28,7 +28,8 @@ Summary:
 |---|---|
 | ECD entities (items, models including presentationModels, tasks, students, policies, …) | `ecd/db.json` snapshot |
 | `sessions` | `mongo/sessions.json` from the session store. The JSON harness also keeps them inside `ecd/db.json`. |
-| `calibrationJobs`, `analysisArtefacts` | Inside `ecd/db.json` (must not be skipped). |
+| `calibrationJobs` | `mongo/calibrationJobs.json` from the calibration job store. The JSON harness also keeps them inside `ecd/db.json`. |
+| `analysisArtefacts` | `mongo/analysisArtefacts.json` from the analysis artefact store. The JSON harness also keeps them inside `ecd/db.json`. |
 | `auditLog` | `mongo/auditLog.json` from the audit store. The JSON harness also keeps rows inside `ecd/db.json`. |
 | Task materials | Inline on `items.stimulus` today; optional `ECD_MATERIALS_DIR` → `materials/` |
 | `users`, `questions` | `mongo/users.json`, `mongo/questions.json` via `dbAdapter` |

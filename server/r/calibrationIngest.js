@@ -9,6 +9,11 @@ import { validateEntity } from "../../src/utils/schema.js";
 import { parameterSetStorageErrors } from "../../src/utils/parameterSetRecord.js";
 import { markParameterSetCandidate } from "../../src/utils/parameterSetStatus.js";
 import { jobKindIngestsParameterSets, jobKindIngestsAnalysisArtefact } from "../../src/utils/ecdVocabulary.js";
+import { saveCalibrationJob } from "../calibrationJobs/calibrationJobRepository.js";
+import {
+  persistAnalysisArtefact,
+  placeAnalysisArtefact,
+} from "../analysisArtefacts/analysisArtefactRepository.js";
 import {
   parameterSetFromCalibrationResponse,
   validateCalibrationResponse,
@@ -164,8 +169,7 @@ export function ingestCalibrationJob(job, db, extras = {}) {
       return { ok: false, error: "Analysis artefact failed validation", details: errors };
     }
 
-    db.analysisArtefacts = db.analysisArtefacts || [];
-    db.analysisArtefacts.push(artefact);
+    placeAnalysisArtefact(db, artefact);
 
     job.ingestedAnalysisArtefactId = analysisArtefactId;
     job.updatedAt = new Date().toISOString();
@@ -212,4 +216,14 @@ export function ingestCalibrationJob(job, db, extras = {}) {
   job.updatedAt = em.updatedAt;
 
   return { ok: true, parameterSet };
+}
+
+/**
+ * External stores already hold the mutated job and any new artefact.
+ * The JSON harness leaves both on `db` for saveDB. Call after a
+ * successful ingestCalibrationJob, before saveDB.
+ */
+export async function commitCalibrationIngest(db, { job, artefact } = {}) {
+  if (artefact) await persistAnalysisArtefact(db, artefact);
+  if (job) await saveCalibrationJob(db, job);
 }

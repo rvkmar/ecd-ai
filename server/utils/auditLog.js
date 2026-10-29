@@ -311,6 +311,22 @@ export function auditsForSessionChange(before, after) {
 }
 
 /**
+ * Same calibration-job diff saveDB runs, for one job document.
+ * External job writes do not leave the job on the ECD file, so the
+ * whole-db diff would not see the change.
+ *
+ * @param {object | null} before
+ * @param {object | null} after
+ */
+export function auditsForCalibrationJobChange(before, after) {
+  if (!after) return [];
+  return collectSaveAudits(
+    { calibrationJobs: before ? [before] : [] },
+    { calibrationJobs: [after] }
+  );
+}
+
+/**
  * Append collected audits onto `db.auditLog` (mutates db).
  * @param {object} db
  * @param {object[]} entries

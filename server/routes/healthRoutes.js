@@ -32,6 +32,8 @@ router.get("/health", async (_req, res) => {
       mode: status.database.ecd.mode,
       sessionsBackend: status.database.ecd.sessionsBackend,
       auditLogBackend: status.database.ecd.auditLogBackend,
+      calibrationJobsBackend: status.database.ecd.calibrationJobsBackend,
+      analysisArtefactsBackend: status.database.ecd.analysisArtefactsBackend,
     },
     // Diagnostic only — does not affect the HTTP status.
     r: { reachable: status.r.reachable, url: status.r.url },

@@ -9,21 +9,24 @@ import path from "path";
 import mongoose from "mongoose";
 import { loadDB, backupDirPath } from "../../src/utils/db-server.js";
 import { describeStorageMode } from "../config/storageMode.js";
+import { getCalibrationQueueMetrics } from "../r/calibrationWorker.js";
+import { computeQueueMetrics } from "../r/calibrationQueueLimits.js";
 import {
   BACKUP_FILE_PREFIX,
   BACKUP_FILE_SUFFIX,
 } from "../backup/inventory.js";
 import { getRHealth, rBackendUrl } from "../r/rClient.js";
-import { computeQueueMetrics } from "../r/calibrationQueueLimits.js";
 import { getMigrationStatus } from "../migrations/runner.js";
 import { migrationRegistryIds } from "../migrations/registry.js";
 import { resolveSessionsBackend } from "../sessions/sessionBackend.js";
 import { resolveAuditLogBackend } from "../auditLog/auditBackend.js";
+import { resolveCalibrationJobsBackend } from "../calibrationJobs/calibrationJobBackend.js";
+import { resolveAnalysisArtefactsBackend } from "../analysisArtefacts/analysisArtefactBackend.js";
 
 // `mode` stays "ecd-json": the ECD file is still the content store.
-// Sessions and auditLog may live in that file or in Mongo. Callers that
-// branch on mode keep working; sessionsBackend / auditLogBackend name
-// those stores.
+// Sessions, auditLog, calibrationJobs, and analysisArtefacts may live in
+// that file or in Mongo. Callers that branch on mode keep working; the
+// *Backend fields name those stores.
 function sessionsBackendName(env = process.env) {
   const backend = resolveSessionsBackend(env);
   if (backend === "mongo") return "mongo";
@@ -33,6 +36,20 @@ function sessionsBackendName(env = process.env) {
 
 function auditLogBackendName(env = process.env) {
   const backend = resolveAuditLogBackend(env);
+  if (backend === "mongo") return "mongo";
+  if (backend === "memory") return "memory";
+  return "file";
+}
+
+function calibrationJobsBackendName(env = process.env) {
+  const backend = resolveCalibrationJobsBackend(env);
+  if (backend === "mongo") return "mongo";
+  if (backend === "memory") return "memory";
+  return "file";
+}
+
+function analysisArtefactsBackendName(env = process.env) {
+  const backend = resolveAnalysisArtefactsBackend(env);
   if (backend === "mongo") return "mongo";
   if (backend === "memory") return "memory";
   return "file";
@@ -53,6 +70,8 @@ function probeEcdDatabase() {
       mode: "ecd-json",
       sessionsBackend: sessionsBackendName(),
       auditLogBackend: auditLogBackendName(),
+      calibrationJobsBackend: calibrationJobsBackendName(),
+      analysisArtefactsBackend: analysisArtefactsBackendName(),
       collections: Object.keys(db || {}).length,
     };
   } catch (err) {
@@ -61,6 +80,8 @@ function probeEcdDatabase() {
       mode: "ecd-json",
       sessionsBackend: sessionsBackendName(),
       auditLogBackend: auditLogBackendName(),
+      calibrationJobsBackend: calibrationJobsBackendName(),
+      analysisArtefactsBackend: analysisArtefactsBackendName(),
       error: err?.message || String(err),
     };
   }
@@ -182,8 +203,7 @@ export async function collectSystemStatus(options = {}) {
 
   let queue = computeQueueMetrics([]);
   try {
-    const db = loadDB();
-    queue = computeQueueMetrics(db.calibrationJobs || []);
+    queue = await getCalibrationQueueMetrics();
   } catch {
     // keep empty metrics
   }

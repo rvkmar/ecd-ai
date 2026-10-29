@@ -9,6 +9,10 @@ import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB } from "../../src/utils/db-server.js";
 import {
+  getAnalysisArtefactById,
+  queryAnalysisArtefacts,
+} from "../analysisArtefacts/analysisArtefactRepository.js";
+import {
   MIN_CELL_SIZE,
   namedAggregateScope,
   suppressArtefactSmallCells,
@@ -56,15 +60,14 @@ function presentArtefact(row, req, { includeReport = false } = {}) {
 // GET /api/analysisArtefacts
 // ?evidenceModelId=  ?kind=  ?jobId=
 // ------------------------------
-router.get("/", canView, (req, res) => {
+router.get("/", canView, async (req, res) => {
   const db = loadDB();
-  let rows = db.analysisArtefacts || [];
   const { evidenceModelId, kind, jobId } = req.query;
-  if (evidenceModelId) {
-    rows = rows.filter((a) => a.scope?.evidenceModelId === evidenceModelId);
-  }
-  if (kind) rows = rows.filter((a) => a.kind === kind);
-  if (jobId) rows = rows.filter((a) => a.jobId === jobId);
+  const rows = await queryAnalysisArtefacts(db, {
+    ...(evidenceModelId ? { evidenceModelId } : {}),
+    ...(kind ? { kind } : {}),
+    ...(jobId ? { jobId } : {}),
+  });
   res.json(rows.map((r) => presentArtefact(r, req)));
 });
 
@@ -72,9 +75,9 @@ router.get("/", canView, (req, res) => {
 // GET /api/analysisArtefacts/:id/report
 // Self-contained HTML technical report. JSON list/detail omit the HTML blob.
 // ------------------------------
-router.get("/:id/report", canView, (req, res) => {
+router.get("/:id/report", canView, async (req, res) => {
   const db = loadDB();
-  const row = (db.analysisArtefacts || []).find((a) => a.id === req.params.id);
+  const row = await getAnalysisArtefactById(db, req.params.id);
   if (!row) return res.status(404).json({ error: "Analysis artefact not found" });
   const html = row.payload?.reportHtml;
   if (typeof html !== "string" || !html.trim()) {
@@ -91,9 +94,9 @@ router.get("/:id/report", canView, (req, res) => {
 // ------------------------------
 // GET /api/analysisArtefacts/:id
 // ------------------------------
-router.get("/:id", canView, (req, res) => {
+router.get("/:id", canView, async (req, res) => {
   const db = loadDB();
-  const row = (db.analysisArtefacts || []).find((a) => a.id === req.params.id);
+  const row = await getAnalysisArtefactById(db, req.params.id);
   if (!row) return res.status(404).json({ error: "Analysis artefact not found" });
   res.json(presentArtefact(row, req));
 });

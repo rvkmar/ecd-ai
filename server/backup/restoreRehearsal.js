@@ -197,7 +197,17 @@ function verifyRestoreFourPoints(args) {
   const ps = (sm?.parameterSets || []).find(
     (s) => s.parameterSetId === args.parameterSetId
   );
-  const job = (ecd.calibrationJobs || []).find((j) => j.id === args.jobId);
+  let jobs = ecd.calibrationJobs || [];
+  const jobsExport = path.join(args.mongoDir, "calibrationJobs.json");
+  if (!jobs.some((j) => j.id === args.jobId) && fs.existsSync(jobsExport)) {
+    try {
+      const exported = JSON.parse(fs.readFileSync(jobsExport, "utf8"));
+      if (Array.isArray(exported) && exported.length) jobs = exported;
+    } catch {
+      // keep ecd.calibrationJobs
+    }
+  }
+  const job = jobs.find((j) => j.id === args.jobId);
   checks.parameterSetResolvesToJob.ok =
     !!ps &&
     ps.calibrationJobId === args.jobId &&

@@ -223,6 +223,10 @@ try {
     const auditRepo = await import("../server/auditLog/auditRepository.js");
     repo.resetSessionStoreForTests();
     auditRepo.resetAuditStoreForTests();
+    const jobsRepo = await import("../server/calibrationJobs/calibrationJobRepository.js");
+    const artefactsRepo = await import("../server/analysisArtefacts/analysisArtefactRepository.js");
+    jobsRepo.resetCalibrationJobStoreForTests();
+    artefactsRepo.resetAnalysisArtefactStoreForTests();
     await repo.upsertSessions(sessions);
 
     async function oneExternal(i) {

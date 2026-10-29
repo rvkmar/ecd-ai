@@ -12,6 +12,8 @@ describe("migrate CLI exits", () => {
     file: process.env.ECD_DB_FILE,
     backend: process.env.SESSIONS_BACKEND,
     auditBackend: process.env.AUDITLOG_BACKEND,
+    jobsBackend: process.env.CALIBRATION_JOBS_BACKEND,
+    artefactsBackend: process.env.ANALYSIS_ARTEFACTS_BACKEND,
     backup: process.env.ECD_BACKUP_DIR,
   };
   let tmp;
@@ -25,6 +27,10 @@ describe("migrate CLI exits", () => {
     else process.env.SESSIONS_BACKEND = prev.backend;
     if (prev.auditBackend === undefined) delete process.env.AUDITLOG_BACKEND;
     else process.env.AUDITLOG_BACKEND = prev.auditBackend;
+    if (prev.jobsBackend === undefined) delete process.env.CALIBRATION_JOBS_BACKEND;
+    else process.env.CALIBRATION_JOBS_BACKEND = prev.jobsBackend;
+    if (prev.artefactsBackend === undefined) delete process.env.ANALYSIS_ARTEFACTS_BACKEND;
+    else process.env.ANALYSIS_ARTEFACTS_BACKEND = prev.artefactsBackend;
     if (prev.backup === undefined) delete process.env.ECD_BACKUP_DIR;
     else process.env.ECD_BACKUP_DIR = prev.backup;
     if (tmp) fs.rmSync(tmp, { recursive: true, force: true });
@@ -36,6 +42,8 @@ describe("migrate CLI exits", () => {
     process.env.ECD_BACKUP_DIR = path.join(tmp, "backups");
     process.env.SESSIONS_BACKEND = "json";
     process.env.AUDITLOG_BACKEND = "json";
+    process.env.CALIBRATION_JOBS_BACKEND = "json";
+    process.env.ANALYSIS_ARTEFACTS_BACKEND = "json";
     fs.writeFileSync(process.env.ECD_DB_FILE, JSON.stringify({ sessions: [], auditLog: [] }));
     forgetDbCache();
     for (const migration of MIGRATION_REGISTRY) {
