@@ -5,14 +5,12 @@
 // observable evidence variables to the competency claim.
 //
 // Current architecture:
-// • single latent claim node
+// • one or more latent nodes (a star, or a small tree)
 // • observable evidence nodes
-// • directed edges Claim → Observables
+// • directed edges from a latent to a child latent or an observable
 //
-// Future support:
-// • multi-latent networks
-// • skill hierarchies
-// • evidence nodes with multiple parents
+// Delivery refuses a cycle, two parents, an observable-observable
+// edge, or a joint larger than the exact-inference cap.
 
 import React, { useEffect, useMemo } from "react";
 import { AlertTriangle, Info } from "lucide-react";
@@ -76,18 +74,17 @@ export default function BNConfigPanel({
        updateStructure spreads the same empty config back.
 
        The consequence showed up at confirmation, not here: schema.js
-       requires `Bayesian model <id> must contain exactly one latent node`,
-       so a Bayesian model configured entirely through this panel failed to
-       confirm with an error naming a node the UI never asked the author
-       about. Write it as soon as the panel mounts, and guarantee it on
-       every subsequent edit.
+       requires at least one latent node, so a Bayesian model configured
+       entirely through this panel failed to confirm with an error naming
+       a node the UI never asked the author about. Seed only when empty.
+       A second latent that was imported or typed in is left alone.
     ===================================================== */
 
     useEffect(() => {
 
         if (locked) return;
 
-        if (config.latentNodes?.length === 1) return;
+        if (Array.isArray(config.latentNodes) && config.latentNodes.length > 0) return;
 
         onChange({
 
@@ -506,7 +503,7 @@ export default function BNConfigPanel({
 
                 <span>
 
-                    Delivery scores one latent student model variable, the observables that depend on it, and a conditional probability table. A second latent node, an edge between observables, or a continuous student model variable is refused.
+                    Delivery scores a star or a small tree of latent student model variables, the observables that depend on them, and a conditional probability table. A cycle, two parents, an edge between observables, a continuous student model variable, or a joint larger than the exact-inference cap is refused.
 
                 </span>
 

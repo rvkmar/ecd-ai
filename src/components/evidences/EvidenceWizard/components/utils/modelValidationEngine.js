@@ -315,7 +315,7 @@ function validateBayesianModel(models, result) {
         if (config.latentNodes && config.latentNodes.length > 1) {
 
             result.warnings.push(
-                "Multiple latent nodes detected. Current architecture assumes one competency node."
+                "Multiple latent nodes: delivery scores a tree (each node has at most one parent). A cycle or two parents is refused at save."
             );
 
         }

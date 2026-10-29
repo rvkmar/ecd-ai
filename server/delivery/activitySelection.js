@@ -1222,7 +1222,22 @@ function selectBayesianNetwork(session, db, warnings) {
         });
         continue;
       }
-      const belief = beliefForBayesianSelection(session, loaded.network);
+      const parentId = loaded.network.parentOf?.[observableId] || loaded.network.smvId;
+      const parentNetwork = loaded.network.statesById
+        ? {
+            smvId: parentId,
+            states: loaded.network.statesById[parentId],
+            prior: loaded.network.priorsById?.[parentId],
+          }
+        : loaded.network;
+      if (!parentNetwork.states || !parentNetwork.prior) {
+        unrankable.push({
+          taskId,
+          reason: `Bayesian model '${statisticalModel.id}' has no belief over parent '${parentId}' for observable '${observableId}'.`,
+        });
+        continue;
+      }
+      const belief = beliefForBayesianSelection(session, parentNetwork);
       if (belief.error) {
         unrankable.push({ taskId, reason: belief.error });
         continue;
@@ -1234,7 +1249,7 @@ function selectBayesianNetwork(session, db, warnings) {
         debug: {
           totalGain: gain,
           itemId: task.itemId,
-          smvId: loaded.network.smvId,
+          smvId: parentNetwork.smvId,
           observableId,
           parameterSource,
           priorSource: belief.source,

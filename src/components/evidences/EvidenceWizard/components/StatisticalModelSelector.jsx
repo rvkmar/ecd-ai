@@ -91,7 +91,7 @@ export default function StatisticalModelSelector({
        family's config -- an IRT observable mapping means nothing to a
        threshold rule -- but resetting to a bare `{}` left a Bayesian
        network with no latent node, which schema.js rejects at
-       confirmation ("Bayesian model ... must contain exactly one latent
+       confirmation ("Bayesian model ... must contain at least one latent
        node") with an error the author has no control in Step 6 to answer.
        BNConfigPanel repairs this on mount as well; seeding here means it
        holds even for a model whose config panel is never expanded. */

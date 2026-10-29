@@ -966,20 +966,19 @@ export function accumulateEvidence(session, db, options = {}) {
     const family = statisticalModel.type;
 
     if (family === BAYESIAN_NETWORK_FAMILY) {
-      posteriors.push(
-        accumulateBayesianNetwork({
-          evidenceModelId,
-          parameterSetId,
-          parameterSource,
-          evidenceModel,
-          statisticalModel,
-          group,
-          db,
-          session,
-          warnings,
-          scoreResponse,
-        })
-      );
+      const bnResult = accumulateBayesianNetwork({
+        evidenceModelId,
+        parameterSetId,
+        parameterSource,
+        evidenceModel,
+        statisticalModel,
+        group,
+        db,
+        session,
+        warnings,
+        scoreResponse,
+      });
+      posteriors.push(...(Array.isArray(bnResult) ? bnResult : [bnResult]));
       continue;
     }
 

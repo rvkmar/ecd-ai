@@ -1,19 +1,23 @@
 // Exact Bayesian network accumulation for the networks this app authors.
 //
-// The evidence-model statistical model stores one latent node
-// (structureConfig.latentNodes), the observables that depend on it
-// (observableIds and edges), a conditional probability table
-// (structureConfig.cpt, or a bayesian-cpt parameter set), and the
-// student model variable that latent node updates (structureConfig.smvId,
-// or a latent node id that is itself an SMV id). That is a naive Bayes
-// star: one discrete student model variable, binary observables that are
-// independent given that variable.
+// A one-latent model is a naive Bayes star: one discrete student model
+// variable, binary observables independent given that variable. That path
+// is unchanged. A small tree of latents is also scored: latent-to-latent
+// edges, each node at most one parent, exact enumeration of the joint
+// (at most MAX_BN_JOINT_CONFIGS configurations), then a marginal for each
+// student model variable. A cycle, two parents, an observable-observable
+// edge, a continuous variable, or a joint larger than that cap is refused
+// with a reason. It is not scored.
+//
+// structureConfig.latentNodes names the latents. observableIds and edges
+// name the evidence and the directed parents. The conditional probability
+// table is structureConfig.cpt or a bayesian-cpt parameter set. For a
+// star, structureConfig.smvId (or a latent node id that is itself an SMV
+// id) binds the one variable. For a tree, each latent node id is an SMV
+// id.
 //
 // Inference is exact, in process, in log space. There is no external
-// service and no new dependency. A network with more than one latent
-// node, an edge that is not from the latent node to an observable, a
-// continuous student model variable, or more states than MAX_BN_STATES
-// is refused with a reason. It is not scored.
+// service and no new dependency.
 //
 // D129 jointPrior is a continuous multivariate normal. It is not a
 // discrete network prior, and this module does not read it.
@@ -24,6 +28,7 @@
 
 const MAX_BN_STATES = 8;
 const MAX_BN_OBSERVABLES = 64;
+const MAX_BN_JOINT_CONFIGS = 64;
 export const BAYESIAN_NETWORK_FAMILY = "bayesian_network";
 
 const DISCRETE_SMV_TYPES = ["binary", "ordinal", "categorical"];
@@ -151,23 +156,41 @@ function priorFromStudentModelVariable(smv, states) {
   };
 }
 
+function uniqueIds(list) {
+  const seen = new Set();
+  const ids = [];
+  for (const entry of list || []) {
+    if (typeof entry !== "string" || !entry.trim()) continue;
+    const id = entry.trim();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
+function latentCycle(latentIds, parentOf) {
+  const latents = new Set(latentIds);
+  for (const start of latentIds) {
+    const seen = new Set();
+    let current = parentOf[start];
+    while (current && latents.has(current)) {
+      if (current === start || seen.has(current)) return true;
+      seen.add(current);
+      current = parentOf[current];
+    }
+  }
+  return false;
+}
+
 function describeStructure(statisticalModel) {
   const id = modelId(statisticalModel);
   const config = statisticalModel?.structureConfig || {};
-  const latent = Array.isArray(config.latentNodes)
-    ? config.latentNodes.filter((node) => typeof node === "string" && node.trim())
-    : [];
-  if (latent.length !== 1) {
-    return {
-      error: latent.length > 1
-        ? `Bayesian model '${id}' has ${latent.length} latent nodes. Delivery updates one student model variable, so this network is not scored.`
-        : `Bayesian model '${id}' must contain exactly one latent node.`,
-    };
+  const latentNodeIds = uniqueIds(config.latentNodes);
+  if (latentNodeIds.length === 0) {
+    return { error: `Bayesian model '${id}' must contain at least one latent node.` };
   }
-  const latentNodeId = latent[0];
-  const observableIds = Array.isArray(config.observableIds)
-    ? config.observableIds.filter((observableId) => typeof observableId === "string" && observableId.trim())
-    : [];
+  const observableIds = uniqueIds(config.observableIds);
   if (observableIds.length === 0) {
     return { error: `Bayesian model '${id}' lists no observable evidence nodes.` };
   }
@@ -176,15 +199,67 @@ function describeStructure(statisticalModel) {
       error: `Bayesian model '${id}' lists ${observableIds.length} observables. Exact inference here supports at most ${MAX_BN_OBSERVABLES} observables.`,
     };
   }
+  for (const latentId of latentNodeIds) {
+    if (observableIds.includes(latentId)) {
+      return { error: `Bayesian model '${id}' uses '${latentId}' as both a latent node and an observable.` };
+    }
+  }
+
   const edges = Array.isArray(config.edges) ? config.edges : [];
+  const star = latentNodeIds.length === 1;
+  const latentNodeId = latentNodeIds[0];
+  const parentOf = {};
+
+  if (star) {
+    for (const edge of edges) {
+      if (!edge || edge.from !== latentNodeId || !observableIds.includes(edge.to)) {
+        return {
+          error: `Bayesian model '${id}' has an edge that is not from latent node '${latentNodeId}' to one of its observables. Only that star is scored.`,
+        };
+      }
+    }
+    for (const observableId of observableIds) parentOf[observableId] = latentNodeId;
+    return { star: true, latentNodeId, latentNodeIds, observableIds, parentOf };
+  }
+
   for (const edge of edges) {
-    if (!edge || edge.from !== latentNodeId || !observableIds.includes(edge.to)) {
+    if (!edge || typeof edge.from !== "string" || typeof edge.to !== "string") {
+      return { error: `Bayesian model '${id}' has an edge that is not a from/to pair.` };
+    }
+    const from = edge.from;
+    const to = edge.to;
+    if (!latentNodeIds.includes(from)) {
       return {
-        error: `Bayesian model '${id}' has an edge that is not from latent node '${latentNodeId}' to one of its observables. Only that star is scored.`,
+        error: `Bayesian model '${id}' has an edge from '${from}', which is not a latent node.`,
+      };
+    }
+    const toLatent = latentNodeIds.includes(to);
+    const toObservable = observableIds.includes(to);
+    if (!toLatent && !toObservable) {
+      return {
+        error: `Bayesian model '${id}' has an edge to '${to}', which is not a latent node or an observable.`,
+      };
+    }
+    if (parentOf[to]) {
+      return {
+        error: `Bayesian model '${id}' gives '${to}' more than one parent. Exact inference here scores a tree.`,
+      };
+    }
+    parentOf[to] = from;
+  }
+
+  for (const observableId of observableIds) {
+    if (!parentOf[observableId]) {
+      return {
+        error: `Bayesian model '${id}' observable '${observableId}' has no parent latent.`,
       };
     }
   }
-  return { latentNodeId, observableIds };
+  if (latentCycle(latentNodeIds, parentOf)) {
+    return { error: `Bayesian model '${id}' latent edges form a cycle, so the network is not scored.` };
+  }
+
+  return { star: false, latentNodeId, latentNodeIds, observableIds, parentOf };
 }
 
 function resolveDiscreteStudentModelVariable(evidenceModel, statisticalModel, db) {
@@ -246,6 +321,168 @@ function resolveDiscreteStudentModelVariable(evidenceModel, statisticalModel, db
     };
   }
   return { smv, states, competencyModelId: competencyModel.id };
+}
+
+function competencyModelFor(evidenceModel, db) {
+  const competency = (db?.competencies || []).find((row) => row && row.id === evidenceModel?.competencyId);
+  if (!competency) {
+    return {
+      error: `Evidence model '${evidenceModel?.id}' references competency '${evidenceModel?.competencyId}', which was not found.`,
+    };
+  }
+  const competencyModel = (db?.competencyModels || []).find((row) => row && row.id === competency.modelId);
+  if (!competencyModel) {
+    return {
+      error: `Competency '${competency.id}' references competency model '${competency.modelId}', which was not found.`,
+    };
+  }
+  return { competencyModel };
+}
+
+function resolveLatentVariables(evidenceModel, statisticalModel, db, structure) {
+  if (structure.star) {
+    const one = resolveDiscreteStudentModelVariable(evidenceModel, statisticalModel, db);
+    if (one.error) return one;
+    return {
+      star: true,
+      smv: one.smv,
+      states: one.states,
+      competencyModelId: one.competencyModelId,
+      latents: [{ id: one.smv.id, smv: one.smv, states: one.states }],
+    };
+  }
+
+  const found = competencyModelFor(evidenceModel, db);
+  if (found.error) return found;
+  const variables = found.competencyModel.smVariables || [];
+  const latents = [];
+  let joint = 1;
+  for (const latentId of structure.latentNodeIds) {
+    const smv = variables.find((variable) => variable && variable.id === latentId) || null;
+    if (!smv) {
+      return {
+        error: `Bayesian model '${modelId(statisticalModel)}' latent node '${latentId}' is not a Student Model Variable on competency model '${found.competencyModel.id}'.`,
+      };
+    }
+    if (!DISCRETE_SMV_TYPES.includes(smv.type)) {
+      return {
+        error: `Bayesian model '${modelId(statisticalModel)}' is bound to '${smv.id}', a ${smv.type} Student Model Variable. A categorical Bayesian network cannot update a continuous variable.`,
+      };
+    }
+    const states = statesOfStudentModelVariable(smv);
+    if (!states || states.length < 2) {
+      return { error: `Student Model Variable '${smv.id}' needs at least two states before a Bayesian network can update it.` };
+    }
+    if (states.length > MAX_BN_STATES) {
+      return {
+        error: `Student Model Variable '${smv.id}' has ${states.length} states. Exact inference here supports at most ${MAX_BN_STATES} states on one variable.`,
+      };
+    }
+    joint *= states.length;
+    latents.push({ id: latentId, smv, states });
+  }
+  if (joint > MAX_BN_JOINT_CONFIGS) {
+    return {
+      error: `Bayesian model '${modelId(statisticalModel)}' joint has ${joint} latent configurations. Exact inference here supports at most ${MAX_BN_JOINT_CONFIGS}.`,
+    };
+  }
+  return { star: false, latents, competencyModelId: found.competencyModel.id };
+}
+
+function nestedStateTable(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+  const table = {};
+  for (const [parentState, nested] of Object.entries(entry)) {
+    if (parentState.startsWith("_")) continue;
+    const row = cptRow(nested);
+    if (row && Object.keys(row).length > 0) table[parentState] = row;
+  }
+  return Object.keys(table).length > 0 ? table : null;
+}
+
+function jointConfigs(latents) {
+  let configs = [{}];
+  for (const latent of latents) {
+    const next = [];
+    for (const config of configs) {
+      for (const state of latent.states) {
+        next.push({ ...config, [latent.id]: state });
+      }
+    }
+    configs = next;
+  }
+  return configs;
+}
+
+function childCptProblems(table, parentStates, childStates, label) {
+  const problems = [];
+  if (!table) return [`${label} is missing.`];
+  for (const parent of parentStates) {
+    problems.push(...rowProblems(table[parent], childStates, `${label} given '${parent}'`));
+  }
+  return problems;
+}
+
+/**
+ * Exact joint update over a tree of latents. Returns a map of latent id
+ * to its marginal, or null when every configuration is impossible.
+ */
+function updateJointPosterior({ latents, parentOf, rootPriors, childCpts, observations, observableCpt }) {
+  const configs = jointConfigs(latents);
+  const logByConfig = [];
+  for (const config of configs) {
+    let logPosterior = 0;
+    for (const latent of latents) {
+      const parent = parentOf[latent.id];
+      const state = config[latent.id];
+      let probability;
+      if (!parent) {
+        probability = rootPriors[latent.id]?.[state];
+      } else {
+        probability = childCpts[latent.id]?.[config[parent]]?.[state];
+      }
+      if (!(probability > 0)) {
+        logPosterior = -Infinity;
+        break;
+      }
+      logPosterior += Math.log(probability);
+    }
+    if (Number.isFinite(logPosterior)) {
+      for (const observation of observations) {
+        const parent = parentOf[observation.observableId];
+        const probability = observableCpt[observation.observableId]?.[config[parent]];
+        const likelihood = observation.u === 1 ? probability : 1 - probability;
+        if (!(likelihood > 0)) {
+          logPosterior = -Infinity;
+          break;
+        }
+        logPosterior += Math.log(likelihood);
+      }
+    }
+    logByConfig.push(logPosterior);
+  }
+
+  const finite = logByConfig.filter((value) => Number.isFinite(value));
+  if (finite.length === 0) return null;
+  const maxLog = Math.max(...finite);
+  let total = 0;
+  const weights = logByConfig.map((value) => {
+    const weight = Number.isFinite(value) ? Math.exp(value - maxLog) : 0;
+    total += weight;
+    return weight;
+  });
+  if (!(total > 0) || !Number.isFinite(total)) return null;
+
+  const marginals = {};
+  for (const latent of latents) {
+    const mass = {};
+    for (const state of latent.states) mass[state] = 0;
+    configs.forEach((config, index) => {
+      mass[config[latent.id]] += weights[index] / total;
+    });
+    marginals[latent.id] = mass;
+  }
+  return marginals;
 }
 
 function modelPrior(statisticalModel, resolved, { parameterSet = null, allowStructurePrior = false } = {}) {
@@ -377,39 +614,40 @@ export function bayesianNetworkAuthoringErrors(statisticalModel, evidenceModel, 
   const errors = [];
   const id = modelId(statisticalModel);
   const config = statisticalModel?.structureConfig || {};
-  const latent = Array.isArray(config.latentNodes) ? config.latentNodes : [];
+  const latent = uniqueIds(config.latentNodes);
   const gate = strict || ["confirmed", "operational", "suspended"].includes(evidenceModel?.status);
 
-  if (latent.length > 1) {
-    errors.push(
-      `Bayesian model ${id} has ${latent.length} latent nodes. Delivery updates one student model variable, so a network with more than one latent node is not stored.`
-    );
-  } else if (gate && latent.length !== 1) {
-    errors.push(`Bayesian model ${id} must contain exactly one latent node.`);
+  if (gate && latent.length === 0) {
+    errors.push(`Bayesian model ${id} must contain at least one latent node.`);
   }
 
-  const observableIds = Array.isArray(config.observableIds) ? config.observableIds : [];
-  const latentNodeId = latent.length === 1 && typeof latent[0] === "string" ? latent[0] : null;
-  let structureBlocked = latent.length !== 1;
-  if (latentNodeId && Array.isArray(config.edges)) {
-    for (const edge of config.edges) {
-      if (!edge || edge.from !== latentNodeId || !observableIds.includes(edge.to)) {
-        errors.push(
-          `Bayesian model ${id} has an edge that is not from latent node '${latentNodeId}' to one of its observables. Only that star is stored.`
-        );
-        structureBlocked = true;
-        break;
-      }
-    }
+  const structure = describeStructure(statisticalModel);
+  let structureBlocked = Boolean(structure.error);
+  if (structure.error) {
+    errors.push(structure.error.replace(`Bayesian model '${id}'`, `Bayesian model ${id}`));
   }
 
   if (config.cpt && typeof config.cpt === "object") {
-    const table = conditionalProbabilityTable(config.cpt);
-    for (const [observableId, row] of Object.entries(table)) {
+    for (const [key, entry] of Object.entries(config.cpt)) {
+      const nested = nestedStateTable(entry);
+      if (nested) {
+        for (const [parentState, row] of Object.entries(nested)) {
+          for (const [state, probability] of Object.entries(row)) {
+            if (probability < 0 || probability > 1) {
+              errors.push(
+                `Conditional probability table for '${key}' given '${parentState}' has a probability outside 0 to 1 for state '${state}'.`
+              );
+            }
+          }
+        }
+        continue;
+      }
+      const row = cptRow(entry);
+      if (!row) continue;
       for (const [state, probability] of Object.entries(row)) {
         if (probability < 0 || probability > 1) {
           errors.push(
-            `Conditional probability table for observable '${observableId}' has a probability outside 0 to 1 for state '${state}'.`
+            `Conditional probability table for observable '${key}' has a probability outside 0 to 1 for state '${state}'.`
           );
         }
       }
@@ -418,27 +656,37 @@ export function bayesianNetworkAuthoringErrors(statisticalModel, evidenceModel, 
 
   if (!gate || !db || structureBlocked) return errors;
 
-  const structure = describeStructure(statisticalModel);
-  if (structure.error) {
-    errors.push(structure.error);
-    return errors;
-  }
-  const resolved = resolveDiscreteStudentModelVariable(evidenceModel, statisticalModel, db);
+  const resolved = resolveLatentVariables(evidenceModel, statisticalModel, db, structure);
   if (resolved.error) {
     errors.push(resolved.error);
     return errors;
   }
 
   if (config.cpt) {
-    const table = conditionalProbabilityTable(config.cpt);
+    const byId = Object.fromEntries(resolved.latents.map((latent) => [latent.id, latent]));
     for (const observableId of structure.observableIds) {
+      const parent = byId[structure.parentOf[observableId]];
       errors.push(
         ...rowProblems(
-          table[observableId],
-          resolved.states,
+          cptRow(config.cpt[observableId]),
+          parent.states,
           `Conditional probability table for observable '${observableId}'`
         )
       );
+    }
+    if (!resolved.star) {
+      for (const latent of resolved.latents) {
+        const parentId = structure.parentOf[latent.id];
+        if (!parentId) continue;
+        errors.push(
+          ...childCptProblems(
+            nestedStateTable(config.cpt[latent.id]),
+            byId[parentId].states,
+            latent.states,
+            `Conditional probability table for latent '${latent.id}'`
+          )
+        );
+      }
     }
   }
 
@@ -448,25 +696,43 @@ export function bayesianNetworkAuthoringErrors(statisticalModel, evidenceModel, 
     );
     if (parameterSet) {
       const table = conditionalProbabilityTable(parameterSet.parameters);
-      if (parameterSet.parameters?._prior) {
-        const parsed = priorFromMap(
-          parameterSet.parameters._prior,
-          resolved.states,
-          `Parameter set '${parameterSet.parameterSetId}' prior`
-        );
-        if (parsed.error) errors.push(parsed.error);
-      } else {
-        const fallback = priorFromStudentModelVariable(resolved.smv, resolved.states);
-        if (fallback.error) errors.push(fallback.error);
+      const byId = Object.fromEntries(resolved.latents.map((latent) => [latent.id, latent]));
+      if (resolved.star) {
+        if (parameterSet.parameters?._prior) {
+          const parsed = priorFromMap(
+            parameterSet.parameters._prior,
+            resolved.states,
+            `Parameter set '${parameterSet.parameterSetId}' prior`
+          );
+          if (parsed.error) errors.push(parsed.error);
+        } else {
+          const fallback = priorFromStudentModelVariable(resolved.smv, resolved.states);
+          if (fallback.error) errors.push(fallback.error);
+        }
       }
       for (const observableId of structure.observableIds) {
+        const parent = byId[structure.parentOf[observableId]];
         errors.push(
           ...rowProblems(
             table[observableId],
-            resolved.states,
+            parent.states,
             `Parameter set '${parameterSet.parameterSetId}' conditional probability for observable '${observableId}'`
           )
         );
+      }
+      if (!resolved.star) {
+        for (const latent of resolved.latents) {
+          const parentId = structure.parentOf[latent.id];
+          if (!parentId) continue;
+          errors.push(
+            ...childCptProblems(
+              nestedStateTable(parameterSet.parameters?.[latent.id]),
+              byId[parentId].states,
+              latent.states,
+              `Parameter set '${parameterSet.parameterSetId}' conditional probability for latent '${latent.id}'`
+            )
+          );
+        }
       }
     }
   }
@@ -481,29 +747,87 @@ export function bayesianNetworkAuthoringErrors(statisticalModel, evidenceModel, 
 export function snapshotBayesianPilot(statisticalModel, evidenceModel, db) {
   const structure = describeStructure(statisticalModel);
   if (structure.error) return { error: structure.error };
-  const resolved = resolveDiscreteStudentModelVariable(evidenceModel, statisticalModel, db);
+  if (structure.star) {
+    const resolved = resolveDiscreteStudentModelVariable(evidenceModel, statisticalModel, db);
+    if (resolved.error) return { error: resolved.error };
+    const table = conditionalProbabilityTable(statisticalModel?.structureConfig?.cpt);
+    const problems = [];
+    for (const observableId of structure.observableIds) {
+      problems.push(
+        ...rowProblems(table[observableId], resolved.states, `Conditional probability table for observable '${observableId}'`)
+      );
+    }
+    if (problems.length) return { error: problems[0] };
+    const prior = modelPrior(statisticalModel, resolved, { allowStructurePrior: true });
+    if (prior.error) return { error: prior.error };
+
+    const pilotParams = {
+      _kind: "bayesian-cpt",
+      _prior: prior.prior,
+      _smvId: resolved.smv.id,
+      _states: resolved.states,
+    };
+    for (const observableId of structure.observableIds) {
+      const levels = {};
+      for (const state of resolved.states) levels[state] = table[observableId][state];
+      pilotParams[observableId] = { levels };
+    }
+    return { pilotParams };
+  }
+
+  const resolved = resolveLatentVariables(evidenceModel, statisticalModel, db, structure);
   if (resolved.error) return { error: resolved.error };
-  const table = conditionalProbabilityTable(statisticalModel?.structureConfig?.cpt);
+  const cpt = statisticalModel?.structureConfig?.cpt || {};
+  const byId = Object.fromEntries(resolved.latents.map((latent) => [latent.id, latent]));
   const problems = [];
   for (const observableId of structure.observableIds) {
+    const parent = byId[structure.parentOf[observableId]];
     problems.push(
-      ...rowProblems(table[observableId], resolved.states, `Conditional probability table for observable '${observableId}'`)
+      ...rowProblems(
+        cptRow(cpt[observableId]),
+        parent.states,
+        `Conditional probability table for observable '${observableId}'`
+      )
     );
   }
+  const rootPriors = {};
+  for (const latent of resolved.latents) {
+    const parentId = structure.parentOf[latent.id];
+    if (parentId) {
+      problems.push(
+        ...childCptProblems(
+          nestedStateTable(cpt[latent.id]),
+          byId[parentId].states,
+          latent.states,
+          `Conditional probability table for latent '${latent.id}'`
+        )
+      );
+      continue;
+    }
+    const parsed = priorFromStudentModelVariable(latent.smv, latent.states);
+    if (parsed.error) return { error: parsed.error };
+    rootPriors[latent.id] = parsed.prior;
+  }
   if (problems.length) return { error: problems[0] };
-  const prior = modelPrior(statisticalModel, resolved, { allowStructurePrior: true });
-  if (prior.error) return { error: prior.error };
 
   const pilotParams = {
     _kind: "bayesian-cpt",
-    _prior: prior.prior,
-    _smvId: resolved.smv.id,
-    _states: resolved.states,
+    _tree: true,
+    _prior: rootPriors,
+    _parentOf: structure.parentOf,
+    _latentIds: structure.latentNodeIds,
   };
   for (const observableId of structure.observableIds) {
+    const parent = byId[structure.parentOf[observableId]];
+    const row = cptRow(cpt[observableId]);
     const levels = {};
-    for (const state of resolved.states) levels[state] = table[observableId][state];
+    for (const state of parent.states) levels[state] = row[state];
     pilotParams[observableId] = { levels };
+  }
+  for (const latent of resolved.latents) {
+    const parentId = structure.parentOf[latent.id];
+    if (!parentId) continue;
+    pilotParams[latent.id] = nestedStateTable(cpt[latent.id]);
   }
   return { pilotParams };
 }
@@ -551,6 +875,208 @@ function networkTables({ parameterSource, group, states }) {
   return { cpt: first, prior: prior.prior, priorSource: "pilot" };
 }
 
+function posteriorRecord({
+  latent,
+  evidenceModelId,
+  parameterSetId,
+  parameterSource,
+  competencyModelId,
+  distribution,
+  observations,
+  excluded,
+  priorSource,
+}) {
+  const positiveState = latent.states[latent.states.length - 1];
+  const precision = indexStandardDeviation(distribution, latent.states);
+  return {
+    smvId: latent.id,
+    smvType: latent.smv.type,
+    evidenceModelId,
+    parameterSetId: parameterSource === "calibrated" ? parameterSetId : null,
+    parameterSource: parameterSource || "calibrated",
+    modelFamily: BAYESIAN_NETWORK_FAMILY,
+    competencyModelId,
+    method: "exact-bayes",
+    supported: true,
+    estimate: distribution[positiveState],
+    precision,
+    sem: precision,
+    distribution,
+    states: latent.states,
+    responsesUsed: observations.length,
+    responsesExcluded: excluded,
+    priorSource,
+    positiveState,
+  };
+}
+
+function accumulateTreeNetwork({
+  structure,
+  evidenceModelId,
+  parameterSetId,
+  parameterSource,
+  evidenceModel,
+  statisticalModel,
+  group,
+  db,
+  session,
+  warnings,
+  scoreResponse,
+}) {
+  const resolved = resolveLatentVariables(evidenceModel, statisticalModel, db, structure);
+  if (resolved.error) return unsupported(evidenceModelId, parameterSetId, parameterSource, resolved.error);
+  const byId = Object.fromEntries(resolved.latents.map((latent) => [latent.id, latent]));
+
+  let source;
+  if (parameterSource === "pilot") {
+    const snapshots = group.map((response) => response?.pilotParams).filter(Boolean);
+    if (snapshots.length !== group.length) {
+      return unsupported(
+        evidenceModelId,
+        parameterSetId,
+        parameterSource,
+        "A pilot Bayesian network response is missing its pinned conditional probability table."
+      );
+    }
+    source = snapshots[0];
+    for (const snapshot of snapshots.slice(1)) {
+      if (JSON.stringify(snapshot) !== JSON.stringify(source)) {
+        return unsupported(
+          evidenceModelId,
+          parameterSetId,
+          parameterSource,
+          "Responses were scored under different Bayesian network tables. A single posterior over mixed tables is not reported."
+        );
+      }
+    }
+  } else if (parameterSource === "calibrated") {
+    const parameterSet = (statisticalModel.parameterSets || []).find((set) => set && set.parameterSetId === parameterSetId);
+    if (!parameterSet) {
+      return unsupported(
+        evidenceModelId,
+        parameterSetId,
+        parameterSource,
+        `No parameter set '${parameterSetId}' is on Bayesian model '${modelId(statisticalModel)}'.`
+      );
+    }
+    source = parameterSet.parameters;
+  } else {
+    return unsupported(
+      evidenceModelId,
+      parameterSetId,
+      parameterSource,
+      `Bayesian network evidence for '${evidenceModelId}' has no parameter source to score against.`
+    );
+  }
+
+  const observableCpt = conditionalProbabilityTable(source);
+  const childCpts = {};
+  const rootPriors = {};
+  const storedPriors = source._prior && typeof source._prior === "object" && !Array.isArray(source._prior)
+    ? source._prior
+    : {};
+
+  for (const latent of resolved.latents) {
+    const parentId = structure.parentOf[latent.id];
+    if (parentId) {
+      const table = nestedStateTable(source[latent.id]);
+      const problems = childCptProblems(
+        table,
+        byId[parentId].states,
+        latent.states,
+        `Conditional probability table for latent '${latent.id}'`
+      );
+      if (problems.length) {
+        return unsupported(evidenceModelId, parameterSetId, parameterSource, problems[0]);
+      }
+      childCpts[latent.id] = table;
+      continue;
+    }
+    let parsed;
+    if (storedPriors[latent.id] && typeof storedPriors[latent.id] === "object") {
+      parsed = priorFromMap(storedPriors[latent.id], latent.states, `Prior for '${latent.id}'`);
+    } else {
+      parsed = priorFromStudentModelVariable(latent.smv, latent.states);
+    }
+    if (parsed.error) return unsupported(evidenceModelId, parameterSetId, parameterSource, parsed.error);
+    if (session?.carryForward === true) {
+      const carried = session.studentModel?.carriedForward?.priors?.[latent.id];
+      if (carried) {
+        parsed = priorFromMap(carried, latent.states, `Carried forward posterior for '${latent.id}'`);
+        if (parsed.error) return unsupported(evidenceModelId, parameterSetId, parameterSource, parsed.error);
+      }
+    }
+    rootPriors[latent.id] = parsed.prior;
+  }
+
+  let priorSource = parameterSource === "pilot" ? "pilot" : "model";
+  if (session?.carryForward === true && resolved.latents.some((latent) => !structure.parentOf[latent.id] && session?.studentModel?.carriedForward?.priors?.[latent.id])) {
+    priorSource = "carried-forward";
+  }
+
+  const observations = [];
+  let excluded = 0;
+  for (const response of group) {
+    const scored = scoreResponse(response);
+    if (scored.u === null) {
+      excluded += 1;
+      continue;
+    }
+    const parent = byId[structure.parentOf[response.observableId]];
+    const problems = rowProblems(
+      observableCpt[response.observableId],
+      parent.states,
+      `Conditional probability table for observable '${response.observableId}'`
+    );
+    if (problems.length) {
+      excluded += 1;
+      warnings.push(`${problems[0]} That response was excluded.`);
+      continue;
+    }
+    observations.push({ observableId: response.observableId, u: scored.u });
+  }
+
+  if (observations.length === 0) {
+    return unsupported(
+      evidenceModelId,
+      parameterSetId,
+      parameterSource,
+      `No response for evidence model '${evidenceModelId}' carried usable Bayesian network evidence, so no posterior is reported.`
+    );
+  }
+
+  const marginals = updateJointPosterior({
+    latents: resolved.latents,
+    parentOf: structure.parentOf,
+    rootPriors,
+    childCpts,
+    observations,
+    observableCpt,
+  });
+  if (!marginals) {
+    return unsupported(
+      evidenceModelId,
+      parameterSetId,
+      parameterSource,
+      "The responses are impossible under this conditional probability table, so no posterior is reported."
+    );
+  }
+
+  return resolved.latents.map((latent) =>
+    posteriorRecord({
+      latent,
+      evidenceModelId,
+      parameterSetId,
+      parameterSource,
+      competencyModelId: resolved.competencyModelId,
+      distribution: marginals[latent.id],
+      observations,
+      excluded,
+      priorSource,
+    })
+  );
+}
+
 export function accumulateBayesianNetwork({
   evidenceModelId,
   parameterSetId,
@@ -565,6 +1091,22 @@ export function accumulateBayesianNetwork({
 }) {
   const structure = describeStructure(statisticalModel);
   if (structure.error) return unsupported(evidenceModelId, parameterSetId, parameterSource, structure.error);
+
+  if (!structure.star) {
+    return accumulateTreeNetwork({
+      structure,
+      evidenceModelId,
+      parameterSetId,
+      parameterSource,
+      evidenceModel,
+      statisticalModel,
+      group,
+      db,
+      session,
+      warnings,
+      scoreResponse,
+    });
+  }
 
   const resolved = resolveDiscreteStudentModelVariable(evidenceModel, statisticalModel, db);
   if (resolved.error) return unsupported(evidenceModelId, parameterSetId, parameterSource, resolved.error);
@@ -693,6 +1235,88 @@ export function loadBayesianNetworkForSelection({
 }) {
   const structure = describeStructure(statisticalModel);
   if (structure.error) return { ok: false, error: structure.error };
+
+  if (!structure.star) {
+    const resolved = resolveLatentVariables(evidenceModel, statisticalModel, db, structure);
+    if (resolved.error) return { ok: false, error: resolved.error };
+    const byId = Object.fromEntries(resolved.latents.map((latent) => [latent.id, latent]));
+    let source;
+    if (parameterSource === "calibrated") {
+      const parameterSet = (statisticalModel.parameterSets || []).find((set) => set && set.parameterSetId === parameterSetId);
+      if (!parameterSet) {
+        return { ok: false, error: `Parameter set '${parameterSetId}' is not on Bayesian model '${modelId(statisticalModel)}'.` };
+      }
+      source = parameterSet.parameters;
+    } else {
+      source = statisticalModel?.structureConfig?.cpt || {};
+    }
+    const observableCpt = conditionalProbabilityTable(source);
+    const childCpts = {};
+    const rootPriors = {};
+    const storedPriors = source._prior && typeof source._prior === "object" && !Array.isArray(source._prior)
+      ? source._prior
+      : {};
+    for (const latent of resolved.latents) {
+      const parentId = structure.parentOf[latent.id];
+      if (parentId) {
+        const table = nestedStateTable(source[latent.id]);
+        const problems = childCptProblems(
+          table,
+          byId[parentId].states,
+          latent.states,
+          `Conditional probability table for latent '${latent.id}'`
+        );
+        if (problems.length) return { ok: false, error: problems[0] };
+        childCpts[latent.id] = table;
+        continue;
+      }
+      let parsed;
+      if (storedPriors[latent.id] && typeof storedPriors[latent.id] === "object") {
+        parsed = priorFromMap(storedPriors[latent.id], latent.states, `Prior for '${latent.id}'`);
+      } else {
+        parsed = priorFromStudentModelVariable(latent.smv, latent.states);
+      }
+      if (parsed.error) return { ok: false, error: parsed.error };
+      rootPriors[latent.id] = parsed.prior;
+    }
+    for (const observableId of structure.observableIds) {
+      const parent = byId[structure.parentOf[observableId]];
+      const problems = rowProblems(
+        observableCpt[observableId],
+        parent.states,
+        `Conditional probability table for observable '${observableId}'`
+      );
+      if (problems.length) return { ok: false, error: problems[0] };
+    }
+    const priorMarginals = updateJointPosterior({
+      latents: resolved.latents,
+      parentOf: structure.parentOf,
+      rootPriors,
+      childCpts,
+      observations: [],
+      observableCpt,
+    });
+    if (!priorMarginals) {
+      return { ok: false, error: `Bayesian model '${modelId(statisticalModel)}' has no usable prior joint.` };
+    }
+    const statesById = Object.fromEntries(resolved.latents.map((latent) => [latent.id, latent.states]));
+    const first = resolved.latents[0];
+    return {
+      ok: true,
+      network: {
+        smvId: first.id,
+        states: first.states,
+        cpt: observableCpt,
+        prior: priorMarginals[first.id],
+        parentOf: structure.parentOf,
+        statesById,
+        priorsById: priorMarginals,
+        observableIds: structure.observableIds,
+        latentNodeId: structure.latentNodeId,
+      },
+    };
+  }
+
   const resolved = resolveDiscreteStudentModelVariable(evidenceModel, statisticalModel, db);
   if (resolved.error) return { ok: false, error: resolved.error };
 
@@ -755,7 +1379,9 @@ export function beliefForBayesianSelection(session, network) {
 export const __testing__ = {
   MAX_BN_STATES,
   MAX_BN_OBSERVABLES,
+  MAX_BN_JOINT_CONFIGS,
   updateDiscretePosterior,
+  updateJointPosterior,
   discreteEntropy,
   statesOfStudentModelVariable,
   conditionalProbabilityTable,

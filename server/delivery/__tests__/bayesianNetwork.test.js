@@ -18,7 +18,7 @@ import {
   expectedInformationGain,
 } from "../bayesianNetwork.js";
 
-const { MAX_BN_STATES, discreteEntropy, updateDiscretePosterior } = __testing__;
+const { MAX_BN_STATES, MAX_BN_JOINT_CONFIGS, discreteEntropy, updateDiscretePosterior, updateJointPosterior } = __testing__;
 import { seedSessionStudentModel } from "../../../src/utils/studentModelRecord.js";
 import { validateEntity } from "../../../src/utils/schema.js";
 
@@ -159,6 +159,34 @@ describe("exact Bayes on a hand-checked network", () => {
     const weighted = expectedInformationGain(skewed, row);
     const flat = discreteEntropy(skewed) - discreteEntropy(updateDiscretePosterior(skewed, [{ observableId: "o1", u: 1 }], { o1: row }));
     expect(weighted).not.toBeCloseTo(flat, 3);
+  });
+
+  it("updates a two-latent tree and leaves the child's marginal mixed", () => {
+    const latents = [
+      { id: "smv1", states: STATES },
+      { id: "smv2", states: STATES },
+    ];
+    const parentOf = { smv2: "smv1", o1: "smv1" };
+    const rootPriors = { smv1: { not_mastered: 0.5, mastered: 0.5 } };
+    const childCpts = {
+      smv2: {
+        not_mastered: { not_mastered: 0.8, mastered: 0.2 },
+        mastered: { not_mastered: 0.2, mastered: 0.8 },
+      },
+    };
+    const observableCpt = { o1: { not_mastered: 0.2, mastered: 0.8 } };
+    const marginals = updateJointPosterior({
+      latents,
+      parentOf,
+      rootPriors,
+      childCpts,
+      observations: [{ observableId: "o1", u: 1 }],
+      observableCpt,
+    });
+    expect(marginals.smv1.mastered).toBeCloseTo(0.8, 12);
+    expect(marginals.smv1.not_mastered).toBeCloseTo(0.2, 12);
+    expect(marginals.smv2.mastered).toBeCloseTo(0.68, 12);
+    expect(marginals.smv2.not_mastered).toBeCloseTo(0.32, 12);
   });
 });
 
@@ -320,14 +348,14 @@ describe("accumulateEvidence writes the Bayesian network posterior", () => {
 });
 
 describe("Bayesian network authoring and parameter binding", () => {
-  it("refuses a second latent node, a non-star edge, and a probability outside 0 to 1", () => {
+  it("refuses a disconnected second latent, a non-star edge, and a probability outside 0 to 1", () => {
     const evidenceModel = { id: "em1", status: "draft", competencyId: "c1" };
     const many = bayesianNetworkAuthoringErrors({
       id: "sm1",
       type: "bayesian_network",
       structureConfig: { latentNodes: ["a", "b"], observableIds: ["o1"], edges: [] },
     }, evidenceModel, null, { strict: false });
-    expect(many[0]).toMatch(/more than one latent node/);
+    expect(many[0]).toMatch(/has no parent latent/);
 
     const edge = bayesianNetworkAuthoringErrors({
       id: "sm1",
@@ -360,7 +388,7 @@ describe("Bayesian network authoring and parameter binding", () => {
       }],
     }, { competencies: [], competencyModels: [] }, { strict: false });
     expect(stored.valid).toBe(false);
-    expect(stored.errors.some((message) => message.includes("more than one latent node"))).toBe(true);
+    expect(stored.errors.some((message) => message.includes("has no parent latent"))).toBe(true);
   });
 
   it("pins a pilot table and a calibrated parameter set", () => {
@@ -516,5 +544,221 @@ describe("BayesianNetwork selection ranks a real network", () => {
     }, db);
     expect(result.debug.fallback).toBe("pool-order");
     expect(result.taskId).toBe("tDull");
+  });
+});
+
+function treePilotParams() {
+  return {
+    _kind: "bayesian-cpt",
+    _tree: true,
+    _prior: { smv1: { not_mastered: 0.5, mastered: 0.5 } },
+    _parentOf: { smv2: "smv1", o1: "smv1" },
+    _latentIds: ["smv1", "smv2"],
+    o1: { levels: { not_mastered: 0.2, mastered: 0.8 } },
+    smv2: {
+      not_mastered: { not_mastered: 0.8, mastered: 0.2 },
+      mastered: { not_mastered: 0.2, mastered: 0.8 },
+    },
+  };
+}
+
+function treeDb() {
+  const db = bnDb({ cpt: { o1: { not_mastered: 0.2, mastered: 0.8 } } });
+  db.competencyModels[0].smVariables = [binarySmv({ id: "smv1" }), binarySmv({ id: "smv2" })];
+  db.evidenceModels[0].observables = [{ id: "o1" }];
+  db.evidenceModels[0].statisticalModels[0].structureConfig = {
+    latentNodes: ["smv1", "smv2"],
+    observableIds: ["o1"],
+    edges: [
+      { from: "smv1", to: "smv2" },
+      { from: "smv1", to: "o1" },
+    ],
+    cpt: {
+      o1: { levels: { not_mastered: 0.2, mastered: 0.8 } },
+      smv2: {
+        not_mastered: { not_mastered: 0.8, mastered: 0.2 },
+        mastered: { not_mastered: 0.2, mastered: 0.8 },
+      },
+    },
+  };
+  return db;
+}
+
+describe("small latent tree", () => {
+  it("stores a two-latent tree and scores both student model variables", () => {
+    const db = treeDb();
+    const evidenceModel = db.evidenceModels[0];
+    const statisticalModel = evidenceModel.statisticalModels[0];
+    expect(bayesianNetworkAuthoringErrors(statisticalModel, evidenceModel, db, { strict: true })).toEqual([]);
+
+    const stored = validateEntity("evidenceModels", {
+      id: "em1",
+      competencyId: "c1",
+      status: "draft",
+      statisticalModels: [statisticalModel],
+    }, db, { strict: false });
+    expect(stored.errors.filter((message) => /parent latent|cycle|more than one parent|joint has/.test(message))).toEqual([]);
+
+    const session = { id: "s1", status: "in_progress", responses: [response({ pilotParams: treePilotParams() })] };
+    const accumulation = accumulateEvidence(session, db);
+    expect(accumulation.posteriors).toHaveLength(2);
+    const byId = Object.fromEntries(accumulation.posteriors.map((posterior) => [posterior.smvId, posterior]));
+    expect(byId.smv1).toMatchObject({ supported: true, method: "exact-bayes", parameterSource: "pilot" });
+    expect(byId.smv1.estimate).toBeCloseTo(0.8, 12);
+    expect(byId.smv2.estimate).toBeCloseTo(0.68, 12);
+
+    applyPosteriorsToSession(session, accumulation, { now: "2026-10-29T00:00:00.000Z" });
+    expect(session.studentModel.bnPosteriors.smv1).toBeCloseTo(0.8, 12);
+    expect(session.studentModel.bnPosteriors.smv2).toBeCloseTo(0.68, 12);
+    expect(session.studentModel.smvPosteriors.smv2.distribution.mastered).toBeCloseTo(0.68, 12);
+  });
+
+  it("pins a tree snapshot for a pilot response", () => {
+    const db = treeDb();
+    const evidenceModel = db.evidenceModels[0];
+    const statisticalModel = evidenceModel.statisticalModels[0];
+    const pilot = chooseSubmitParameterBinding({
+      family: "bayesian_network",
+      calibratedParameterSetId: null,
+      item: { id: "item1", evidenceModelId: "em1" },
+      statisticalModel,
+      evidenceModel,
+      db,
+    });
+    expect(pilot.parameterSource).toBe("pilot");
+    expect(pilot.pilotParams._tree).toBe(true);
+    expect(pilot.pilotParams.smv2.mastered.mastered).toBe(0.8);
+    expect(pilot.pilotParams._prior.smv1.mastered).toBe(0.5);
+  });
+
+  it("refuses a cycle, two parents, and a joint larger than the exact-inference cap", () => {
+    const db = treeDb();
+    const evidenceModel = db.evidenceModels[0];
+    const statisticalModel = evidenceModel.statisticalModels[0];
+
+    statisticalModel.structureConfig.edges = [
+      { from: "smv1", to: "smv2" },
+      { from: "smv2", to: "smv1" },
+      { from: "smv1", to: "o1" },
+    ];
+    const cycle = accumulateEvidence({
+      id: "s1",
+      responses: [response({ pilotParams: treePilotParams() })],
+    }, db);
+    expect(cycle.posteriors[0].supported).toBe(false);
+    expect(cycle.posteriors[0].reason).toMatch(/cycle/);
+
+    statisticalModel.structureConfig.edges = [
+      { from: "smv1", to: "o1" },
+      { from: "smv2", to: "o1" },
+      { from: "smv1", to: "smv2" },
+    ];
+    const twoParents = accumulateEvidence({
+      id: "s1",
+      responses: [response({ pilotParams: treePilotParams() })],
+    }, db);
+    expect(twoParents.posteriors[0].supported).toBe(false);
+    expect(twoParents.posteriors[0].reason).toMatch(/more than one parent/);
+
+    const states = ["s0", "s1", "s2", "s3", "s4"];
+    const bulky = (id) => ({
+      id,
+      type: "ordinal",
+      scale: { states },
+      priorDistribution: { family: "dirichlet", params: { alpha: states.map(() => 1) } },
+    });
+    db.competencyModels[0].smVariables = [bulky("smv1"), bulky("smv2"), bulky("smv3")];
+    statisticalModel.structureConfig = {
+      latentNodes: ["smv1", "smv2", "smv3"],
+      observableIds: ["o1"],
+      edges: [
+        { from: "smv1", to: "smv2" },
+        { from: "smv2", to: "smv3" },
+        { from: "smv1", to: "o1" },
+      ],
+    };
+    const large = accumulateEvidence({
+      id: "s1",
+      responses: [response()],
+    }, db);
+    expect(5 ** 3).toBeGreaterThan(MAX_BN_JOINT_CONFIGS);
+    expect(large.posteriors[0].supported).toBe(false);
+    expect(large.posteriors[0].reason).toMatch(/at most 64/);
+  });
+
+  it("ranks an observable from its parent student model variable, not from the root", () => {
+    const db = treeDb();
+    db.evidenceModels[0].observables = [{ id: "oRoot" }, { id: "oChild" }];
+    db.evidenceModels[0].statisticalModels[0].structureConfig = {
+      latentNodes: ["smv1", "smv2"],
+      observableIds: ["oRoot", "oChild"],
+      edges: [
+        { from: "smv1", to: "smv2" },
+        { from: "smv1", to: "oRoot" },
+        { from: "smv2", to: "oChild" },
+      ],
+      cpt: {
+        oRoot: { levels: { not_mastered: 0.05, mastered: 0.95 } },
+        oChild: { levels: { not_mastered: 0.3, mastered: 0.7 } },
+        smv2: {
+          not_mastered: { not_mastered: 0.8, mastered: 0.2 },
+          mastered: { not_mastered: 0.2, mastered: 0.8 },
+        },
+      },
+    };
+    db.taskModels = [{ id: "tm1", versionNumber: 1, evidenceModelIds: ["em1"] }];
+    db.items = [
+      { id: "itemRoot", taskModelId: "tm1", observationId: "oRoot", evidenceModelId: "em1", status: "operational" },
+      { id: "itemChild", taskModelId: "tm1", observationId: "oChild", evidenceModelId: "em1", status: "operational" },
+    ];
+    db.tasks = [
+      { id: "tRoot", taskModelId: "tm1", itemId: "itemRoot" },
+      { id: "tChild", taskModelId: "tm1", itemId: "itemChild" },
+    ];
+    db.compositeLibrary = [{
+      id: "cl1",
+      taskModelId: "tm1",
+      taskModelVersion: 1,
+      active: true,
+      items: [
+        { itemId: "itemRoot", observationId: "oRoot", evidenceModelId: "em1", evidenceModelVersion: 1 },
+        { itemId: "itemChild", observationId: "oChild", evidenceModelId: "em1", evidenceModelVersion: 1 },
+      ],
+    }];
+
+    const fromPrior = selectNextActivity({
+      id: "s1",
+      taskIds: ["tRoot", "tChild"],
+      currentTaskIndex: 0,
+      responses: [],
+      studentModel: {},
+      selectionStrategy: "BayesianNetwork",
+    }, db);
+    expect(fromPrior.taskId).toBe("tRoot");
+    expect(fromPrior.debug.smvId).toBe("smv1");
+
+    const peaked = { not_mastered: 0.01, mastered: 0.99 };
+    const uncertain = { not_mastered: 0.5, mastered: 0.5 };
+    const fromLive = selectNextActivity({
+      id: "s1",
+      taskIds: ["tRoot", "tChild"],
+      currentTaskIndex: 0,
+      responses: [],
+      selectionStrategy: "BayesianNetwork",
+      studentModel: {
+        bnPosteriors: { smv1: 0.99, smv2: 0.5 },
+        smvPosteriors: {
+          smv1: { smvId: "smv1", modelFamily: "bayesian_network", distribution: peaked, estimate: 0.99 },
+          smv2: { smvId: "smv2", modelFamily: "bayesian_network", distribution: uncertain, estimate: 0.5 },
+        },
+      },
+    }, db);
+    expect(fromLive.taskId).toBe("tChild");
+    expect(fromLive.debug.smvId).toBe("smv2");
+    expect(fromLive.debug.priorSource).toBe("posterior");
+    expect(fromLive.debug.totalGain).toBeCloseTo(
+      expectedInformationGain(uncertain, { not_mastered: 0.3, mastered: 0.7 }),
+      12
+    );
   });
 });
