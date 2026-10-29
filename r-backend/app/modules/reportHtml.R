@@ -753,6 +753,7 @@ build_testinfo_html <- function(job_id, package_version, sample_size, calibrated
   info <- as.numeric(parameters$information)
   sem <- suppressWarnings(as.numeric(parameters$conditionalSEM))
   skin_obj <- if (is.null(skin)) .load_report_skin(if (!is.null(template)) template$skinId else "xcalibre-classic") else skin
+  tpl_name <- if (!is.null(template) && !is.null(template$name)) template$name else ""
   paste0(
     "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'/>",
     "<title>Test information ", .html_escape(job_id), "</title>",
@@ -762,7 +763,9 @@ build_testinfo_html <- function(job_id, package_version, sample_size, calibrated
       "<div class='stamp'>jobId ", .html_escape(job_id),
       " | ", .html_escape(package_version),
       " | n = ", .html_escape(as.character(sample_size)),
-      " | ", .html_escape(calibrated_at), "</div>"
+      " | ", .html_escape(calibrated_at),
+      if (nzchar(tpl_name)) paste0(" | template ", .html_escape(tpl_name)) else "",
+      "</div>"
     ) else "",
     if (.chapter_on(template, "irt-plots")) paste0(
       .polyline_svg(th, info, "Test information", "theta", "I(theta)"),

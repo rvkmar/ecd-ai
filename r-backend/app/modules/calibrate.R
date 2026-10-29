@@ -961,13 +961,66 @@ calibrate_ctt <- function(body, res) {
     return(out)
   }
 
+  calibrated_at <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+  html_params <- lapply(parameters, function(p) {
+    list(
+      pValue = as.numeric(p$difficulty),
+      pointBiserial = as.numeric(p$discrimination),
+      n = as.integer(p$n),
+      distractors = NULL
+    )
+  })
+  overlay_level <- if (is.list(test_level)) test_level else list(nQuantiles = 5L, alphaIfDeleted = list())
+  if (exists("classical_item_overlay", mode = "function")) {
+    overlay <- tryCatch(
+      classical_item_overlay(
+        resp_mat,
+        html_params,
+        tryCatch(
+          if (is.null(body$optionMatrix)) NULL else option_matrix_to_char(body$optionMatrix),
+          error = function(e) NULL
+        ),
+        body$itemKeys,
+        score,
+        overlay_level,
+        opts
+      ),
+      error = function(e) NULL
+    )
+    if (is.list(overlay)) html_params <- overlay
+  }
+  scores <- tryCatch({
+    if (!exists("classical_person_scores", mode = "function")) {
+      NULL
+    } else {
+      n_q <- .quantile_groups(score, overlay_level$nQuantiles)
+      classical_person_scores(
+        body$responseMatrix$personIds, score, n_q,
+        if (is.list(test_level)) test_level$domains else NULL, resp_mat
+      )
+    }
+  }, error = function(e) NULL)
+  credits <- .credits_for("TAM", "ggplot2", "svglite")
+  tpl <- body$reportTemplate
+  report_html <- tryCatch({
+    if (!is.list(test_level)) {
+      NULL
+    } else {
+      build_item_analysis_html(
+        .as_char(body$jobId), pkg_ver, nrow(resp_mat), calibrated_at,
+        test_level, html_params, list(authority = "ctt-statistics"), NULL,
+        template = tpl, credits = credits
+      )
+    }
+  }, error = function(e) NULL)
+
   list(
     contractVersion = CALIBRATION_CONTRACT_VERSION,
     jobId = .as_char(body$jobId),
     converged = TRUE,
     packageVersion = pkg_ver,
     sampleSize = nrow(resp_mat),
-    calibratedAt = format(Sys.time(), tz = "UTC", usetz = TRUE),
+    calibratedAt = calibrated_at,
     parameters = parameters,
     standardErrors = NULL,
     fitStatistics = c(
@@ -980,6 +1033,10 @@ calibrate_ctt <- function(body, res) {
       ),
       if (is.list(test_level$reliability)) test_level$reliability else list()
     ),
+    reportHtml = report_html,
+    scores = scores,
+    credits = credits,
+    reportTemplate = tpl,
     diagnostics = list(
       iterations = 1L,
       elapsedSeconds = elapsed,

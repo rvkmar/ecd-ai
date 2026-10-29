@@ -1,0 +1,35 @@
+{
+  "host": "http://localhost:6060",
+  "index": "/assets/index-CKvQEtqs.js",
+  "rRestarted": true,
+  "templates": {
+    "itemanCtt": "prt1793293656800000",
+    "xcalibreIrt": "prt1793293656875001",
+    "status": "operational"
+  },
+  "jobs": {
+    "mcq": "job1793293874775002",
+    "artefactMcq": "aa1793293895398",
+    "irt": "job1793293875202004",
+    "parameterSetIrt": "ps1793293895203",
+    "ctt": "job1793294039843006",
+    "parameterSetCtt": "ps1793294058504",
+    "tif": "job1793294040102007",
+    "artefactTif": "aa1793294058816"
+  },
+  "checks": {
+    "mcqHtml": "CSEM, option Mean/SD, omit/notAdministered rows, domain rpb, credits, template name; unused flags skip omit/not-administered",
+    "irtHtml": "T-Rpbis, empirical IRF, credits, Walk Xcalibre IRT",
+    "cttHtml": "CSEM, KR-20, credits, Walk Iteman CTT (added this walk; calibrate_ctt previously omitted reportHtml)",
+    "tifHtml": "credits, template name in stamp, TIF CSV sidecar",
+    "scores": "aa1793293895398 person rows with domain.algebra/geometry",
+    "aggregates": "MIN_CELL_SIZE 5, n=20 unsuppressed, meanRaw 2.05",
+    "studentScores": "stud1 GET artefact scores 403",
+    "studentTemplates": "stud1 GET psychometricReportTemplates 403",
+    "ui": {
+      "psychometricsTemplatesTab": ["Walk Iteman CTT operational", "Walk Xcalibre IRT operational"],
+      "calibrationAdopt": "Walk Iteman CTT on lsat7-ctt; Walk Xcalibre IRT on lsat7",
+      "openHtml": "blob Test information job1793294040102007 with Software and packages"
+    }
+  }
+}

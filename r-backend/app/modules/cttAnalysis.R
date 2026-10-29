@@ -215,6 +215,8 @@
     }
     for (nm in names(distractors)) {
       d <- distractors[[nm]]
+      role <- if (!is.null(d$role)) as.character(d$role)[[1]] else ""
+      if (role %in% c("omit", "not-administered")) next
       prop <- .finite_num(d$proportion)
       drpb <- .finite_num(d$pointBiserial)
       if (!isTRUE(d$keyed) && is.finite(prop) && prop < bounds$unusedProportion) {
