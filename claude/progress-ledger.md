@@ -40,6 +40,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | Last completed unit | **D154** (W31 D151–D154 done; D155 remains; ~~W29~~ closed off-calendar Wave 3; through-D153 leftovers recorded Wave 4; W30 closed). `itemMappings` is derived from instantiable items. Step 6 is a readout. Product `9b944ee`. Handoff: `claude/day154-itemmappings-writeback.md`. |
 | Textbook ECD re-audit | **~~R1–R14~~ complete** 2026-10-29. Product `78151e3`. All fourteen re-audit gaps closed (1 High, 6 Med, 7 Low). ~~R15~~ already closed. G15–G22 and F24 stay closed. D129 stays closed. Last handoff: `claude/day146t-offcal-r11-r14-remaining-lows.md`. **Not D146.** |
+| Textbook ECD gap audit 2 (2026-10-29) | 28 gaps T1–T28 on main 2d5ada6 (3 High, 14 Med, 11 Low; 18 new, 9 tracked, 1 partly tracked). Fix plan TU1–TU27. Source: claude/day146af-offcal-ecd-textbook-gaps-t.md. **Not D146.** |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -1081,4 +1082,38 @@ Corrections from that re-audit:
 | ~~R15~~ | Lifecycle gates vs small student models | Closed off calendar (Not D146). A multidimensional model with two competencies needed three relationships, which forced two types toward one competency. The floor is now the minimum of 3 and the number of ordered pairs. fairnessNotes is enforced on draft to reviewed. A decision rule is enforced when confirm locks the model. An active parameter set is enforced at operational scoring and adaptive selection, not at confirm. Operational exposure still counts only an operational item; a confirmed pilot response is calibration data and does not increment usageCount. | `src/utils/studentModelAudit.js`; `src/utils/schema.js`; `server/routes/evidenceModels.js`; `server/utils/itemExposure.js` | Done. | Med |
 
 **~~R1–R14~~ are all closed** as of `78151e3` (2026-10-29). ~~R1~~ is closed. A follow-up after running that path against R is recorded on the R1 row and in `claude/day146d-offcal-calibration-fixes.md` (Not D146). A second follow-up, after an end-to-end simulation, is on the same row and in `claude/day146e-offcal-e2e-simulation-blockers.md` (Not D146). ~~R2~~ is closed (draft PR #121). ~~R3~~ is closed (PR #120, `da0a597`). ~~R4~~ is closed (`claude/day146m-offcal-r4-multi-observable.md`). ~~R5~~ is closed (`claude/day146n-offcal-r5-ordinal-grm.md`). ~~R6~~ is closed (`claude/day146o-offcal-r6-bn-latent-tree.md`). ~~R7~~ is closed (`claude/day146p-offcal-r7-gdina-selection.md`). ~~R8~~ is closed (`claude/day146q-offcal-r8-gdina-pilot.md`). ~~R9~~ is closed (`claude/day146r-offcal-r9-observable-params.md`). ~~R10~~ is closed (`claude/day146s-offcal-r10-jointprior-limit.md`). ~~R11~~–~~R14~~ are closed (`claude/day146t-offcal-r11-r14-remaining-lows.md`). ~~R15~~ records the lifecycle placement from that same pass. No High, Med, or Low gap remains in this table. D129 stays closed. Calendar next stays D155 (never-compress, not started). The audit's `ledger.md` is this repo's `claude/progress-ledger.md`. Wave 4 (`claude/day146ae-offcal-wave4-limits.md`) recorded remaining through-D153 leftovers as design limits and wrote off store-blocked standing walks.
+
+Textbook gaps T1–T28 (2026-10-29), from `claude/day146af-offcal-ecd-textbook-gaps-t.md` (**Not D146**). Audited at main `2d5ada6`. Eighteen new lines below (id, title, severity, fix unit). T2 is the partly tracked line and points at the struck mastery-cut bullet. The nine fully tracked gaps are cross-references only. No existing line is un-struck.
+
+- T1. Score reports not tied to claims. High. TU3.
+- T3. No model criticism before activation. High. TU4, TU5.
+- T4. Alternative explanations not first-class in the argument. Medium. TU16.
+- T5. No empirical validity evidence. Medium. TU17.
+- T6. No per-examinee accommodations. Medium. TU7.
+- T7. Task-level feedback is not authored. Medium. TU8.
+- T8. BN probability tables are not learned from data. Medium. TU12.
+- T9. DIF and equating don't run on live data. Medium. TU11.
+- T10. Observables within one task treated as independent. Medium. TU6.
+- T11. Composite tasks are never delivered. Medium. TU18.
+- T12. No family-level psychometrics for generated tasks. Medium. TU19. Related to D155.
+- T14. Design-layer and delivery records are not versioned. Medium. TU20.
+- T15. No standard setting or performance-level descriptors. Medium. TU2.
+- T18. No response timing or process data. Low. TU9.
+- T19. Task-level time and attempt limits not enforced. Low. TU10.
+- T20. No rater-agreement statistics. Low. TU22.
+- T21. No standard interchange format. Low. TU27.
+- T22. Design patterns have no exemplar tasks. Low. TU23.
+- T2. Authored decision rules never applied. High, partly tracked. TU1. Cross-reference: ~~Mastery cut fixed at 0.5~~ (Wave 4, ADR 0004, `claude/day146ae-offcal-wave4-limits.md`). The cut stays recorded. This line is the unused `decisionRule`.
+
+Cross-references only:
+
+- T13 = calendar D155 (Next queued, never-compress, not started).
+- T16 = R5 remainder (PCM is not scored). Planned unit TU13.
+- T17 = R10 / Wave 4 (one correlated partner; D129 stays closed). Planned unit TU14.
+- T23 = R13 remainder (no Sympson-Hetter P(A) table). Planned unit TU24.
+- T24 = Wave 4 limit (inferred Assembly Model stays `AMBIGUOUS`; G19 stays closed). Planned unit TU21.
+- T25 = R9 remainder (calibration still keys fitted parameters by item). Planned unit TU15.
+- T26 = R12 limit (legacy nearest difficulty at `irtTheta`). Planned unit TU25.
+- T27 = Wave 4 limit (D147; sociocultural and process-trace left out). Planned unit TU26.
+- T28 = R11 limit (carry-forward stays default off). Planned unit TU25.
 
