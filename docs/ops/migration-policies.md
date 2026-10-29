@@ -1,8 +1,9 @@
 # Migration rollback / forward-only policy (D109)
 
 Every registered migration declares either a **rollback** procedure or an
-explicit **forward-only** justification. Health/metrics already expose the
-applied version (`GET /api/metrics` → `migrations`, D104).
+explicit **forward-only** justification. The applied version is on
+admin-only `GET /api/metrics` (`migrations`, D104). `GET /api/health` stays
+public and does not include the migration list.
 
 | Id | Mode | Rollback / justification |
 |---|---|---|

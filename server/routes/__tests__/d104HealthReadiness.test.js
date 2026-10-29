@@ -9,7 +9,17 @@ import request from "supertest";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import jwt from "jsonwebtoken";
 import { collectSystemStatus } from "../../utils/systemStatus.js";
+import { JWT_SECRET } from "../../config/jwt.js";
+
+function bearer(role, username = `${role}1`) {
+  return `Bearer ${jwt.sign(
+    { username, role, ae: 0, typ: "access" },
+    JWT_SECRET,
+    { expiresIn: "1h" }
+  )}`;
+}
 
 describe("D104 health vs readiness", () => {
   let tmpDir;
@@ -143,6 +153,12 @@ describe("D104 HTTP endpoints", () => {
       collectSystemStatus: statusFactory,
     }));
     const { default: router } = await import("../healthRoutes.js");
+    // resetModules drops the epoch cache seeded in test setup. Minted
+    // tokens below must hit this fresh copy, the one the router imported.
+    const { setCachedAuthEpoch } = await import("../../utils/tokenService.js");
+    for (const username of ["admin1", "teacher1", "district1", "student1"]) {
+      setCachedAuthEpoch(username, 0);
+    }
     const app = express();
     app.use(express.json());
     app.use("/api", router);
@@ -207,11 +223,75 @@ describe("D104 HTTP endpoints", () => {
     };
 
     const app = await appWithStatus(async () => status);
-    const res = await request(app).get("/api/metrics");
+    const res = await request(app)
+      .get("/api/metrics")
+      .set("Authorization", bearer("admin"));
     expect(res.status).toBe(200);
     expect(res.body.migrations.latestId).toBe("005-remove-lifecycle-meta");
     expect(res.body.backup.ageMs).toBe(86400000);
     expect(res.body.queue.queued).toBe(2);
+  });
+
+  it("GET /api/metrics requires an admin; health and ready stay public", async () => {
+    const status = {
+      at: "2026-09-20T00:00:00.000Z",
+      process: { ok: true, uptimeSec: 1, pid: 1, node: "v24" },
+      database: { ok: true, ecd: { ok: true, mode: "ecd-json" }, userStore: { ok: true } },
+      r: { ok: true, reachable: true, url: "http://r-backend:4000", status: 200, rStatus: "healthy" },
+      queue: { queued: 2, running: 1, maxConcurrent: 1 },
+      migrations: {
+        latestId: "005-remove-lifecycle-meta",
+        latestAppliedAt: "2026-09-20T00:00:00.000Z",
+        appliedCount: 5,
+        registryCount: 5,
+        pendingIds: [],
+      },
+      backup: { latestAt: "2026-09-19T00:00:00.000Z", ageMs: 86400000, fileCount: 3 },
+      health: { ok: true, servingSessions: true },
+      readiness: { ok: true, calibration: true, reason: null },
+    };
+    const app = await appWithStatus(async () => status);
+
+    const open = await request(app).get("/api/metrics");
+    expect(open.status).toBe(401);
+    expect(open.body.migrations).toBeUndefined();
+
+    const garbage = await request(app)
+      .get("/api/metrics")
+      .set("Authorization", "Bearer not-a-token");
+    expect(garbage.status).toBe(403);
+    expect(garbage.body.queue).toBeUndefined();
+
+    const teacher = await request(app)
+      .get("/api/metrics")
+      .set("Authorization", bearer("teacher"));
+    expect(teacher.status).toBe(403);
+    expect(teacher.body.backup).toBeUndefined();
+
+    const district = await request(app)
+      .get("/api/metrics")
+      .set("Authorization", bearer("district"));
+    expect(district.status).toBe(403);
+
+    const student = await request(app)
+      .get("/api/metrics")
+      .set("Authorization", bearer("student"));
+    expect(student.status).toBe(403);
+
+    const admin = await request(app)
+      .get("/api/metrics")
+      .set("Authorization", bearer("admin"));
+    expect(admin.status).toBe(200);
+    expect(admin.body.migrations.latestId).toBe("005-remove-lifecycle-meta");
+    expect(admin.body.backup.ageMs).toBe(86400000);
+
+    const health = await request(app).get("/api/health");
+    expect(health.status).toBe(200);
+    expect(health.body.status).toBe("ok");
+
+    const ready = await request(app).get("/api/ready");
+    expect(ready.status).toBe(200);
+    expect(ready.body.status).toBe("ready");
   });
 
   it("POST /api/client-errors accepts a release-tagged report", async () => {

@@ -76,7 +76,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// D104: unauthenticated ops probes (health ≠ readiness; R does not fail health).
+// D104: /health and /ready stay public (health stays green when R is down).
+// /metrics on this router is admin-only.
 app.use("/api", healthRoutes);
 
 // Role-specific dashboard "am I still logged in" probes. These used to have
