@@ -452,8 +452,8 @@ export default function SessionPlayer({
 
       // D47: an item-backed task presents the ECD Item, not a legacy
       // question. Resolved from the task's own itemId pointer -- NOT
-      // re-derived from taskModel.itemMappings, which the project treats
-      // as best-effort until D154 makes it authoritative.
+      // re-derived from taskModel.itemMappings. D154 made that map the
+      // derived coverage record; delivery still uses the task pointer.
       if (enrichedTask?.itemId) {
         try {
           const it = await fetchJsonSafe(`/api/items/${enrichedTask.itemId}`);

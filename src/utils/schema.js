@@ -518,16 +518,16 @@ export const schema = {
     actions: 'array',
 
     /* ---------------------------------------------
-      5️⃣ ITEM SCOPE (advisory)
+      5️⃣ ITEM SCOPE (derived, D154)
 
-      Which items are expected to elicit which observables. Read by
-      SessionPlayer, TasksManager and TaskDetails. Never gates lifecycle
-      promotion: items are normally authored after the TaskModel they
-      instantiate, so requiring coverage at confirmation would make the
-      ordinary authoring order impossible.
+      Coverage is recomputed server-side from items that instantiate this
+      Task Model version (confirmed / operational / suspended). It is
+      never authored. Confirming or archiving an item updates the map;
+      a client PUT of itemMappings is discarded. Still does not gate
+      Task Model confirmation: items are authored after the Task Model.
     --------------------------------------------- */
     selectedItemIds: 'array',
-    itemMappings: 'array',   // [{ itemId, observationId, evidenceModelId }]
+    itemMappings: 'array',   // [{ itemId, observationId, evidenceModelId }] — derived
 
     /* ---------------------------------------------
       6️⃣ FAIRNESS & ACCESSIBILITY

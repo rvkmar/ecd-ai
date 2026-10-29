@@ -206,6 +206,31 @@ describe("PUT /api/taskModels/:id — locked models", () => {
 });
 
 describe("PUT /api/taskModels/:id — unlocked models", () => {
+  it("discards client itemMappings and recomputes coverage from items", async () => {
+    const db = seed(
+      makeTaskModel({
+        status: "draft",
+        locked: false,
+        itemMappings: [{ itemId: "forged", observationId: "o1", evidenceModelId: "em1" }],
+        selectedItemIds: ["forged"],
+      }),
+      [makeItem({ status: "draft", locked: false })]
+    );
+
+    const res = await request(makeApp())
+      .put("/api/taskModels/tm1")
+      .send({
+        description: "Still a draft.",
+        itemMappings: [{ itemId: "forged", observationId: "o1", evidenceModelId: "em1" }],
+        selectedItemIds: ["forged"],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.itemMappings).toEqual([]);
+    expect(res.body.selectedItemIds).toEqual([]);
+    expect(db.taskModels[0].itemMappings).toEqual([]);
+  });
+
   it("saves a draft that has not reached the later wizard steps", async () => {
     // The wizard auto-saves on every Next. A draft leaving the evidence
     // step legitimately has no observables, structure or blueprint yet;

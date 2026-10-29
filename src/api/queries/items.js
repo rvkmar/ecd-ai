@@ -92,7 +92,10 @@ export function useDeleteItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id) => apiFetch(`/api/items/${id}`, { method: "DELETE" }, auth),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: itemsKey }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: itemsKey });
+      queryClient.invalidateQueries({ queryKey: ["taskModels"] });
+    },
   });
 }
 

@@ -57,6 +57,7 @@ import {
 import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
 import { logger } from "../utils/logger.js";
 import { rebuildPackageForTaskModel } from "../compositeLibrary/activation.js";
+import { syncTaskModelItemMappings } from "../services/syncTaskModelItemMappings.js";
 
 const router = express.Router();
 
@@ -452,6 +453,7 @@ router.post("/", canAuthor, (req, res) => {
       .json({ error: result.error, details: result.details });
   }
 
+  syncTaskModelItemMappings(db, result.record.taskModelId);
   saveDB(db);
   res.status(result.status).json(result.record);
 });
@@ -484,7 +486,14 @@ router.post("/bulk", canAuthor, (req, res) => {
 
   // Only touch the file when something actually landed. An all-failed
   // batch used to rewrite the database for no reason.
-  if (created > 0) saveDB(db);
+  if (created > 0) {
+    for (const row of results) {
+      if (!row.ok) continue;
+      const landed = (db.items || []).find((item) => item.id === row.id);
+      if (landed?.taskModelId) syncTaskModelItemMappings(db, landed.taskModelId);
+    }
+    saveDB(db);
+  }
 
   if (failed > 0) {
     logger.warn("bulk.failure", {
@@ -576,6 +585,7 @@ router.put("/:id", canAuthor, (req, res) => {
 
   items[index] = updated;
   db.items = items;
+  syncTaskModelItemMappings(db, updated.taskModelId);
   saveDB(db);
 
   res.json(updated);
@@ -659,6 +669,7 @@ function applyLifecycle(req, res, db, items, index, nextStatus, options = {}) {
 
   items[index] = updated;
   db.items = items;
+  syncTaskModelItemMappings(db, updated.taskModelId);
   saveDB(db);
 
   let compositeLibrary = null;
@@ -795,6 +806,7 @@ router.post("/:id/clone", canAuthor, (req, res) => {
   if (!valid) return validationFailure(res, errors, "Clone failed validation.");
 
   db.items.push(cloned);
+  syncTaskModelItemMappings(db, cloned.taskModelId);
   saveDB(db);
 
   res.status(201).json(cloned);
@@ -991,19 +1003,8 @@ router.delete("/:id", canAuthor, async (req, res) => {
     });
   }
 
-  // Items referenced by a Task Model's advisory item map, cleaned up here
-  // rather than left dangling for Step6ItemMapping to render as a blank
-  // row.
-  for (const tm of db.taskModels || []) {
-    if (Array.isArray(tm.itemMappings)) {
-      tm.itemMappings = tm.itemMappings.filter((m) => m.itemId !== item.id);
-    }
-    if (Array.isArray(tm.selectedItemIds)) {
-      tm.selectedItemIds = tm.selectedItemIds.filter((id) => id !== item.id);
-    }
-  }
-
   db.items = items.filter((i) => i.id !== item.id);
+  syncTaskModelItemMappings(db, item.taskModelId);
   saveDB(db);
 
   res.status(204).end();

@@ -93,11 +93,11 @@ export function validateTaskModelLifecycle(taskModel, db = null, options = {}) {
      as does subTaskIds (SubTaskSelector, previously an orphan file the
      wizard never mounted), so both can be enforced here.
 
-     itemMappings deliberately stays unenforced. Items are normally
-     authored AFTER the Task Model they instantiate, so requiring
-     coverage at confirmation would make the ordinary authoring order
-     impossible. Step6ItemMapping surfaces coverage gaps as guidance and
-     the client-side readiness checklist agrees -- keep the two in step.
+     itemMappings is derived from instantiable items (D154) and
+     deliberately stays unenforced at Task Model confirmation. Items are
+     authored AFTER the Task Model, so requiring coverage here would
+     make the ordinary authoring order impossible. Step 6 is a readout
+     of that derived map.
   -------------------------------------------------- */
   if (["confirmed", "operational", "suspended"].includes(status)) {
 

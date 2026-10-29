@@ -17,6 +17,7 @@ import {
 import { authorizeRole } from "../utils/authMiddleware.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
 import { compileAndActivate, rebuildPackageForTaskModel } from "../compositeLibrary/activation.js";
+import { applyDerivedItemMappings } from "../services/syncTaskModelItemMappings.js";
 import { logger } from "../utils/logger.js";
 import { commitFinishedStudentModel } from "../studentModelRecords/studentModelRecordRepository.js";
 
@@ -268,8 +269,8 @@ export function createTaskModelRecord(payload = {}, db, idSuffix = "", options =
     subTaskIds: payload.subTaskIds || [],
     actions: payload.actions || [],
 
-    selectedItemIds: payload.selectedItemIds || [],
-    itemMappings: payload.itemMappings || [],
+    selectedItemIds: [],
+    itemMappings: [],
 
     fairnessRisks: payload.fairnessRisks || [],
     fairnessNotes: payload.fairnessNotes || "",
@@ -293,6 +294,8 @@ export function createTaskModelRecord(payload = {}, db, idSuffix = "", options =
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+
+  applyDerivedItemMappings(db, newTaskModel);
 
   const errors = [];
 
@@ -441,6 +444,8 @@ router.put("/:id", canAuthor, async (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
+    applyDerivedItemMappings(db, promoted);
+
     const lifecycleErrors = validateTaskModelLifecycle(promoted, db);
 
     if (lifecycleErrors.length) {
@@ -535,6 +540,8 @@ router.put("/:id", canAuthor, async (req, res) => {
   if (nextStatus === "confirmed") {
     updated.locked = true;
   }
+
+  applyDerivedItemMappings(db, updated);
 
   if (!canTransition(prevStatus, nextStatus)) {
     return res.status(400).json({
@@ -795,6 +802,8 @@ router.post("/:id/clone", canAuthor, (req, res) => {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+
+  applyDerivedItemMappings(db, cloned);
 
   db.taskModels.push(cloned);
   saveDB(db);

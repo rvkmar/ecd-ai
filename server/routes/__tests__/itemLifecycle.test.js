@@ -55,6 +55,7 @@ vi.mock("../../../src/utils/db-server.js", () => ({
 
 import { loadDB, saveDB } from "../../../src/utils/db-server.js";
 import itemsRouter from "../itemsRoutes.js";
+import { buildCompositeLibrary } from "../../compositeLibrary/builder.js";
 
 function makeApp() {
   const app = express();
@@ -385,6 +386,66 @@ describe("PATCH /api/items/:id/lifecycle", () => {
       .then((res) => {
         expect(res.body.status).toBe("confirmed");
         expect(res.body.locked).toBe(true);
+      });
+  });
+
+  it("writes the Task Model coverage map on confirm without an author edit of Step 6", () => {
+    const db = makeDB({
+      taskModels: [makeTaskModel({ itemMappings: [], selectedItemIds: [] })],
+      items: [makeItem({ status: "reviewed" })],
+    });
+    loadDB.mockReturnValue(db);
+
+    return patch("confirmed")
+      .expect(200)
+      .then(() => {
+        expect(db.taskModels[0].itemMappings).toEqual([
+          { itemId: "it1", observationId: "o1", evidenceModelId: "em1" },
+        ]);
+        expect(db.taskModels[0].selectedItemIds).toEqual(["it1"]);
+      });
+  });
+
+  it("agrees with the composite library on the instantiable item set", () => {
+    const db = makeDB({
+      taskModels: [makeTaskModel({ itemMappings: [], selectedItemIds: [] })],
+      items: [makeItem({ status: "reviewed" })],
+    });
+    loadDB.mockReturnValue(db);
+
+    return patch("confirmed")
+      .expect(200)
+      .then(() => {
+        const tm = db.taskModels[0];
+        const { record } = buildCompositeLibrary(tm, db);
+        const fromLibrary = record.items
+          .map((row) => ({ itemId: row.itemId, observationId: row.observationId }))
+          .sort((a, b) => String(a.itemId).localeCompare(String(b.itemId)));
+        const fromMap = tm.itemMappings
+          .map((row) => ({ itemId: row.itemId, observationId: row.observationId }))
+          .sort((a, b) => String(a.itemId).localeCompare(String(b.itemId)));
+        expect(fromMap).toEqual(fromLibrary);
+        expect(fromMap).toEqual([{ itemId: "it1", observationId: "o1" }]);
+      });
+  });
+
+  it("drops an archived item from the coverage map", () => {
+    const db = makeDB({
+      taskModels: [
+        makeTaskModel({
+          itemMappings: [{ itemId: "it1", observationId: "o1", evidenceModelId: "em1" }],
+          selectedItemIds: ["it1"],
+        }),
+      ],
+      items: [makeItem({ status: "confirmed", locked: true })],
+    });
+    loadDB.mockReturnValue(db);
+
+    return patch("archived")
+      .expect(200)
+      .then(() => {
+        expect(db.taskModels[0].itemMappings).toEqual([]);
+        expect(db.taskModels[0].selectedItemIds).toEqual([]);
       });
   });
 
