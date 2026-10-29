@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D154** (W31 D151–D154 done; D155 remains; ~~W29~~ closed off-calendar Wave 3; through-D153 leftovers recorded Wave 4; W30 closed). `itemMappings` is derived from instantiable items. Step 6 is a readout. Product `9b944ee`. Handoff: `claude/day154-itemmappings-writeback.md`. |
+| Last completed unit | **D154** (W31 D151–D154 done; D155 remains, not started; ~~W29~~ closed off-calendar Wave 3; through-D153 leftovers recorded Wave 4; W30 closed). `itemMappings` is derived from instantiable items. Step 6 is a readout. Product `9b944ee`. Handoff: `claude/day154-itemmappings-writeback.md`. This close: `claude/day155-not-started-session-close.md`. |
 | Textbook ECD re-audit | **~~R1–R14~~ complete** 2026-10-29. Product `78151e3`. All fourteen re-audit gaps closed (1 High, 6 Med, 7 Low). ~~R15~~ already closed. G15–G22 and F24 stay closed. D129 stays closed. Last handoff: `claude/day146t-offcal-r11-r14-remaining-lows.md`. **Not D146.** |
 | Textbook ECD gap audit 2 (2026-10-29) | 28 gaps T1–T28 on main 2d5ada6 (3 High, 14 Med, 11 Low; 18 new, 9 tracked, 1 partly tracked). Fix plan TU1–TU27. Source: claude/day146af-offcal-ecd-textbook-gaps-t.md. **Not D146.** |
 
@@ -296,7 +296,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-10-29 Wave 2B | product **`2c2df8e`** ≡ `main/master` before Wave 3. Handoff: `claude/day146ac-offcal-wave2b-dual-attribute-selection.md`. Suite **2879 passed / 4 skipped** (332 files, 2883). Build green (EvidenceModelBuilder 369.20 kB gzip 87.22 kB). Live `:6060` index `/assets/index-B94H1MXV.js`. **Not D146.** D155 not started. |
 | HEAD at 2026-10-29 Wave 3 | product **`7fb4bef`** ≡ `main/master` before Wave 4. Handoff: `claude/day146ad-offcal-wave3-w29-forward-controls.md`. Suite **2884 passed / 3 skipped** (333 files, 2887). Build green (EvidenceModelBuilder 369.20 kB gzip 87.22 kB; DomainAnalysisEditor 35.71 kB gzip 10.14 kB). Live `:6060` index `/assets/index-CcflFHJL.js`. Confirmed live Student Model **W29 Fractions Student Model**. **Not D146.** D155 not started. ~~W29~~ closed. |
 | HEAD at 2026-10-29 Wave 4 | docs **`2d5ada6`** ≡ `main/master` before T1–T28. Handoff: `claude/day146ae-offcal-wave4-limits.md`. No product; suite / build / live not re-run. Standing walks D68 / Continue / Newtonian / CM archive written off. **Not D146.** D155 not started. ~~W29~~ closed. |
-| HEAD at 2026-10-29 wave leftover pass | Last committed tip **`73c5ac2`**. Docs uncommitted at close. Handoff: `claude/day146ag-offcal-wave-leftover-pass.md`. Waves 0–4 product leftovers already discharged or recorded. Live index `/assets/index-CcflFHJL.js`. **Not D146.** D155 not started. T1–T28 not started. |
+| HEAD at 2026-10-29 wave leftover pass | docs **`dfb3e56`** ≡ `main/master` before this close. Handoff: `claude/day146ag-offcal-wave-leftover-pass.md`. Waves 0–4 product leftovers already discharged or recorded. Live index `/assets/index-CcflFHJL.js`. **Not D146.** D155 not started. T1–T28 not started. |
+| HEAD at 2026-10-29 D155 not started | tip **`dfb3e56`** ≡ `main/master` before this close + `claude/day155-not-started-session-close.md`. Close re-run **2884 passed / 3 skipped** (333 files, 181.55s). Build green (22.09s; largest chunk EvidenceModelBuilder 369.20 kB gzip 87.22 kB). Calendar D155 not marked. W31 not marked. Dates not moved. Last completed stays D154. Next: re-calibrate before D155 (never-compress). |
 
 
 
@@ -667,6 +668,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-29 | off-calendar | Wave 3 / ~~W29~~ | Confirmed Domain Analysis Overview hands off `?tab=student\|designpatterns&domainAnalysisId=`. Live `:6060` authored and confirmed **W29 Fractions Student Model** from Fractions (Trait inherited). Unpatterned New Student Model still opens. Q-matrix button unchanged. Suite **2884 passed / 3 skipped**. **Not D146.** Handoff: `claude/day146ad-offcal-wave3-w29-forward-controls.md`. |
 | 2026-10-29 | off-calendar | Wave 4 limits | Recorded remaining through-D153 leftovers as design limits. Standing walks D68 / Continue / Newtonian / CM archive written off (store cannot host them without inventing a session or a pack). No product. Suite not re-run. **Not D146.** Handoff: `claude/day146ae-offcal-wave4-limits.md`. Calendar next stays D155. |
 | 2026-10-29 | off-calendar | wave leftover pass | Waves 0–4 have no remaining product leftover. Live walk debris already gone. Wave 4 HEAD set to `2d5ada6`. T1–T28 not started. **Not D146.** Handoff: `claude/day146ag-offcal-wave-leftover-pass.md`. |
+| 2026-10-29 | close | — | D155 not started. Last completed stays D154. W29 closed Wave 3. Waves 0–4 and T1–T28 already recorded. Close re-run **2884 passed / 3 skipped**. Calendar D155 and W31 unmarked. |
 
 
 
