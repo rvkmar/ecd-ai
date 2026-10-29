@@ -9,7 +9,8 @@
 // including items scored under another evidence model, intersected with
 // the items finished sessions actually answered. Observable-keyed entries
 // win over item-only entries, the same rule scoring uses. Slip and guess
-// stay keyed by item id.
+// stay keyed by item id at calibration (R1). Scoring looks up
+// observableId first, then itemId (R9).
 //
 // Item floors are per family. The ADR envelope still requires two items.
 // These floors are the smallest dichotomous models mirt or GDINA can

@@ -180,6 +180,7 @@ import {
   GOVERNING_ASSEMBLY_MODEL_STATUSES,
 } from "./assemblyProgress.js";
 import {
+  calibratedDiagnosticParams,
   conjunctiveGdinaTable,
   dinaParametersAreUsable,
   gdinaParametersAreUsable,
@@ -304,7 +305,7 @@ function resolveContinuousParameters(observationId, evidenceModel, item, freeze 
  * selection decision would be worse than declining to rank that
  * candidate (R8).
  */
-function resolveDinaParameters(itemId, item, statisticalModel, family, freeze = {}, requiredCount = null) {
+function resolveDinaParameters(itemId, item, statisticalModel, family, freeze = {}, requiredCount = null, observableId = null) {
   if (freeze.error) {
     return { reason: freeze.error };
   }
@@ -320,7 +321,10 @@ function resolveDinaParameters(itemId, item, statisticalModel, family, freeze = 
     const parameterSet = (statisticalModel.parameterSets || []).find(
       (ps) => ps.parameterSetId === calibratedId
     );
-    const params = parameterSet?.parameters?.[itemId];
+    const { params } = calibratedDiagnosticParams(parameterSet, {
+      observableId: observableId || item?.observationId,
+      itemId,
+    });
 
     if (params && family === "dina" && dinaParametersAreUsable(params)) {
       return { params, parameterSource: "calibrated" };
@@ -1308,9 +1312,10 @@ function selectBayesianNetwork(session, db, warnings) {
     }
 
     const item = (db.items || []).find((it) => it.id === task.itemId);
+    const observableId = item?.observationId || entry.observationId;
     const requiredAttributeIds = attributeIdsForDeliveryItem(qMatrix.entries, {
       itemId: task.itemId,
-      observableId: item?.observationId,
+      observableId,
       evidenceModelId: evidenceModel?.id,
     });
 
@@ -1332,7 +1337,8 @@ function selectBayesianNetwork(session, db, warnings) {
       statisticalModel,
       family,
       freeze,
-      requiredAttributeIds.length
+      requiredAttributeIds.length,
+      observableId
     );
 
     if (!resolved.params) {

@@ -567,6 +567,20 @@ describe("selection and scoring agree on which parameters an item is delivered u
       parameterSource: "calibrated",
       params: { slip: 0.1, guess: 0.2 },
     });
+    const observableKeyed = {
+      ...calibrated,
+      parameterSets: [{
+        parameterSetId: "ps-d",
+        parameters: {
+          o1: { slip: 0.05, guess: 0.1 },
+          item1: { slip: 0.4, guess: 0.3 },
+        },
+      }],
+    };
+    expect(resolveDinaParameters("item1", { ...item, observationId: "o1" }, observableKeyed, "dina")).toMatchObject({
+      parameterSource: "calibrated",
+      params: { slip: 0.05, guess: 0.1 },
+    });
     expect(resolveDinaParameters("item1", item, uncalibrated, "dina")).toMatchObject({
       parameterSource: "pilot",
       params: { slip: 0.15, guess: 0.25 },
@@ -761,6 +775,36 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
     expect(result.debug.totalGain).toBeCloseTo(computeExpectedInformationGain(0.5, 0.1, 0.2), 10);
     expect(result.debug.parameterSource).toBe("pilot");
     expect(result.debug.source).toBe("composite-library");
+  });
+
+  it("R9: ranks from observable-keyed slip/guess, not a conflicting item row", () => {
+    const db = dinaDb();
+    db.evidenceModels[0].statisticalModels[0].activeParameterSetId = "ps-d";
+    db.evidenceModels[0].statisticalModels[0].parameterSets = [{
+      parameterSetId: "ps-d",
+      parameters: {
+        oA: { slip: 0.1, guess: 0.2 },
+        oB: { slip: 0.1, guess: 0.2 },
+        itemA: { slip: 0.6, guess: 0.5 },
+        itemB: { slip: 0.6, guess: 0.5 },
+      },
+    }];
+    const s = session({
+      taskIds: ["tA", "tB"],
+      selectionStrategy: "BayesianNetwork",
+      studentModel: {
+        smvPosteriors: {
+          attrA: smvPosterior({ smvId: "attrA", evidenceModelId: "emD", method: "map", modelFamily: "dina", estimate: 0.97 }),
+          attrB: smvPosterior({ smvId: "attrB", evidenceModelId: "emD", method: "map", modelFamily: "dina", estimate: 0.5 }),
+        },
+      },
+    });
+
+    const result = selectNextActivity(s, db);
+    expect(result.taskId).toBe("tB");
+    expect(result.debug.fallback).toBeUndefined();
+    expect(result.debug.parameterSource).toBe("calibrated");
+    expect(result.debug.totalGain).toBeCloseTo(computeExpectedInformationGain(0.5, 0.1, 0.2), 10);
   });
 
   it("the preference flips when the beliefs flip", () => {

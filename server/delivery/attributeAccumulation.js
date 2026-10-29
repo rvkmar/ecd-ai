@@ -21,23 +21,18 @@ import { entriesForResponse } from "../../src/utils/qMatrixEntries.js";
 //
 // FIVE DECISIONS WORTH READING BEFORE CHANGING ANYTHING HERE
 //
-// 1. PARAMETERS ARE KEYED BY ITEM, NOT BY OBSERVABLE. This diverges from
-//    the IRT branch, deliberately. A Q-matrix is an items x attributes
-//    matrix -- `qMatrixModels.entries[]` is `{itemId, attributeId}` (Day
-//    18), so an item's Q-vector is item-scoped by construction. The DINA
-//    response function P(X=1 | alpha) is a function of BOTH the Q-vector
-//    and (slip, guess) together, so those parameters must live at the same
-//    granularity as the Q-vector or the two can disagree. Two items
-//    sharing one observable have different Q-vectors and therefore need
-//    different slip/guess; keying them by observable would silently force
-//    them to share. This also matches the DINA literature, where s_j and
-//    g_j are per-item throughout.
-//
-//    G18 adds observable-keyed Q-matrix rows. Those rows choose the
-//    Q-vector for a response that names that observable. They do not move
-//    slip and guess off the item. An item-only matrix still resolves by
-//    itemId, including when the response also carries an observableId that
-//    no row cites.
+// 1. PARAMETERS FOLLOW THE Q-VECTOR'S GRAIN. The DINA response function
+//    P(X=1 | alpha) is a function of BOTH the Q-vector and (slip, guess)
+//    together, so those parameters must live at the same granularity as
+//    the Q-vector or the two can disagree. Day 18 keyed both by item.
+//    G18 lets a cell cite an observable; R4 lets one item yield several
+//    observables, each with its own Q-row. Looking up slip/guess by
+//    itemId alone then forces those observables to share a pair they
+//    should not. Lookup is therefore the D50 rule: observableId wins
+//    when the parameter set has that key, else itemId. Two items that
+//    share an observation share a row when the set is keyed that way;
+//    an R-ingested set that still keys by item (R1) still scores.
+//    Pilot `psychometrics.dinaParams` stay on the item.
 //
 // 2. THE PRIOR ASSUMES ATTRIBUTE INDEPENDENCE; THE POSTERIOR DOES NOT.
 //    Competency models declare a prior per binary SMV, one at a time --
@@ -322,6 +317,22 @@ export function gdinaParametersAreUsable(params, requiredCount) {
   if (!Array.isArray(probabilities)) return false;
   if (probabilities.length !== 2 ** requiredCount) return false;
   return probabilities.every((p) => Number.isFinite(p) && p >= 0 && p <= 1);
+}
+
+/**
+ * D50 / R9: the same observable-then-item lookup IRT uses. Lives here
+ * rather than importing evidenceAccumulation.js (that file imports this
+ * one). Keep the two copies in step: observable wins when present.
+ */
+export function calibratedDiagnosticParams(parameterSet, { observableId, itemId } = {}) {
+  const map = parameterSet?.parameters || {};
+  if (observableId && map[observableId]) {
+    return { params: map[observableId], keyedBy: "observableId" };
+  }
+  if (itemId && map[itemId]) {
+    return { params: map[itemId], keyedBy: "itemId" };
+  }
+  return { params: undefined, keyedBy: null };
 }
 
 /**
@@ -794,8 +805,11 @@ export function accumulateAttributeMastery({
       continue;
     }
 
-    // Decision 1: parameters are keyed by ITEM for this family.
-    const params = parameterSet?.parameters?.[r.itemId];
+    // Decision 1 / R9: observableId wins when the set has that key.
+    const { params } = calibratedDiagnosticParams(parameterSet, {
+      observableId: r.observableId,
+      itemId: r.itemId,
+    });
 
     if (!params) {
       excluded += 1;

@@ -202,6 +202,57 @@ describe("R4 — accumulation against distinct Q-matrix rows", () => {
     expect(content.estimate).toBeGreaterThan(0.5);
     expect(grammar.estimate).toBeLessThan(0.5);
   });
+
+  it("R9: two observables on one item use distinct slip/guess when the set is keyed by observableId", () => {
+    // Content correct, slip 0.1 / guess 0.2 → 9/11.
+    // Grammar incorrect, slip 0.02 / guess 0.02 → 0.02.
+    // Shared item-keyed params would have given grammar 1/9 instead.
+    const warnings = [];
+    const posteriors = accumulateAttributeMastery({
+      evidenceModelId: "em-r4",
+      parameterSetId: "ps1",
+      family: "dina",
+      evidenceModel: { id: "em-r4", competencyId: "c1" },
+      statisticalModel: { id: "sm1", type: "dina", structureConfig: { qMatrixId: "qm-r4" } },
+      parameterSet: {
+        parameterSetId: "ps1",
+        parameters: {
+          "item-essay": { slip: 0.1, guess: 0.2 },
+          "o-content": { slip: 0.1, guess: 0.2 },
+          "o-grammar": { slip: 0.02, guess: 0.02 },
+        },
+      },
+      group: [
+        { itemId: "item-essay", observableId: "o-content", evidenceModelId: "em-r4", activated: true, direction: "supports" },
+        { itemId: "item-essay", observableId: "o-grammar", evidenceModelId: "em-r4", activated: false, direction: "supports" },
+      ],
+      db: {
+        qMatrixModels: [{
+          id: "qm-r4",
+          competencyModelId: "cm1",
+          attributeIds: ["attr-content", "attr-grammar"],
+          entries: [
+            { observableId: "o-content", evidenceModelId: "em-r4", itemId: "item-essay", attributeId: "attr-content" },
+            { observableId: "o-grammar", evidenceModelId: "em-r4", itemId: "item-essay", attributeId: "attr-grammar" },
+          ],
+        }],
+        competencyModels: [{
+          id: "cm1",
+          smVariables: [
+            { id: "attr-content", type: "binary", priorDistribution: { family: "bernoulli", params: { p: 0.5 } } },
+            { id: "attr-grammar", type: "binary", priorDistribution: { family: "bernoulli", params: { p: 0.5 } } },
+          ],
+        }],
+      },
+      warnings,
+      scoreResponse,
+    });
+
+    const content = posteriors.find((p) => p.smvId === "attr-content");
+    const grammar = posteriors.find((p) => p.smvId === "attr-grammar");
+    expect(content.estimate).toBeCloseTo(0.8181818181818181, 12);
+    expect(grammar.estimate).toBeCloseTo(0.02, 12);
+  });
 });
 
 describe("R4 — placeAttempts", () => {

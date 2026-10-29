@@ -20,7 +20,7 @@
 
 import { describe, it, expect } from "vitest";
 import { accumulateEvidence } from "../evidenceAccumulation.js";
-import { accumulateAttributeMastery, computeGdinaExpectedInformationGain, conjunctiveGdinaTable, __testing__ } from "../attributeAccumulation.js";
+import { accumulateAttributeMastery, calibratedDiagnosticParams, computeGdinaExpectedInformationGain, conjunctiveGdinaTable, __testing__ } from "../attributeAccumulation.js";
 
 const {
   enumerateProfiles, reducedPatternIndex, masteryPrior,
@@ -648,6 +648,45 @@ describe("accumulateAttributeMastery — the full branch", () => {
     expect(posteriors[0].supported).toBe(false);
     expect(posteriors[0].reason).toMatch(/carried usable diagnostic evidence/);
     expect(warnings.join(" ")).toMatch(/no dina parameters for item 'i1'/);
+  });
+
+  it("R9: observable-keyed slip/guess win over the item row", () => {
+    const { args } = makeContext({
+      parameters: {
+        i1: { slip: 0.4, guess: 0.3 },
+        o1: { slip: 0.1, guess: 0.2 },
+      },
+    });
+    const posteriors = accumulateAttributeMastery(args);
+    expect(posteriors[0].supported).toBe(true);
+    // One conjunctive item, both attributes required, correct, slip 0.1 / guess 0.2
+    // is the 11/15 fixture, not the noisier item-keyed pair.
+    expect(posteriors[0].estimate).toBeCloseTo(11 / 15, 12);
+  });
+
+  it("R9: an item-keyed set still scores when no observable row exists", () => {
+    const { args } = makeContext({
+      parameters: { i1: { slip: 0.1, guess: 0.2 } },
+    });
+    const posteriors = accumulateAttributeMastery(args);
+    expect(posteriors[0].supported).toBe(true);
+    expect(posteriors[0].estimate).toBeCloseTo(11 / 15, 12);
+  });
+
+  it("calibratedDiagnosticParams prefers observableId, then itemId", () => {
+    const set = { parameters: { o1: { slip: 0.05, guess: 0.1 }, i1: { slip: 0.4, guess: 0.3 } } };
+    expect(calibratedDiagnosticParams(set, { observableId: "o1", itemId: "i1" })).toEqual({
+      params: { slip: 0.05, guess: 0.1 },
+      keyedBy: "observableId",
+    });
+    expect(calibratedDiagnosticParams(set, { observableId: "missing", itemId: "i1" })).toEqual({
+      params: { slip: 0.4, guess: 0.3 },
+      keyedBy: "itemId",
+    });
+    expect(calibratedDiagnosticParams(set, { observableId: "missing", itemId: "missing" })).toEqual({
+      params: undefined,
+      keyedBy: null,
+    });
   });
 
   it("excludes a non-monotonic DINA item rather than silently inverting it", () => {
