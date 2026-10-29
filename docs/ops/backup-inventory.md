@@ -7,9 +7,9 @@ manager — referenced by compose as `${ECD_BACKUP_ENCRYPTION_KEY}`, never
 inlined in `docker-compose.yml`.
 
 Default schedule: `20 2 * * *` UTC (`ECD_BACKUP_CRON`). Retention: 14 days
-(`ECD_BACKUP_RETENTION_DAYS`). Age is exposed on `/api/health` /
-`/api/metrics` as `backup.ageMs` (prefers encrypted full backups) and
-alarmed as `backup.age` (D105).
+(`ECD_BACKUP_RETENTION_DAYS`). Age is on admin-only `GET /api/metrics` as
+`backup.ageMs` (prefers encrypted full backups) and alarmed as `backup.age`
+(D105). `GET /api/health` stays public and does not include backup age.
 
 `saveDB` also writes unencrypted `db.json.<timestamp>` crash copies into
 `ECD_BACKUP_DIR`. Those are not the scheduled backup. A copy is written

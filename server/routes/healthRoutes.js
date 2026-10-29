@@ -1,12 +1,14 @@
 // server/routes/healthRoutes.js
-// D104: unauthenticated health / readiness / metrics + client error intake.
-// Health stays green when R is down (ADR 0001). Readiness does not.
+// D104: public /health and /ready, plus client error intake.
+// /metrics is admin-only. Health stays green when R is down (ADR 0001).
+// Readiness does not.
 
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { collectSystemStatus } from "../utils/systemStatus.js";
 import { logger } from "../utils/logger.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
+import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 
 const router = express.Router();
 router.use(sanitizeRequestInputs);
@@ -50,7 +52,13 @@ router.get("/ready", async (_req, res) => {
   });
 });
 
-router.get("/metrics", async (_req, res) => {
+// Same gate as /api/ops: a logged-in admin. Compose, nginx, scripts, and
+// the client do not scrape this route. System Health reads
+// /api/ops/health-summary, which is already admin-only. /health and
+// /ready stay public.
+const canAdmin = authorizeRole(["admin"]);
+
+router.get("/metrics", authenticateToken, canAdmin, async (_req, res) => {
   const status = await collectSystemStatus();
   res.status(200).json({
     at: status.at,

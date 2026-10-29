@@ -20,7 +20,8 @@ D108 rehearsal: backup age ~12 h (RPO met); restore **3 ms** (RTO met).
 1. Operator notices delivery/authoring outage, corrupt `ECD_DB_FILE`, or
    missing Mongo user store.
 2. Check health without a shell if the UI is up: **System Health** screen
-   (D105) or `GET /api/health` / `GET /api/metrics`.
+   (D105) or public `GET /api/health`. `GET /api/metrics` requires an admin
+   access token (`Authorization: Bearer` of that user's access JWT).
 3. Confirm backup age on metrics (`backup.ageMs`). If age > 24 h, RPO is
    already breached — restore the newest good archive and investigate the
    scheduler (`ECD_BACKUP_CRON`, compose key env).
