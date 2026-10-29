@@ -218,8 +218,11 @@ try {
     fs.writeFileSync(process.env.ECD_DB_FILE, JSON.stringify(shellOnly));
     forgetDbCache();
     process.env.SESSIONS_BACKEND = "memory";
+    process.env.AUDITLOG_BACKEND = "memory";
     const repo = await import("../server/sessions/sessionRepository.js");
+    const auditRepo = await import("../server/auditLog/auditRepository.js");
     repo.resetSessionStoreForTests();
+    auditRepo.resetAuditStoreForTests();
     await repo.upsertSessions(sessions);
 
     async function oneExternal(i) {

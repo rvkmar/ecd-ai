@@ -18,12 +18,21 @@ import { computeQueueMetrics } from "../r/calibrationQueueLimits.js";
 import { getMigrationStatus } from "../migrations/runner.js";
 import { migrationRegistryIds } from "../migrations/registry.js";
 import { resolveSessionsBackend } from "../sessions/sessionBackend.js";
+import { resolveAuditLogBackend } from "../auditLog/auditBackend.js";
 
 // `mode` stays "ecd-json": the ECD file is still the content store.
-// Sessions may live in that file or in Mongo. Callers that branch on
-// mode keep working; sessionsBackend is the session store.
+// Sessions and auditLog may live in that file or in Mongo. Callers that
+// branch on mode keep working; sessionsBackend / auditLogBackend name
+// those stores.
 function sessionsBackendName(env = process.env) {
   const backend = resolveSessionsBackend(env);
+  if (backend === "mongo") return "mongo";
+  if (backend === "memory") return "memory";
+  return "file";
+}
+
+function auditLogBackendName(env = process.env) {
+  const backend = resolveAuditLogBackend(env);
   if (backend === "mongo") return "mongo";
   if (backend === "memory") return "memory";
   return "file";
@@ -43,6 +52,7 @@ function probeEcdDatabase() {
       ok: true,
       mode: "ecd-json",
       sessionsBackend: sessionsBackendName(),
+      auditLogBackend: auditLogBackendName(),
       collections: Object.keys(db || {}).length,
     };
   } catch (err) {
@@ -50,6 +60,7 @@ function probeEcdDatabase() {
       ok: false,
       mode: "ecd-json",
       sessionsBackend: sessionsBackendName(),
+      auditLogBackend: auditLogBackendName(),
       error: err?.message || String(err),
     };
   }

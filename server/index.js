@@ -57,6 +57,7 @@ import healthRoutes from "./routes/healthRoutes.js";
 import opsRoutes from "./routes/opsRoutes.js";
 import dataZipRoutes from "./routes/dataZipRoutes.js";
 import { bootSessionStore } from "./sessions/bootSessionStore.js";
+import { bootAuditStore } from "./auditLog/bootAuditStore.js";
 
 const app = express();
 app.use(express.json());
@@ -169,6 +170,15 @@ async function main() {
     }
   } catch (err) {
     console.error("session store boot failed:", err);
+    process.exit(1);
+  }
+  try {
+    const auditBoot = await bootAuditStore();
+    if (auditBoot && !auditBoot.skipped && auditBoot.summary) {
+      console.log(auditBoot.summary);
+    }
+  } catch (err) {
+    console.error("audit store boot failed:", err);
     process.exit(1);
   }
 

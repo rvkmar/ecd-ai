@@ -132,9 +132,10 @@ export const BACKUP_INVENTORY = Object.freeze([
   },
   {
     id: "auditLog",
-    store: "ecd-json",
-    pathInArchive: "ecd/db.json",
-    reason: "Included — append-only governance trail.",
+    store: "mongo-or-ecd-json",
+    pathInArchive: "mongo/auditLog.json",
+    reason:
+      "Included. Mongo (or memory) auditLog rows are exported as mongo/auditLog.json. The JSON harness still keeps them inside ecd/db.json as well, so a harness backup remains complete. Append-only governance trail.",
   },
   {
     id: "questions",

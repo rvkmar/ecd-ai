@@ -11,6 +11,10 @@ import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB } from "../../src/utils/db-server.js";
+import {
+  getAuditEntryById,
+  queryAuditLog,
+} from "../auditLog/auditRepository.js";
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -23,46 +27,19 @@ const APPEND_ONLY =
 
 // GET /api/auditLog
 // ?entityCollection=  ?entityId=  ?action=  ?actor=  ?from=  ?to=  ?toStatus=
-router.get("/", canView, (req, res) => {
+router.get("/", canView, async (req, res) => {
   const db = loadDB();
-  let rows = Array.isArray(db.auditLog) ? [...db.auditLog] : [];
   const { entityCollection, entityId, action, actor, from, to, toStatus } = req.query;
-
-  if (entityCollection) {
-    rows = rows.filter((r) => r.entity?.collection === entityCollection);
-  }
-  if (entityId) {
-    rows = rows.filter((r) => String(r.entity?.id) === String(entityId));
-  }
-  if (action) {
-    rows = rows.filter((r) => r.action === action);
-  }
-  if (toStatus) {
-    rows = rows.filter((r) => r.detail?.to === toStatus);
-  }
-  if (actor) {
-    rows = rows.filter(
-      (r) =>
-        r.actor?.userId === actor ||
-        (r.actor?.userId && String(r.actor.userId).includes(String(actor)))
-    );
-  }
-  if (from) {
-    const t = Date.parse(from);
-    if (!Number.isNaN(t)) rows = rows.filter((r) => Date.parse(r.at) >= t);
-  }
-  if (to) {
-    const t = Date.parse(to);
-    if (!Number.isNaN(t)) rows = rows.filter((r) => Date.parse(r.at) <= t);
-  }
-
-  rows.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const rows = await queryAuditLog(
+    { entityCollection, entityId, action, actor, from, to, toStatus },
+    { db }
+  );
   res.json(rows);
 });
 
-router.get("/:id", canView, (req, res) => {
+router.get("/:id", canView, async (req, res) => {
   const db = loadDB();
-  const row = (db.auditLog || []).find((a) => a.id === req.params.id);
+  const row = await getAuditEntryById(req.params.id, { db });
   if (!row) return res.status(404).json({ error: "Audit entry not found" });
   res.json(row);
 });

@@ -72,37 +72,47 @@ describe("D104 health vs readiness", () => {
     expect(status.backup.ageMs).toEqual(expect.any(Number));
   });
 
-  it("GET /api/health keeps mode ecd-json and names the session store", async () => {
+  it("GET /api/health keeps mode ecd-json and names the session and audit stores", async () => {
     const { default: router } = await import("../healthRoutes.js");
     const app = express();
     app.use(express.json());
     app.use("/api", router);
-    const previous = process.env.SESSIONS_BACKEND;
+    const previousSessions = process.env.SESSIONS_BACKEND;
+    const previousAudit = process.env.AUDITLOG_BACKEND;
 
     try {
-      if (previous === undefined) delete process.env.SESSIONS_BACKEND;
-      else process.env.SESSIONS_BACKEND = previous;
+      if (previousSessions === undefined) delete process.env.SESSIONS_BACKEND;
+      else process.env.SESSIONS_BACKEND = previousSessions;
+      if (previousAudit === undefined) delete process.env.AUDITLOG_BACKEND;
+      else process.env.AUDITLOG_BACKEND = previousAudit;
 
       const fileHealth = await request(app).get("/api/health");
       expect(fileHealth.status).toBe(200);
       expect(fileHealth.body.database.mode).toBe("ecd-json");
       expect(fileHealth.body.database.sessionsBackend).toBe("file");
+      expect(fileHealth.body.database.auditLogBackend).toBe("file");
       expect(fileHealth.body.servingSessions).toBe(true);
 
       process.env.SESSIONS_BACKEND = "mongo";
+      process.env.AUDITLOG_BACKEND = "mongo";
       const mongoHealth = await request(app).get("/api/health");
       expect(mongoHealth.status).toBe(200);
       expect(mongoHealth.body.database.mode).toBe("ecd-json");
       expect(mongoHealth.body.database.sessionsBackend).toBe("mongo");
+      expect(mongoHealth.body.database.auditLogBackend).toBe("mongo");
       expect(mongoHealth.body.servingSessions).toBe(true);
 
       process.env.SESSIONS_BACKEND = "memory";
+      process.env.AUDITLOG_BACKEND = "memory";
       const memoryHealth = await request(app).get("/api/health");
       expect(memoryHealth.body.database.mode).toBe("ecd-json");
       expect(memoryHealth.body.database.sessionsBackend).toBe("memory");
+      expect(memoryHealth.body.database.auditLogBackend).toBe("memory");
     } finally {
-      if (previous === undefined) delete process.env.SESSIONS_BACKEND;
-      else process.env.SESSIONS_BACKEND = previous;
+      if (previousSessions === undefined) delete process.env.SESSIONS_BACKEND;
+      else process.env.SESSIONS_BACKEND = previousSessions;
+      if (previousAudit === undefined) delete process.env.AUDITLOG_BACKEND;
+      else process.env.AUDITLOG_BACKEND = previousAudit;
     }
   });
 
