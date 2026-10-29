@@ -8,6 +8,7 @@
 // - Governance-aligned messaging
 
 import React, { useMemo } from "react";
+import { CheckCircle2, Eye } from "lucide-react";
 import LifecycleStatusBadge from "@/components/ui/LifecycleStatusBadge";
 
 export default function VersionHistoryViewer({
@@ -40,7 +41,10 @@ export default function VersionHistoryViewer({
     ===================================================== */
 
     return (
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-6 space-y-6">
+        <div
+            className="rounded-lg border border-slate-200 bg-white shadow-sm p-6 space-y-6"
+            data-testid="version-history-viewer"
+        >
             <div>
                 <h4 className="text-sm font-semibold text-slate-800">Version History</h4>
                 <p className="mt-1 text-sm text-slate-500">
@@ -80,7 +84,10 @@ export default function VersionHistoryViewer({
                                 </div>
 
                                 {isCurrent ? (
-                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                                    <span
+                                        className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"
+                                        data-testid="version-history-current"
+                                    >
                                         <CheckCircle2 size={14} strokeWidth={2} />
                                         Current
                                     </span>

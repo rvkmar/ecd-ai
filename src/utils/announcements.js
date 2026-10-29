@@ -15,8 +15,15 @@ export const DISTRICT_AUDIENCE = Object.freeze([
   "student",
 ]);
 
-export function announcementVisibleToRole(announcement, role) {
+export function announcementVisibleToRole(announcement, role, username) {
   if (!announcement || !role) return false;
+  if (
+    username &&
+    announcement.createdBy &&
+    String(announcement.createdBy) === String(username)
+  ) {
+    return true;
+  }
   if (announcement.visibility === "public") return true;
   const audience = Array.isArray(announcement.audienceRoles)
     ? announcement.audienceRoles
@@ -24,9 +31,9 @@ export function announcementVisibleToRole(announcement, role) {
   return audience.includes(role);
 }
 
-export function announcementsForRole(list, role) {
+export function announcementsForRole(list, role, username) {
   return (list || [])
-    .filter((a) => announcementVisibleToRole(a, role))
+    .filter((a) => announcementVisibleToRole(a, role, username))
     .slice()
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 }
@@ -53,6 +60,8 @@ export function buildAnnouncementRecord({
   createdBy,
   visibility,
   audienceRoles,
+  districtId = null,
+  schoolId = null,
   now = new Date().toISOString(),
   id = `ann${Date.now()}`,
 }) {
@@ -85,6 +94,8 @@ export function buildAnnouncementRecord({
     body: trimmedBody,
     authorRole,
     createdBy: createdBy || null,
+    districtId: districtId ? String(districtId) : null,
+    schoolId: schoolId ? String(schoolId) : null,
     visibility: vis,
     audienceRoles: audience,
     createdAt: now,

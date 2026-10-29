@@ -20,7 +20,9 @@ router.get("/", (req, res) => {
   try {
     const db = loadDB();
     const role = req.user?.role;
-    res.json(announcementsForRole(db.announcements || [], role));
+    res.json(
+      announcementsForRole(db.announcements || [], role, req.user?.username)
+    );
   } catch (err) {
     console.error("GET /api/announcements failed:", err);
     res.json([]);
@@ -39,6 +41,8 @@ router.post("/", canAuthor, (req, res) => {
       audienceRoles: req.body?.audienceRoles,
       authorRole: req.user.role,
       createdBy: req.user.username,
+      districtId: req.user.districtId || req.user.profile?.districtId || null,
+      schoolId: req.user.schoolId || req.user.profile?.schoolId || null,
     });
     db.announcements.push(record);
     saveDB(db);

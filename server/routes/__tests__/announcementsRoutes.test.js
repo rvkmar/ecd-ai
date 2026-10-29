@@ -38,12 +38,48 @@ describe("announcements API", () => {
       .send({ title: "Hello", body: "World", visibility: "public" });
     expect(created.status).toBe(201);
     expect(created.body.visibility).toBe("public");
+    expect(created.body.districtId).toBeNull();
 
     globalThis.__annUser = { username: "stud1", role: "student" };
     const list = await request(app).get("/api/announcements");
     expect(list.status).toBe(200);
     expect(list.body).toHaveLength(1);
     expect(list.body[0].title).toBe("Hello");
+  });
+
+  it("stamps districtId from a district author", async () => {
+    globalThis.__annUser = {
+      username: "dist1",
+      role: "district",
+      districtId: "tn-chennai",
+      schoolId: "sch-1",
+    };
+    const created = await request(app)
+      .post("/api/announcements")
+      .send({ title: "Buses", body: "Late" });
+    expect(created.status).toBe(201);
+    expect(created.body.districtId).toBe("tn-chennai");
+    expect(created.body.schoolId).toBe("sch-1");
+  });
+
+  it("returns a teachers-only post to the admin who created it", async () => {
+    loadDB.mockReturnValue({
+      announcements: [
+        {
+          id: "ann-teachers",
+          title: "Teachers only",
+          body: "PD",
+          visibility: "roles",
+          audienceRoles: ["teacher"],
+          authorRole: "admin",
+          createdBy: "admin1",
+          createdAt: "2026-10-29T10:00:00.000Z",
+        },
+      ],
+    });
+    const list = await request(app).get("/api/announcements");
+    expect(list.status).toBe(200);
+    expect(list.body.map((a) => a.id)).toEqual(["ann-teachers"]);
   });
 
   it("hides role-restricted announcements from other roles", async () => {

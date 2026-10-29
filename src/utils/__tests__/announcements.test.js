@@ -17,9 +17,38 @@ describe("announcement visibility", () => {
       visibility: "public",
     });
     expect(ann.visibility).toBe("public");
+    expect(ann.districtId).toBeNull();
+    expect(ann.schoolId).toBeNull();
     for (const role of ["admin", "district", "teacher", "student"]) {
       expect(announcementVisibleToRole(ann, role)).toBe(true);
     }
+  });
+
+  it("stamps districtId and schoolId from the author when present", () => {
+    const ann = buildAnnouncementRecord({
+      title: "Buses",
+      body: "Late",
+      authorRole: "district",
+      createdBy: "dist1",
+      districtId: "tn-chennai",
+      schoolId: "sch-1",
+    });
+    expect(ann.districtId).toBe("tn-chennai");
+    expect(ann.schoolId).toBe("sch-1");
+  });
+
+  it("lets the author see a role-restricted post they created", () => {
+    const ann = buildAnnouncementRecord({
+      title: "Teachers only",
+      body: "PD day",
+      authorRole: "admin",
+      createdBy: "admin1",
+      visibility: "roles",
+      audienceRoles: ["teacher"],
+    });
+    expect(announcementVisibleToRole(ann, "admin")).toBe(false);
+    expect(announcementVisibleToRole(ann, "admin", "admin1")).toBe(true);
+    expect(announcementVisibleToRole(ann, "teacher", "teach1")).toBe(true);
   });
 
   it("admin can target a subset of roles", () => {

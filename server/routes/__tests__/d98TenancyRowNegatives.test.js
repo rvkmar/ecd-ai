@@ -38,8 +38,10 @@ const fixture = {
     { id: "task-m", districtId: "tn-madurai", name: "M task" },
   ],
   announcements: [
-    { id: "ann-c", districtId: "tn-chennai", title: "C", body: "c", visibility: "public", audienceRoles: ["district", "teacher", "student"], createdBy: "dist1" },
-    { id: "ann-m", districtId: "tn-madurai", title: "M", body: "m", visibility: "public", audienceRoles: ["district", "teacher", "student"], createdBy: "dist-m" },
+    { id: "ann-c", districtId: "tn-chennai", title: "C", body: "c", visibility: "public", audienceRoles: ["district", "teacher", "student"], authorRole: "district", createdBy: "dist1" },
+    { id: "ann-m", districtId: "tn-madurai", title: "M", body: "m", visibility: "public", audienceRoles: ["district", "teacher", "student"], authorRole: "district", createdBy: "dist-m" },
+    { id: "ann-admin", districtId: null, title: "All", body: "x", visibility: "public", audienceRoles: ["admin", "district", "teacher", "student"], authorRole: "admin", createdBy: "admin1" },
+    { id: "ann-orphan", districtId: null, title: "Orphan", body: "y", visibility: "public", audienceRoles: ["district", "teacher", "student"], authorRole: "district", createdBy: "dist-old" },
   ],
   analysisArtefacts: [
     { id: "art-c", kind: "item-parameters", scope: { districtId: "tn-chennai" } },
@@ -168,8 +170,9 @@ describe("D98 row-level tenancy negatives (HTTP)", () => {
       const res = await request(app).get("/api/announcements").set(authHeader(actors.district));
       expect(res.status).toBe(200);
       const ids = (res.body || []).map((a) => a.id);
-      expect(ids).toContain("ann-c");
+      expect(ids).toEqual(expect.arrayContaining(["ann-c", "ann-admin"]));
       expect(ids).not.toContain("ann-m");
+      expect(ids).not.toContain("ann-orphan");
     });
 
     it("GET /api/analysisArtefacts omits other districts and unscoped", async () => {
@@ -202,6 +205,15 @@ describe("D98 row-level tenancy negatives (HTTP)", () => {
       expect((res.body || []).map((s) => s.id)).toEqual(["stu-c"]);
     });
 
+    it("GET /api/announcements includes admin unscoped and omits other-district", async () => {
+      const res = await request(app).get("/api/announcements").set(authHeader(actors.teacher));
+      expect(res.status).toBe(200);
+      const ids = (res.body || []).map((a) => a.id);
+      expect(ids).toEqual(expect.arrayContaining(["ann-c", "ann-admin"]));
+      expect(ids).not.toContain("ann-m");
+      expect(ids).not.toContain("ann-orphan");
+    });
+
     it("GET /api/sessions omits other-district sessions", async () => {
       const res = await request(app).get("/api/sessions").set(authHeader(actors.teacher));
       expect(res.status).toBe(200);
@@ -216,6 +228,15 @@ describe("D98 row-level tenancy negatives (HTTP)", () => {
       const res = await request(app).get("/api/students").set(authHeader(actors.student));
       expect(res.status).toBe(200);
       expect(res.body || []).toEqual([]);
+    });
+
+    it("GET /api/announcements includes admin unscoped and same-district", async () => {
+      const res = await request(app).get("/api/announcements").set(authHeader(actors.student));
+      expect(res.status).toBe(200);
+      const ids = (res.body || []).map((a) => a.id);
+      expect(ids).toEqual(expect.arrayContaining(["ann-c", "ann-admin"]));
+      expect(ids).not.toContain("ann-m");
+      expect(ids).not.toContain("ann-orphan");
     });
 
     it("GET /api/sessions omits peers", async () => {

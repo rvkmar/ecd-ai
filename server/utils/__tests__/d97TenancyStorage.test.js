@@ -94,8 +94,15 @@ function sampleDb() {
       { id: "task-m", districtId: "tn-madurai" },
     ],
     announcements: [
-      { id: "ann-c", districtId: "tn-chennai" },
-      { id: "ann-m", districtId: "tn-madurai" },
+      { id: "ann-c", districtId: "tn-chennai", authorRole: "district" },
+      { id: "ann-m", districtId: "tn-madurai", authorRole: "district" },
+      {
+        id: "ann-admin",
+        districtId: null,
+        authorRole: "admin",
+        createdBy: "admin1",
+      },
+      { id: "ann-orphan", districtId: null, authorRole: "district" },
     ],
     calibrationJobs: [
       { id: "job-c", scope: { districtId: "tn-chennai" } },
@@ -151,7 +158,10 @@ describe("D97 tenancyScope storage helpers", () => {
     expect(scoped.sessions.map((s) => s.id)).toEqual(["sess-c"]);
     expect(scoped.studentModelRecords.map((row) => row.id).sort()).toEqual(["smr-c", "smr-c2"]);
     expect(scoped.tasks.map((t) => t.id)).toEqual(["task-c"]);
-    expect(scoped.announcements.map((a) => a.id)).toEqual(["ann-c"]);
+    expect(scoped.announcements.map((a) => a.id).sort()).toEqual([
+      "ann-admin",
+      "ann-c",
+    ]);
     // Global content chain stays unscoped
     expect(scoped.items).toEqual(db.items);
     expect(scoped.competencyModels).toEqual(db.competencyModels);
@@ -170,6 +180,20 @@ describe("D97 tenancyScope storage helpers", () => {
     expect(scoped.sessions.map((s) => s.id)).toEqual(["sess-c"]);
     expect(scoped.studentModelRecords.map((row) => row.id)).toEqual(["smr-c"]);
     expect(scoped.students).toEqual([]);
+  });
+
+  it("announcements skip student self-scope; admin unscoped is visible, orphan is not", () => {
+    const student = applyTenancyToDb(sampleDb(), studentCtx);
+    expect(student.announcements.map((a) => a.id).sort()).toEqual([
+      "ann-admin",
+      "ann-c",
+    ]);
+
+    const teacher = applyTenancyToDb(sampleDb(), teacherSchoolCtx);
+    expect(teacher.announcements.map((a) => a.id).sort()).toEqual([
+      "ann-admin",
+      "ann-c",
+    ]);
   });
 
   it("teacher with schoolId prefers school rows; without schoolId falls back to district", () => {

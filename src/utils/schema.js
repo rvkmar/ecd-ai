@@ -791,6 +791,10 @@ export const schema = {
     body: 'string',
     authorRole: 'string',
     createdBy: 'string',
+    // Optional tenancy. District authors stamp their claim on create.
+    // Admin posts may omit districtId and stay visible to every tenant.
+    districtId: 'string',
+    schoolId: 'string',
     visibility: 'string',
     audienceRoles: 'array',
     createdAt: 'date',
