@@ -11,6 +11,7 @@ describe("migrate CLI exits", () => {
   const prev = {
     file: process.env.ECD_DB_FILE,
     backend: process.env.SESSIONS_BACKEND,
+    auditBackend: process.env.AUDITLOG_BACKEND,
     backup: process.env.ECD_BACKUP_DIR,
   };
   let tmp;
@@ -22,6 +23,8 @@ describe("migrate CLI exits", () => {
     else process.env.ECD_DB_FILE = prev.file;
     if (prev.backend === undefined) delete process.env.SESSIONS_BACKEND;
     else process.env.SESSIONS_BACKEND = prev.backend;
+    if (prev.auditBackend === undefined) delete process.env.AUDITLOG_BACKEND;
+    else process.env.AUDITLOG_BACKEND = prev.auditBackend;
     if (prev.backup === undefined) delete process.env.ECD_BACKUP_DIR;
     else process.env.ECD_BACKUP_DIR = prev.backup;
     if (tmp) fs.rmSync(tmp, { recursive: true, force: true });
@@ -32,6 +35,7 @@ describe("migrate CLI exits", () => {
     process.env.ECD_DB_FILE = path.join(tmp, "db.json");
     process.env.ECD_BACKUP_DIR = path.join(tmp, "backups");
     process.env.SESSIONS_BACKEND = "json";
+    process.env.AUDITLOG_BACKEND = "json";
     fs.writeFileSync(process.env.ECD_DB_FILE, JSON.stringify({ sessions: [], auditLog: [] }));
     forgetDbCache();
     for (const migration of MIGRATION_REGISTRY) {

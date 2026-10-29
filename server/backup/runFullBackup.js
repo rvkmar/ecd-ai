@@ -10,6 +10,10 @@ import zlib from "zlib";
 import { backupDirPath } from "../../src/utils/db-server.js";
 import { dbAdapter } from "../utils/dbAdapter.js";
 import { exportAllSessions, sessionsUseExternalStore } from "../sessions/sessionRepository.js";
+import {
+  exportAllAuditEntries,
+  auditLogUseExternalStore,
+} from "../auditLog/auditRepository.js";
 import { BACKUP_INVENTORY, inventoryIncluded, inventoryExcluded, BACKUP_FILE_PREFIX, BACKUP_FILE_SUFFIX } from "./inventory.js";
 import {
   decryptBackupBlob,
@@ -77,6 +81,15 @@ function sessionsInEcdBuffer(buf) {
   }
 }
 
+function auditLogInEcdBuffer(buf) {
+  try {
+    const db = JSON.parse(buf.toString("utf8"));
+    return Array.isArray(db?.auditLog) ? db.auditLog : [];
+  } catch {
+    return [];
+  }
+}
+
 async function exportMongoCollections(deps = {}, ecdBytes = null) {
   const list =
     deps.listCollection || ((name) => dbAdapter.list(name));
@@ -90,6 +103,14 @@ async function exportMongoCollections(deps = {}, ecdBytes = null) {
   } else {
     sessions = ecdBytes ? sessionsInEcdBuffer(ecdBytes) : [];
   }
+  let auditLog;
+  if (typeof deps.listAuditLog === "function") {
+    auditLog = await deps.listAuditLog();
+  } else if (auditLogUseExternalStore()) {
+    auditLog = (await exportAllAuditEntries()) || [];
+  } else {
+    auditLog = ecdBytes ? auditLogInEcdBuffer(ecdBytes) : [];
+  }
   return {
     "mongo/users.json": Buffer.from(JSON.stringify(users ?? [], null, 2), "utf8"),
     "mongo/questions.json": Buffer.from(
@@ -97,6 +118,7 @@ async function exportMongoCollections(deps = {}, ecdBytes = null) {
       "utf8"
     ),
     "mongo/sessions.json": Buffer.from(JSON.stringify(sessions ?? [], null, 2), "utf8"),
+    "mongo/auditLog.json": Buffer.from(JSON.stringify(auditLog ?? [], null, 2), "utf8"),
   };
 }
 

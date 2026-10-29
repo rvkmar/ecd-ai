@@ -221,7 +221,16 @@ function verifyRestoreFourPoints(args) {
     materialFileText: fileText,
   };
 
-  const audit = ecd.auditLog || [];
+  let audit = ecd.auditLog || [];
+  const auditExport = path.join(args.mongoDir, "auditLog.json");
+  if ((!audit.length || !audit.some((a) => a.id === "audit-rehearsal-1")) && fs.existsSync(auditExport)) {
+    try {
+      const exported = JSON.parse(fs.readFileSync(auditExport, "utf8"));
+      if (Array.isArray(exported) && exported.length) audit = exported;
+    } catch {
+      // keep ecd.auditLog
+    }
+  }
   checks.auditLogIntact.ok = audit.some(
     (a) => a.id === "audit-rehearsal-1" && a.action === "lifecycle.transition"
   );

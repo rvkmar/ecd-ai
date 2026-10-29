@@ -58,9 +58,12 @@ describe("D107 backup inventory", () => {
     expect(ids).toContain("analysisArtefacts");
     expect(ids).toContain("users");
     expect(ids).toContain("sessions");
+    expect(ids).toContain("auditLog");
     expect(ids).toContain("presentationModels");
     const jobs = BACKUP_INVENTORY.find((r) => r.id === "calibrationJobs");
     expect(jobs.pathInArchive).toBe("ecd/db.json");
+    const audit = BACKUP_INVENTORY.find((r) => r.id === "auditLog");
+    expect(audit.pathInArchive).toBe("mongo/auditLog.json");
   });
 
   it("has an explicit reason on every excluded row", () => {
@@ -148,6 +151,9 @@ describe("D107 runFullBackup", () => {
     expect(ecd.analysisArtefacts[0].id).toBe("art1");
     const users = JSON.parse(opened.files["mongo/users.json"].toString("utf8"));
     expect(users[0].username).toBe("admin1");
+    expect(opened.files["mongo/auditLog.json"]).toBeTruthy();
+    const auditExport = JSON.parse(opened.files["mongo/auditLog.json"].toString("utf8"));
+    expect(Array.isArray(auditExport)).toBe(true);
     const manifest = JSON.parse(opened.files["manifest.json"].toString("utf8"));
     expect(manifest.inventory.length).toBe(BACKUP_INVENTORY.length);
   });

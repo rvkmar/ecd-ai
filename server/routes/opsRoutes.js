@@ -10,6 +10,7 @@ import { collectSystemStatus } from "../utils/systemStatus.js";
 import { evaluateOpsAlerts } from "../utils/opsAlerts.js";
 import { getSubmitStats } from "../utils/submitStats.js";
 import { isTenantScopedCollection } from "../utils/tenancyScope.js";
+import { queryAuditLog } from "../auditLog/auditRepository.js";
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -20,15 +21,17 @@ const canAdmin = authorizeRole(["admin"]);
 router.get("/alerts", canAdmin, async (_req, res) => {
   const status = await collectSystemStatus();
   const db = loadDB();
-  const payload = evaluateOpsAlerts(status, db.auditLog || []);
+  const auditLog = await queryAuditLog({}, { db });
+  const payload = evaluateOpsAlerts(status, auditLog);
   res.json(payload);
 });
 
 router.get("/health-summary", canAdmin, async (_req, res) => {
   const status = await collectSystemStatus();
   const db = loadDB();
-  const alerts = evaluateOpsAlerts(status, db.auditLog || []);
-  const recentAuthFailures = (db.auditLog || [])
+  const auditLog = await queryAuditLog({}, { db });
+  const alerts = evaluateOpsAlerts(status, auditLog);
+  const recentAuthFailures = auditLog
     .filter((e) => e.action === "auth.failure")
     .sort((a, b) => String(b.at).localeCompare(String(a.at)))
     .slice(0, 10);

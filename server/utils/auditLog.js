@@ -42,7 +42,7 @@ const JOB_STATUS_SET = new Set(CALIBRATION_JOB_STATUS);
  *   id?: string,
  * }} partial
  */
-function buildAuditEntry(partial = {}) {
+export function makeAuditEntry(partial = {}) {
   const actorIn = partial.actor !== undefined ? partial.actor : getAuditActor();
   const requestId =
     partial.requestId !== undefined ? partial.requestId : getAuditRequestId();
@@ -63,6 +63,10 @@ function buildAuditEntry(partial = {}) {
     detail: partial.detail && typeof partial.detail === "object" ? partial.detail : {},
     requestId: requestId || null,
   };
+}
+
+function buildAuditEntry(partial = {}) {
+  return makeAuditEntry(partial);
 }
 
 function pushTraitDiagnosticProceed(entries, collection, prev, row, before, after) {

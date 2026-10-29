@@ -12,8 +12,13 @@ import {
   applySaveAudits,
   auditBaseline,
   pushAuditEvent,
+  makeAuditEntry,
 } from "../../server/utils/auditLog.js";
 import { sessionsUseExternalStore } from "../../server/sessions/sessionBackend.js";
+import {
+  appendAuditEntries,
+  auditLogUseExternalStore,
+} from "../../server/auditLog/auditRepository.js";
 
 function dbFilePath() {
   return process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
@@ -274,6 +279,21 @@ function omitSessions(obj) {
   return copy;
 }
 
+function omitAuditLog(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
+  if (!Object.prototype.hasOwnProperty.call(obj, "auditLog")) return obj;
+  const copy = { ...obj };
+  delete copy.auditLog;
+  return copy;
+}
+
+function omitExternalCollections(obj) {
+  let next = obj;
+  if (sessionsUseExternalStore()) next = omitSessions(next);
+  if (auditLogUseExternalStore()) next = omitAuditLog(next);
+  return next;
+}
+
 function resealFullSnapshot(toWrite, ctx) {
   // Visible rows are the caller's objects. Clone those. Hidden rows were
   // taken from the previous snapshot and are not reachable by the caller.
@@ -333,6 +353,11 @@ export function loadDB() {
  * not import the audit module; a transition that is not logged is a
  * transition that did not happen (through this path).
  *
+ * When the audit store is external, new rows are upserted there and the
+ * `auditLog` key is omitted from the file. The JSON harness still writes
+ * the array. An async function with no await on the json/memory path runs
+ * synchronously until return, so existing un-awaited callers keep working.
+ *
  * The file is minified JSON. Pretty files still parse. exportDB stays
  * indented for the download helper; that string is not the on-disk file.
  *
@@ -340,7 +365,7 @@ export function loadDB() {
  * @param {{ skipAudit?: boolean, now?: Date | number | string }} [options]
  *   `now` stamps the crash-copy filename. Tests inject it. Production omits it.
  */
-export function saveDB(db, options = {}) {
+export async function saveDB(db, options = {}) {
   const file = dbFilePath();
   const ctx = getTenancyContext();
   const scoped = isScopedTenancy(ctx);
@@ -357,6 +382,7 @@ export function saveDB(db, options = {}) {
 
   let toWrite = scoped ? mergeScopedDbSave(previous, db, ctx) : db;
   const externalSessions = sessionsUseExternalStore();
+  const externalAudit = auditLogUseExternalStore();
   if (externalSessions) {
     // Session bytes stay in the session store. The audit diff must not
     // treat a hydrated array as the file's session collection, or a
@@ -372,7 +398,8 @@ export function saveDB(db, options = {}) {
   if (toWrite !== db && Array.isArray(toWrite.auditLog)) {
     db.auditLog = toWrite.auditLog;
   }
-  const diskWrite = externalSessions ? omitSessions(toWrite) : toWrite;
+  const pendingAudit = externalAudit && Array.isArray(toWrite.auditLog) ? [...toWrite.auditLog] : null;
+  const diskWrite = omitExternalCollections(toWrite);
   backupDB({ now: options.now });
   atomicWrite(file, JSON.stringify(diskWrite));
   const st = statOf(file);
@@ -393,6 +420,9 @@ export function saveDB(db, options = {}) {
       obj: auditBaseline(diskWrite),
     };
   }
+  if (pendingAudit?.length) {
+    await appendAuditEntries(pendingAudit);
+  }
 }
 
 /** Drop the previous-state cache after an out-of-band rewrite of the file. */
@@ -409,13 +439,19 @@ export function forgetDbCache() {
 /**
  * D101 — append one audit row for events outside the JSON entity save
  * path (auth failures, dbAdapter user/role/tenant changes).
+ * External audit store: upsert the row without rewriting db.json.
  *
  * @param {{ action: string, entity?: object, detail?: object, actor?: object }} partial
  */
-export function recordAuditEvent(partial) {
+export async function recordAuditEvent(partial) {
+  if (auditLogUseExternalStore()) {
+    const entry = makeAuditEntry(partial);
+    await appendAuditEntries([entry]);
+    return entry;
+  }
   const db = readRawDB();
   const entry = pushAuditEvent(db, partial);
-  saveDB(db, { skipAudit: true });
+  await saveDB(db, { skipAudit: true });
   return entry;
 }
 

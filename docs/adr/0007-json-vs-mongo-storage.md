@@ -22,7 +22,7 @@ production**.
 
 | Path | Mechanism | What lives there in practice |
 |---|---|---|
-| **ECD file store** | `loadDB` / `saveDB` (`src/utils/db-server.js`), path `ECD_DB_FILE` (compose: `/data/db.json`) | Competency / evidence / task models, items, sessions, tasks, students, announcements, `calibrationJobs`, `analysisArtefacts`, `auditLog`, composite libraries, policies, … — almost all ECD routes |
+| **ECD file store** | `loadDB` / `saveDB` (`src/utils/db-server.js`), path `ECD_DB_FILE` (compose: `/data/db.json`) | Competency / evidence / task models, items, tasks, students, announcements, `calibrationJobs`, `analysisArtefacts`, composite libraries, policies, … — almost all ECD routes. Production keeps `sessions` and `auditLog` in Mongo (see below). |
 | **dbAdapter** | `DB_MODE` = `mongo` (default) or `json` (`./data/db.json`) | Users (auth/roster) and questions; optional Mongo models via `ensureMongoModel` |
 
 Compose already pins `NODE_ENV=production` and `DB_MODE=mongo`, and still mounts
@@ -115,11 +115,11 @@ are cutover / D107–D109 work guided by this ADR.
 
 ### Audit (D101–D105)
 
-- `auditLog` today appends via the `saveDB` chokepoint into the ECD JSON file.
-- Production retention and queryability after cutover mean `auditLog` must
-  land in Mongo with the same append-only semantics — plan that in the
-  migration rehearsal, do not leave audit on a disposable file while claiming
-  Mongo production.
+- `auditLog` appends via the `saveDB` chokepoint. Production and
+  `DB_MODE=mongo` store rows in the Mongo `auditLog` collection
+  (`server/auditLog/`, migration `012-auditlog-to-mongo`). The JSON harness
+  used by Vitest and `npm run dev` still keeps the array in the ECD file.
+- Optional `AUDITLOG_RETENTION_DAYS` TTL is off by default.
 - Admin-global (not tenant-scoped) read policy is unchanged.
 
 ### Ops / threat model
