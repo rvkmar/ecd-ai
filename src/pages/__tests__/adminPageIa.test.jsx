@@ -48,6 +48,9 @@ vi.mock("@/components/itemBank/ItemBankAdmin", () => ({
 vi.mock("@/components/reports/AnalyticsReports", () => ({
   default: () => <div>Reports dashboard</div>,
 }));
+vi.mock("@/components/reports/CumulativeEcdReport", () => ({
+  default: () => <div>Curriculum cumulative</div>,
+}));
 vi.mock("@/components/reports/StudentModelRecordPanel", () => ({
   default: () => <div>Student model record</div>,
 }));

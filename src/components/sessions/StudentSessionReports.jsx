@@ -4,6 +4,7 @@ import { useAuth } from "@/auth/AuthProvider";
 import { apiFetch, apiErrorMessage } from "@/api/apiClient";
 import SessionReport from "./SessionReport";
 import StudentModelRecordPanel from "@/components/reports/StudentModelRecordPanel";
+import CumulativeEcdReport from "@/components/reports/CumulativeEcdReport";
 import { normalizeSessionStatus } from "@/utils/sessionStatus";
 import { sessionResponseCount } from "@/utils/sessionPlay";
 
@@ -71,10 +72,11 @@ export default function StudentSessionReports() {
   return (
     <div className="space-y-4">
       <StudentModelRecordPanel self />
+      <CumulativeEcdReport kind="student" />
       <div>
-        <h2 className="text-xl font-semibold text-slate-900">My performance</h2>
+        <h2 className="text-xl font-semibold text-slate-900">Session reports</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Open a report for any session you have submitted.
+          Open a report for any session you have submitted. The cumulative report above pools those sessions.
         </p>
       </div>
 

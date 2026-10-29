@@ -8,7 +8,7 @@
 // The payload is student-visible. It never includes answer keys,
 // isCorrect flags, or keyedOptionId.
 
-const BANDS = [
+export const BANDS = [
   { id: "secure", min: 0.85, label: "Secure" },
   { id: "mostly-secure", min: 0.7, label: "Mostly secure" },
   { id: "developing", min: 0.5, label: "Developing" },
@@ -35,26 +35,26 @@ export function roundStat(n, digits = 3) {
   return Math.round(n * f) / f;
 }
 
-function mean(xs) {
+export function bandFor(p) {
+  if (!Number.isFinite(p)) return null;
+  return BANDS.find((b) => p >= b.min) || BANDS[BANDS.length - 1];
+}
+
+export function mean(xs) {
   if (!xs.length) return null;
   return xs.reduce((a, b) => a + b, 0) / xs.length;
 }
 
-function sampleSd(xs) {
+export function sampleSd(xs) {
   if (xs.length < 2) return null;
   const m = mean(xs);
   const v = xs.reduce((s, x) => s + (x - m) ** 2, 0) / (xs.length - 1);
   return Math.sqrt(v);
 }
 
-function proportionSe(p, n) {
+export function proportionSe(p, n) {
   if (!Number.isFinite(p) || n < 1) return null;
   return Math.sqrt((p * (1 - p)) / n);
-}
-
-function bandFor(p) {
-  if (!Number.isFinite(p)) return null;
-  return BANDS.find((b) => p >= b.min) || BANDS[BANDS.length - 1];
 }
 
 function indexById(rows) {
@@ -63,6 +63,15 @@ function indexById(rows) {
     if (row && row.id) map[row.id] = row;
   }
   return map;
+}
+
+export function ecdIndexes(db) {
+  return {
+    items: indexById(db.items),
+    tasks: indexById(db.tasks),
+    taskModels: indexById(db.taskModels),
+    evidenceModels: indexById(db.evidenceModels),
+  };
 }
 
 function optionLabel(item, response) {
@@ -157,7 +166,7 @@ function evidenceModelIdFor(item, task, taskModel) {
   return task?.evidenceModelId || null;
 }
 
-function interpretRow(name, p, n, kind) {
+export function interpretRow(name, p, n, kind) {
   const label = name || `this ${kind}`;
   if (!Number.isFinite(p) || n < 1) {
     return `Not enough scored responses to interpret ${label}.`;
@@ -243,7 +252,7 @@ function aggregate(rows, key, nameOf) {
   }).sort((a, b) => (b.percent ?? -1) - (a.percent ?? -1) || a.name.localeCompare(b.name));
 }
 
-function occasionPoints(records) {
+export function occasionPoints(records) {
   const points = [];
   for (const record of records || []) {
     const history = Array.isArray(record.history) ? record.history : [];
@@ -270,18 +279,10 @@ function occasionPoints(records) {
   return points;
 }
 
-export function buildStudentEcdReport(db, session, options = {}) {
-  const student = options.student || null;
-  const measurement = options.measurement || { stopped: null, attributeProfile: [] };
-  const studentModelRecords = options.studentModelRecords || [];
-
-  const items = indexById(db.items);
-  const tasks = indexById(db.tasks);
-  const taskModels = indexById(db.taskModels);
-  const evidenceModels = indexById(db.evidenceModels);
-
+export function collectSessionItemRows(db, session, indexes) {
+  const { items, tasks, taskModels, evidenceModels } = indexes || ecdIndexes(db);
   const responses = Array.isArray(session?.responses) ? session.responses : [];
-  const itemRows = responses.map((response, index) => {
+  return responses.map((response, index) => {
     const item = items[response.itemId] || null;
     const task = tasks[response.taskId] || null;
     const taskModelId = item?.taskModelId || task?.taskModelId || null;
@@ -294,6 +295,9 @@ export function buildStudentEcdReport(db, session, options = {}) {
     const observationId = response.observationId || item?.observationId || null;
     return {
       index: index + 1,
+      sessionId: session?.id || null,
+      studentId: session?.studentId || null,
+      finishedAt: session?.finishedAt || session?.updatedAt || session?.startedAt || null,
       itemId: response.itemId || null,
       itemName: item?.name || response.itemId || `Item ${index + 1}`,
       excerpt: stimulusExcerpt(item),
@@ -316,6 +320,13 @@ export function buildStudentEcdReport(db, session, options = {}) {
       topic: item?.metadata?.topic || null,
     };
   });
+}
+
+export function buildStudentEcdReport(db, session, options = {}) {
+  const student = options.student || null;
+  const measurement = options.measurement || { stopped: null, attributeProfile: [] };
+  const studentModelRecords = options.studentModelRecords || [];
+  const itemRows = collectSessionItemRows(db, session, options.indexes);
 
   const scored = itemRows.filter((r) => Number.isFinite(r.score));
   const n = itemRows.length;

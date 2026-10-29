@@ -29,6 +29,9 @@ vi.mock("../../components/sessions/SessionBuilder", () => ({
 vi.mock("../../components/reports/AnalyticsReports", () => ({
   default: () => <div>Reports dashboard</div>,
 }));
+vi.mock("../../components/reports/CumulativeEcdReport", () => ({
+  default: () => <div>Cumulative ECD report</div>,
+}));
 vi.mock("@/components/reports/StudentModelRecordPanel", () => ({
   default: () => <div>Student model record</div>,
 }));

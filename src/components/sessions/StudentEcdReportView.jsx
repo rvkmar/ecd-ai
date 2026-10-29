@@ -15,7 +15,7 @@ function pct(n) {
   return `${(Number(n) * 100).toFixed(1)}%`;
 }
 
-function Band({ id, label }) {
+export function Band({ id, label }) {
   if (!id) return "—";
   return <span className={`ecd-band ${id}`}>{label || id}</span>;
 }

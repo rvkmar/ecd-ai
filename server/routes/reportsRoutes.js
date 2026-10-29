@@ -8,7 +8,7 @@ import { sessionMeasurementReport } from "../delivery/sessionReportMeasurement.j
 import { taskIdsIncludingDelivered } from "../delivery/activitySelection.js";
 import { studentForbiddenFromSession } from "../../src/utils/sessionPlay.js";
 import { assertCallerMayAccessDistrict } from "../utils/tenancyScope.js";
-import { TenancyError } from "../utils/tenancyContext.js";
+import { TenancyError, runWithTenancy } from "../utils/tenancyContext.js";
 import {
   MIN_CELL_SIZE,
   namedAggregateScope,
@@ -19,6 +19,13 @@ import {
 import { resolveStudentIdentity } from "../../src/utils/studentModelRecord.js";
 import { queryStudentModelRecords } from "../studentModelRecords/studentModelRecordRepository.js";
 import { buildStudentEcdReport } from "../delivery/studentEcdReport.js";
+import {
+  buildStudentCumulativeReport,
+  buildTeacherCumulativeReport,
+  buildDistrictCumulativeReport,
+  scopedStudentsFor,
+  sessionsForStudent,
+} from "../delivery/cumulativeEcdReport.js";
 
 
 const router = express.Router();
@@ -991,6 +998,196 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, async (req, r
   districtReport.minCellSize = MIN_CELL_SIZE;
 
   res.json(districtReport);
+});
+
+const UNSCOPED_DB = Object.freeze({
+  role: "admin",
+  username: "",
+  viewScope: null,
+  districtId: null,
+  schoolId: null,
+  unscoped: true,
+});
+
+function loadDbForCumulative() {
+  return runWithTenancy(UNSCOPED_DB, () => loadDB());
+}
+
+function staffMayReadStudent(user, identity) {
+  if (!user || !identity) return false;
+  if (user.role === "admin") return true;
+  if (!identity.districtId && !identity.schoolId) {
+    return user.role === "district" || user.role === "teacher";
+  }
+  const did = user.districtId;
+  if (!did || !identity.districtId || String(did) !== String(identity.districtId)) return false;
+  if (user.role === "district") return true;
+  if (user.role === "teacher") {
+    const sid = user.schoolId;
+    if (sid && identity.schoolId) return String(sid) === String(identity.schoolId);
+    return true;
+  }
+  return false;
+}
+
+function studentRowFromIdentity(db, identity, fallbackId) {
+  const aliases = new Set((identity?.identityAliases || []).map(String));
+  if (identity?.canonicalStudentId) aliases.add(String(identity.canonicalStudentId));
+  if (fallbackId) aliases.add(String(fallbackId));
+  const row = (db.students || []).find(
+    (s) =>
+      s &&
+      (aliases.has(String(s.id)) ||
+        aliases.has(String(s.username)) ||
+        aliases.has(String(s.userId)))
+  );
+  if (row) return row;
+  return {
+    id: identity?.canonicalStudentId || fallbackId,
+    name: identity?.displayName || fallbackId,
+    districtId: identity?.districtId || null,
+    schoolId: identity?.schoolId || null,
+  };
+}
+
+// ------------------------------
+// GET /api/reports/cumulative/student
+// Student: own history only (query studentId ignored). Staff: ?studentId= in tenancy.
+// ------------------------------
+router.get("/cumulative/student", async (req, res) => {
+  const role = req.user?.role;
+  const db = loadDbForCumulative();
+  db.sessions = await querySessions(db, { unscoped: true });
+
+  let requestedId;
+  if (role === "student") {
+    requestedId = req.user.username || req.user.id;
+  } else if (role === "admin" || role === "district" || role === "teacher") {
+    requestedId = req.query.studentId;
+    if (!requestedId) {
+      return res.status(400).json({ error: "studentId is required" });
+    }
+  } else {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const identity = resolveStudentIdentity(requestedId, db);
+  if (role === "student") {
+    const self = resolveStudentIdentity(req.user.username || req.user.id, db);
+    const selfKeys = new Set(self.identityAliases || []);
+    const overlap = (identity.identityAliases || []).some((alias) => selfKeys.has(String(alias)));
+    if (!overlap) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+  } else if (!staffMayReadStudent(req.user, identity)) {
+    return res.status(403).json({ error: "Forbidden", code: "TENANCY_REQUIRED" });
+  }
+
+  const student = studentRowFromIdentity(db, identity, requestedId);
+  const sessions = sessionsForStudent(db.sessions || [], db, student, requestedId);
+  const studentModelRecords = await queryStudentModelRecords(db, { identity });
+  const report = buildStudentCumulativeReport(db, { student, sessions, studentModelRecords });
+  report.scope = namedAggregateScope(req, { kind: "student-cumulative", studentId: student.id });
+  res.json(report);
+});
+
+// ------------------------------
+// GET /api/reports/cumulative/teacher
+// Teacher classroom (named roster). District/admin may pass ?teacherId=.
+// Students: 403.
+// ------------------------------
+router.get("/cumulative/teacher", canViewTeacherReports, async (req, res) => {
+  const db = loadDbForCumulative();
+  db.sessions = await querySessions(db, { unscoped: true });
+  const role = req.user?.role;
+  const teacherUser = {
+    role: "teacher",
+    username: role === "teacher" ? (req.user.username || req.user.id) : (req.query.teacherId || req.user.username),
+    id: req.user.id,
+    districtId: req.user.districtId || null,
+    schoolId: req.user.schoolId || null,
+  };
+  if (role === "teacher") {
+    teacherUser.username = req.user.username || req.user.id;
+    teacherUser.districtId = req.user.districtId || null;
+    teacherUser.schoolId = req.user.schoolId || null;
+  } else if (req.query.teacherId) {
+    const listed = (db.users || []).find(
+      (u) => u && u.role === "teacher" && (u.username === req.query.teacherId || u.id === req.query.teacherId)
+    );
+    teacherUser.username = listed?.username || req.query.teacherId;
+    teacherUser.districtId = listed?.districtId || listed?.profile?.districtId || req.user.districtId || null;
+    teacherUser.schoolId = listed?.schoolId || listed?.profile?.schoolId || req.user.schoolId || null;
+    if (role !== "admin") {
+      const callerDid = req.user.districtId;
+      if (callerDid && teacherUser.districtId && String(callerDid) !== String(teacherUser.districtId)) {
+        return res.status(403).json({ error: "Teacher is outside caller district", code: "TENANCY_REQUIRED" });
+      }
+    }
+  }
+
+  const students = scopedStudentsFor(
+    role === "teacher" ? req.user : { ...req.user, role: "teacher", schoolId: teacherUser.schoolId, districtId: teacherUser.districtId, username: teacherUser.username },
+    db
+  );
+  const aliases = new Set();
+  for (const student of students) {
+    const identity = resolveStudentIdentity(student.id, db);
+    for (const alias of identity.identityAliases || []) aliases.add(String(alias));
+    aliases.add(String(student.id));
+  }
+  const sessions = (db.sessions || []).filter(
+    (s) => aliases.has(String(s.studentId)) || (s.studentIds || []).some((id) => aliases.has(String(id)))
+  );
+  const report = buildTeacherCumulativeReport(db, { teacher: teacherUser, students, sessions });
+  report.scope = namedAggregateScope(req, { kind: "teacher-cumulative", teacherId: teacherUser.username });
+  res.json(report);
+});
+
+// ------------------------------
+// GET /api/reports/cumulative/district
+// District/admin curriculum. Named students omitted. MIN_CELL_SIZE on cells.
+// Teacher and student: 403.
+// ------------------------------
+router.get("/cumulative/district", authorizeRole(["admin", "district"]), async (req, res) => {
+  const db = loadDbForCumulative();
+  db.sessions = await querySessions(db, { unscoped: true });
+  let districtId = null;
+  if (req.user.role === "district") {
+    districtId = req.user.districtId || null;
+    if (!districtId) {
+      return res.status(403).json({ error: "District id missing on caller", code: "TENANCY_REQUIRED" });
+    }
+  } else if (req.query.districtId) {
+    districtId = req.query.districtId;
+  }
+
+  if (districtId && req.user.role !== "admin") {
+    try {
+      assertCallerMayAccessDistrict(districtId);
+    } catch (err) {
+      if (err instanceof TenancyError || err?.code === "TENANCY_REQUIRED") {
+        return res.status(403).json({ error: err.message, code: err.code });
+      }
+      throw err;
+    }
+  }
+
+  const students = districtId
+    ? (db.students || []).filter((s) => s && s.districtId === districtId)
+    : scopedStudentsFor(req.user, db);
+  const aliases = new Set();
+  for (const student of students) {
+    const identity = resolveStudentIdentity(student.id, db);
+    for (const alias of identity.identityAliases || []) aliases.add(String(alias));
+    aliases.add(String(student.id));
+  }
+  const sessions = (db.sessions || []).filter(
+    (s) => aliases.has(String(s.studentId)) || (s.studentIds || []).some((id) => aliases.has(String(id)))
+  );
+  const report = buildDistrictCumulativeReport(db, { districtId, students, sessions });
+  report.scope = namedAggregateScope(req, { kind: "district-cumulative", districtId });
+  res.json(report);
 });
 
 // ------------------------------
