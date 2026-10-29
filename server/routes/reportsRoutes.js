@@ -25,6 +25,7 @@ import {
   buildDistrictCumulativeReport,
   scopedStudentsFor,
   sessionsForStudent,
+  comparisonStudentsFor,
 } from "../delivery/cumulativeEcdReport.js";
 
 
@@ -1086,7 +1087,14 @@ router.get("/cumulative/student", async (req, res) => {
   const student = studentRowFromIdentity(db, identity, requestedId);
   const sessions = sessionsForStudent(db.sessions || [], db, student, requestedId);
   const studentModelRecords = await queryStudentModelRecords(db, { identity });
-  const report = buildStudentCumulativeReport(db, { student, sessions, studentModelRecords });
+  const comparisonStudents = comparisonStudentsFor(db, student);
+  const report = buildStudentCumulativeReport(db, {
+    student,
+    sessions,
+    studentModelRecords,
+    comparisonStudents,
+    comparisonSessions: db.sessions || [],
+  });
   report.scope = namedAggregateScope(req, { kind: "student-cumulative", studentId: student.id });
   res.json(report);
 });

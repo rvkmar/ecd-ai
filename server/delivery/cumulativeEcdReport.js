@@ -30,7 +30,7 @@ function isArchived(session) {
   return normalizeSessionStatus(session?.status) === "archived";
 }
 
-export function isClosedForCumulative(session) {
+function isClosedForCumulative(session) {
   if (!session || isArchived(session)) return false;
   if (session.autoFinished || session.isCompleted) return true;
   const status = normalizeSessionStatus(session.status);
@@ -44,7 +44,7 @@ function aliasesOf(identity, fallbackId) {
   return aliases;
 }
 
-export function sessionMatchesAliases(session, aliases) {
+function sessionMatchesAliases(session, aliases) {
   if (!session || !aliases || aliases.size === 0) return false;
   if (session.studentId && aliases.has(String(session.studentId))) return true;
   return (session.studentIds || []).some((id) => id != null && aliases.has(String(id)));
@@ -113,6 +113,85 @@ function dateSpan(sessions) {
     from: times[0] ? times[0].slice(0, 10) : null,
     to: times.length ? times[times.length - 1].slice(0, 10) : null,
   };
+}
+
+/**
+ * Midrank percentile rank: 100 * (n_below + 0.5 * n_tied) / N.
+ * Includes the examinee in N. Returns 0–100.
+ */
+function percentileRank(value, sample) {
+  const xs = (sample || []).filter((x) => Number.isFinite(x));
+  if (!Number.isFinite(value) || xs.length === 0) return null;
+  let below = 0;
+  let equal = 0;
+  for (const x of xs) {
+    if (x < value) below += 1;
+    else if (x === value) equal += 1;
+  }
+  return (100 * (below + 0.5 * equal)) / xs.length;
+}
+
+/** R type-7 / Excel PERCENTILE: linear interpolation on the sorted sample. */
+function quantile(sample, p) {
+  const xs = (sample || []).filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+  if (!xs.length || !Number.isFinite(p) || p < 0 || p > 1) return null;
+  if (xs.length === 1) return xs[0];
+  const h = (xs.length - 1) * p;
+  const i = Math.floor(h);
+  const f = h - i;
+  if (i >= xs.length - 1) return xs[xs.length - 1];
+  return xs[i] + f * (xs[i + 1] - xs[i]);
+}
+
+function quartileFromRank(pr) {
+  if (!Number.isFinite(pr)) return null;
+  if (pr <= 25) return { id: "q1", label: "Bottom quartile" };
+  if (pr <= 50) return { id: "q2", label: "Second quartile" };
+  if (pr <= 75) return { id: "q3", label: "Third quartile" };
+  return { id: "q4", label: "Top quartile" };
+}
+
+function distributionPercentiles(sample) {
+  const xs = (sample || []).filter((x) => Number.isFinite(x));
+  if (!xs.length) {
+    return { p10: null, p25: null, p50: null, p75: null, p90: null, iqr: null };
+  }
+  const p25 = quantile(xs, 0.25);
+  const p75 = quantile(xs, 0.75);
+  const asPct = (v) => (v == null ? null : roundStat(v * 100, 1));
+  return {
+    p10: asPct(quantile(xs, 0.1)),
+    p25: asPct(p25),
+    p50: asPct(quantile(xs, 0.5)),
+    p75: asPct(p75),
+    p90: asPct(quantile(xs, 0.9)),
+    iqr: asPct(Number.isFinite(p25) && Number.isFinite(p75) ? p75 - p25 : null),
+  };
+}
+
+function rankFields(value, sample) {
+  const pr = roundStat(percentileRank(value, sample), 1);
+  const quartile = quartileFromRank(pr);
+  return {
+    percentileRank: pr,
+    quartile: quartile?.id || null,
+    quartileLabel: quartile?.label || null,
+  };
+}
+
+function emptyPercentiles() {
+  return { p10: null, p25: null, p50: null, p75: null, p90: null, iqr: null };
+}
+
+export function comparisonStudentsFor(db, student) {
+  const all = db.students || [];
+  if (student?.classId) {
+    return all.filter((s) => s && s.classId === student.classId);
+  }
+  if (student?.districtId) {
+    return all.filter((s) => s && (s.districtId === student.districtId || isUnstampedStudent(s)));
+  }
+  return all.filter((s) => s && isUnstampedStudent(s));
 }
 
 function scoreStats(scores) {
@@ -267,6 +346,7 @@ function personMeanRows(itemRows, key) {
           : proportionSe(p, n)),
         band: band?.id || null,
         bandLabel: band?.label || null,
+        percentiles: distributionPercentiles(target.personMeans),
       };
     })
     .sort((a, b) => (a.percent ?? 99) - (b.percent ?? 99) || a.name.localeCompare(b.name));
@@ -420,6 +500,7 @@ function suppressGroupRow(row, { apply, minCell }) {
       se: null,
       band: null,
       bandLabel: null,
+      percentiles: emptyPercentiles(),
       suppressed: true,
     };
     suppressed.interpretation = interpretGroupRow(suppressed, "district");
@@ -487,7 +568,7 @@ function studentPersonRows(db, student, itemRows) {
   return annotatePerson(itemRows, identity.canonicalStudentId, aliases);
 }
 
-function interpretStudentOverall({ nScored, percent, nSessions, span, competencies }) {
+function interpretStudentOverall({ nScored, percent, nSessions, span, competencies, norms }) {
   if (nScored < 1) {
     return {
       headline: "No scored responses yet across closed sessions.",
@@ -500,7 +581,12 @@ function interpretStudentOverall({ nScored, percent, nSessions, span, competenci
   const headline = `${band.label} cumulative performance (${pct}% on ${nScored} scored ${nScored === 1 ? "response" : "responses"} in ${nSessions} ${nSessions === 1 ? "session" : "sessions"}).`;
   const strengths = competencies.filter((c) => c.percent != null && c.percent >= 0.7).map((c) => c.name);
   const focus = competencies.filter((c) => c.percent != null && c.percent < 0.7).map((c) => c.name);
-  let body = `Mean score across closed sessions ${range} is ${pct}% on the 0–1 scale. Bands describe this examinee's own history, not a class rank.`;
+  let body = `Mean score across closed sessions ${range} is ${pct}% on the 0–1 scale. Bands describe this examinee's own history. Percentile rank is the share of the comparison group scoring below this mean, using the midrank formula.`;
+  if (norms?.suppressed) {
+    body += ` Percentile rank is omitted because the comparison group is smaller than n = ${MIN_CELL_SIZE}.`;
+  } else if (Number.isFinite(norms?.percentileRank)) {
+    body += ` Percentile rank is ${norms.percentileRank} (${norms.quartileLabel || "ungrouped"}) among ${norms.n} ${norms.n === 1 ? "student" : "students"} in this ${norms.group || "group"}.`;
+  }
   if (strengths.length && focus.length) {
     body += ` Strengths: ${strengths.join(", ")}. Focus: ${focus.join(", ")}.`;
   } else if (strengths.length) {
@@ -531,7 +617,13 @@ function studentNextSteps(competencies) {
   return steps;
 }
 
-export function buildStudentCumulativeReport(db, { student, sessions, studentModelRecords = [] } = {}) {
+export function buildStudentCumulativeReport(db, {
+  student,
+  sessions,
+  studentModelRecords = [],
+  comparisonStudents = [],
+  comparisonSessions = [],
+} = {}) {
   const closed = (sessions || []).filter(isClosedForCumulative);
   const rawRows = collectForSessions(db, closed);
   const itemRows = student ? studentPersonRows(db, student, rawRows) : rawRows;
@@ -541,8 +633,77 @@ export function buildStudentCumulativeReport(db, { student, sessions, studentMod
   const evidence = studentAggregate(itemRows, "evidenceModelId");
   const tasks = studentAggregate(itemRows, "taskId");
   const taskModels = studentAggregate(itemRows, "taskModelId");
-  const strengths = competencies.filter((c) => c.percent != null && c.percent >= 0.7).map((c) => c.name);
-  const focus = competencies.filter((c) => c.percent != null && c.percent < 0.7).map((c) => c.name);
+
+  const peers = comparisonStudents.length ? comparisonStudents : (student ? [student] : []);
+  const peerClosed = (comparisonSessions.length ? comparisonSessions : closed).filter(isClosedForCumulative);
+  const indexes = ecdIndexes(db);
+  const peerMeans = [];
+  const meansByKey = {
+    competencyId: new Map(),
+    evidenceModelId: new Map(),
+    taskId: new Map(),
+    taskModelId: new Map(),
+  };
+  const pushMeans = (map, rows) => {
+    for (const row of rows) {
+      if (!Number.isFinite(row.mean)) continue;
+      if (!map.has(row.id)) map.set(row.id, []);
+      map.get(row.id).push(row.mean);
+    }
+  };
+  for (const peer of peers) {
+    const identity = identityForStudentRow(db, peer, peer.id);
+    const personSessions = sessionsForStudent(peerClosed, db, peer, peer.id);
+    const personRows = [];
+    for (const session of personSessions) {
+      personRows.push(
+        ...collectSessionItemRows(db, session, indexes).map((row) => ({
+          ...stripKeys(row),
+          canonicalStudentId: identity.canonicalStudentId,
+          studentId: peer.id,
+        }))
+      );
+    }
+    const personStats = overallFromRows(personRows);
+    if (Number.isFinite(personStats.mean)) peerMeans.push(personStats.mean);
+    pushMeans(meansByKey.competencyId, studentAggregate(personRows, "competencyId"));
+    pushMeans(meansByKey.evidenceModelId, studentAggregate(personRows, "evidenceModelId"));
+    pushMeans(meansByKey.taskId, studentAggregate(personRows, "taskId"));
+    pushMeans(meansByKey.taskModelId, studentAggregate(personRows, "taskModelId"));
+  }
+
+  const nGroup = peerMeans.length;
+  const suppressed = nGroup > 0 && nGroup < MIN_CELL_SIZE;
+  const group = student?.classId ? "class" : student?.districtId ? "district" : "group";
+  const ranks = suppressed ? { percentileRank: null, quartile: null, quartileLabel: null } : rankFields(overviewBase.mean, peerMeans);
+  const norms = {
+    group,
+    groupId: student?.classId || student?.districtId || null,
+    n: suppressed ? null : nGroup,
+    suppressed,
+    ...ranks,
+    percentiles: suppressed ? emptyPercentiles() : distributionPercentiles(peerMeans),
+  };
+
+  const withPeerRank = (rows, byId) => rows.map((row) => {
+    const sample = byId.get(row.id) || [];
+    const n = sample.length;
+    const cellSuppressed = n > 0 && n < MIN_CELL_SIZE;
+    const extra = cellSuppressed ? { percentileRank: null, quartile: null, quartileLabel: null } : rankFields(row.mean, sample);
+    const interpretation = cellSuppressed
+      ? `${row.interpretation} Percentile rank is omitted (n < ${MIN_CELL_SIZE} in the comparison group).`
+      : Number.isFinite(extra.percentileRank)
+        ? `${row.interpretation} Percentile rank ${extra.percentileRank} (${extra.quartileLabel}) among ${n} ${n === 1 ? "student" : "students"}.`
+        : row.interpretation;
+    return { ...row, ...extra, nGroup: cellSuppressed ? null : n, interpretation };
+  });
+
+  const rankedCompetencies = withPeerRank(competencies, meansByKey.competencyId);
+  const rankedEvidence = withPeerRank(evidence, meansByKey.evidenceModelId);
+  const rankedTasks = withPeerRank(tasks, meansByKey.taskId);
+  const rankedTaskModels = withPeerRank(taskModels, meansByKey.taskModelId);
+  const strengths = rankedCompetencies.filter((c) => c.percent != null && c.percent >= 0.7).map((c) => c.name);
+  const focus = rankedCompetencies.filter((c) => c.percent != null && c.percent < 0.7).map((c) => c.name);
   const guideNotes = competencies
     .map((c) => {
       const resolved = resolveCompetency(db, c.id);
@@ -565,22 +726,27 @@ export function buildStudentCumulativeReport(db, { student, sessions, studentMod
       nStudents: 1,
       from: span.from,
       to: span.to,
+      percentileRank: norms.percentileRank,
+      quartile: norms.quartile,
+      quartileLabel: norms.quartileLabel,
     },
+    norms,
     interpretation: interpretStudentOverall({
       nScored: overviewBase.nScored,
       percent: overviewBase.percent,
       nSessions: closed.length,
       span,
-      competencies,
+      competencies: rankedCompetencies,
+      norms,
     }),
-    competencies,
-    evidence,
-    tasks,
-    taskModels,
+    competencies: rankedCompetencies,
+    evidence: rankedEvidence,
+    tasks: rankedTasks,
+    taskModels: rankedTaskModels,
     sessions: sessionSummaries(closed, itemRows),
     strengths,
     focus,
-    nextSteps: studentNextSteps(competencies),
+    nextSteps: studentNextSteps(rankedCompetencies),
     guideNotes,
     occasions: occasionPoints(studentModelRecords),
   };
@@ -608,6 +774,15 @@ function studentRoster(db, students, sessions, itemRows) {
       strongestCompetency: strongest ? { id: strongest.id, name: strongest.name, percentDisplay: strongest.percentDisplay, band: strongest.band } : null,
     };
   }).sort((a, b) => (a.percent ?? 99) - (b.percent ?? 99) || String(a.name).localeCompare(String(b.name)));
+}
+
+function attachRosterRanks(studentsTable) {
+  const means = (studentsTable || []).map((row) => row.mean).filter((x) => Number.isFinite(x));
+  return (studentsTable || []).map((row) => ({ ...row, ...rankFields(row.mean, means) }));
+}
+
+function personMeansFromRoster(studentsTable) {
+  return (studentsTable || []).map((row) => row.mean).filter((x) => Number.isFinite(x));
 }
 
 function classroomFocus(competencies, evidence, tasks, nStudents) {
@@ -656,7 +831,7 @@ function interpretTeacherOverall({ nStudents, nSessions, percent, competencies }
   const band = bandFor(percent);
   const focus = competencies.filter((c) => (c.nFocus || 0) > 0 || (c.percent != null && c.percent < 0.7));
   const headline = `${band?.label || "Unscored"} classroom performance (${pct == null ? "—" : `${pct}%`} mean across ${nStudents} ${nStudents === 1 ? "student" : "students"} in ${nSessions} closed ${nSessions === 1 ? "session" : "sessions"}).`;
-  let body = "Each competency row is the mean of per-student means, so one heavily tested student does not dominate the class picture. Named students are this teacher's roster, not a public aggregate.";
+  let body = "Each competency row is the mean of per-student means, so one heavily tested student does not dominate the class picture. Named students are this teacher's roster, not a public aggregate. Percentile rank is the midrank share of classmates scoring below that student.";
   if (focus.length) {
     body += ` Classroom focus: ${focus.map((c) => c.name).join(", ")}.`;
   } else {
@@ -689,8 +864,9 @@ export function buildTeacherCumulativeReport(db, { teacher = null, students = []
   const taskModels = attachTeacherInterpretations(personMeanRows(itemRows, "taskModelId"));
   const overviewBase = overallFromRows(itemRows);
   const span = dateSpan(closed);
-  const studentsTable = studentRoster(db, students, closed, itemRows);
+  const studentsTable = attachRosterRanks(studentRoster(db, students, closed, itemRows));
   const focus = classroomFocus(competencies, evidence, tasks, students.length);
+  const classPercentiles = distributionPercentiles(personMeansFromRoster(studentsTable));
 
   return {
     kind: "teacher",
@@ -706,6 +882,7 @@ export function buildTeacherCumulativeReport(db, { teacher = null, students = []
       nStudents: students.length,
       from: span.from,
       to: span.to,
+      percentiles: classPercentiles,
     },
     interpretation: interpretTeacherOverall({
       nStudents: students.length,
@@ -737,6 +914,11 @@ function groupCells(students, itemRows, sessions, key) {
     const nSessions = (sessions || []).filter((s) => ids.has(s.studentId)).length;
     const stats = overallFromRows(rows);
     const suppressed = nStudents > 0 && nStudents < MIN_CELL_SIZE;
+    const memberMeans = members.map((student) => {
+      const identity = student.id;
+      const personRows = itemRows.filter((r) => r.studentId === identity || r.canonicalStudentId === identity);
+      return overallFromRows(personRows).mean;
+    }).filter((x) => Number.isFinite(x));
     if (suppressed) {
       return {
         id,
@@ -747,6 +929,7 @@ function groupCells(students, itemRows, sessions, key) {
         percentDisplay: null,
         band: null,
         bandLabel: null,
+        percentiles: emptyPercentiles(),
         suppressed: true,
       };
     }
@@ -759,6 +942,7 @@ function groupCells(students, itemRows, sessions, key) {
       percentDisplay: stats.percentDisplay,
       band: stats.band,
       bandLabel: stats.bandLabel,
+      percentiles: distributionPercentiles(memberMeans),
       suppressed: false,
     };
   }).sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -810,7 +994,7 @@ function interpretDistrictOverall({ nStudents, nSessions, percent, competencies,
   const band = bandFor(percent);
   const headline = `${where}: ${band?.label || "unscored"} cumulative performance (${pct == null ? "—" : `${pct}%`} mean; ${nStudents} students; ${nSessions} closed sessions).`;
   const focus = competencies.filter((c) => !c.suppressed && ((c.nFocus || 0) > 0 || (c.percent != null && c.percent < 0.7)));
-  let body = `Rows are means of per-student means. Named students are omitted. Counts below n = ${MIN_CELL_SIZE} are suppressed so a small cell cannot identify a child.`;
+  let body = `Rows are means of per-student means. Named students are omitted. P10–P90 are percentiles of those per-student means. Counts below n = ${MIN_CELL_SIZE} are suppressed so a small cell cannot identify a child.`;
   if (focus.length) {
     body += ` Curriculum should concentrate on ${focus.map((c) => c.name).join(", ")}.`;
   } else {
@@ -850,6 +1034,9 @@ export function buildDistrictCumulativeReport(db, {
   const overviewSuppressed = nStudents > 0 && nStudents < MIN_CELL_SIZE;
   const span = dateSpan(closed);
   const focus = curriculumFocus(competencies, evidence, tasks, overviewSuppressed ? null : nStudents);
+  const districtMeans = overviewSuppressed
+    ? []
+    : studentRoster(db, students, closed, itemRows).map((row) => row.mean).filter((x) => Number.isFinite(x));
 
   return {
     kind: "district",
@@ -873,6 +1060,7 @@ export function buildDistrictCumulativeReport(db, {
       from: span.from,
       to: span.to,
       suppressed: overviewSuppressed,
+      percentiles: overviewSuppressed ? emptyPercentiles() : distributionPercentiles(districtMeans),
     },
     interpretation: interpretDistrictOverall({
       nStudents: overviewSuppressed ? 0 : nStudents,

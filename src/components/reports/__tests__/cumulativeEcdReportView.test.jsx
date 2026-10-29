@@ -12,6 +12,7 @@ describe("CumulativeEcdReportView", () => {
           student: { id: "stu1", name: "Pat" },
           overview: { nSessions: 2, nScored: 4, percentDisplay: 50, from: "2026-10-01", to: "2026-10-20" },
           interpretation: { headline: "Developing cumulative performance.", body: "Uneven across competencies." },
+          norms: { group: "class", n: 12, suppressed: false, percentileRank: 62.5, quartile: "q3", quartileLabel: "Third quartile" },
           competencies: [{
             id: "c-name",
             name: "Plant part naming",
@@ -19,6 +20,7 @@ describe("CumulativeEcdReportView", () => {
             nSessions: 2,
             nStudents: 1,
             percentDisplay: 67,
+            percentileRank: 58.3,
             band: "developing",
             bandLabel: "Developing",
             interpretation: "Plant part naming: partial command.",
@@ -37,6 +39,8 @@ describe("CumulativeEcdReportView", () => {
     expect(screen.getByText(/Developing cumulative performance/)).toBeInTheDocument();
     expect(screen.getByText("Plant part naming")).toBeInTheDocument();
     expect(screen.getByText(/Revisit Plant part naming/)).toBeInTheDocument();
+    expect(screen.getByText(/62.5/)).toBeInTheDocument();
+    expect(screen.getByText(/Third quartile/)).toBeInTheDocument();
   });
 
   it("renders named students on the teacher classroom report", () => {
@@ -71,6 +75,8 @@ describe("CumulativeEcdReportView", () => {
             classId: "6A",
             nSessions: 1,
             percentDisplay: 40,
+            percentileRank: 25,
+            quartileLabel: "Second quartile",
             band: "emerging",
             bandLabel: "Emerging",
             weakestCompetency: { name: "Photosynthesis", percentDisplay: 20 },
@@ -82,6 +88,7 @@ describe("CumulativeEcdReportView", () => {
     expect(screen.getByTestId("cumulative-ecd-teacher")).toBeInTheDocument();
     expect(screen.getByText("Pat")).toBeInTheDocument();
     expect(screen.getByText(/What to focus on in class/)).toBeInTheDocument();
+    expect(screen.getByText(/Second quartile/)).toBeInTheDocument();
   });
 
   it("omits a students table on the district curriculum report and marks suppressed cells", () => {

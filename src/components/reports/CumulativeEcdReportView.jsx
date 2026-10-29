@@ -12,6 +12,11 @@ function pct(n) {
   return `${Number(n).toFixed(1)}%`;
 }
 
+function pr(n) {
+  if (n == null || Number.isNaN(n)) return "—";
+  return Number(n).toFixed(1);
+}
+
 const BAND_COLORS = {
   emerging: "#8a2e2e",
   developing: "#8a5a12",
@@ -85,7 +90,66 @@ export function BandStackChart({ rows, caption }) {
   );
 }
 
-function GroupTable({ rows, empty, groupCounts = true }) {
+export function PercentileBoxChart({ rows, caption }) {
+  const usable = (rows || []).filter((r) => r && !r.suppressed && r.percentiles && Number.isFinite(r.percentiles.p50));
+  if (!usable.length) return null;
+
+  const labelW = 168;
+  const plotW = 360;
+  const padR = 56;
+  const rowH = 28;
+  const top = 10;
+  const axisH = 28;
+  const height = top + usable.length * rowH + axisH;
+  const width = labelW + plotW + padR;
+  const plotBottom = top + usable.length * rowH;
+  const xOf = (p) => labelW + (Number(p) / 100) * plotW;
+
+  return (
+    <figure className="ecd-figure">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={caption || "Percentiles of student means"}>
+        <rect x={labelW} y={top} width={plotW} height={usable.length * rowH} fill="#fbf7f0" />
+        {[0, 25, 50, 75, 100].map((tick) => {
+          const x = xOf(tick);
+          return (
+            <g key={tick}>
+              <line x1={x} y1={top} x2={x} y2={plotBottom} stroke="#d9d1c4" strokeWidth="1" />
+              <line x1={x} y1={plotBottom} x2={x} y2={plotBottom + 5} stroke="#5c564c" />
+              <text x={x} y={height - 8} textAnchor="middle" fill="#5c564c" fontSize="11" fontFamily="Source Sans 3, sans-serif">
+                {tick}
+              </text>
+            </g>
+          );
+        })}
+        {usable.map((row, i) => {
+          const p = row.percentiles;
+          const y = top + i * rowH + 14;
+          const x10 = xOf(p.p10 ?? p.p25);
+          const x25 = xOf(p.p25);
+          const x50 = xOf(p.p50);
+          const x75 = xOf(p.p75);
+          const x90 = xOf(p.p90 ?? p.p75);
+          return (
+            <g key={row.id || i}>
+              <text x={labelW - 10} y={y + 4} textAnchor="end" fill="#1c1915" fontSize="12" fontFamily="Source Sans 3, sans-serif">
+                {(row.name || row.id || "").length > 24 ? `${(row.name || row.id).slice(0, 22)}…` : (row.name || row.id)}
+              </text>
+              <line x1={x10} y1={y} x2={x90} y2={y} stroke="#5c564c" strokeWidth="1.2" />
+              <line x1={x10} y1={y - 4} x2={x10} y2={y + 4} stroke="#5c564c" strokeWidth="1.2" />
+              <line x1={x90} y1={y - 4} x2={x90} y2={y + 4} stroke="#5c564c" strokeWidth="1.2" />
+              <rect x={Math.min(x25, x75)} y={y - 6} width={Math.max(1, Math.abs(x75 - x25))} height="12" fill="#c5d4b8" stroke="#2f5d3a" strokeWidth="1" />
+              <line x1={x50} y1={y - 6} x2={x50} y2={y + 6} stroke="#1c1915" strokeWidth="1.6" />
+            </g>
+          );
+        })}
+        <rect x={labelW} y={top} width={plotW} height={usable.length * rowH} fill="none" stroke="#1c1915" strokeWidth="1.2" />
+      </svg>
+      {caption ? <figcaption>{caption}</figcaption> : null}
+    </figure>
+  );
+}
+
+function GroupTable({ rows, empty, groupCounts = true, showRank = false, showPercentiles = false }) {
   if (!rows?.length) return <p className="ecd-note">{empty}</p>;
   return (
     <div className="ecd-table-wrap">
@@ -97,6 +161,10 @@ function GroupTable({ rows, empty, groupCounts = true }) {
             <th className="num">Sessions</th>
             <th className="num extra">Items</th>
             <th className="num">Mean</th>
+            {showRank ? <th className="num">PR</th> : null}
+            {showPercentiles ? <th className="num extra">P25</th> : null}
+            {showPercentiles ? <th className="num">P50</th> : null}
+            {showPercentiles ? <th className="num extra">P75</th> : null}
             {groupCounts ? <th className="num extra">Emerging</th> : null}
             {groupCounts ? <th className="num extra">Developing</th> : null}
             {groupCounts ? <th className="num extra">Mostly secure</th> : null}
@@ -119,6 +187,10 @@ function GroupTable({ rows, empty, groupCounts = true }) {
               <td className="num">{row.suppressed ? "—" : row.nSessions ?? "—"}</td>
               <td className="num extra">{row.suppressed ? "—" : row.n ?? "—"}</td>
               <td className="num">{row.suppressed ? "—" : pct(row.percentDisplay)}</td>
+              {showRank ? <td className="num">{row.suppressed ? "—" : pr(row.percentileRank)}</td> : null}
+              {showPercentiles ? <td className="num extra">{row.suppressed ? "—" : pct(row.percentiles?.p25)}</td> : null}
+              {showPercentiles ? <td className="num">{row.suppressed ? "—" : pct(row.percentiles?.p50)}</td> : null}
+              {showPercentiles ? <td className="num extra">{row.suppressed ? "—" : pct(row.percentiles?.p75)}</td> : null}
               {groupCounts ? <td className="num extra">{row.suppressed ? "—" : row.nEmerging ?? "—"}</td> : null}
               {groupCounts ? <td className="num extra">{row.suppressed ? "—" : row.nDeveloping ?? "—"}</td> : null}
               {groupCounts ? <td className="num extra">{row.suppressed ? "—" : row.nMostlySecure ?? "—"}</td> : null}
@@ -143,6 +215,8 @@ function StudentTable({ rows }) {
             <th className="extra">Class</th>
             <th className="num">Sessions</th>
             <th className="num">Mean</th>
+            <th className="num">PR</th>
+            <th className="extra">Quartile</th>
             <th>Weakest competency</th>
             <th className="extra">Strongest competency</th>
           </tr>
@@ -157,6 +231,8 @@ function StudentTable({ rows }) {
               <td className="extra">{row.classId || "—"}</td>
               <td className="num">{row.nSessions ?? "—"}</td>
               <td className="num">{pct(row.percentDisplay)}</td>
+              <td className="num">{pr(row.percentileRank)}</td>
+              <td className="extra">{row.quartileLabel || "—"}</td>
               <td>
                 {row.weakestCompetency
                   ? `${row.weakestCompetency.name} (${fmt(row.weakestCompetency.percentDisplay, 0)}%)`
@@ -186,6 +262,9 @@ function CellTable({ rows, label }) {
             <th className="num">Students</th>
             <th className="num">Sessions</th>
             <th className="num">Mean</th>
+            <th className="num extra">P25</th>
+            <th className="num">P50</th>
+            <th className="num extra">P75</th>
             <th>Band</th>
           </tr>
         </thead>
@@ -196,6 +275,9 @@ function CellTable({ rows, label }) {
               <td className="num">{row.suppressed ? "n < 5" : row.nStudents ?? "—"}</td>
               <td className="num">{row.suppressed ? "—" : row.nSessions ?? "—"}</td>
               <td className="num">{row.suppressed ? "—" : pct(row.percentDisplay)}</td>
+              <td className="num extra">{row.suppressed ? "—" : pct(row.percentiles?.p25)}</td>
+              <td className="num">{row.suppressed ? "—" : pct(row.percentiles?.p50)}</td>
+              <td className="num extra">{row.suppressed ? "—" : pct(row.percentiles?.p75)}</td>
               <td>{row.suppressed ? "Suppressed" : <Band id={row.band} label={row.bandLabel} />}</td>
             </tr>
           ))}
@@ -264,6 +346,46 @@ export default function CumulativeEcdReportView({ report }) {
             <th>Cumulative mean</th>
             <td>{o.suppressed || o.percentDisplay == null ? "—" : `${fmt(o.percentDisplay, 1)}%`}</td>
           </tr>
+          {kind === "student" && (
+            <>
+              <tr>
+                <th>Percentile rank</th>
+                <td>
+                  {report.norms?.suppressed
+                    ? "n < 5"
+                    : report.norms?.percentileRank == null
+                      ? "—"
+                      : `${pr(report.norms.percentileRank)} (${report.norms.quartileLabel || "—"})`}
+                </td>
+              </tr>
+              <tr>
+                <th>Comparison group</th>
+                <td>
+                  {report.norms?.suppressed
+                    ? `Too small to rank (n < 5)`
+                    : report.norms?.n
+                      ? `${report.norms.group || "group"} · ${report.norms.n} students`
+                      : "—"}
+                </td>
+              </tr>
+            </>
+          )}
+          {kind !== "student" && (
+            <>
+              <tr>
+                <th>P10 – P90</th>
+                <td>
+                  {o.suppressed || !o.percentiles || o.percentiles.p50 == null
+                    ? "—"
+                    : `${pct(o.percentiles.p10)} · ${pct(o.percentiles.p25)} · ${pct(o.percentiles.p50)} · ${pct(o.percentiles.p75)} · ${pct(o.percentiles.p90)}`}
+                </td>
+              </tr>
+              <tr>
+                <th>IQR</th>
+                <td>{o.suppressed || o.percentiles?.iqr == null ? "—" : `${fmt(o.percentiles.iqr, 1)} pp`}</td>
+              </tr>
+            </>
+          )}
           <tr>
             <th>Window</th>
             <td>{o.from && o.to ? (o.from === o.to ? o.from : `${o.from} – ${o.to}`) : "—"}</td>
@@ -274,22 +396,30 @@ export default function CumulativeEcdReportView({ report }) {
       <h3>Competencies</h3>
       <p>
         {kind === "student"
-          ? "Each row pools scored items for that competency across closed sessions. Delta is the change in session mean from the first occasion to the last."
-          : "Each row is the mean of per-student means, so one heavily tested student does not dominate. Student counts say how many examinees contributed."}
+          ? "Each row pools scored items for that competency across closed sessions. Delta is the change in session mean from the first occasion to the last. Percentile rank (PR) is this student's standing among classmates on that competency."
+          : "Each row is the mean of per-student means, so one heavily tested student does not dominate. P25, P50, and P75 describe the spread of those person means. Student counts say how many examinees contributed."}
       </p>
       <PercentBarChart
         rows={(report.competencies || []).filter((r) => !r.suppressed)}
         caption="Figure 1. Mean score by competency."
       />
       {kind !== "student" && (
-        <BandStackChart
-          rows={report.competencies}
-          caption="Figure 2. Share of students in each performance band, by competency."
-        />
+        <>
+          <BandStackChart
+            rows={report.competencies}
+            caption="Figure 2. Share of students in each performance band, by competency."
+          />
+          <PercentileBoxChart
+            rows={report.competencies}
+            caption="Figure 3. Percentiles of per-student means (whiskers P10–P90, box P25–P75, stroke at the median)."
+          />
+        </>
       )}
       <GroupTable
         rows={report.competencies}
         groupCounts={kind !== "student"}
+        showRank={kind === "student"}
+        showPercentiles={kind !== "student"}
         empty="No competency could be resolved from closed sessions."
       />
       {(report.competencies || []).length > 0 && (
@@ -318,11 +448,13 @@ export default function CumulativeEcdReportView({ report }) {
       </p>
       <PercentBarChart
         rows={(report.evidence || []).filter((r) => !r.suppressed)}
-        caption={kind === "student" ? "Figure 2. Mean score by evidence model." : "Figure 3. Mean score by evidence model."}
+        caption={kind === "student" ? "Figure 2. Mean score by evidence model." : "Figure 4. Mean score by evidence model."}
       />
       <GroupTable
         rows={report.evidence}
         groupCounts={kind !== "student"}
+        showRank={kind === "student"}
+        showPercentiles={kind !== "student"}
         empty="No evidence model is linked to the scored items."
       />
       {(report.evidence || []).length > 0 && (
@@ -340,11 +472,15 @@ export default function CumulativeEcdReportView({ report }) {
       <GroupTable
         rows={report.taskModels}
         groupCounts={kind !== "student"}
+        showRank={kind === "student"}
+        showPercentiles={kind !== "student"}
         empty="No task model is linked to the scored items."
       />
       <GroupTable
         rows={report.tasks}
         groupCounts={kind !== "student"}
+        showRank={kind === "student"}
+        showPercentiles={kind !== "student"}
         empty="No task instances were scored."
       />
 
@@ -446,6 +582,17 @@ export default function CumulativeEcdReportView({ report }) {
           </ul>
         </>
       )}
+
+      <h3>How percentiles are computed</h3>
+      <p>
+        Percentile rank uses the midrank formula 100 × (students below + half of those tied) ÷ N.
+        P10, P25, P50, P75, and P90 are percentiles of per-student means, using linear interpolation (R type-7).
+        {kind === "student"
+          ? " This document reports this student's own rank among the comparison group, not named classmates."
+          : kind === "teacher"
+            ? " Named ranks are this classroom's roster."
+            : " Named students are omitted. Cells below n = 5 suppress ranks so a small group cannot identify a child."}
+      </p>
 
     </div>
   );

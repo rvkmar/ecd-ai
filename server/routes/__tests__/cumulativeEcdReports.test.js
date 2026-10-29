@@ -81,6 +81,9 @@ describe("GET /api/reports/cumulative/student", () => {
     expect(res.body.overview.nSessions).toBe(2);
     expect(res.body.competencies[0].name).toBe("Plant part naming");
     expect(JSON.stringify(res.body)).not.toMatch(/isCorrect/);
+    expect(JSON.stringify(res.body)).not.toMatch(/Sam/);
+    expect(res.body.norms.suppressed).toBe(true);
+    expect(res.body.overview.percentileRank).toBeNull();
   });
 
   it("ignores a spoofed studentId query from the examinee", async () => {
@@ -123,6 +126,7 @@ describe("GET /api/reports/cumulative/teacher", () => {
     expect(res.body.students.map((s) => s.name).sort()).toEqual(["Pat", "Sam"]);
     expect(res.body.students.some((s) => s.name === "Other")).toBe(false);
     expect(res.body.nextSteps.length).toBeGreaterThan(0);
+    expect(res.body.students.every((s) => Number.isFinite(s.percentileRank))).toBe(true);
   });
 });
 
@@ -164,5 +168,6 @@ describe("GET /api/reports/cumulative/district", () => {
     expect(res.body.overview.nStudents).toBe(MIN_CELL_SIZE);
     expect(res.body.overview.suppressed).toBe(false);
     expect(JSON.stringify(res.body)).not.toMatch(/N0/);
+    expect(res.body.overview.percentiles.p50).toBeGreaterThan(0);
   });
 });

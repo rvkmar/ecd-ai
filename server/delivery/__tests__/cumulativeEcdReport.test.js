@@ -109,6 +109,49 @@ describe("buildStudentCumulativeReport", () => {
     expect(report.overview.nSessions).toBe(0);
     expect(report.overview.nScored).toBe(0);
   });
+
+  it("ranks the student against classmates without naming them, and suppresses n < 5", () => {
+    const classmates = Array.from({ length: 5 }, (_, i) => ({
+      id: `stu${i + 1}`,
+      name: `Peer ${i + 1}`,
+      username: `peer${i + 1}`,
+      classId: "6A",
+      districtId: "d1",
+    }));
+    const db = plantDb(classmates, []);
+    const scores = [0, 0.25, 0.5, 0.75, 1];
+    const sessions = classmates.map((s, i) =>
+      closedSession(`s${i}`, s.id, [{ taskId: "t-leaf", itemId: "it-leaf", scoredValue: scores[i] }], "2026-10-06T00:00:00.000Z")
+    );
+    const student = classmates[2];
+    const report = buildStudentCumulativeReport(db, {
+      student,
+      sessions: sessions.filter((s) => s.studentId === student.id),
+      comparisonStudents: classmates,
+      comparisonSessions: sessions,
+    });
+    expect(report.norms.n).toBe(5);
+    expect(report.norms.suppressed).toBe(false);
+    expect(report.norms.percentileRank).toBe(50);
+    expect(report.overview.percentileRank).toBe(50);
+    expect(report.norms.quartile).toBe("q2");
+    const naming = report.competencies.find((c) => c.id === "c-name");
+    expect(naming.percentileRank).toBe(50);
+    const blob = JSON.stringify(report);
+    expect(blob).not.toMatch(/Peer 1/);
+    expect(blob).not.toMatch(/Peer 4/);
+    expect(report.students).toBeUndefined();
+
+    const small = buildStudentCumulativeReport(db, {
+      student,
+      sessions: sessions.filter((s) => s.studentId === student.id),
+      comparisonStudents: classmates.slice(0, 3),
+      comparisonSessions: sessions,
+    });
+    expect(small.norms.suppressed).toBe(true);
+    expect(small.norms.percentileRank).toBeNull();
+    expect(small.overview.percentileRank).toBeNull();
+  });
 });
 
 describe("buildTeacherCumulativeReport", () => {
@@ -141,6 +184,9 @@ describe("buildTeacherCumulativeReport", () => {
     expect(photo.interpretation).toMatch(/classroom-wide focus|below mostly-secure/i);
     expect(report.nextSteps.join(" ")).toMatch(/Photosynthesis/);
     expect(JSON.stringify(report)).not.toMatch(/isCorrect/);
+    expect(report.students.every((s) => Number.isFinite(s.percentileRank))).toBe(true);
+    expect(report.overview.percentiles.p50).toBeGreaterThan(0);
+    expect(photo.percentiles.p50).toBeDefined();
   });
 
   it("includes unstamped students and excludes a foreign district", () => {
@@ -180,6 +226,8 @@ describe("buildDistrictCumulativeReport", () => {
     expect(report.overview.nStudents).toBeNull();
     expect(report.competencies.every((c) => c.suppressed)).toBe(true);
     expect(report.classes[0].suppressed).toBe(true);
+    expect(report.overview.percentiles.p50).toBeNull();
+    expect(report.classes[0].percentiles.p50).toBeNull();
   });
 
   it("reports student counts and curriculum focus when n is large enough", () => {
@@ -207,5 +255,8 @@ describe("buildDistrictCumulativeReport", () => {
     expect(report.nextSteps.join(" ")).toMatch(/Plant part naming/);
     expect(report.classes[0].nStudents).toBe(MIN_CELL_SIZE);
     expect(JSON.stringify(report)).not.toMatch(/Student 0/);
+    expect(report.overview.percentiles.p50).toBeGreaterThan(0);
+    expect(naming.percentiles.p25).toBeLessThanOrEqual(naming.percentiles.p75);
+    expect(report.classes[0].percentiles.p50).toBeGreaterThan(0);
   });
 });
