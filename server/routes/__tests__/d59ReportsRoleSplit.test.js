@@ -166,6 +166,11 @@ describe("learner and generic session reports carry the same measurement fields"
         expect.objectContaining({ type: "AttributeProfile", smvId: "attrA", classification: "master" }),
       ])
     );
+    expect(res.body.ecdReport).toEqual(expect.objectContaining({
+      sessionId: "s-d59",
+      overview: expect.objectContaining({ nItems: expect.any(Number) }),
+    }));
+    expect(JSON.stringify(res.body.ecdReport)).not.toMatch(/isCorrect/);
   });
 
   it("refuses a student reading another examinee's session report", async () => {

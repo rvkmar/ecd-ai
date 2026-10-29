@@ -7,6 +7,8 @@ import { measurementStopHeading, measurementStopDetails } from "./measurementSto
 import { assemblyProgressLine } from "../../utils/assemblyConstraints";
 import AttributeProfileList from "./AttributeProfileList";
 import { RecordCard } from "../reports/StudentModelRecordPanel";
+import StudentEcdReportView from "./StudentEcdReportView";
+import "./StudentEcdReport.css";
 
 function formatProbability(value) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "unknown";
@@ -125,23 +127,28 @@ export default function SessionReport({ sessionId, onClose }) {
     teacherReport?.attributeProfile ||
     [];
   const stopDetails = measurementStopDetails(stopped);
+  const ecdReport = report?.ecdReport || learnerFeedback?.ecdReport || null;
 
   return (
-    <div className="p-4 border rounded bg-white">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Session Report: {sessionId}</h2>
+    <div className="ecd-sheet p-4">
+      <div className="ecd-toolbar ecd-no-print">
+        <button type="button" onClick={() => window.print()}>Print report</button>
         {onClose && (
-          <button onClick={onClose} className="px-3 py-1 bg-gray-300 rounded hover:bg-gray-400">Close</button>
+          <button type="button" onClick={onClose}>Close</button>
         )}
       </div>
 
+      <div className="ecd-paper">
+      <h2 className="ecd-title">Session Report: {sessionId}</h2>
+      <p className="ecd-sub">Learner performance on tasks, evidence, and competencies</p>
+
       {(stopped || attributeProfile.length > 0) && (
-        <div className="mb-4 p-3 border rounded bg-green-50" data-testid="report-header-measurement">
+        <div className="ecd-header-measure" data-testid="report-header-measurement">
           {stopped ? (
             <>
               <p className="font-medium">{measurementStopHeading(stopped)}</p>
               {stopped.reason && (
-                <p className="text-sm text-gray-700 mt-1">{stopped.reason}</p>
+                <p className="ecd-note mt-1">{stopped.reason}</p>
               )}
             </>
           ) : (
@@ -152,7 +159,7 @@ export default function SessionReport({ sessionId, onClose }) {
       )}
 
       {(report?.student || teacherReport?.studentId) && (
-        <div className="mb-4 text-sm text-gray-700" data-testid="report-student">
+        <div className="ecd-student" data-testid="report-student">
           <div>
             Student id: <strong>{report?.student?.id || teacherReport?.studentId}</strong>
           </div>
@@ -162,46 +169,37 @@ export default function SessionReport({ sessionId, onClose }) {
         </div>
       )}
 
-      {Array.isArray(report?.responses) && report.responses.length > 0 && (
-        <div className="mb-4" data-testid="report-responses">
-          <h3 className="font-semibold mb-2">Responses</h3>
-          <ul className="space-y-1 text-sm">
-            {report.responses.map((row, i) => (
-              <li key={`${row.itemId || "item"}-${i}`}>
-                Item: <strong>{row.itemId || "—"}</strong>
-                {" · "}Option: <strong>{row.option || "—"}</strong>
-                {" · "}Activated: <strong>{row.activated == null ? "null" : String(row.activated)}</strong>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="mb-4 flex space-x-2">
+      <div className="ecd-tabs ecd-no-print">
         <button
-          className={`px-3 py-1 rounded ${tab === "learner" ? "bg-purple-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+          type="button"
+          aria-selected={tab === "learner"}
           onClick={() => setTab("learner")}
         >
           Learner Feedback
         </button>
         {canViewTeacherReports && (
           <button
-            className={`px-3 py-1 rounded ${tab === "teacher" ? "bg-green-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+            type="button"
+            aria-selected={tab === "teacher"}
             onClick={() => setTab("teacher")}
           >
             Teacher Report
           </button>
         )}
         <button
-          className={`px-3 py-1 rounded ${tab === "raw" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+          type="button"
+          aria-selected={tab === "raw"}
           onClick={() => setTab("raw")}
         >
           Raw JSON
         </button>
       </div>
 
-      {tab === "learner" && learnerFeedback && (
+      {tab === "learner" && (
         <div className="space-y-3">
+          <StudentEcdReportView report={ecdReport} />
+          {learnerFeedback && (
+            <>
           <h3 className="font-semibold">Summary</h3>
           <p className="text-gray-700">Level: {learnerFeedback.summary?.level}</p>
           <p className="text-gray-700">{learnerFeedback.summary?.message}</p>
@@ -266,11 +264,14 @@ export default function SessionReport({ sessionId, onClose }) {
               ))}
             </div>
           )}
+            </>
+          )}
         </div>
       )}
 
       {tab === "teacher" && canViewTeacherReports && teacherReport && (
         <div className="space-y-3">
+          <StudentEcdReportView report={teacherReport.ecdReport || ecdReport} />
           <h3 className="font-semibold">Teacher Report</h3>
             <p className="text-gray-700">
             Strategy: {teacherReport.selectionStrategy || teacherReport.strategy}
@@ -347,10 +348,25 @@ export default function SessionReport({ sessionId, onClose }) {
 
       {tab === "raw" && report && (
         <div>
+          {Array.isArray(report.responses) && report.responses.length > 0 && (
+            <div className="mb-4" data-testid="report-responses">
+              <h3 className="font-semibold mb-2">Responses</h3>
+              <ul className="space-y-1 text-sm">
+                {report.responses.map((row, i) => (
+                  <li key={`${row.itemId || "item"}-${i}`}>
+                    Item: <strong>{row.itemId || "—"}</strong>
+                    {" · "}Option: <strong>{row.option || "—"}</strong>
+                    {" · "}Activated: <strong>{row.activated == null ? "null" : String(row.activated)}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <h3 className="font-semibold mb-2">Raw Report JSON</h3>
-          <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto max-h-96">{JSON.stringify(report, null, 2)}</pre>
+          <pre className="ecd-raw">{JSON.stringify(report, null, 2)}</pre>
         </div>
       )}
+      </div>
     </div>
   );
 }

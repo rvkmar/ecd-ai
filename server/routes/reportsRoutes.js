@@ -18,6 +18,7 @@ import {
 } from "../utils/aggregatePrivacy.js";
 import { resolveStudentIdentity } from "../../src/utils/studentModelRecord.js";
 import { queryStudentModelRecords } from "../studentModelRecords/studentModelRecordRepository.js";
+import { buildStudentEcdReport } from "../delivery/studentEcdReport.js";
 
 
 const router = express.Router();
@@ -215,6 +216,12 @@ router.get("/session/:id", async (req, res) => {
     report.recommendations.push("Complete more tasks for a fuller assessment.");
   }
 
+  report.ecdReport = buildStudentEcdReport(db, session, {
+    student,
+    measurement,
+    studentModelRecords: report.studentModelRecords,
+  });
+
   res.json(report);
 });
 
@@ -371,6 +378,13 @@ router.get("/session/:id/learner-feedback", async (req, res) => {
     const mastered = measurement.attributeProfile.filter((r) => r.classification === "master").length;
     feedback.summary.level = `${mastered} of ${measurement.attributeProfile.length} attributes classified as mastered`;
   }
+
+  const student = personForStudentId(db, session.studentId);
+  feedback.ecdReport = buildStudentEcdReport(db, session, {
+    student,
+    measurement,
+    studentModelRecords: feedback.studentModelRecords,
+  });
 
   res.json(feedback);
 });
@@ -540,6 +554,12 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, async (req, res
   if (Object.keys(report.modelSummary).length === 0) {
     report.recommendations.individualLevel.push("Complete more tasks to build a measurable profile.");
   }
+
+  report.ecdReport = buildStudentEcdReport(db, session, {
+    student,
+    measurement,
+    studentModelRecords: report.studentModelRecords,
+  });
 
   res.json(report);
 });
