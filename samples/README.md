@@ -241,7 +241,8 @@ All three are written against the observables in `sample-evidence-model.json`
    estimates θ from real a/b values instead of the a = 1, b = 0 defaults.
 5. Import `sample-calibration-responses.csv` as a second calibration and use
    the **Compare active against…** selector to see parameter drift between
-   the two.
+   the two, largest movement first. The same table appears on a succeeded
+   D65 calibration-console job against the current active set.
 
 ## The JSON calibration package
 

@@ -14,7 +14,6 @@
 import React, { useMemo, useState } from "react";
 import {
     AlertCircle,
-    ArrowLeftRight,
     CheckCircle2,
     Clock,
     History,
@@ -25,6 +24,7 @@ import { useActivateParameterSet } from "@/api/queries/evidenceModels";
 import { apiErrorMessage } from "@/api/apiClient";
 import { observableParameterEntries } from "../engines/calibrationFile";
 import { resolveCalibrationWindow } from "../engines/effectiveModel";
+import ParameterSetDiff from "./ParameterSetDiff";
 
 export default function ParameterSetRegistry({
     evidenceModel,
@@ -173,7 +173,7 @@ export default function ParameterSetRegistry({
             {/* ---------- comparison ---------- */}
 
             {compareWith && activeSet && (
-                <ParameterDrift
+                <ParameterSetDiff
                     activeSet={activeSet}
                     otherSet={sets.find(ps => ps.parameterSetId === compareWith)}
                     observables={observables}
@@ -319,124 +319,6 @@ export default function ParameterSetRegistry({
 
     );
 
-}
-
-/* =====================================================
-   DRIFT — how far did this recalibration move the numbers?
-===================================================== */
-
-function ParameterDrift({ activeSet, otherSet, observables }) {
-
-    if (!otherSet) return null;
-
-    const kind = activeSet.parameters?._kind;
-
-    if (kind === "bayesian-cpt") {
-        return (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3.5 text-xs text-slate-600">
-                Numeric drift comparison is available for IRT parameter sets.
-                Inspect both sets to compare conditional probability tables.
-            </div>
-        );
-    }
-
-    const ids = [
-        ...new Set([
-            ...observableParameterEntries(activeSet.parameters || {}).map(([id]) => id),
-            ...observableParameterEntries(otherSet.parameters || {}).map(([id]) => id),
-        ]),
-    ];
-
-    const statementFor = (id) =>
-        observables.find(o => o.id === id)?.statement || "—";
-
-    return (
-
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                <ArrowLeftRight size={16} strokeWidth={2} className="text-slate-400" />
-                Drift — active vs {otherSet.parameterSetId}
-            </div>
-
-            <table className="w-full min-w-[560px] text-left text-xs">
-
-                <thead className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
-                    <tr>
-                        <th className="py-2 pr-3">Observable</th>
-                        <th className="py-2 pr-3">b (active)</th>
-                        <th className="py-2 pr-3">b (other)</th>
-                        <th className="py-2 pr-3">Δb</th>
-                        <th className="py-2 pr-3">a (active)</th>
-                        <th className="py-2 pr-3">a (other)</th>
-                        <th className="py-2 pr-3">Δa</th>
-                    </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-
-                    {ids.map(id => {
-
-                        const A = activeSet.parameters?.[id] || {};
-                        const B = otherSet.parameters?.[id] || {};
-
-                        const db = num(A.b) - num(B.b);
-                        const da = num(A.a) - num(B.a);
-
-                        return (
-
-                            <tr key={id}>
-                                <td className="py-2 pr-3">
-                                    <div className="font-mono text-slate-800">{id}</div>
-                                    <div className="max-w-xs truncate text-[11px] text-slate-500">
-                                        {statementFor(id)}
-                                    </div>
-                                </td>
-                                <td className="py-2 pr-3 tabular-nums text-slate-700">{fmt(A.b)}</td>
-                                <td className="py-2 pr-3 tabular-nums text-slate-700">{fmt(B.b)}</td>
-                                <td className={`py-2 pr-3 tabular-nums font-medium ${driftClass(db)}`}>{signed(db)}</td>
-                                <td className="py-2 pr-3 tabular-nums text-slate-700">{fmt(A.a)}</td>
-                                <td className="py-2 pr-3 tabular-nums text-slate-700">{fmt(B.a)}</td>
-                                <td className={`py-2 pr-3 tabular-nums font-medium ${driftClass(da)}`}>{signed(da)}</td>
-                            </tr>
-
-                        );
-
-                    })}
-
-                </tbody>
-
-            </table>
-
-            <div className="mt-3 text-[11px] text-slate-500">
-                Drift beyond roughly ±0.5 logits on difficulty usually means the item
-                behaved differently in the two populations — investigate before
-                treating the two administrations as being on one scale.
-            </div>
-
-        </div>
-
-    );
-
-}
-
-/* =====================================================
-   HELPERS
-===================================================== */
-
-const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
-
-const fmt = (v) =>
-    typeof v === "number" && Number.isFinite(v) ? v.toFixed(3) : "—";
-
-const signed = (v) =>
-    !Number.isFinite(v) ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(3)}`;
-
-function driftClass(v) {
-    if (!Number.isFinite(v)) return "text-slate-400";
-    if (Math.abs(v) >= 0.5) return "text-red-600";
-    if (Math.abs(v) >= 0.25) return "text-amber-600";
-    return "text-slate-500";
 }
 
 function formatDate(value) {

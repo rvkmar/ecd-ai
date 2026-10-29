@@ -19,7 +19,22 @@ const fx = vi.hoisted(() => {
         id: "em1",
         name: "LSAT evidence",
         statisticalModels: [
-          { id: "sm1", type: "irt", subtype: "2PL", active: true, parameterSets: [] },
+          {
+            id: "sm1",
+            type: "irt",
+            subtype: "2PL",
+            active: true,
+            activeParameterSetId: "ps-active",
+            parameterSets: [
+              {
+                parameterSetId: "ps-active",
+                parameters: {
+                  "Item.1": { a: 1.0, b: -0.3 },
+                  "Item.5": { a: 0.9, b: 0.4 },
+                },
+              },
+            ],
+          },
         ],
       },
       {
@@ -120,6 +135,10 @@ function succeededResponse({ converged = true } = {}) {
 
 vi.mock("@/api/queries/evidenceModels", () => ({
   useEvidenceModels: () => ({ data: fx.evidenceModels, isLoading: false }),
+  useEvidenceModel: (id) => ({
+    data: fx.evidenceModels.find((model) => model.id === id) || null,
+    isLoading: false,
+  }),
   evidenceModelsKey: ["evidenceModels"],
   useActivateParameterSet: () => ({
     isPending: false,
@@ -398,6 +417,10 @@ describe("admin start → process → watch → ingest", () => {
     expect(screen.getByText("1000")).toBeInTheDocument();
     expect(screen.getAllByText(/"Item\.1"/).length).toBeGreaterThan(0);
     expect(screen.getByText(/"logLik"/)).toBeInTheDocument();
+    expect(screen.getByTestId("parameter-set-diff")).toBeInTheDocument();
+    const driftRows = screen.getAllByTestId(/parameter-set-diff-row-/);
+    expect(driftRows[0]).toHaveAttribute("data-testid", "parameter-set-diff-row-Item.5");
+    expect(driftRows[1]).toHaveAttribute("data-testid", "parameter-set-diff-row-Item.1");
 
     await user.click(screen.getByRole("button", { name: /^ingest$/i }));
 

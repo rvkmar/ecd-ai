@@ -1,7 +1,8 @@
 // src/components/calibration/CalibrationJobDetail.jsx
 // Inspect a job: request summary, R response, stderr on failure, and
 // lifecycle actions. Ingest of converged: false must show the 409; it
-// must not look like a parameter set was written.
+// must not look like a parameter set was written. A succeeded IRT/DINA
+// run also diffs against the current active set, largest |Δ| first.
 
 import React, { useState } from "react";
 import toast from "react-hot-toast";
@@ -16,7 +17,8 @@ import {
   useProcessCalibrationJob,
   useRetryCalibrationJob,
 } from "@/api/queries/calibrationJobs";
-import { useActivateParameterSet } from "@/api/queries/evidenceModels";
+import { useActivateParameterSet, useEvidenceModel } from "@/api/queries/evidenceModels";
+import ParameterSetDiff from "@/components/evidences/calibration/panels/ParameterSetDiff";
 import CalibrationJobStatusBadge from "./CalibrationJobStatusBadge";
 import {
   convergedLabel,
@@ -24,6 +26,28 @@ import {
   requestSummary,
 } from "./calibrationConsoleUtils";
 import { jobKindIngestsAnalysisArtefact } from "@/utils/ecdVocabulary";
+
+function candidateParameterSet(job, ingestResult) {
+  const parameters = ingestResult?.parameters || job?.response?.parameters;
+  if (!parameters || typeof parameters !== "object") return null;
+  return {
+    parameterSetId:
+      ingestResult?.parameterSetId || job.ingestedParameterSetId || "this run",
+    parameters,
+  };
+}
+
+function activeParameterSet(evidenceModel, statisticalModelId) {
+  const statisticalModel = evidenceModel?.statisticalModels?.find(
+    (model) => model.id === statisticalModelId
+  );
+  if (!statisticalModel) return null;
+  return (
+    statisticalModel.parameterSets?.find(
+      (set) => set.parameterSetId === statisticalModel.activeParameterSetId
+    ) || null
+  );
+}
 
 function JsonBlock({ value, empty }) {
   if (value == null) {
@@ -38,6 +62,7 @@ function JsonBlock({ value, empty }) {
 
 export default function CalibrationJobDetail({ job, readOnly = false }) {
   const { auth } = useAuth() || {};
+  const { data: evidenceModel } = useEvidenceModel(job?.evidenceModelId);
   const cancel = useCancelCalibrationJob();
   const retry = useRetryCalibrationJob();
   const process = useProcessCalibrationJob();
@@ -65,6 +90,8 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
     !job.ingestedParameterSetId &&
     !job.ingestedAnalysisArtefactId;
   const writesArtefact = jobKindIngestsAnalysisArtefact(job.kind);
+  const activeSet = activeParameterSet(evidenceModel, job.statisticalModelId);
+  const otherSet = candidateParameterSet(job, ingestResult);
 
   async function runAction(label, mutation, id) {
     setActionError(null);
@@ -364,6 +391,14 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
               standardErrors={response.standardErrors}
               itemFit={response.fitStatistics?.itemFit}
             />
+            {activeSet && otherSet && (
+              <ParameterSetDiff
+                activeSet={activeSet}
+                otherSet={otherSet}
+                observables={evidenceModel?.observables || []}
+                otherLabel={otherSet.parameterSetId}
+              />
+            )}
             <div>
               <h4 className="mb-1 text-caption font-medium text-muted-foreground">Parameters</h4>
               <JsonBlock value={response.parameters} empty="No parameters on this response." />

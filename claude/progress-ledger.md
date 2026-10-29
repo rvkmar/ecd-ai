@@ -86,6 +86,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Off-calendar (2026-10-29, Wave 0) | Live `ecd-node` + `ecd-nginx` rebuilt and recreated from `79ea093`. `admin1` signs in on `:6060`. Domain Analysis, Design Pattern, and Student Model match git (DA still only “Author a Q-matrix”). Did not walk Wave 1. Did not start D155. Handoff: `claude/day146y-offcal-wave0-live-rebuild.md`. **Not D146.** |
 | Off-calendar (2026-10-29, Wave 1) | Standing walks **partial**. ~~D115b Instantiated tasks~~ passed on `:6060`. Announcements create/delete work; teacher visibility fails (no `districtId`). CM archive blocked by Step 9 `CheckCircle2`. D68, Continue, Newtonian not walked (no in-flight session / no Newtonian EMs). Handoff: `claude/day146z-offcal-wave1-standing-walks.md`. **Not D146.** |
 | Off-calendar (2026-10-29, Wave 2 walk-fails) | ~~Step 9 `CheckCircle2`~~ closed. ~~Home announcement tenancy~~ closed. Clone Step 9 Version History renders. `teach1` Home lists admin public and teachers-only posts. D129 stays closed. Handoff: `claude/day146aa-offcal-wave2-walk-fixes.md`. **Not D146.** |
+| Off-calendar (2026-10-29, Wave 2A) | ~~D65 parameter-set diff~~ closed. Helper sorts largest \|Δ\| first. Same table on Evidence Model Parameter Sets Compare and D65 console inspect vs the current active set. Live inspect `job1793177974633000` vs `ps1793177976685`. D129 stays closed. Handoff: `claude/day146ab-offcal-wave2a-parameter-set-diff.md`. **Not D146.** |
 | Next queued | **D155**, alone, never-compress. Re-calibrate first. Generate the D120 ten-spec family end to end and deliver one spec as an item that scores. W31 gate. Do not start from this close. W29 stays open. |
 
 | Block | **W31 started** 2026-10-28 (D151–D154 done; D155 remains). Conformance G15 closed by D151. W31 gate (ten specs from one template, one delivered and scored) is D155. **W30 closed** 2026-10-17 (D146–D150). Gate held as restated: a trait Student Model scored with DINA or G-DINA raises an advisory sourced from the Domain Analysis, and confirm is not blocked. “Visible at every layer” was not the gate. **W29 open** (D141–D145 done; D145 is a walk, not the gate). Gate not held: an author cannot yet start at a Domain Analysis and reach a Competency Model. **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
@@ -285,7 +286,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at D154 | product **`9b944ee`** ≡ `main/master` before this close + `claude/day154-itemmappings-writeback.md`. Close re-run **2862 passed / 3 skipped** (329 files, 196.82s). Build green (24.30s; largest chunk EvidenceModelBuilder 372.26 kB gzip 87.77 kB). Calendar D154 ✅, date not moved. W31 not marked. W29 stays open. Next: re-calibrate before D155 (never-compress). |
 | HEAD at 2026-10-29 Wave 0 | **`79ea093`** ≡ `main/master`. Live `:6060` `ecd-node` + `ecd-nginx` force-recreated from current context (compose build fully CACHED). Index `/assets/index-BdsKVPkN.js`. Health ok; R reachable. `admin1` login and DA / Design Pattern / Student Model match git. **Not D146.** D155 not started. W29 stays open. |
 | HEAD at 2026-10-29 Wave 1 | **`de44c60`** ≡ `main/master`. No product. Instantiated tasks walked. Announcement tenancy and Step 9 `CheckCircle2` become Wave 2. D68 / Continue / Newtonian still open. **Not D146.** D155 not started. W29 stays open. |
-| HEAD at 2026-10-29 Wave 2 walk-fails | Last committed tip **`de44c60`**. Product uncommitted at close. Handoff: `claude/day146aa-offcal-wave2-walk-fixes.md`. Suite **2869 passed / 4 skipped** (330 files). Build green (EvidenceModelBuilder 372.26 kB gzip 87.78 kB). Live `:6060` index `/assets/index-BDA9pVz6.js`. **Not D146.** D155 not started. W29 stays open. |
+| HEAD at 2026-10-29 Wave 2 walk-fails | product **`758c3e1`** ≡ `main/master` before Wave 2A. Handoff: `claude/day146aa-offcal-wave2-walk-fixes.md`. Suite **2869 passed / 4 skipped** (330 files). Build green (EvidenceModelBuilder 372.26 kB gzip 87.78 kB). Live `:6060` index `/assets/index-BDA9pVz6.js`. **Not D146.** D155 not started. W29 stays open. |
+| HEAD at 2026-10-29 Wave 2A | Last committed tip **`758c3e1`**. Product uncommitted at close. Handoff: `claude/day146ab-offcal-wave2a-parameter-set-diff.md`. Suite **2874 passed / 5 skipped** (332 files). Build green (EvidenceModelBuilder 369.20 kB gzip 87.23 kB; ParameterSetDiff 5.73 kB gzip 1.87 kB). Live `:6060` index `/assets/index-Cdv-oe6_.js`. **Not D146.** D155 not started. W29 stays open. |
 
 
 
@@ -651,6 +653,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-29 | off-calendar | Wave 0 | Rebuilt and recreated `ecd-node` + `ecd-nginx` from `79ea093`. `admin1` signed in on `:6060`. Fractions Domain Analysis still only offers “Author a Q-matrix”. Design Pattern Identity and Student Model Step 1 both cite Domain Analysis. Wave 1 not started. D155 not started. **Not D146.** Handoff: `claude/day146y-offcal-wave0-live-rebuild.md`. |
 | 2026-10-29 | off-calendar | Wave 1 | Instantiated tasks walked. Announcements: create/delete yes, teacher visibility no. Archive: Step 9 crash. D68, Continue, Newtonian not walked. **Not D146.** Handoff: `claude/day146z-offcal-wave1-standing-walks.md`. |
 | 2026-10-29 | off-calendar | Wave 2 walk-fails | Import lucide on VersionHistoryViewer. Stamp announcement tenancy; admin unscoped posts visible to tenant readers. Clone Step 9 Current; `teach1` Home lists both posts. **Not D146.** Handoff: `claude/day146aa-offcal-wave2-walk-fixes.md`. |
+| 2026-10-29 | off-calendar | Wave 2A | Parameter-set diff helper sorts largest \|Δ\| first. Same table on Parameter Sets Compare and D65 console inspect. Live inspect `job1793177974633000` vs activated `ps1793177976685`. **Not D146.** Handoff: `claude/day146ab-offcal-wave2a-parameter-set-diff.md`. |
 
 
 
@@ -686,7 +689,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | D54 | Wizard readiness mirror has no agreement test | Token | W12 close | **closed D90** — `assemblyModelReadiness.js` + agreement test; lifecycle refuses empty `stoppingRules: {}` |
 
-| D65 | Live operator walk + parameter-set diff UI skipped | Tests + routes; seed password; diff never built | D71 / follow-on | **walk closed 2026-09-13** (coordinator, `job1789319022666002` → `ps1789319081640`). Parameter-set diff UI still open. |
+| D65 | Live operator walk + parameter-set diff UI skipped | Tests + routes; seed password; registry compared without largest-first sort; console had no diff | D71 / follow-on | **walk closed 2026-09-13** (coordinator, `job1789319022666002` → `ps1789319081640`). **diff closed 2026-10-29 Wave 2A** — helper + largest \|Δ\| first on Parameter Sets Compare and D65 inspect (`job1793177974633000` vs `ps1793177976685`). |
 
 | D66 | Live GDINA sim10GDINA not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `sim10gdinaPipeline.test.js` | this PR's CI | **closed** — live job green (`GDINA 2.9.12`, `converged: true`, 1000×10; first CI keyed `"Item 1"`, then keyed by request `itemIds`) |
 
@@ -744,6 +747,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | R11 | Add a cross-occasion report from studentModelRecords. Consider default carry-forward on | G16 already writes the collection on finish. Session reports ignored it. `administration.carryForward` is live, default false | Attach records to session / learner / teacher reports. Reuse RecordCard. Do not default carry-forward on. Class/district stay one-session (D99). |
 | R12 | Migrate legacy questions to items and remove the nearest-difficulty path | Player, submit, and the task XOR still depend on `selectLegacyQuestionCandidate`. Item IRT is already max Fisher. Fisher on b-only rows is a no-op and still uses `irtTheta` | Record nearest-difficulty as the design limit. Do not delete the path. |
 | R13 | Build fixed forms from the pool, and add randomesque or Sympson-Hetter exposure control | G20 already builds the package pool for adaptive IRT/BN. Fixed with a cited delivery model still walked the seed. `usageCount` increments on operational submit and was not a ranking input | Authoritative fixed walks remaining pool ids. Adaptive ranking takes top-N then lowest `usageCount`. No P(A) table. D56 roster fixed is unchanged. |
+| Wave 2A / D65 leftover | Parameter-set diff UI was never built | Registry already compared active vs another set without sorting by movement. D65 console inspect had no diff | Extract `diffParameterSets`, sort by max(\|Δa\|,\|Δb\|,\|Δslip\|,\|Δguess\|), share `ParameterSetDiff` on Compare and console inspect. Do not start Wave 2B or D155. |
 
 | D59 | Split reports by role; attribute-profile UI; close teacher-report leak | One stack (`reportsRoutes` + `SessionReport`); teacher-report was authenticate-only; classification already computed, not shown on reports | Gate teacher routes with `authorizeRole`; stop the client fetching them as a student; attach `stopped` + `attributeProfile` to existing payloads/surfaces |
 
@@ -931,7 +935,9 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - Dual-attribute *targetsMet* early stop ("1 of 1") — **closed** (D57 join + D60 re-run)
 
-- Dual-attribute *selection*: items for an attribute with no persisted posterior stay unrankable while measured-attribute items remain (D60 P1-4)
+- Dual-attribute *selection*: items for an attribute with no persisted posterior stay unrankable while measured-attribute items remain (D60 P1-4). Wave 2B.
+
+- ~~D65 parameter-set diff (largest movements first)~~ closed 2026-10-29 Wave 2A. Registry Compare and D65 console inspect share `ParameterSetDiff`, sorted by max |Δ|. Bayesian CPTs stay inspect-both.
 
 - ~~Chunk >500 kB — D74~~ closed D74 (warning cleared; max JS chunk 446.89 kB recharts)
 
