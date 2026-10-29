@@ -38,7 +38,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 |---|---|
 
-| Last completed unit | **D154** (W31 D151–D154 done; D155 remains; ~~W29~~ closed off-calendar Wave 3; W30 closed). `itemMappings` is derived from instantiable items. Step 6 is a readout. Product `9b944ee`. Handoff: `claude/day154-itemmappings-writeback.md`. |
+| Last completed unit | **D154** (W31 D151–D154 done; D155 remains; ~~W29~~ closed off-calendar Wave 3; through-D153 leftovers recorded Wave 4; W30 closed). `itemMappings` is derived from instantiable items. Step 6 is a readout. Product `9b944ee`. Handoff: `claude/day154-itemmappings-writeback.md`. |
 | Textbook ECD re-audit | **~~R1–R14~~ complete** 2026-10-29. Product `78151e3`. All fourteen re-audit gaps closed (1 High, 6 Med, 7 Low). ~~R15~~ already closed. G15–G22 and F24 stay closed. D129 stays closed. Last handoff: `claude/day146t-offcal-r11-r14-remaining-lows.md`. **Not D146.** |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
@@ -89,13 +89,14 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Off-calendar (2026-10-29, Wave 2A) | ~~D65 parameter-set diff~~ closed. Helper sorts largest \|Δ\| first. Same table on Evidence Model Parameter Sets Compare and D65 console inspect vs the current active set. Live inspect `job1793177974633000` vs `ps1793177976685`. D129 stays closed. Handoff: `claude/day146ab-offcal-wave2a-parameter-set-diff.md`. **Not D146.** |
 | Off-calendar (2026-10-29, Wave 2B) | ~~D60 P1-4 dual-attribute selection~~ closed. Unmeasured attributes rank at authored `masteryPrior`. Missing SMV or invalid declared prior still unrankable. Wave 2A leftovers: inspect missing-active copy; walk debris deleted; G-DINA characterisation no longer sequential. D129 stays closed. Product `2c2df8e`. Handoff: `claude/day146ac-offcal-wave2b-dual-attribute-selection.md`. **Not D146.** |
 | Off-calendar (2026-10-29, Wave 3) | ~~W29~~ closed. Confirmed Domain Analysis Overview authors a Student Model or a Design Pattern with `domainAnalysisId` prefilled. Live `:6060` confirmed **W29 Fractions Student Model** from Fractions (Trait inherited). Unpatterned New Student Model still opens. Q-matrix handoff unchanged. D129 stays closed. Handoff: `claude/day146ad-offcal-wave3-w29-forward-controls.md`. **Not D146.** |
+| Off-calendar (2026-10-29, Wave 4) | Remaining through-D153 leftovers recorded as design limits (ADR 0004 mastery cut; inferred Assembly Model `AMBIGUOUS`; item-keyed DINA calibration; Settings `curricularPolicies` stay while Step 3 reads them; D144 Q-matrix stay; D147/D148/R10 leftovers; AuditLog TTL off; dead-export shared-name). Standing walks D68 / Continue / Newtonian / CM archive written off as store-blocked. No product. D129 stays closed. Handoff: `claude/day146ae-offcal-wave4-limits.md`. **Not D146.** |
 | Next queued | **D155**, alone, never-compress. Re-calibrate first. Generate the D120 ten-spec family end to end and deliver one spec as an item that scores. W31 gate. Do not start from this close. |
 
 | Block | **W31 started** 2026-10-28 (D151–D154 done; D155 remains). Conformance G15 closed by D151. W31 gate (ten specs from one template, one delivered and scored) is D155. **W30 closed** 2026-10-17 (D146–D150). Gate held as restated: a trait Student Model scored with DINA or G-DINA raises an advisory sourced from the Domain Analysis, and confirm is not blocked. “Visible at every layer” was not the gate. **W29 closed** 2026-10-29 Wave 3 (D141–D145 plus off-calendar forward controls). Gate held: a confirmed Domain Analysis authors and confirms a Student Model that names the analysis and inherits its perspective; New Student Model with no analysis still opens. **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
 
 | Block gate | ~~Administrator can start, watch, inspect and ingest a calibration without a shell (D65).~~ ~~LSAT7 in CI (D64).~~ ~~D66: sim10GDINA through R in tests/CI.~~ ~~D67: CTT through R in tests/CI.~~ ~~D69: planted DIF unique-item flag in CI.~~ ~~D70: known-equating recovered locally (`plink` 1.5.1).~~ ~~Hub `latest` includes plink (D88).~~ ~~D89: R crash degrades calibration only; session delivery unaffected (live kill).~~ ~~D90: adversarial R track + D54 discharged.~~ ~~D91: written threat model, every threat dispositioned.~~ ~~W20: district cannot read another district’s data (D96–D100).~~ ~~W21: “who promoted this Task Model to operational, when, and on what evidence” is one query (D105).~~ ~~W22: a restore from backup is performed and timed (D108).~~ ~~W23: Changing a Presentation Model changes what an examinee sees, without touching item content (D115).~~ |
 
-| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` not walked. **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
+| Gate status | D61 live `/health` met. D62/D63 met in tests. D64 live CI + local `test:lsat7` green (restated a/b check — see units revised). **D65 met in UI + tests + coordinator live walk 2026-09-13** (`job1789319022666002` → `ps1789319081640`). **D66** always-run + live CI (`lsat7-pipeline` sim10GDINA step green on `dca6c31`); recovered-vs-`simItempar` and classification **restated**, not pinned. **D67** always-run + live CI (`lsat7-pipeline` CTT step green on `45de56f`; `TAM 4.3.25`, `converged: true`, 1000×5). Difficulty asserted against published LSAT7 item means; KR-20 / rpb **restated**, not pinned. **D68** met in tests (in-flight freeze; new sessions take the active set; D50 IRT keying = observable with itemId fallback). Live mid-flight ingest on `:6060` **written off Wave 4** (store has no unstopped two-item session). **D69** always-run + live CI (`lsat7-pipeline` planted DIF step green on `56de11d`; `difR 6.1.0`, unique ETS C on Item.5). |
 
 | HEAD at D60 | `bdc88dc` |
 
@@ -291,7 +292,8 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-10-29 Wave 2 walk-fails | product **`758c3e1`** ≡ `main/master` before Wave 2A. Handoff: `claude/day146aa-offcal-wave2-walk-fixes.md`. Suite **2869 passed / 4 skipped** (330 files). Build green (EvidenceModelBuilder 372.26 kB gzip 87.78 kB). Live `:6060` index `/assets/index-BDA9pVz6.js`. **Not D146.** D155 not started. W29 stays open. |
 | HEAD at 2026-10-29 Wave 2A | product **`6cc96bf`** ≡ `main/master` before Wave 2B. Handoff: `claude/day146ab-offcal-wave2a-parameter-set-diff.md`. Suite **2874 passed / 5 skipped** (332 files). Build green (EvidenceModelBuilder 369.20 kB gzip 87.23 kB; ParameterSetDiff 5.73 kB gzip 1.87 kB). Live `:6060` index `/assets/index-Cdv-oe6_.js`. **Not D146.** D155 not started. W29 stays open. |
 | HEAD at 2026-10-29 Wave 2B | product **`2c2df8e`** ≡ `main/master` before Wave 3. Handoff: `claude/day146ac-offcal-wave2b-dual-attribute-selection.md`. Suite **2879 passed / 4 skipped** (332 files, 2883). Build green (EvidenceModelBuilder 369.20 kB gzip 87.22 kB). Live `:6060` index `/assets/index-B94H1MXV.js`. **Not D146.** D155 not started. |
-| HEAD at 2026-10-29 Wave 3 | Last committed tip **`2c2df8e`**. Product uncommitted at close. Handoff: `claude/day146ad-offcal-wave3-w29-forward-controls.md`. Suite **2884 passed / 3 skipped** (333 files, 2887). Build green (EvidenceModelBuilder 369.20 kB gzip 87.22 kB; DomainAnalysisEditor 35.71 kB gzip 10.14 kB). Live `:6060` index `/assets/index-CcflFHJL.js`. Confirmed live Student Model **W29 Fractions Student Model**. **Not D146.** D155 not started. ~~W29~~ closed. |
+| HEAD at 2026-10-29 Wave 3 | product **`7fb4bef`** ≡ `main/master` before Wave 4. Handoff: `claude/day146ad-offcal-wave3-w29-forward-controls.md`. Suite **2884 passed / 3 skipped** (333 files, 2887). Build green (EvidenceModelBuilder 369.20 kB gzip 87.22 kB; DomainAnalysisEditor 35.71 kB gzip 10.14 kB). Live `:6060` index `/assets/index-CcflFHJL.js`. Confirmed live Student Model **W29 Fractions Student Model**. **Not D146.** D155 not started. ~~W29~~ closed. |
+| HEAD at 2026-10-29 Wave 4 | Last committed tip **`7fb4bef`**. Docs uncommitted at close. Handoff: `claude/day146ae-offcal-wave4-limits.md`. No product; suite / build / live not re-run. Standing walks D68 / Continue / Newtonian / CM archive written off. **Not D146.** D155 not started. ~~W29~~ closed. |
 
 
 
@@ -660,6 +662,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-29 | off-calendar | Wave 2A | Parameter-set diff helper sorts largest \|Δ\| first. Same table on Parameter Sets Compare and D65 console inspect. Live inspect `job1793177974633000` vs activated `ps1793177976685`. **Not D146.** Handoff: `claude/day146ab-offcal-wave2a-parameter-set-diff.md`. |
 | 2026-10-29 | off-calendar | Wave 2B | Dual-attribute selection ranks unmeasured attributes at authored `masteryPrior`. Inspect missing-active copy on Fraction IRT `job1793184918746000`. Deleted draft clone and two walk announcements. **Not D146.** Handoff: `claude/day146ac-offcal-wave2b-dual-attribute-selection.md`. |
 | 2026-10-29 | off-calendar | Wave 3 / ~~W29~~ | Confirmed Domain Analysis Overview hands off `?tab=student\|designpatterns&domainAnalysisId=`. Live `:6060` authored and confirmed **W29 Fractions Student Model** from Fractions (Trait inherited). Unpatterned New Student Model still opens. Q-matrix button unchanged. Suite **2884 passed / 3 skipped**. **Not D146.** Handoff: `claude/day146ad-offcal-wave3-w29-forward-controls.md`. |
+| 2026-10-29 | off-calendar | Wave 4 limits | Recorded remaining through-D153 leftovers as design limits. Standing walks D68 / Continue / Newtonian / CM archive written off (store cannot host them without inventing a session or a pack). No product. Suite not re-run. **Not D146.** Handoff: `claude/day146ae-offcal-wave4-limits.md`. Calendar next stays D155. |
 
 
 
@@ -701,7 +704,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | D67 | Live TAM LSAT7 CTT not executed in the authoring environment (no Docker/R here) | CI `lsat7-pipeline` now also runs `cttPipeline.test.js` | this PR's CI | **closed** — live job green (`TAM 4.3.25`, `converged: true`, 1000×5, `TAM::tam.ctt2`; observed KR-20 0.4542 recorded, not pinned) |
 
-| D68 | Live mid-flight ingest + second submit on `:6060` | HTTP switchover tests; player regression only | D71 | **open — standing risk** escalated at W26 close 2026-10-13 (carried past two block closes). Still no unstopped two-item live walk. |
+| D68 | Live mid-flight ingest + second submit on `:6060` | HTTP switchover tests; player regression only | D71 | **written off 2026-10-29 Wave 4** — product met in tests (`c4e5d77`). Live walk not executable: store has completed sessions only, no unstopped two-item session. Do not invent one. Handoff: `claude/day146ae-offcal-wave4-limits.md`. |
 | D146 | Perspective readout not opened on `:6060` | Exit check was the inheritance test | Next live Evidence Model walk | **closed** — 2026-10-17 `:6060`. Design Pattern does not store a perspective. Confirmed Student Model **Plant part naming** shows `Perspective: Trait Inherited from Fractions.` Evidence identity, the statistical-model choice, and template **Name the plant part** each show `Perspective: Trait. Declared on Fractions.` Task was not opened |
 | D147 | New advisory wording not opened on `:6060` | Exit check was the panel test and the audit test | Next live Evidence Model walk | **closed** — 2026-10-17 `:6060`. Draft **Part naming evidence**, type DINA, configuration panel: “Declared on Fractions. A trait perspective describes competence as a continuous latent trait, which a diagnostic model does not estimate. This is advisory, not blocking.” The same model was later confirmed as Rasch 1PL (`em1792239691400`), because a DINA confirm still needs a confirmed Q-matrix |
 | D148 | New decision-point lines not opened on `:6060` | Exit check was the selector test, the template test, and the Storybook component | Next live Evidence Model walk | **closed** — 2026-10-17 `:6060`. The statistical-model selector and the template Student Model select both show `Perspective: Trait. Declared on Fractions.` |
@@ -711,7 +714,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | D70 | Live known-equating not executed against Hub `rvkmar/r-backend:latest` | Local `:4000` has equate 2.0.9 / plink 1.5.1; CI still pulls Hub | Docker Hub push of the rebuilt image | **closed D88** — Hub `latest` reports plink 1.5.1; CI package gate fails loudly if missing |
 
-| CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open — standing risk** 2026-10-29 Wave 2: Step 9 crash closed (`CheckCircle2` imported). Wave 2B deleted leftover draft clone `cm1793267236887`. Did not archive the live confirmed parents. |
+| CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **written off 2026-10-29 Wave 4** — archive UI/API exists; Wave 2 closed the Step 9 crash; Wave 2B deleted leftover draft clone `cm1793267236887`. Did not archive live confirmed parents (would mutate operational Student Models). Handoff: `claude/day146ae-offcal-wave4-limits.md`. |
 
 | D115 | Live `:6060` two-PM / one-item browser walk | Tests proved chrome flip; seeded dual-PM session not walked end-to-end | next live student/admin walk | **closed** — 2026-09-21 live walk on `s1789988990327` / `tm-d56` / `itemA`; student tenancy bugs fixed (presentation attach + task GET); chrome flipped `large_text` → `high_contrast` without item edits |
 
@@ -756,6 +759,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 | Wave 2A / D65 leftover | Parameter-set diff UI was never built | Registry already compared active vs another set without sorting by movement. D65 console inspect had no diff | Extract `diffParameterSets`, sort by max(\|Δa\|,\|Δb\|,\|Δslip\|,\|Δguess\|), share `ParameterSetDiff` on Compare and console inspect. Do not start Wave 2B or D155. |
 | Wave 2B / D60 P1-4 | Dual-attribute selection skipped attributes with no live posterior | Stopping already closed. D56 refused `?? 0.5`. Accumulation already had `masteryPrior` (absent → 0.5; invalid declared prior refused). True BN already used `network.prior` | Rank at live posterior else authored `masteryPrior`. Missing SMV or invalid prior still unrankable. Do not start D155. |
 | Wave 3 / W29 | Start at Domain Analysis and reach a Competency Model | Overview only offered Author a Q-matrix. Student Model and Design Pattern already had a Domain Analysis select and D146 copy-when-empty. Q-matrix already used `?tab=qmatrix&domainAnalysisId=` | Same URL handoff for `tab=student` and `tab=designpatterns`. Confirmed-only buttons. Do not auto-create a CM. Do not absorb D143. Do not re-home D144. Keep the unpatterned New SM path. Do not start D155. Held on live `:6060` confirm of **W29 Fractions Student Model**. |
+| Wave 4 | Remaining open ledger rows through D153 are unfinished product | They are recorded design limits. ADR 0004 already exists. G19 already binds an Assembly Model via a cited delivery model; inferred two-governing still applies none. Student Model Step 3 still reads `curricularPolicies`. D68 / Continue / Newtonian / CM archive need a store this session will not invent | Strike as recorded limits. Write off the standing walks. Do not author a mastery threshold, `session.assemblyModelId`, TTL prune, sociocultural advisories, Item-wizard perspective, or `jointPrior` editor. Do not start D155. |
 
 | D59 | Split reports by role; attribute-profile UI; close teacher-report leak | One stack (`reportsRoutes` + `SessionReport`); teacher-report was authenticate-only; classification already computed, not shown on reports | Gate teacher routes with `authorizeRole`; stop the client fetching them as a student; attach `stopped` + `attributeProfile` to existing payloads/surfaces |
 
@@ -931,13 +935,13 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~Examinee can GET teacher-report~~ closed D59
 
-- Mastery cut fixed at 0.5 — still true
+- ~~Mastery cut fixed at 0.5~~ recorded Wave 4. ADR 0004: `DEFAULT_MASTERY_THRESHOLD = 0.5` is the Bayes rule under symmetric 0-1 loss. Authorable per Assembly Model or SMV is a later unit. Handoff: `claude/day146ae-offcal-wave4-limits.md`.
 
 - ~~`gdina` has no pilot path (R8)~~ closed. Uncalibrated G-DINA derives a conjunctive table from `dinaParams` slip/guess. ~~R7~~ closed ranking from a calibrated table. Missing slip/guess, Q-vector, or posterior still falls back.
 
-- ~~DINA slip/guess keyed only by itemId (R9)~~ closed. Scoring looks up observableId first, then itemId. Calibration still keys fitted parameters by item.
+- ~~DINA slip/guess keyed only by itemId (R9)~~ closed. Scoring looks up observableId first, then itemId. ~~Calibration still keys fitted parameters by item~~ recorded Wave 4 as the R9 remainder (R1). Not a scoring hole.
 
-- Session not bound to a specific Assembly Model (two *governing* matches → none applied, now warned). A draft/archived sibling no longer vetoes the unique governing model (D60 P0).
+- ~~Session not bound to a specific Assembly Model~~ recorded Wave 4. A cited delivery model uses that model's `assemblyModelId` (G19). A session with no delivery model still infers; two *governing* matches apply none (`AMBIGUOUS`) rather than guessing (D60). Binding a first-class `session.assemblyModelId` is a later unit.
 
 - ~~Adaptive selection: nearest difficulty, not max information~~ closed as a design limit (~~R12~~). Item IRT is max Fisher. Legacy question IRT stays nearest difficulty at `irtTheta`. The path is not deleted.
 
@@ -955,7 +959,21 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~Student My Sessions placeholder~~ closed D60
 
-- Dead-export guard can miss unused exports that share a name
+- ~~Dead-export guard can miss unused exports that share a name~~ recorded Wave 4 as a guard limitation, not a product gap.
+
+- ~~Settings Curricular Policies still mounted~~ recorded Wave 4. ADR 0011 / D143: retire when nothing reads `/api/curricularPolicies`. Competency Wizard Step 3 still does.
+
+- ~~Q-matrix on the DINA store~~ recorded Wave 4. ADR 0012 / D144 stay. Knowledge–task statements stay `{ label }`.
+
+- ~~Sociocultural / process-trace advisories~~ recorded Wave 4. Left out of D147 on purpose.
+
+- ~~Item wizard perspective~~ recorded Wave 4. Explicitly not D148.
+
+- ~~Competency Wizard `jointPrior` editor~~ recorded Wave 4. R10 one-partner cap; no multivariate EAP. D129 stays closed.
+
+- ~~AuditLog TTL / calibration `retainUntil` prune~~ recorded Wave 4. `AUDITLOG_RETENTION_DAYS` off by default. Jobs stamp `retainUntil`; payloads are not pruned on write. Ops, not D153 product.
+
+- ~~PCM, Sympson–Hetter, full joint EAP, default carry-forward~~ already recorded (R5, R13, R10, R11). Wave 4 did not reopen them.
 
 - ~~Session ownership-scoping (a student may only read their own session)~~ closed D72 on session + session-report routes; ~~`GET /api/students` roster dump~~ closed D97 at storage boundary; ~~row-level HTTP matrix~~ closed D98 (`d98TenancyRowNegatives.test.js` + sixth mirror)
 
@@ -963,7 +981,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~Home announcements live `:6060` create/visibility walk~~ **closed** 2026-10-29 Wave 2. Admin public and leftover teachers-only posts list on `teach1` Home. Create stamps `districtId` when the author has one; admin unscoped posts are platform-wide.
 
-- Student wizard timing Continue across devices — **open** (API tests only this close)
+- ~~Student wizard timing Continue across devices~~ **written off 2026-10-29 Wave 4**. No in-progress wizard session on this store. API tests only. Do not invent a Continue session.
 
 - ~~W15 five-claim core sign-off~~ closed D75 (`4d56191`)
 
@@ -977,9 +995,9 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~Force Q-matrix still single-attribute~~ closed EM-R3
 
-- Newtonian live promote on `:6060` (confirm → attach-seed → operational) — **open**
+- ~~Newtonian live promote on `:6060` (confirm → attach-seed → operational)~~ **written off 2026-10-29 Wave 4**. Live store has Part naming / Part function / Fraction. No Newtonian pack. Do not bulk-upload Newtonian here.
 
-- Live Newtonian console walk beyond suite ingest fixture — **open**
+- ~~Live Newtonian console walk beyond suite ingest fixture~~ **written off 2026-10-29 Wave 4**. Same store.
 
 - ~~Work Products / Rubrics as first-class objects + multi-phase eval + human rating UI (W25 / G11–G12)~~ closed D125 (`claude/day125-w25-block-close.md`)
 
@@ -1062,5 +1080,5 @@ Corrections from that re-audit:
 | ~~R14~~ | Design pattern provenance | Closed. DELETE 409s while a seeded evidence or task model cites `seededFrom.designPatternId`, naming collection and id. After those rows are gone, DELETE is 200. Templates still 409 first. No tombstone. The snapshot is not stripped. Handoff: `claude/day146t-offcal-r11-r14-remaining-lows.md`. | `server/routes/designPatternsRoutes.js` | Done. | ~~Low~~ |
 | ~~R15~~ | Lifecycle gates vs small student models | Closed off calendar (Not D146). A multidimensional model with two competencies needed three relationships, which forced two types toward one competency. The floor is now the minimum of 3 and the number of ordered pairs. fairnessNotes is enforced on draft to reviewed. A decision rule is enforced when confirm locks the model. An active parameter set is enforced at operational scoring and adaptive selection, not at confirm. Operational exposure still counts only an operational item; a confirmed pilot response is calibration data and does not increment usageCount. | `src/utils/studentModelAudit.js`; `src/utils/schema.js`; `server/routes/evidenceModels.js`; `server/utils/itemExposure.js` | Done. | Med |
 
-**~~R1–R14~~ are all closed** as of `78151e3` (2026-10-29). ~~R1~~ is closed. A follow-up after running that path against R is recorded on the R1 row and in `claude/day146d-offcal-calibration-fixes.md` (Not D146). A second follow-up, after an end-to-end simulation, is on the same row and in `claude/day146e-offcal-e2e-simulation-blockers.md` (Not D146). ~~R2~~ is closed (draft PR #121). ~~R3~~ is closed (PR #120, `da0a597`). ~~R4~~ is closed (`claude/day146m-offcal-r4-multi-observable.md`). ~~R5~~ is closed (`claude/day146n-offcal-r5-ordinal-grm.md`). ~~R6~~ is closed (`claude/day146o-offcal-r6-bn-latent-tree.md`). ~~R7~~ is closed (`claude/day146p-offcal-r7-gdina-selection.md`). ~~R8~~ is closed (`claude/day146q-offcal-r8-gdina-pilot.md`). ~~R9~~ is closed (`claude/day146r-offcal-r9-observable-params.md`). ~~R10~~ is closed (`claude/day146s-offcal-r10-jointprior-limit.md`). ~~R11~~–~~R14~~ are closed (`claude/day146t-offcal-r11-r14-remaining-lows.md`). ~~R15~~ records the lifecycle placement from that same pass. No High, Med, or Low gap remains in this table. D129 stays closed. Calendar next stays D154. The audit's `ledger.md` is this repo's `claude/progress-ledger.md`.
+**~~R1–R14~~ are all closed** as of `78151e3` (2026-10-29). ~~R1~~ is closed. A follow-up after running that path against R is recorded on the R1 row and in `claude/day146d-offcal-calibration-fixes.md` (Not D146). A second follow-up, after an end-to-end simulation, is on the same row and in `claude/day146e-offcal-e2e-simulation-blockers.md` (Not D146). ~~R2~~ is closed (draft PR #121). ~~R3~~ is closed (PR #120, `da0a597`). ~~R4~~ is closed (`claude/day146m-offcal-r4-multi-observable.md`). ~~R5~~ is closed (`claude/day146n-offcal-r5-ordinal-grm.md`). ~~R6~~ is closed (`claude/day146o-offcal-r6-bn-latent-tree.md`). ~~R7~~ is closed (`claude/day146p-offcal-r7-gdina-selection.md`). ~~R8~~ is closed (`claude/day146q-offcal-r8-gdina-pilot.md`). ~~R9~~ is closed (`claude/day146r-offcal-r9-observable-params.md`). ~~R10~~ is closed (`claude/day146s-offcal-r10-jointprior-limit.md`). ~~R11~~–~~R14~~ are closed (`claude/day146t-offcal-r11-r14-remaining-lows.md`). ~~R15~~ records the lifecycle placement from that same pass. No High, Med, or Low gap remains in this table. D129 stays closed. Calendar next stays D155 (never-compress, not started). The audit's `ledger.md` is this repo's `claude/progress-ledger.md`. Wave 4 (`claude/day146ae-offcal-wave4-limits.md`) recorded remaining through-D153 leftovers as design limits and wrote off store-blocked standing walks.
 

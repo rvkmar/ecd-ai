@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Notes
+
+- Wave 4 recorded remaining through-D153 leftovers as design limits
+  (mastery cut ADR 0004; inferred Assembly Model `AMBIGUOUS`; item-keyed
+  DINA calibration; Settings `curricularPolicies` while Step 3 still
+  reads them; D144 Q-matrix stay; D147/D148/R10 leftovers; AuditLog TTL
+  off; dead-export shared-name). Standing walks D68 / Continue /
+  Newtonian / CM archive written off as store-blocked. No product.
+  Handoff: `claude/day146ae-offcal-wave4-limits.md`.
+
 ### Added
 
 - Wave 3 / W29: a confirmed Domain Analysis Overview can author a Student
@@ -15,7 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   either record. A draft analysis tells the author to confirm first. New
   Student Model with no analysis still opens. Q-matrix handoff is
   unchanged. Handoff: `claude/day146ad-offcal-wave3-w29-forward-controls.md`.
-
 
 - D116: Task Model Variables (W24 G13). `taskModelVariables` is a library
   collection of typed reusable design features (no CAF status machine).
@@ -408,10 +417,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known gaps (carried forward, see progress ledger)
 
-- The mastery cut for a diagnostic classification is fixed at 0.5 and cannot
-  be set per Assembly Model or per attribute. 0.5 is the standard rule and the
-  right default, but a programme wanting a stricter bar for a high-stakes
-  attribute cannot express it yet.
+- ~~The mastery cut for a diagnostic classification is fixed at 0.5~~
+  recorded Wave 4. ADR 0004: `DEFAULT_MASTERY_THRESHOLD = 0.5` is the
+  Bayes rule under symmetric 0-1 loss. Authorable per Assembly Model or
+  per attribute is a later unit.
 - ~~A mastery classification was absent from learner/teacher report views~~
   closed D59 (player ending screen was D58; reports / header / list badge now).
 - The expected classification accuracy reported for a student is the
@@ -419,9 +428,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   test's overall classification-accuracy rate, which needs the whole
   population and is not computed anywhere yet. Averaging the per-student
   figures across a cohort will not produce it.
-- The guard that stops unused code shipping can miss an unused export whose
-  name is also used by another module — the two cover for each other. Found
-  by experiment while adding a new module; not yet fixed.
+- ~~The guard that stops unused code shipping can miss an unused export whose
+  name is also used by another module~~ recorded Wave 4 as a guard
+  limitation, not a product gap. Two modules that share an export name
+  cover for each other.
 
 - The Q-matrix's *advisory* rules (duplicate rows, weak identifiability,
   low coverage) have no server-side equivalent — by design, since they are
@@ -431,10 +441,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   routed but have no inbound link anywhere in the app, so nothing but a typed
   URL reaches them. `/district/q-matrices` was given a dashboard tab as well
   as a route for exactly this reason; the other three are still unreachable.
-- Diagnostic models still cannot score `gdina` on pilot parameters: its
-  calibrated parameters are a probability table sized to each item's own
-  required-attribute count, not a fixed pair, and authoring that table is
-  its own piece of work. `dina` now has a pilot path (see Added, above).
+- ~~Diagnostic models still cannot score `gdina` on pilot parameters~~
+  closed R8. Uncalibrated G-DINA derives a conjunctive table from
+  `dinaParams` slip/guess. Calibrated tables rank by expected posterior
+  entropy (R7). Missing slip/guess still falls back to pool order.
 - Creating an item through the API with its pilot DINA slip/guess values
   already set in the same request silently drops them — only a follow-up
   edit persists them. Not believed to be reachable through the Item Wizard
@@ -455,11 +465,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - There is no district-facing read-only Q-matrix view, though the UI
   specification calls for one. Newly recorded, not previously tracked.
 - Remaining D51 debt: the grid is not virtualised above a stated row count.
-- A session is not bound to a specific Assembly Model. The one governing a
-  session is inferred from the competency model its tasks measure; where two
-  confirmed Assembly Models match, none is applied rather than one being
-  guessed at, so those sessions get no stopping rules at all. A draft or
+- ~~A session is not bound to a specific Assembly Model.~~ A session that
+  cites a delivery model uses that model's `assemblyModelId` (G19).
+  Recorded Wave 4: a session with no delivery model still infers from
+  the competency model; where two governing Assembly Models match, none
+  is applied (`AMBIGUOUS`) rather than one being guessed at. A draft or
   archived sibling no longer vetoes the unique governing model (D60).
+  Binding a first-class `session.assemblyModelId` is a later unit.
 - Dual-attribute diagnostic *stopping* will not fire on a one-attribute
   slice of a two-attribute Assembly Model. Dual-attribute *selection*
   ranks an unmeasured attribute at the SMV's authored masteryPrior
@@ -470,15 +482,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   conjunctive slip/guess table (R8). Missing slip/guess still falls
   back to pool order with a warning.
 - ~~Stop reason missing from learner/teacher reports~~ closed D59.
-- Adaptive selection still picks the item whose difficulty sits closest to
-  the current estimate rather than the one carrying most information at it.
-  The latter is the better rule and is deliberately held back for the work
-  that checks selection against a published benchmark.
+- ~~Adaptive selection still picks the item whose difficulty sits closest to
+  the current estimate~~ recorded R12 as the legacy-question design
+  limit. Item IRT is max Fisher at the live EAP. The quarantined reader
+  is not deleted.
 - A session mixing item-based and legacy question-based tasks ranks only the
   item-based ones when selecting adaptively: the two carry ability estimates
   that are not on a common scale and must not be compared in one ranking.
-- Adaptive selection has not yet been exercised in a live browser session;
-  it is verified by tests only.
+- ~~Adaptive selection has not yet been exercised in a live browser session~~
+  closed D56 as inspection (`s1789288355960`).
 
 ## [1.0.0] - 2026-09-10
 
