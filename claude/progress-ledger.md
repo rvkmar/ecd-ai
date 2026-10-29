@@ -84,6 +84,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Off-calendar (2026-10-29, calibration store) | `calibrationJobs` and `analysisArtefacts` move to Mongo in production (migration 013). Worker claim is one document update. JSON harness unchanged. Response and payload are not pruned. Handoff: `claude/day146w-offcal-calibration-mongo.md`. **Not D146.** |
 | Off-calendar (2026-10-29, student model store) | `studentModelRecords` moves to Mongo in production (migration 014). A session finish is one document update. `saveDB` omits the key when external. JSON harness unchanged. The design zip does not carry these rows. Handoff: `claude/day146x-offcal-student-model-mongo.md`. **Not D146.** |
 | Off-calendar (2026-10-29, Wave 0) | Live `ecd-node` + `ecd-nginx` rebuilt and recreated from `79ea093`. `admin1` signs in on `:6060`. Domain Analysis, Design Pattern, and Student Model match git (DA still only “Author a Q-matrix”). Did not walk Wave 1. Did not start D155. Handoff: `claude/day146y-offcal-wave0-live-rebuild.md`. **Not D146.** |
+| Off-calendar (2026-10-29, Wave 1) | Standing walks **partial**. ~~D115b Instantiated tasks~~ passed on `:6060`. Announcements create/delete work; teacher visibility fails (no `districtId`). CM archive blocked by Step 9 `CheckCircle2`. D68, Continue, Newtonian not walked (no in-flight session / no Newtonian EMs). Handoff: `claude/day146z-offcal-wave1-standing-walks.md`. **Not D146.** |
 | Next queued | **D155**, alone, never-compress. Re-calibrate first. Generate the D120 ten-spec family end to end and deliver one spec as an item that scores. W31 gate. Do not start from this close. W29 stays open. |
 
 | Block | **W31 started** 2026-10-28 (D151–D154 done; D155 remains). Conformance G15 closed by D151. W31 gate (ten specs from one template, one delivered and scored) is D155. **W30 closed** 2026-10-17 (D146–D150). Gate held as restated: a trait Student Model scored with DINA or G-DINA raises an advisory sourced from the Domain Analysis, and confirm is not blocked. “Visible at every layer” was not the gate. **W29 open** (D141–D145 done; D145 is a walk, not the gate). Gate not held: an author cannot yet start at a Domain Analysis and reach a Competency Model. **W28 closed** 2026-10-14 (D136–D140). Gate held in the component test and the descendants query: a seeded model traces to its pattern, and a chain of 24 stays at four nodes. Live `:6060` showed the kind-of neighbourhood and had no seeded models. **W27 closed** 2026-10-14 (D131–D135). Gate held: a design pattern was authored and confirmed. **W26 closed** 2026-10-13 (D126–D130). **W25 closed** 2026-09-22 (D121–D125). **W24 closed** 2026-09-22. **W23 closed** 2026-09-21. **W22** closed 2026-09-20. |
@@ -282,6 +283,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | HEAD at 2026-10-29 student model store | product **`99320b2`** (#126) ≡ `main/master` before D154. Sessions, auditLog, calibrationJobs, analysisArtefacts, and studentModelRecords leave `db.json` in production. JSON harness unchanged. **Not D146.** |
 | HEAD at D154 | product **`9b944ee`** ≡ `main/master` before this close + `claude/day154-itemmappings-writeback.md`. Close re-run **2862 passed / 3 skipped** (329 files, 196.82s). Build green (24.30s; largest chunk EvidenceModelBuilder 372.26 kB gzip 87.77 kB). Calendar D154 ✅, date not moved. W31 not marked. W29 stays open. Next: re-calibrate before D155 (never-compress). |
 | HEAD at 2026-10-29 Wave 0 | **`79ea093`** ≡ `main/master`. Live `:6060` `ecd-node` + `ecd-nginx` force-recreated from current context (compose build fully CACHED). Index `/assets/index-BdsKVPkN.js`. Health ok; R reachable. `admin1` login and DA / Design Pattern / Student Model match git. **Not D146.** D155 not started. W29 stays open. |
+| HEAD at 2026-10-29 Wave 1 | **`cfa4b56`** ≡ `main/master`. No product. Instantiated tasks walked. Announcement tenancy and Step 9 `CheckCircle2` become Wave 2. D68 / Continue / Newtonian still open. **Not D146.** D155 not started. W29 stays open. |
 
 
 
@@ -645,6 +647,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-29 | off-calendar | student model store | `studentModelRecords` leaves `db.json` for Mongo in production (migration 014). Session finish merges one history entry. `saveDB` omits the key when external. JSON harness unchanged. Suite **2843 passed / 13 skipped**. **Not D146.** Handoff: `claude/day146x-offcal-student-model-mongo.md`. Calendar next stays D154. |
 | 2026-10-29 | D154 | 2, alone | Coverage map derived from instantiable items. Step 6 is a readout. Client `itemMappings` discarded. Library agreement asserted. Product `9b944ee`. Close re-run **2862 passed / 3 skipped**. D155 not started. W31 not marked. W29 stays open. |
 | 2026-10-29 | off-calendar | Wave 0 | Rebuilt and recreated `ecd-node` + `ecd-nginx` from `79ea093`. `admin1` signed in on `:6060`. Fractions Domain Analysis still only offers “Author a Q-matrix”. Design Pattern Identity and Student Model Step 1 both cite Domain Analysis. Wave 1 not started. D155 not started. **Not D146.** Handoff: `claude/day146y-offcal-wave0-live-rebuild.md`. |
+| 2026-10-29 | off-calendar | Wave 1 | Instantiated tasks walked. Announcements: create/delete yes, teacher visibility no. Archive: Step 9 crash. D68, Continue, Newtonian not walked. **Not D146.** Handoff: `claude/day146z-offcal-wave1-standing-walks.md`. |
 
 
 
@@ -696,7 +699,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 
 | D70 | Live known-equating not executed against Hub `rvkmar/r-backend:latest` | Local `:4000` has equate 2.0.9 / plink 1.5.1; CI still pulls Hub | Docker Hub push of the rebuilt image | **closed D88** — Hub `latest` reports plink 1.5.1; CI package gate fails loudly if missing |
 
-| CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open — standing risk** escalated at W26 close 2026-10-13. Still not walked on `:6060`. |
+| CM archive live walk | Archive UI/API in source; not demonstrated on `:6060` | Image not rebuilt this session | next live admin walk | **open — standing risk** 2026-10-29 Wave 1: Archive control is on confirmed Plant part naming. Clone to avoid archiving the live parent. Step 9 crashed (`CheckCircle2` used in `VersionHistoryViewer.jsx` with no import). Confirm/archive of the clone did not run. |
 
 | D115 | Live `:6060` two-PM / one-item browser walk | Tests proved chrome flip; seeded dual-PM session not walked end-to-end | next live student/admin walk | **closed** — 2026-09-21 live walk on `s1789988990327` / `tm-d56` / `itemA`; student tenancy bugs fixed (presentation attach + task GET); chrome flipped `large_text` → `high_contrast` without item edits |
 
@@ -941,7 +944,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~Staff Operate mislabeled / teachers could Finish student sessions~~ closed day73c (Review/View/Report + read-only teacher player)
 
-- Home announcements live `:6060` create/visibility walk — **open** (tests only this close)
+- Home announcements live `:6060` create/visibility walk — **open** (2026-10-29 Wave 1: admin create and delete work; `teach1` sees none because create does not stamp `districtId` and D97 hides no-district rows)
 
 - Student wizard timing Continue across devices — **open** (API tests only this close)
 
@@ -967,7 +970,7 @@ Debt against the never-compress list is not permitted. **D60** (this file's real
 
 - ~~D47 F6 / TasksManager item bind (`schema.tasks` commented; POST `{ taskModelId }` only)~~ closed D115b (`claude/day115b-instantiated-tasks.md`)
 
-- D115b live Implementation → Instantiated tasks click-through on `:6060` — **open** (schema/API/UI tests this close)
+- ~~D115b live Implementation → Instantiated tasks click-through on `:6060`~~ **closed** 2026-10-29 Wave 1. `/admin?tab=activities` listed 23 rows, bound Leaf, deleted the extra `t1793267165006`.
 
 - ~~W26 templates + joint SMV update (G14)~~ closed D130 (`claude/day130-adversarial-joint-w26.md`, `claude/day130-w26-session-close.md`)
 
