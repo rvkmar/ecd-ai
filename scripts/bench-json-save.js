@@ -227,6 +227,9 @@ try {
     const artefactsRepo = await import("../server/analysisArtefacts/analysisArtefactRepository.js");
     jobsRepo.resetCalibrationJobStoreForTests();
     artefactsRepo.resetAnalysisArtefactStoreForTests();
+    process.env.STUDENT_MODEL_RECORDS_BACKEND = "memory";
+    const studentModelRepo = await import("../server/studentModelRecords/studentModelRecordRepository.js");
+    studentModelRepo.resetStudentModelRecordStoreForTests();
     await repo.upsertSessions(sessions);
 
     async function oneExternal(i) {

@@ -22,6 +22,10 @@ import {
   exportAllAnalysisArtefacts,
   analysisArtefactsUseExternalStore,
 } from "../analysisArtefacts/analysisArtefactRepository.js";
+import {
+  exportAllStudentModelRecords,
+  studentModelRecordsUseExternalStore,
+} from "../studentModelRecords/studentModelRecordRepository.js";
 import { BACKUP_INVENTORY, inventoryIncluded, inventoryExcluded, BACKUP_FILE_PREFIX, BACKUP_FILE_SUFFIX } from "./inventory.js";
 import {
   decryptBackupBlob,
@@ -144,6 +148,16 @@ async function exportMongoCollections(deps = {}, ecdBytes = null) {
   } else {
     analysisArtefacts = ecdBytes ? collectionInEcdBuffer(ecdBytes, "analysisArtefacts") : [];
   }
+  let studentModelRecords;
+  if (typeof deps.listStudentModelRecords === "function") {
+    studentModelRecords = await deps.listStudentModelRecords();
+  } else if (studentModelRecordsUseExternalStore()) {
+    studentModelRecords = (await exportAllStudentModelRecords()) || [];
+  } else {
+    studentModelRecords = ecdBytes
+      ? collectionInEcdBuffer(ecdBytes, "studentModelRecords")
+      : [];
+  }
   return {
     "mongo/users.json": Buffer.from(JSON.stringify(users ?? [], null, 2), "utf8"),
     "mongo/questions.json": Buffer.from(
@@ -158,6 +172,10 @@ async function exportMongoCollections(deps = {}, ecdBytes = null) {
     ),
     "mongo/analysisArtefacts.json": Buffer.from(
       JSON.stringify(analysisArtefacts ?? [], null, 2),
+      "utf8"
+    ),
+    "mongo/studentModelRecords.json": Buffer.from(
+      JSON.stringify(studentModelRecords ?? [], null, 2),
       "utf8"
     ),
   };
@@ -230,6 +248,7 @@ export async function runFullBackup(options = {}) {
     notes: [
       "calibrationJobs are in mongo/calibrationJobs.json; the JSON harness also keeps them inside ecd/db.json",
       "analysisArtefacts are in mongo/analysisArtefacts.json; the JSON harness also keeps them inside ecd/db.json",
+      "studentModelRecords are in mongo/studentModelRecords.json; the JSON harness also keeps them inside ecd/db.json",
       "sessions are in mongo/sessions.json; the JSON harness also keeps them inside ecd/db.json",
       "uploaded task materials are inline on items unless ECD_MATERIALS_DIR is set",
     ],

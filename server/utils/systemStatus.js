@@ -22,11 +22,12 @@ import { resolveSessionsBackend } from "../sessions/sessionBackend.js";
 import { resolveAuditLogBackend } from "../auditLog/auditBackend.js";
 import { resolveCalibrationJobsBackend } from "../calibrationJobs/calibrationJobBackend.js";
 import { resolveAnalysisArtefactsBackend } from "../analysisArtefacts/analysisArtefactBackend.js";
+import { resolveStudentModelRecordsBackend } from "../studentModelRecords/studentModelRecordBackend.js";
 
 // `mode` stays "ecd-json": the ECD file is still the content store.
-// Sessions, auditLog, calibrationJobs, and analysisArtefacts may live in
-// that file or in Mongo. Callers that branch on mode keep working; the
-// *Backend fields name those stores.
+// Sessions, auditLog, calibrationJobs, analysisArtefacts, and
+// studentModelRecords may live in that file or in Mongo. Callers that
+// branch on mode keep working; the *Backend fields name those stores.
 function sessionsBackendName(env = process.env) {
   const backend = resolveSessionsBackend(env);
   if (backend === "mongo") return "mongo";
@@ -55,6 +56,13 @@ function analysisArtefactsBackendName(env = process.env) {
   return "file";
 }
 
+function studentModelRecordsBackendName(env = process.env) {
+  const backend = resolveStudentModelRecordsBackend(env);
+  if (backend === "mongo") return "mongo";
+  if (backend === "memory") return "memory";
+  return "file";
+}
+
 function userStoreMode() {
   // Avoid the bare identifier DB_MODE — the dead-export guard matches that
   // name across files and would treat this as a caller of dbAdapter.DB_MODE.
@@ -72,6 +80,7 @@ function probeEcdDatabase() {
       auditLogBackend: auditLogBackendName(),
       calibrationJobsBackend: calibrationJobsBackendName(),
       analysisArtefactsBackend: analysisArtefactsBackendName(),
+      studentModelRecordsBackend: studentModelRecordsBackendName(),
       collections: Object.keys(db || {}).length,
     };
   } catch (err) {
@@ -82,6 +91,7 @@ function probeEcdDatabase() {
       auditLogBackend: auditLogBackendName(),
       calibrationJobsBackend: calibrationJobsBackendName(),
       analysisArtefactsBackend: analysisArtefactsBackendName(),
+      studentModelRecordsBackend: studentModelRecordsBackendName(),
       error: err?.message || String(err),
     };
   }

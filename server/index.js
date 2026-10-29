@@ -59,6 +59,7 @@ import dataZipRoutes from "./routes/dataZipRoutes.js";
 import { bootSessionStore } from "./sessions/bootSessionStore.js";
 import { bootAuditStore } from "./auditLog/bootAuditStore.js";
 import { bootCalibrationStore } from "./calibrationData/bootCalibrationStore.js";
+import { bootStudentModelStore } from "./studentModelRecords/bootStudentModelStore.js";
 
 const app = express();
 app.use(express.json());
@@ -189,6 +190,15 @@ async function main() {
     }
   } catch (err) {
     console.error("calibration store boot failed:", err);
+    process.exit(1);
+  }
+  try {
+    const studentModelBoot = await bootStudentModelStore();
+    if (studentModelBoot && !studentModelBoot.skipped && studentModelBoot.summary) {
+      console.log(studentModelBoot.summary);
+    }
+  } catch (err) {
+    console.error("student model store boot failed:", err);
     process.exit(1);
   }
 

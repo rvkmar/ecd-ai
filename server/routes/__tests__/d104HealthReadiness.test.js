@@ -81,12 +81,14 @@ describe("D104 health vs readiness", () => {
     const previousAudit = process.env.AUDITLOG_BACKEND;
     const previousJobs = process.env.CALIBRATION_JOBS_BACKEND;
     const previousArtefacts = process.env.ANALYSIS_ARTEFACTS_BACKEND;
+    const previousStudentModels = process.env.STUDENT_MODEL_RECORDS_BACKEND;
 
     try {
       delete process.env.SESSIONS_BACKEND;
       delete process.env.AUDITLOG_BACKEND;
       delete process.env.CALIBRATION_JOBS_BACKEND;
       delete process.env.ANALYSIS_ARTEFACTS_BACKEND;
+      delete process.env.STUDENT_MODEL_RECORDS_BACKEND;
 
       const fileHealth = await request(app).get("/api/health");
       expect(fileHealth.status).toBe(200);
@@ -95,6 +97,7 @@ describe("D104 health vs readiness", () => {
       expect(fileHealth.body.database.auditLogBackend).toBe("file");
       expect(fileHealth.body.database.calibrationJobsBackend).toBe("file");
       expect(fileHealth.body.database.analysisArtefactsBackend).toBe("file");
+      expect(fileHealth.body.database.studentModelRecordsBackend).toBe("file");
       expect(fileHealth.body.servingSessions).toBe(true);
 
       process.env.SESSIONS_BACKEND = "mongo";
@@ -106,18 +109,21 @@ describe("D104 health vs readiness", () => {
       expect(mongoHealth.body.database.auditLogBackend).toBe("mongo");
       expect(mongoHealth.body.database.calibrationJobsBackend).toBe("file");
       expect(mongoHealth.body.database.analysisArtefactsBackend).toBe("file");
+      expect(mongoHealth.body.database.studentModelRecordsBackend).toBe("file");
       expect(mongoHealth.body.servingSessions).toBe(true);
 
       process.env.SESSIONS_BACKEND = "memory";
       process.env.AUDITLOG_BACKEND = "memory";
       process.env.CALIBRATION_JOBS_BACKEND = "memory";
       process.env.ANALYSIS_ARTEFACTS_BACKEND = "memory";
+      process.env.STUDENT_MODEL_RECORDS_BACKEND = "memory";
       const memoryHealth = await request(app).get("/api/health");
       expect(memoryHealth.body.database.mode).toBe("ecd-json");
       expect(memoryHealth.body.database.sessionsBackend).toBe("memory");
       expect(memoryHealth.body.database.auditLogBackend).toBe("memory");
       expect(memoryHealth.body.database.calibrationJobsBackend).toBe("memory");
       expect(memoryHealth.body.database.analysisArtefactsBackend).toBe("memory");
+      expect(memoryHealth.body.database.studentModelRecordsBackend).toBe("memory");
     } finally {
       if (previousSessions === undefined) delete process.env.SESSIONS_BACKEND;
       else process.env.SESSIONS_BACKEND = previousSessions;
@@ -127,6 +133,8 @@ describe("D104 health vs readiness", () => {
       else process.env.CALIBRATION_JOBS_BACKEND = previousJobs;
       if (previousArtefacts === undefined) delete process.env.ANALYSIS_ARTEFACTS_BACKEND;
       else process.env.ANALYSIS_ARTEFACTS_BACKEND = previousArtefacts;
+      if (previousStudentModels === undefined) delete process.env.STUDENT_MODEL_RECORDS_BACKEND;
+      else process.env.STUDENT_MODEL_RECORDS_BACKEND = previousStudentModels;
     }
   });
 

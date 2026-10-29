@@ -68,7 +68,8 @@ These are the steps D108 actually ran (`npm run backup:restore-rehearsal`
 5. **Point the app** — set `ECD_DB_FILE` (and materials dir) at restored
    `ecd/db.json`; import `mongo/users.json` if the user store was lost.
    Import `mongo/calibrationJobs.json` and `mongo/analysisArtefacts.json`
-   when those collections live in Mongo (production). The JSON harness
+   when those collections live in Mongo (production). Import
+   `mongo/studentModelRecords.json` the same way. The JSON harness
    copy inside `ecd/db.json` is enough for a harness restore.
 6. **Restart** node (and mongo if users were re-imported).
 

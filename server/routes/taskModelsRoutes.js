@@ -18,7 +18,7 @@ import { authorizeRole } from "../utils/authMiddleware.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
 import { compileAndActivate, rebuildPackageForTaskModel } from "../compositeLibrary/activation.js";
 import { logger } from "../utils/logger.js";
-import { commitFinishedSession } from "../../src/utils/studentModelRecord.js";
+import { commitFinishedStudentModel } from "../studentModelRecords/studentModelRecordRepository.js";
 
 const router = express.Router();
 
@@ -734,7 +734,7 @@ router.post("/:id/force-deactivate", authorizeRole(["admin", "district"]), async
   const closed = [];
   for (const session of live) {
     forceCloseSession(session, now, reason);
-    commitFinishedSession(db, session, { now });
+    await commitFinishedStudentModel(db, session, { now });
     await replaceStoredSession(db, session);
     closed.push({ id: session.id, studentId: session.studentId || null });
   }

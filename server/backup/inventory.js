@@ -72,9 +72,10 @@ export const BACKUP_INVENTORY = Object.freeze([
   },
   {
     id: "studentModelRecords",
-    store: "ecd-json",
-    pathInArchive: "ecd/db.json",
-    reason: "Included. Per-student scoring record carried across finished sessions. Runtime data, not design data, so it is not in the zip.",
+    store: "mongo-or-ecd-json",
+    pathInArchive: "mongo/studentModelRecords.json",
+    reason:
+      "Included. Mongo (or memory) studentModelRecords are exported as mongo/studentModelRecords.json. The JSON harness still keeps them inside ecd/db.json as well, so a harness backup remains complete. Per-student scoring record carried across finished sessions. Runtime data, not design data, so it is not in the zip.",
   },
   {
     id: "announcements",
