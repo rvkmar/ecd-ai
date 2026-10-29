@@ -9,7 +9,7 @@
  import { autoFinishDueSessions } from "../utils/autoFinish.js";
  import { loadDB, saveDB } from "../../src/utils/db-server.js";
  import { getSessionById, replaceStoredSession } from "../sessions/sessionRepository.js";
- import { commitFinishedSession } from "../../src/utils/studentModelRecord.js";
+ import { commitFinishedStudentModel } from "../studentModelRecords/studentModelRecordRepository.js";
 
  const router = express.Router();
  router.use(authenticateToken);
@@ -57,7 +57,7 @@
      r.submittedAt = r.submittedAt || now.toISOString();
    }
  
-   commitFinishedSession(db, session, { now: session.finishedAt });
+   await commitFinishedStudentModel(db, session, { now: session.finishedAt });
    await replaceStoredSession(db, session);
    saveDB(db);
  

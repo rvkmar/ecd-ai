@@ -16,7 +16,8 @@ import {
   suppressCoverageMap,
   suppressIrtSummary,
 } from "../utils/aggregatePrivacy.js";
-import { identityOverlaps, resolveStudentIdentity } from "../../src/utils/studentModelRecord.js";
+import { resolveStudentIdentity } from "../../src/utils/studentModelRecord.js";
+import { queryStudentModelRecords } from "../studentModelRecords/studentModelRecordRepository.js";
 
 
 const router = express.Router();
@@ -54,9 +55,9 @@ function bnNodeDistribution(session, node) {
   return null;
 }
 
-function recordsForSessionStudent(db, session) {
+async function recordsForSessionStudent(db, session) {
   const identity = resolveStudentIdentity(session?.studentId, db);
-  return (db.studentModelRecords || []).filter((row) => identityOverlaps(identity, row));
+  return queryStudentModelRecords(db, { identity });
 }
 
 function personForStudentId(db, studentId) {
@@ -158,7 +159,7 @@ router.get("/session/:id", async (req, res) => {
     recommendations: [],
     stopped: measurement.stopped,
     attributeProfile: measurement.attributeProfile,
-    studentModelRecords: recordsForSessionStudent(db, session),
+    studentModelRecords: await recordsForSessionStudent(db, session),
     ...(session.assemblyProgress ? { assemblyProgress: session.assemblyProgress } : {}),
   };
 
@@ -316,7 +317,7 @@ router.get("/session/:id/learner-feedback", async (req, res) => {
     encouragement: "Great effort! Keep practicing.",
     stopped: measurement.stopped,
     attributeProfile: measurement.attributeProfile,
-    studentModelRecords: recordsForSessionStudent(db, session),
+    studentModelRecords: await recordsForSessionStudent(db, session),
     ...(session.assemblyProgress ? { assemblyProgress: session.assemblyProgress } : {}),
   };
 
@@ -479,7 +480,7 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, async (req, res
     },
     stopped: measurement.stopped,
     attributeProfile: measurement.attributeProfile,
-    studentModelRecords: recordsForSessionStudent(db, session),
+    studentModelRecords: await recordsForSessionStudent(db, session),
     ...(session.assemblyProgress ? { assemblyProgress: session.assemblyProgress } : {}),
   };
 

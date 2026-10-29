@@ -11,6 +11,10 @@ import {
   recordVisibleToUser,
   resolveStudentIdentity,
 } from "../../src/utils/studentModelRecord.js";
+import {
+  getStudentModelRecordById,
+  queryStudentModelRecords,
+} from "../studentModelRecords/studentModelRecordRepository.js";
 
 const router = express.Router();
 
@@ -28,25 +32,23 @@ function askedIdentityOverlapsSelf(studentId, user, db) {
 }
 
 // GET /api/studentModelRecords?studentId=
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   const db = loadDB();
   const studentId = req.query.studentId ? String(req.query.studentId) : "";
   if (studentId && req.user?.role === "student" && !askedIdentityOverlapsSelf(studentId, req.user, db)) {
     return res.status(403).json({ error: "Forbidden" });
   }
 
-  let rows = (db.studentModelRecords || []).filter((row) => recordVisibleToUser(row, req.user, db));
-  if (studentId) {
-    const asked = resolveStudentIdentity(studentId, db);
-    rows = rows.filter((row) => identityOverlaps(asked, row));
-  }
+  const filter = studentId ? { studentId } : {};
+  let rows = await queryStudentModelRecords(db, filter);
+  rows = rows.filter((row) => recordVisibleToUser(row, req.user, db));
   res.json(rows);
 });
 
 // GET /api/studentModelRecords/:id
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
   const db = loadDB();
-  const row = (db.studentModelRecords || []).find((record) => record && record.id === req.params.id);
+  const row = await getStudentModelRecordById(db, req.params.id);
   if (!row) return res.status(404).json({ error: "Student model record not found" });
   if (!recordVisibleToUser(row, req.user, db)) {
     return res.status(403).json({ error: "Forbidden" });

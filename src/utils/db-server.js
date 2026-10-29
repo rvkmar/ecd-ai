@@ -21,6 +21,7 @@ import {
 } from "../../server/auditLog/auditRepository.js";
 import { calibrationJobsUseExternalStore } from "../../server/calibrationJobs/calibrationJobBackend.js";
 import { analysisArtefactsUseExternalStore } from "../../server/analysisArtefacts/analysisArtefactBackend.js";
+import { studentModelRecordsUseExternalStore } from "../../server/studentModelRecords/studentModelRecordBackend.js";
 
 function dbFilePath() {
   return process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
@@ -305,12 +306,21 @@ function omitAnalysisArtefacts(obj) {
   return copy;
 }
 
+function omitStudentModelRecords(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
+  if (!Object.prototype.hasOwnProperty.call(obj, "studentModelRecords")) return obj;
+  const copy = { ...obj };
+  delete copy.studentModelRecords;
+  return copy;
+}
+
 function omitExternalCollections(obj) {
   let next = obj;
   if (sessionsUseExternalStore()) next = omitSessions(next);
   if (auditLogUseExternalStore()) next = omitAuditLog(next);
   if (calibrationJobsUseExternalStore()) next = omitCalibrationJobs(next);
   if (analysisArtefactsUseExternalStore()) next = omitAnalysisArtefacts(next);
+  if (studentModelRecordsUseExternalStore()) next = omitStudentModelRecords(next);
   return next;
 }
 
@@ -405,6 +415,7 @@ export async function saveDB(db, options = {}) {
   const externalAudit = auditLogUseExternalStore();
   const externalJobs = calibrationJobsUseExternalStore();
   const externalArtefacts = analysisArtefactsUseExternalStore();
+  const externalStudentModels = studentModelRecordsUseExternalStore();
   // External collections stay in their own stores. The audit diff must
   // not treat a hydrated array as the file's collection, or a job
   // already recorded on the store would be logged again.
@@ -421,6 +432,10 @@ export async function saveDB(db, options = {}) {
   if (externalArtefacts) {
     auditPrev = omitAnalysisArtefacts(auditPrev);
     auditNext = omitAnalysisArtefacts(auditNext);
+  }
+  if (externalStudentModels) {
+    auditPrev = omitStudentModelRecords(auditPrev);
+    auditNext = omitStudentModelRecords(auditNext);
   }
   toWrite = applySaveAudits(auditPrev, auditNext, options);
   // When merge produced a new object, mirror auditLog onto the caller's

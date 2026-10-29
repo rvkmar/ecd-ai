@@ -100,12 +100,13 @@ records like seed users that have no synthetic `id`), and switches its implement
 Collection name → Mongoose model name is singularized by naively stripping a trailing "s"
 (`capitalize()` in `dbAdapter.js`). Keep collection names simple plurals for this to work.
 
-Sessions, `auditLog`, `calibrationJobs`, and `analysisArtefacts` are the
-exceptions to the single JSON document. Production (`NODE_ENV=production`,
-or storage mode mongo) keeps them in the Mongo `sessions`, `auditLog`,
-`calibrationJobs`, and `analysisArtefacts` collections via
-`server/sessions/`, `server/auditLog/`, `server/calibrationJobs/`, and
-`server/analysisArtefacts/`. The JSON harness used by Vitest and
+Sessions, `auditLog`, `calibrationJobs`, `analysisArtefacts`, and
+`studentModelRecords` are the exceptions to the single JSON document.
+Production (`NODE_ENV=production`, or storage mode mongo) keeps them in
+the Mongo `sessions`, `auditLog`, `calibrationJobs`, `analysisArtefacts`,
+and `studentModelRecords` collections via `server/sessions/`,
+`server/auditLog/`, `server/calibrationJobs/`, `server/analysisArtefacts/`,
+and `server/studentModelRecords/`. The JSON harness used by Vitest and
 `npm run dev` without that mode still stores them in the ECD file.
 Optional audit retention is `AUDITLOG_RETENTION_DAYS` (off by default).
 Calibration response and artefact payload are not pruned on write.

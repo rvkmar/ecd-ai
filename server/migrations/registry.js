@@ -14,6 +14,7 @@ import parameterSetStatus from "./migrations/010-parameter-set-status.js";
 import sessionsToMongo from "./migrations/011-sessions-to-mongo.js";
 import auditLogToMongo from "./migrations/012-auditlog-to-mongo.js";
 import calibrationDataToMongo from "./migrations/013-calibration-data-to-mongo.js";
+import studentModelRecordsToMongo from "./migrations/014-student-model-records-to-mongo.js";
 
 export const MIGRATION_REGISTRY = [
   normalizeSessionStatus,
@@ -29,6 +30,7 @@ export const MIGRATION_REGISTRY = [
   sessionsToMongo,
   auditLogToMongo,
   calibrationDataToMongo,
+  studentModelRecordsToMongo,
 ];
 
 export function migrationRegistryIds() {

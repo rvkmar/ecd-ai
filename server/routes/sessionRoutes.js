@@ -58,9 +58,9 @@ import { recordSubmitOutcome } from "../utils/submitStats.js";
 import { selectNextActivity, resolveAssemblyModelForSession, selectionPolicyForDelivery, taskIsInSessionDelivery, noteDeliveredTask } from "../delivery/activitySelection.js";
 import { persistableAssemblyProgress } from "../delivery/assemblyConstraints.js";
 import {
-  commitFinishedSession,
-  seedSessionStudentModel,
-} from "../../src/utils/studentModelRecord.js";
+  commitFinishedStudentModel,
+  seedStoredSessionStudentModel,
+} from "../studentModelRecords/studentModelRecordRepository.js";
 import {
   presentationTimeMultiplier,
   selectPresentationModelIdForTaskModel,
@@ -165,7 +165,7 @@ function timeLimitBody(session) {
 async function closeForTimeLimit(db, session, now = new Date()) {
   if (!session || !isPastDeliveryDeadline(session, now)) return false;
   closeSessionAtDeadline(session, now);
-  commitFinishedSession(db, session, { now: session.finishedAt });
+  await commitFinishedStudentModel(db, session, { now: session.finishedAt });
   await persistSession(db, session);
   return true;
 }
@@ -402,7 +402,7 @@ router.post("/", async (req, res) => {
 
     // Carry-forward is off unless the delivery model's administration
     // says so, or the request sets carryForward. Legacy creates stay empty.
-    seedSessionStudentModel(newSession, db, {
+    await seedStoredSessionStudentModel(newSession, db, {
       carryForward: req.body.carryForward === true,
       now,
     });
@@ -1437,7 +1437,7 @@ router.post("/:id/finish", async (req, res) => {
   // The occasion is finished, so the persistent scoring record takes
   // this session's estimates. A session with no posterior does not
   // erase an earlier record.
-  commitFinishedSession(db, session, { now });
+  await commitFinishedStudentModel(db, session, { now });
 
   await persistSession(db, session);
   res.json(sessionView(session, req.user));

@@ -4,7 +4,7 @@
   import { loadDB, saveDB } from "../../src/utils/db-server.js";
   import { querySessions, replaceStoredSession, sessionsUseExternalStore } from "../sessions/sessionRepository.js";
   import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
-  import { commitFinishedSession } from "../../src/utils/studentModelRecord.js";
+  import { commitFinishedStudentModel } from "../studentModelRecords/studentModelRecordRepository.js";
   import {
     closeSessionAtDeadline,
     deliveryClockStarted,
@@ -57,7 +57,7 @@
       if (clock) {
         if (isPastDeliveryDeadline(session, now)) {
           closeSessionAtDeadline(session, now);
-          commitFinishedSession(db, session, { now: session.finishedAt });
+          await commitFinishedStudentModel(db, session, { now: session.finishedAt });
           if (sessionsUseExternalStore()) await replaceStoredSession(db, session);
           changed.push(session.id);
         }
@@ -102,7 +102,7 @@
           }
         }
   
-        commitFinishedSession(db, session, { now: session.finishedAt });
+        await commitFinishedStudentModel(db, session, { now: session.finishedAt });
         if (sessionsUseExternalStore()) await replaceStoredSession(db, session);
         changed.push(session.id);
       }
