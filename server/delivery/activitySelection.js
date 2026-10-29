@@ -120,7 +120,9 @@
 // (the session seed, then task id) and says so in `debug.fallback` and a
 // warning, rather than presenting an accidental default as a computed
 // choice. On a roster session that order is the old first unanswered task.
-// G-DINA still cannot be ranked (D60 P1-5): it uses this same fallback.
+// G-DINA with a calibrated probability table is ranked by expected
+// posterior entropy over the reduced attribute pattern (R7). Without
+// that table it still uses this fallback (R8, D60 P1-5 remainder).
 //
 // F24 (off calendar). Evidence Accumulation now writes bnPosteriors and
 // the distribution on smvPosteriors for a bayesian_network statistical
@@ -128,7 +130,8 @@
 // The belief is the live distribution when its states match, else a
 // carried-forward prior, else the model prior, so the first item can be
 // ranked. DINA still requires a live posterior and does not invent 0.5.
-// jointPrior is not read. G-DINA still cannot be ranked. When nothing
+// jointPrior is not read. G-DINA ranks from a calibrated table and
+// live attribute posteriors; it has no pilot path (R8). When nothing
 // can be ranked, the fallback is still pool order plus a warning.
 //
 // ------------------------------------------------------------------
@@ -173,7 +176,11 @@ import {
   resolveAssemblyProgress,
   GOVERNING_ASSEMBLY_MODEL_STATUSES,
 } from "./assemblyProgress.js";
-import { dinaParametersAreUsable } from "./attributeAccumulation.js";
+import {
+  dinaParametersAreUsable,
+  gdinaParametersAreUsable,
+  computeGdinaExpectedInformationGain,
+} from "./attributeAccumulation.js";
 import { attributeIdsForDeliveryItem } from "../../src/utils/qMatrixEntries.js";
 import { assemblyConstraintsActive } from "../../src/utils/assemblyConstraints.js";
 import { activePackageFor } from "../compositeLibrary/activePackage.js";
@@ -286,12 +293,14 @@ function resolveContinuousParameters(observationId, evidenceModel, item, freeze 
 /**
  * DINA slip/guess for a candidate item: calibrated parameter set first
  * (keyed by ITEM id), then the item's pilot `psychometrics.dinaParams`
- * (D53b). 'gdina' deliberately gets no pilot fallback here, exactly as it
- * gets none in sessionRoutes.js's submit path -- no item-level pilot
- * probability-table field exists, and inventing one to make a selection
- * decision would be worse than declining to rank that candidate.
+ * (D53b). G-DINA uses the calibrated saturated probability table when
+ * one exists (R7). It deliberately gets no pilot fallback here, exactly
+ * as it gets none in sessionRoutes.js's submit path -- no item-level
+ * pilot probability-table field exists, and inventing one to make a
+ * selection decision would be worse than declining to rank that
+ * candidate (R8).
  */
-function resolveDinaParameters(itemId, item, statisticalModel, family, freeze = {}) {
+function resolveDinaParameters(itemId, item, statisticalModel, family, freeze = {}, requiredCount = null) {
   if (freeze.error) {
     return { reason: freeze.error };
   }
@@ -310,6 +319,14 @@ function resolveDinaParameters(itemId, item, statisticalModel, family, freeze = 
     const params = parameterSet?.parameters?.[itemId];
 
     if (params && family === "dina" && dinaParametersAreUsable(params)) {
+      return { params, parameterSource: "calibrated" };
+    }
+    if (
+      params
+      && family === "gdina"
+      && Number.isInteger(requiredCount)
+      && gdinaParametersAreUsable(params, requiredCount)
+    ) {
       return { params, parameterSource: "calibrated" };
     }
     return {
@@ -1152,7 +1169,7 @@ function selectIrt(session, db, warnings) {
  * given. On a roster session that list is the seed, so the task is the
  * same one the old first-unanswered rule returned. The fallback name and
  * the warning say that this was not an information-gain ranking. G-DINA
- * still cannot be ranked and uses this fallback (D60 P1-5).
+ * without a calibrated table still uses this fallback (R8).
  */
 function selectBayesianNetwork(session, db, warnings) {
   let candidates = candidatesFor(session, db);
@@ -1295,10 +1312,62 @@ function selectBayesianNetwork(session, db, warnings) {
     }
 
     const freeze = frozenScoringContext(session, evidenceModel?.id);
-    const resolved = resolveDinaParameters(task.itemId, item, statisticalModel, family, freeze);
+    const resolved = resolveDinaParameters(
+      task.itemId,
+      item,
+      statisticalModel,
+      family,
+      freeze,
+      requiredAttributeIds.length
+    );
 
     if (!resolved.params) {
       unrankable.push({ taskId, reason: resolved.reason });
+      continue;
+    }
+
+    if (family === "gdina") {
+      const priors = [];
+      const missing = [];
+      for (const attributeId of requiredAttributeIds) {
+        const prior = posteriors[attributeId]?.estimate;
+        if (!Number.isFinite(prior)) missing.push(attributeId);
+        else priors.push(prior);
+      }
+      if (missing.length > 0) {
+        unrankable.push({
+          taskId,
+          reason: missing.length === requiredAttributeIds.length
+            ? `No live posterior exists yet for any attribute item '${task.itemId}' requires.`
+            : `No live posterior exists yet for ${missing.length === 1 ? "attribute" : "attributes"} ${missing.join(", ")} that item '${task.itemId}' requires.`,
+        });
+        continue;
+      }
+      const gain = computeGdinaExpectedInformationGain(priors, resolved.params.probabilities);
+      if (gain == null) {
+        unrankable.push({
+          taskId,
+          reason: `Parameter set has no usable G-DINA table for item '${task.itemId}'.`,
+        });
+        continue;
+      }
+      const candidate = {
+        taskId,
+        score: gain,
+        debug: {
+          totalGain: gain,
+          itemId: task.itemId,
+          qMatrixId: qMatrix.id,
+          parameterSource: resolved.parameterSource,
+          family: "gdina",
+          attributes: requiredAttributeIds.map((attributeId, index) => ({
+            attributeId,
+            prior: priors[index],
+          })),
+          source: "composite-library",
+        },
+      };
+      if (!best || candidate.score > best.score) best = candidate;
       continue;
     }
 
@@ -1535,6 +1604,7 @@ export const __testing__ = {
   resolveContinuousParameters,
   resolveDinaParameters,
   computeExpectedInformationGain,
+  computeGdinaExpectedInformationGain,
   competencyModelIdsForSession,
   resolveDeliveryBinding,
   resolveAssemblyModelForSession,

@@ -530,7 +530,7 @@ describe("BayesianNetwork selection ranks a real network", () => {
     expect(result.warnings.join(" ")).toMatch(/pool order/);
   });
 
-  it("still cannot rank G-DINA, so it falls back to pool order", () => {
+  it("cannot rank G-DINA without a Q-matrix, so it falls back to pool order", () => {
     const db = selectionDb();
     db.evidenceModels[0].statisticalModels[0].type = "gdina";
     db.evidenceModels[0].statisticalModels[0].structureConfig = { qMatrixId: "missing" };

@@ -573,6 +573,26 @@ describe("selection and scoring agree on which parameters an item is delivered u
     });
     expect(resolveDinaParameters("item1", item, { ...uncalibrated, type: "gdina" }, "gdina").params).toBeUndefined();
   });
+
+  it("G-DINA: a calibrated probability table is used, and there is still no pilot", () => {
+    const calibrated = {
+      id: "sm2",
+      active: true,
+      type: "gdina",
+      activeParameterSetId: "ps-g",
+      parameterSets: [{ parameterSetId: "ps-g", parameters: { item1: { probabilities: [0.2, 0.9] } } }],
+    };
+    const uncalibrated = { id: "sm2", active: true, type: "gdina", activeParameterSetId: null, parameterSets: [] };
+    const item = { id: "item1" };
+
+    expect(resolveDinaParameters("item1", item, calibrated, "gdina", {}, 1)).toMatchObject({
+      parameterSource: "calibrated",
+      params: { probabilities: [0.2, 0.9] },
+    });
+    expect(resolveDinaParameters("item1", item, uncalibrated, "gdina", {}, 1).params).toBeUndefined();
+    expect(resolveDinaParameters("item1", item, calibrated, "gdina").params).toBeUndefined();
+    expect(resolveDinaParameters("item1", item, calibrated, "gdina", {}, 2).params).toBeUndefined();
+  });
 });
 
 /* ------------------------------------------------------------------
@@ -799,6 +819,72 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
     expect(result.debug.fallback).toBe("pool-order");
 
     expect(result.debug.unrankable[0].reason).toContain("no required attributes");
+  });
+
+  it("ranks a calibrated G-DINA item from expected posterior entropy, not pool order", () => {
+    const db = dinaDb();
+    const statisticalModel = db.evidenceModels[0].statisticalModels[0];
+    statisticalModel.type = "gdina";
+    statisticalModel.activeParameterSetId = "ps-g";
+    statisticalModel.parameterSets = [{
+      parameterSetId: "ps-g",
+      parameters: {
+        itemA: { probabilities: [0.2, 0.9] },
+        itemB: { probabilities: [0.2, 0.9] },
+      },
+    }];
+
+    const s = session({
+      taskIds: ["tA", "tB"],
+      selectionStrategy: "BayesianNetwork",
+      studentModel: {
+        smvPosteriors: {
+          attrA: smvPosterior({ smvId: "attrA", evidenceModelId: "emD", method: "map", modelFamily: "gdina", estimate: 0.97 }),
+          attrB: smvPosterior({ smvId: "attrB", evidenceModelId: "emD", method: "map", modelFamily: "gdina", estimate: 0.5 }),
+        },
+      },
+    });
+
+    const result = selectNextActivity(s, db);
+    expect(result.taskId).toBe("tB");
+    expect(result.debug.fallback).toBeUndefined();
+    expect(result.debug.family).toBe("gdina");
+    expect(result.debug.parameterSource).toBe("calibrated");
+    expect(result.debug.totalGain).toBeCloseTo(computeExpectedInformationGain(0.5, 0.1, 0.2), 10);
+  });
+
+  it("does not invent a G-DINA ranking from a missing table or a missing posterior", () => {
+    const db = dinaDb();
+    db.evidenceModels[0].statisticalModels[0].type = "gdina";
+
+    const settled = session({
+      taskIds: ["tA", "tB"],
+      selectionStrategy: "BayesianNetwork",
+      studentModel: {
+        smvPosteriors: {
+          attrA: smvPosterior({ smvId: "attrA", evidenceModelId: "emD", method: "map", modelFamily: "gdina", estimate: 0.97 }),
+          attrB: smvPosterior({ smvId: "attrB", evidenceModelId: "emD", method: "map", modelFamily: "gdina", estimate: 0.5 }),
+        },
+      },
+    });
+    const uncalibrated = selectNextActivity(settled, db);
+    expect(uncalibrated.debug.fallback).toBe("pool-order");
+    expect(uncalibrated.taskId).toBe("tA");
+
+    db.evidenceModels[0].statisticalModels[0].activeParameterSetId = "ps-g";
+    db.evidenceModels[0].statisticalModels[0].parameterSets = [{
+      parameterSetId: "ps-g",
+      parameters: {
+        itemA: { probabilities: [0.2, 0.9] },
+        itemB: { probabilities: [0.2, 0.9] },
+      },
+    }];
+    const noBelief = selectNextActivity(
+      session({ taskIds: ["tA", "tB"], selectionStrategy: "BayesianNetwork" }),
+      db
+    );
+    expect(noBelief.debug.fallback).toBe("pool-order");
+    expect(noBelief.taskId).toBe("tA");
   });
 
   it("ranks an observable-keyed row from the item's observation", () => {
