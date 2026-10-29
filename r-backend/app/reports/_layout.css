@@ -323,6 +323,11 @@ figure.plot svg {
   margin: 0 auto;
 }
 
+figure.plot svg .tick-label,
+figure.plot svg .axis-title {
+  font-variant-numeric: tabular-nums;
+}
+
 figure.plot figcaption {
   font-family: var(--font-ui);
   font-size: 0.78rem;

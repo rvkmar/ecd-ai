@@ -181,50 +181,136 @@
   paste0("<ul class='flags flag'>", paste(items, collapse = ""), "</ul>")
 }
 
-.polyline_svg <- function(xs, ys, title, xlab, ylab, series = NULL) {
-  w <- 480
-  h <- 240
-  pad_l <- 48
-  pad_b <- 42
-  pad_t <- 12
-  pad_r <- 12
-  inner_w <- w - pad_l - pad_r
-  inner_h <- h - pad_t - pad_b
+.CHART <- list(
+  ink = "#1c1917",
+  muted = "#57534e",
+  grid = "#e8dfd0",
+  panel = "#fffdf8",
+  line = "#1e3a5f",
+  font = "Source Sans 3, Segoe UI, sans-serif"
+)
+
+.chart_id <- local({
+  n <- 0L
+  function() {
+    n <<- n + 1L
+    sprintf("ax%04d", n)
+  }
+})
+
+.finite_range <- function(x, fallback = c(0, 1), pad = 0.04) {
+  x <- x[is.finite(x)]
+  if (!length(x)) return(fallback)
+  r <- range(x)
+  if (!is.finite(diff(r)) || diff(r) == 0) {
+    span <- max(abs(r[[1]]) * 0.1, 0.05)
+    r <- r + c(-span, span)
+  }
+  if (pad > 0) r <- r + c(-1, 1) * diff(r) * pad
+  r
+}
+
+.chart_axes <- function(w, h, pad, xr, yr, xlab, ylab, x_digits = 2, y_digits = 2,
+                        xticks = NULL, yticks = NULL) {
+  inner_w <- w - pad$l - pad$r
+  inner_h <- h - pad$t - pad$b
+  sx <- function(x) pad$l + (x - xr[1]) / diff(xr) * inner_w
+  sy <- function(y) pad$t + (1 - (y - yr[1]) / diff(yr)) * inner_h
+  if (is.null(xticks)) xticks <- pretty(xr, n = 5)
+  if (is.null(yticks)) yticks <- pretty(yr, n = 5)
+  xticks <- xticks[xticks >= xr[1] - 1e-8 * max(diff(xr), 1e-9) & xticks <= xr[2] + 1e-8 * max(diff(xr), 1e-9)]
+  yticks <- yticks[yticks >= yr[1] - 1e-8 * max(diff(yr), 1e-9) & yticks <= yr[2] + 1e-8 * max(diff(yr), 1e-9)]
+  if (!length(xticks)) xticks <- xr
+  if (!length(yticks)) yticks <- yr
+  id <- .chart_id()
+  grid <- paste(c(
+    vapply(xticks, function(v) {
+      sprintf("<line class='grid' x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='%s' stroke-width='0.6'/>",
+              sx(v), pad$t, sx(v), pad$t + inner_h, .CHART$grid)
+    }, character(1)),
+    vapply(yticks, function(v) {
+      sprintf("<line class='grid' x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='%s' stroke-width='0.6'/>",
+              pad$l, sy(v), pad$l + inner_w, sy(v), .CHART$grid)
+    }, character(1))
+  ), collapse = "")
+  fill <- sprintf(
+    "<rect class='panel-fill' x='%.1f' y='%.1f' width='%.1f' height='%.1f' fill='%s' stroke='none'/>",
+    pad$l, pad$t, inner_w, inner_h, .CHART$panel
+  )
+  frame <- sprintf(
+    "<rect class='panel-frame' x='%.1f' y='%.1f' width='%.1f' height='%.1f' fill='none' stroke='%s' stroke-width='1.2'/>",
+    pad$l, pad$t, inner_w, inner_h, .CHART$ink
+  )
+  xt <- paste(vapply(xticks, function(v) {
+    paste0(
+      sprintf("<line class='tick' x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='%s' stroke-width='1'/>",
+              sx(v), pad$t + inner_h, sx(v), pad$t + inner_h + 5.5, .CHART$ink),
+      sprintf("<text class='tick-label' x='%.1f' y='%.1f' text-anchor='middle' font-size='10' fill='%s' font-family='%s'>%s</text>",
+              sx(v), pad$t + inner_h + 17, .CHART$muted, .CHART$font, .fmt(v, x_digits))
+    )
+  }, character(1)), collapse = "")
+  yt <- paste(vapply(yticks, function(v) {
+    paste0(
+      sprintf("<line class='tick' x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='%s' stroke-width='1'/>",
+              pad$l - 5.5, sy(v), pad$l, sy(v), .CHART$ink),
+      sprintf("<text class='tick-label' x='%.1f' y='%.1f' text-anchor='end' font-size='10' fill='%s' font-family='%s'>%s</text>",
+              pad$l - 8, sy(v) + 3.5, .CHART$muted, .CHART$font, .fmt(v, y_digits))
+    )
+  }, character(1)), collapse = "")
+  xlab_el <- sprintf(
+    "<text class='axis-title' x='%.1f' y='%.1f' text-anchor='middle' font-size='11' fill='%s' font-family='%s'>%s</text>",
+    pad$l + inner_w / 2, h - 7, .CHART$ink, .CHART$font, .html_escape(xlab)
+  )
+  ylab_el <- sprintf(
+    "<text class='axis-title' x='13' y='%.1f' text-anchor='middle' font-size='11' fill='%s' font-family='%s' transform='rotate(-90 13 %.1f)'>%s</text>",
+    pad$t + inner_h / 2, .CHART$ink, .CHART$font, pad$t + inner_h / 2, .html_escape(ylab)
+  )
+  clip <- sprintf(
+    "<defs><clipPath id='%s'><rect x='%.1f' y='%.1f' width='%.1f' height='%.1f'/></clipPath></defs>",
+    id, pad$l, pad$t, inner_w, inner_h
+  )
+  list(
+    sx = sx, sy = sy, inner_w = inner_w, inner_h = inner_h, xr = xr, yr = yr,
+    pad = pad, clip_id = id,
+    under = paste0(clip, fill, grid),
+    over = paste0(frame, xt, yt, xlab_el, ylab_el)
+  )
+}
+
+.chart_svg <- function(w, h, title, axes, series, extra = "") {
+  .inline_svg(paste0(
+    "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h,
+    "' viewBox='0 0 ", w, " ", h, "' role='img' aria-label='", .html_escape(title), "'>",
+    axes$under,
+    sprintf("<g clip-path='url(#%s)'>", axes$clip_id), series, "</g>",
+    axes$over,
+    extra,
+    "</svg>"
+  ), title)
+}
+
+.polyline_svg <- function(xs, ys, title, xlab, ylab, ylim = NULL) {
+  w <- 520
+  h <- 260
+  pad <- list(l = 58, r = 16, t = 14, b = 48)
   finite <- is.finite(xs) & is.finite(ys)
   if (!any(finite)) {
     return(sprintf("<p class='note'>%s: no finite points.</p>", .html_escape(title)))
   }
-  xr <- range(xs[finite])
-  yr <- range(ys[finite])
-  if (diff(xr) == 0) xr <- xr + c(-1, 1)
-  if (diff(yr) == 0) yr <- yr + c(-0.05, 0.05)
-  sx <- function(x) pad_l + (x - xr[1]) / diff(xr) * inner_w
-  sy <- function(y) pad_t + (1 - (y - yr[1]) / diff(yr)) * inner_h
-  pts <- paste(sprintf("%.1f,%.1f", sx(xs[finite]), sy(ys[finite])), collapse = " ")
-  xt <- seq(xr[1], xr[2], length.out = 5)
-  yt <- seq(yr[1], yr[2], length.out = 5)
-  grid <- paste(c(
-    vapply(xt, function(v) sprintf("<line x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='#d4c6b0' stroke-width='0.6'/>", sx(v), pad_t, sx(v), pad_t + inner_h), character(1)),
-    vapply(yt, function(v) sprintf("<line x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='#d4c6b0' stroke-width='0.6'/>", pad_l, sy(v), pad_l + inner_w, sy(v)), character(1))
-  ), collapse = "")
-  xlab_txt <- paste(vapply(xt, function(v) {
-    sprintf("<text x='%.1f' y='%.1f' text-anchor='middle' font-size='9' fill='#57534e'>%s</text>", sx(v), h - 10, .fmt(v, 2))
-  }, character(1)), collapse = "")
-  ylab_txt <- paste(vapply(yt, function(v) {
-    sprintf("<text x='%.1f' y='%.1f' text-anchor='end' font-size='9' fill='#57534e'>%s</text>", pad_l - 6, sy(v) + 3, .fmt(v, 2))
-  }, character(1)), collapse = "")
-  .inline_svg(paste0(
-    "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h, "' role='img' aria-label='",
-    .html_escape(title), "'>",
-    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fffcf7' stroke='#d4c6b0'/>",
-    grid,
-    xlab_txt, ylab_txt,
-    "<text x='", w / 2, "' y='", h - 1, "' text-anchor='middle' font-size='10' fill='#57534e'>", .html_escape(xlab), "</text>",
-    "<text x='11' y='", h / 2, "' text-anchor='middle' font-size='10' fill='#57534e' transform='rotate(-90 11,", h / 2, ")'>",
-    .html_escape(ylab), "</text>",
-    "<polyline fill='none' stroke='#1e3a5f' stroke-width='1.6' points='", pts, "'/>",
-    "</svg>"
-  ), title)
+  xr <- .finite_range(xs[finite], fallback = c(-3, 3), pad = 0.03)
+  yr <- if (!is.null(ylim) && length(ylim) == 2 && all(is.finite(ylim))) {
+    as.numeric(ylim)
+  } else {
+    r <- .finite_range(ys[finite], pad = 0.08)
+    if (min(ys[finite], na.rm = TRUE) >= 0) r[1] <- 0
+    r
+  }
+  ax <- .chart_axes(w, h, pad, xr, yr, xlab, ylab)
+  pts <- paste(sprintf("%.1f,%.1f", ax$sx(xs[finite]), ax$sy(ys[finite])), collapse = " ")
+  .chart_svg(w, h, title, ax, sprintf(
+    "<polyline fill='none' stroke='%s' stroke-width='1.7' points='%s'/>",
+    .CHART$line, pts
+  ))
 }
 
 .quantile_svg <- function(item_id, distractors) {
@@ -234,16 +320,14 @@
   if (!is.list(qs) || !length(qs)) return("")
   n_q <- length(qs)
   colors <- c("#1d4ed8", "#b45309", "#15803d", "#be123c", "#6d28d9", "#0f766e")
-  w <- 420
-  h <- 220
-  pad_l <- 42
-  pad_b <- 32
-  pad_t <- 22
-  pad_r <- 12
-  inner_w <- w - pad_l - pad_r
-  inner_h <- h - pad_t - pad_b
-  sx <- function(q) pad_l + (q - 1) / max(1, n_q - 1) * inner_w
-  sy <- function(p) pad_t + (1 - p) * inner_h
+  n_opt <- length(distractors)
+  w <- 520
+  h <- 280
+  pad <- list(l = 58, r = 16, t = 14, b = 64)
+  xr <- c(1, max(n_q, 2))
+  yr <- c(0, 1)
+  ax <- .chart_axes(w, h, pad, xr, yr, "Score quantile", "Proportion", x_digits = 0, y_digits = 2,
+                    xticks = seq_len(n_q), yticks = seq(0, 1, by = 0.2))
   lines <- character(0)
   legend <- character(0)
   i <- 0L
@@ -255,27 +339,24 @@
       q <- as.integer(row$quantile)
       p <- as.numeric(row$proportion)
       if (!is.finite(p)) p <- 0
-      sprintf("%.1f,%.1f", sx(q), sy(max(0, min(1, p))))
+      sprintf("%.1f,%.1f", ax$sx(q), ax$sy(max(0, min(1, p))))
     }, character(1))
-    dash <- if (isTRUE(d$keyed)) "stroke-width='2'" else "stroke-width='1.2' stroke-dasharray='4 3'"
+    dash <- if (isTRUE(d$keyed)) "stroke-width='2'" else "stroke-width='1.25' stroke-dasharray='4 3'"
     lines <- c(lines, sprintf(
       "<polyline fill='none' stroke='%s' %s points='%s'/>",
       col, dash, paste(pts, collapse = " ")
     ))
+    lx <- pad$l + ((i - 1L) %% min(n_opt, 6L)) * 78
+    ly <- h - 12
     legend <- c(legend, sprintf(
-      "<text x='%d' y='%d' font-size='10' fill='%s' font-family='Segoe UI, sans-serif'>%s%s</text>",
-      pad_l + (i - 1L) * 48, h - 8, col, .html_escape(nm),
-      if (isTRUE(d$keyed)) "*" else ""
+      "<rect x='%.1f' y='%.1f' width='10' height='2.4' fill='%s'/>", lx, ly - 4, col
+    ), sprintf(
+      "<text x='%.1f' y='%.1f' font-size='10' fill='%s' font-family='%s'>%s%s</text>",
+      lx + 14, ly, .CHART$ink, .CHART$font, .html_escape(nm),
+      if (isTRUE(d$keyed)) " (key)" else ""
     ))
   }
-  .inline_svg(paste0(
-    "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h, "' role='img' aria-label='Quantile plot ",
-    .html_escape(item_id), "'>",
-    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fffcf7' stroke='#d4c6b0'/>",
-    lines,
-    legend,
-    "</svg>"
-  ), paste("Quantile plot --", item_id))
+  .chart_svg(w, h, paste("Quantile plot --", item_id), ax, paste(lines, collapse = ""), paste(legend, collapse = ""))
 }
 
 .try_ggplot_quantile <- function(item_id, distractors) {
@@ -298,17 +379,26 @@
   if (!length(rows)) return("")
   df <- do.call(rbind, rows)
   p <- ggplot2::ggplot(df, ggplot2::aes(quantile, proportion, colour = option, linetype = keyed)) +
-    ggplot2::geom_line() +
-    ggplot2::geom_point() +
-    ggplot2::ylim(0, 1) +
+    ggplot2::geom_line(linewidth = 0.7) +
+    ggplot2::geom_point(size = 1.8) +
+    ggplot2::scale_x_continuous(breaks = sort(unique(df$quantile)), expand = c(0.02, 0)) +
+    ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2), expand = c(0.02, 0)) +
     ggplot2::labs(x = "Score quantile", y = "Proportion", linetype = NULL, colour = "Option") +
     ggplot2::scale_linetype_manual(values = c("FALSE" = "dashed", "TRUE" = "solid"), labels = c("FALSE" = "distractor", "TRUE" = "key"), name = NULL) +
-    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme_bw(base_size = 11) +
     ggplot2::theme(
+      panel.border = ggplot2::element_rect(colour = "#1c1917", fill = NA, linewidth = 0.7),
+      axis.ticks = ggplot2::element_line(colour = "#1c1917", linewidth = 0.45),
+      axis.ticks.length = grid::unit(3.2, "pt"),
+      axis.title = ggplot2::element_text(colour = "#1c1917", size = 11),
+      axis.text = ggplot2::element_text(colour = "#57534e", size = 10),
       panel.grid.minor = ggplot2::element_blank(),
-      panel.grid.major = ggplot2::element_line(colour = "#e6ddd0", linewidth = 0.3),
-      text = ggplot2::element_text(colour = "#1c1917"),
-      legend.position = "bottom"
+      panel.grid.major = ggplot2::element_line(colour = "#e8dfd0", linewidth = 0.35),
+      panel.background = ggplot2::element_rect(fill = "#fffdf8", colour = NA),
+      plot.background = ggplot2::element_rect(fill = "transparent", colour = NA),
+      legend.position = "bottom",
+      legend.background = ggplot2::element_blank(),
+      text = ggplot2::element_text(colour = "#1c1917")
     )
   tmp <- tempfile(fileext = ".svg")
   ok <- try(ggplot2::ggsave(tmp, p, width = 5.5, height = 3.2, device = svglite::svglite), silent = TRUE)
@@ -398,47 +488,46 @@ irt_curve_payload <- function(params, theta = seq(-3, 3, by = 0.1), person_theta
   ok <- is.finite(a) & is.finite(b)
   if (!any(ok)) return("")
   a <- a[ok]; b <- b[ok]
-  w <- 360; h <- 240; pad_l <- 40; pad_b <- 32; pad_t <- 22; pad_r <- 12
-  inner_w <- w - pad_l - pad_r
-  inner_h <- h - pad_t - pad_b
-  xr <- range(b); yr <- range(a)
-  if (diff(xr) == 0) xr <- xr + c(-1, 1)
-  if (diff(yr) == 0) yr <- yr + c(-0.2, 0.2)
-  sx <- function(x) pad_l + (x - xr[1]) / diff(xr) * inner_w
-  sy <- function(y) pad_t + (1 - (y - yr[1]) / diff(yr)) * inner_h
-  dots <- paste(sprintf("<circle cx='%.1f' cy='%.1f' r='3' fill='#1e3a5f'/>", sx(b), sy(a)), collapse = "")
-  .inline_svg(paste0(
-    "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h,
-    "' role='img' aria-label='a versus b'><rect x='0' y='0' width='", w, "' height='", h,
-    "' fill='#fffcf7' stroke='#d4c6b0'/>",
-    dots,
-    "<text x='", w / 2, "' y='", h - 6, "' text-anchor='middle' font-size='10' fill='#57534e'>b</text></svg>"
-  ), "Item discrimination (a) against difficulty (b)")
+  w <- 480
+  h <- 280
+  pad <- list(l = 58, r = 16, t = 14, b = 48)
+  xr <- .finite_range(b, pad = 0.08)
+  yr <- .finite_range(a, pad = 0.08)
+  if (min(a) >= 0 && yr[1] > 0) yr[1] <- 0
+  ax <- .chart_axes(w, h, pad, xr, yr, "Difficulty (b)", "Discrimination (a)")
+  dots <- paste(sprintf("<circle cx='%.1f' cy='%.1f' r='3' fill='%s'/>", ax$sx(b), ax$sy(a), .CHART$line), collapse = "")
+  .chart_svg(w, h, "Item discrimination (a) against difficulty (b)", ax, dots)
 }
 
 .hist_svg <- function(hist, title) {
   if (is.null(hist) || !is.list(hist)) return("")
   counts <- as.numeric(hist$counts)
   if (!length(counts)) return("")
-  w <- 420; h <- 200; pad_l <- 36; pad_b <- 28; pad_t <- 22; pad_r <- 12
-  inner_w <- w - pad_l - pad_r
-  inner_h <- h - pad_t - pad_b
-  max_c <- max(c(counts, 1))
-  bw <- inner_w / length(counts)
+  breaks <- as.numeric(hist$breaks)
+  n <- length(counts)
+  w <- 520
+  h <- 260
+  pad <- list(l = 58, r = 16, t = 14, b = 48)
+  if (length(breaks) == n + 1L && all(is.finite(breaks))) {
+    xr <- c(breaks[[1]], breaks[[n + 1L]])
+  } else {
+    xr <- c(0, n)
+    breaks <- seq(0, n)
+  }
+  yr <- c(0, max(c(counts, 1)) * 1.08)
+  ax <- .chart_axes(w, h, pad, xr, yr, "theta", "Count", y_digits = 0)
   bars <- character(0)
   for (i in seq_along(counts)) {
-    bh <- counts[[i]] / max_c * inner_h
-    x <- pad_l + (i - 1) * bw
-    y <- pad_t + inner_h - bh
-    bars <- c(bars, sprintf("<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' fill='#1e3a5f'/>", x, y, bw - 1.5, bh))
+    x0 <- ax$sx(breaks[[i]])
+    x1 <- ax$sx(breaks[[i + 1L]])
+    y0 <- ax$sy(0)
+    y1 <- ax$sy(counts[[i]])
+    bars <- c(bars, sprintf(
+      "<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' fill='%s'/>",
+      x0 + 0.6, min(y0, y1), max(0.5, abs(x1 - x0) - 1.2), abs(y0 - y1), .CHART$line
+    ))
   }
-  .inline_svg(paste0(
-    "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h,
-    "' role='img' aria-label='", .html_escape(title), "'>",
-    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fffcf7' stroke='#d4c6b0'/>",
-    paste(bars, collapse = ""),
-    "</svg>"
-  ), title)
+  .chart_svg(w, h, title, ax, paste(bars, collapse = ""))
 }
 
 .empirical_irf_svg <- function(item) {
@@ -450,26 +539,25 @@ irt_curve_payload <- function(params, theta = seq(-3, 3, by = 0.1), person_theta
   if (!length(th) || !length(p)) return("")
   lo <- p - 2 * se
   hi <- p + 2 * se
-  w <- 420; h <- 220; pad_l <- 42; pad_b <- 32; pad_t <- 22; pad_r <- 12
-  inner_w <- w - pad_l - pad_r
-  inner_h <- h - pad_t - pad_b
-  xr <- range(c(th, as.numeric(item$theta)), na.rm = TRUE)
-  if (!all(is.finite(xr)) || diff(xr) == 0) xr <- c(-3, 3)
-  sx <- function(x) pad_l + (x - xr[1]) / diff(xr) * inner_w
-  sy <- function(y) pad_t + (1 - max(0, min(1, y))) * inner_h
-  model_pts <- paste(sprintf("%.1f,%.1f", sx(as.numeric(item$theta)), sy(as.numeric(item$irf))), collapse = " ")
+  w <- 520
+  h <- 260
+  pad <- list(l = 58, r = 16, t = 14, b = 48)
+  xr <- .finite_range(c(th, as.numeric(item$theta)), fallback = c(-3, 3), pad = 0)
+  yr <- c(0, 1)
+  ax <- .chart_axes(w, h, pad, xr, yr, "theta", "P(theta)", yticks = seq(0, 1, by = 0.2))
+  model_th <- as.numeric(item$theta)
+  model_p <- as.numeric(item$irf)
+  ok <- is.finite(model_th) & is.finite(model_p)
+  model_pts <- paste(sprintf("%.1f,%.1f", ax$sx(model_th[ok]), ax$sy(pmax(0, pmin(1, model_p[ok])))), collapse = " ")
   bands <- paste(sprintf(
     "<line x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='#94a3b8' stroke-width='2'/>",
-    sx(th), sy(lo), sx(th), sy(hi)
+    ax$sx(th), ax$sy(pmax(0, pmin(1, lo))), ax$sx(th), ax$sy(pmax(0, pmin(1, hi)))
   ), collapse = "")
-  dots <- paste(sprintf("<circle cx='%.1f' cy='%.1f' r='3' fill='#b45309'/>", sx(th), sy(p)), collapse = "")
-  .inline_svg(paste0(
-    "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h,
-    "' role='img' aria-label='empirical IRF'><rect x='0' y='0' width='", w, "' height='", h,
-    "' fill='#fffcf7' stroke='#d4c6b0'/>",
-    "<polyline fill='none' stroke='#1e3a5f' stroke-width='1.6' points='", model_pts, "'/>",
-    bands, dots, "</svg>"
-  ), "Empirical IRF with 2 SE")
+  dots <- paste(sprintf("<circle cx='%.1f' cy='%.1f' r='3' fill='#b45309'/>", ax$sx(th), ax$sy(pmax(0, pmin(1, p)))), collapse = "")
+  .chart_svg(w, h, "Empirical IRF with 2 SE", ax, paste0(
+    "<polyline fill='none' stroke='", .CHART$line, "' stroke-width='1.7' points='", model_pts, "'/>",
+    bands, dots
+  ))
 }
 
 .tif_csv <- function(plots) {
@@ -509,48 +597,38 @@ irt_curve_payload <- function(params, theta = seq(-3, 3, by = 0.1), person_theta
   breaks <- seq(xr[1], xr[2], length.out = 13L)
   counts <- if (length(person)) as.numeric(table(cut(person, breaks = breaks, include.lowest = TRUE))) else rep(0, 12L)
   max_c <- max(c(counts, 1))
-  w <- 520
-  h <- 280
-  pad_l <- 48
-  pad_r <- 16
-  pad_t <- 24
-  mid <- 140
-  inner_w <- w - pad_l - pad_r
-  sx <- function(x) pad_l + (x - xr[1]) / diff(xr) * inner_w
+  w <- 540
+  h <- 300
+  pad <- list(l = 58, r = 16, t = 14, b = 78)
+  yr <- c(0, max_c * 1.08)
+  ax <- .chart_axes(w, h, pad, xr, yr, "theta / b", "Persons", y_digits = 0)
   bars <- character(0)
   for (i in seq_along(counts)) {
     if (counts[[i]] <= 0) next
-    x0 <- sx(breaks[[i]])
-    x1 <- sx(breaks[[i + 1L]])
-    bh <- (counts[[i]] / max_c) * 90
+    x0 <- ax$sx(breaks[[i]])
+    x1 <- ax$sx(breaks[[i + 1L]])
+    y0 <- ax$sy(0)
+    y1 <- ax$sy(counts[[i]])
     bars <- c(bars, sprintf(
-      "<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' fill='#1e3a5f' fill-opacity='0.55'/>",
-      x0, mid - 8 - bh, max(1, x1 - x0 - 1), bh
+      "<rect x='%.1f' y='%.1f' width='%.1f' height='%.1f' fill='%s' fill-opacity='0.72'/>",
+      x0 + 0.5, min(y0, y1), max(0.5, abs(x1 - x0) - 1), abs(y0 - y1), .CHART$line
     ))
   }
   ticks <- character(0)
   ids <- names(item_b)
   if (is.null(ids)) ids <- as.character(seq_along(item_b))
+  y_base <- pad$t + ax$inner_h
   for (i in seq_along(item_b)) {
-    x <- sx(item_b[[i]])
+    x <- ax$sx(item_b[[i]])
     ticks <- c(ticks, sprintf(
-      "<line x1='%.1f' y1='%d' x2='%.1f' y2='%d' stroke='#b45309'/>",
-      x, mid + 8, x, mid + 28
+      "<line x1='%.1f' y1='%.1f' x2='%.1f' y2='%.1f' stroke='#b45309' stroke-width='1.2'/>",
+      x, y_base, x, y_base + 8
     ), sprintf(
-      "<text x='%.1f' y='%d' text-anchor='middle' font-size='9' transform='rotate(-40 %.1f %d)'>%s</text>",
-      x, mid + 42, x, mid + 42, .html_escape(ids[[i]])
+      "<text x='%.1f' y='%.1f' text-anchor='start' font-size='9' fill='%s' font-family='%s' transform='rotate(-40 %.1f %.1f)'>%s</text>",
+      x + 3, y_base + 44, .CHART$ink, .CHART$font, x + 3, y_base + 44, .html_escape(ids[[i]])
     ))
   }
-  .inline_svg(paste0(
-    "<svg xmlns='http://www.w3.org/2000/svg' width='", w, "' height='", h,
-    "' role='img' aria-label='Wright map'>",
-    "<rect x='0' y='0' width='", w, "' height='", h, "' fill='#fffcf7' stroke='#d4c6b0'/>",
-    "<line x1='", pad_l, "' y1='", mid, "' x2='", w - pad_r, "' y2='", mid, "' stroke='#57534e'/>",
-    bars,
-    ticks,
-    "<text x='", w / 2, "' y='", h - 8, "' text-anchor='middle' font-size='10' fill='#57534e'>theta / b</text>",
-    "</svg>"
-  ), "Wright map (persons above, items below)")
+  .chart_svg(w, h, "Wright map (persons above, items below)", ax, paste(bars, collapse = ""), paste(ticks, collapse = ""))
 }
 
 .irt_chapter_html <- function(plots) {
@@ -588,7 +666,7 @@ irt_curve_payload <- function(params, theta = seq(-3, 3, by = 0.1), person_theta
       chunks <- c(
         chunks,
         sprintf("<h3>%s</h3>", .html_escape(id)),
-        .polyline_svg(as.numeric(it$theta), as.numeric(it$irf), paste("IRF", id), "theta", "P(theta)"),
+        .polyline_svg(as.numeric(it$theta), as.numeric(it$irf), paste("IRF", id), "theta", "P(theta)", ylim = c(0, 1)),
         .empirical_irf_svg(it),
         .polyline_svg(as.numeric(it$theta), as.numeric(it$iif), paste("IIF", id), "theta", "I(theta)")
       )
