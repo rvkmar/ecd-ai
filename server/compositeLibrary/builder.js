@@ -17,7 +17,9 @@
 // evidence-activation mapping (the item's own scoring.evidenceActivationMap
 // PLUS the bound Evidence Model observable's evidenceRule), the TR9
 // evaluationProcedure for that observation (Work Product → Observable
-// Variable), and the weight of evidence (from the Task Model's own
+// Variable), sibling observations that share the same workProductId
+// when no other item already owns them (R4: one work product, several
+// observables), and the weight of evidence (from the Task Model's own
 // expectedObservations[], not the Evidence Model side -- weight is
 // authored per Task Model, per the referential-integrity chain CLAUDE.md
 // documents).
@@ -75,6 +77,68 @@ function resolveEvaluationProcedure(evidenceModel, observationId, db) {
     // D123: multi-phase evaluation (PADI Fig. 7). Absent → single automated.
     phases: Array.isArray(proc.phases) ? proc.phases : null,
   };
+}
+
+function trimmedId(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function workProductIdOf(procedure, item) {
+  return trimmedId(procedure?.workProductId) || trimmedId(item?.interaction?.workProductId);
+}
+
+function evidenceRuleForObservable(evidenceModel, observationId) {
+  const observable = evidenceModel?.observables?.find((o) => o.id === observationId);
+  const evidenceRuleByObservableId = new Map(
+    (evidenceModel?.evidenceRules || []).map((r) => [r.observableId, r])
+  );
+  if (observable) {
+    return observable.evidenceRule || evidenceRuleByObservableId.get(observable.id) || null;
+  }
+  return evidenceRuleByObservableId.get(observationId) || null;
+}
+
+/**
+ * Other evaluation procedures on the same Evidence Model that extract
+ * from this item's work product. A sibling must declare workProductId,
+ * share that id, be expected by the Task Model, and not already belong
+ * to another instantiable item on this Task Model version. Two items
+ * that happen to cite the same work product keep one observable each.
+ */
+function additionalObservationsForItem({ item, evidenceModel, taskModel, usableItems, db }) {
+  if (!evidenceModel) return [];
+  const primaryId = item?.observationId;
+  const primaryProc = resolveEvaluationProcedure(evidenceModel, primaryId, db);
+  const wpId = workProductIdOf(primaryProc, item);
+  if (!wpId) return [];
+
+  const expectedById = new Map(
+    (taskModel?.expectedObservations || []).map((eo) => [eo.observationId, eo])
+  );
+  const ownedByOthers = new Set();
+  for (const other of usableItems || []) {
+    if (!other || other.id === item.id) continue;
+    if (other.observationId) ownedByOthers.add(other.observationId);
+  }
+
+  const extras = [];
+  const seen = new Set();
+  for (const proc of evidenceModel.evaluationProcedures || []) {
+    const obsId = proc?.observableId;
+    if (!obsId || obsId === primaryId || seen.has(obsId)) continue;
+    if (trimmedId(proc.workProductId) !== wpId) continue;
+    if (!expectedById.has(obsId) || ownedByOthers.has(obsId)) continue;
+    seen.add(obsId);
+    const expected = expectedById.get(obsId);
+    extras.push({
+      observationId: obsId,
+      evidenceRule: evidenceRuleForObservable(evidenceModel, obsId),
+      evaluationProcedure: resolveEvaluationProcedure(evidenceModel, obsId, db),
+      weight: expected?.weight ?? null,
+      required: expected?.required ?? null,
+    });
+  }
+  return extras;
 }
 
 /**
@@ -183,6 +247,14 @@ export function buildCompositeLibrary(taskModel, db) {
       );
     }
 
+    const additionalObservations = additionalObservationsForItem({
+      item,
+      evidenceModel,
+      taskModel,
+      usableItems,
+      db,
+    });
+
     return {
       itemId: item.id,
       observationId: item.observationId,
@@ -197,6 +269,7 @@ export function buildCompositeLibrary(taskModel, db) {
       },
       evidenceRule,
       evaluationProcedure,
+      additionalObservations,
       weight: expected?.weight ?? null,
       required: expected?.required ?? null,
     };
@@ -245,7 +318,7 @@ export function buildCompositeLibrary(taskModel, db) {
  *   against (only the ones referenced by libraryRecord.items are consulted)
  * @returns {{ stale: boolean, reasons: string[] }}
  */
-export function isCompositeLibraryStale(libraryRecord, { taskModel, evidenceModels = [], rubrics = [] } = {}) {
+export function isCompositeLibraryStale(libraryRecord, { taskModel, evidenceModels = [], rubrics = [], items = [] } = {}) {
   if (!libraryRecord || !taskModel) {
     throw new Error("isCompositeLibraryStale requires both a libraryRecord and the current taskModel.");
   }
@@ -261,6 +334,12 @@ export function isCompositeLibraryStale(libraryRecord, { taskModel, evidenceMode
   const evidenceModelsById = new Map(evidenceModels.map((em) => [em.id, em]));
   const dbSlice = { rubrics };
   const checkedEvidenceModelIds = new Set();
+  const usableItems = (items || []).filter(
+    (item) =>
+      item?.taskModelId === taskModel.id &&
+      item.taskModelVersion === taskModel.versionNumber &&
+      INSTANTIABLE_TASK_MODEL_STATUSES.includes(item.status)
+  );
 
   for (const entry of libraryRecord.items || []) {
     const currentEm = evidenceModelsById.get(entry.evidenceModelId);
@@ -293,6 +372,26 @@ export function isCompositeLibraryStale(libraryRecord, { taskModel, evidenceMode
       if (JSON.stringify(currentProc) !== JSON.stringify(baked)) {
         reasons.push(
           `Evidence model '${entry.evidenceModelId}' evaluationProcedure for '${entry.observationId}' changed since this package was compiled.`
+        );
+      }
+
+      const currentAdditional = additionalObservationsForItem({
+        item: {
+          id: entry.itemId,
+          observationId: entry.observationId,
+          interaction: entry.interactionParams,
+        },
+        evidenceModel: currentEm,
+        taskModel,
+        usableItems,
+        db: dbSlice,
+      });
+      const bakedAdditional = Array.isArray(entry.additionalObservations)
+        ? entry.additionalObservations
+        : [];
+      if (JSON.stringify(currentAdditional) !== JSON.stringify(bakedAdditional)) {
+        reasons.push(
+          `Evidence model '${entry.evidenceModelId}' additional observations for item '${entry.itemId}' changed since this package was compiled.`
         );
       }
     }

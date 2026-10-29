@@ -1044,6 +1044,7 @@ export function accumulateEvidence(session, db, options = {}) {
     /* Score each response and attach its item parameters. */
     const scoredObservations = [];
     let excluded = 0;
+    const itemKeyedIrt = new Set();
 
     for (const r of group) {
       const { u, reason } = scoreResponse(r);
@@ -1072,17 +1073,34 @@ export function accumulateEvidence(session, db, options = {}) {
          `parameters[observableId]` map, exactly as before Day 38. */
       let params;
       let sourceLabel;
+      let keyedBy;
 
       if (parameterSource === "pilot") {
         params = r.pilotParams;
         sourceLabel = `response for item '${r.itemId}''s pinned pilot parameters`;
+        keyedBy = "itemId";
       } else {
         const resolved = calibratedIrtParams(parameterSet, {
           observableId: r.observableId,
           itemId: r.itemId,
         });
         params = resolved.params;
+        keyedBy = resolved.keyedBy;
         sourceLabel = `parameter set '${parameterSetId}'`;
+      }
+
+      // R4: one work product can yield several observables. An extra
+      // observable from the same submit without its own IRT row must not
+      // reuse the item's parameters and count the same likelihood twice.
+      // The same item on a later task is a new observation and still scores.
+      if (keyedBy === "itemId" && r.itemId) {
+        const itemKey = `${r.taskId || ""}:${r.itemId}`;
+        if (itemKeyedIrt.has(itemKey)) {
+          excluded += 1;
+          warnings.push(`Observable '${r.observableId}' on item '${r.itemId}' shares that item's IRT parameters; it was excluded rather than counted twice.`);
+          continue;
+        }
+        itemKeyedIrt.add(itemKey);
       }
 
       if (!params) {

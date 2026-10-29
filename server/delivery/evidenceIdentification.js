@@ -159,6 +159,139 @@ function emptyIdentification(observationId, extras = {}) {
   };
 }
 
+function workProductMeta(item, evaluationProcedure, db) {
+  const wpId = item?.interaction?.workProductId ?? evaluationProcedure?.workProductId ?? null;
+  if (!wpId) return { workProductId: evaluationProcedure?.workProductId ?? null, workProductType: evaluationProcedure?.workProductType ?? null };
+  const wp = (db.workProducts || []).find((row) => row?.id === wpId);
+  return {
+    workProductId: wpId,
+    workProductType: wp?.type ?? evaluationProcedure?.workProductType ?? null,
+  };
+}
+
+/**
+ * Identify one observable from a baked observation slot. The item's
+ * evidenceActivationMap is only for the item's own observationId;
+ * sibling observables use an empty map and their own procedure artifact.
+ */
+function identifyObservable({
+  workProduct,
+  item,
+  db,
+  observationId,
+  evidenceRule,
+  evaluationProcedure,
+  activationMap,
+  scoringSource,
+  allowKeyedMiss = true,
+}) {
+  const observableId = observationId;
+  const optionSets = componentSets(scoringSource);
+  const resolvedMap = (activationMap || []).map((row) => ({
+    ...row,
+    responsePattern: patternResolvingEqualsCorrect(row.responsePattern, optionSets),
+  }));
+
+  let matchedEntry = resolvedMap.find((entryRow) =>
+    matchesResponsePattern(entryRow.responsePattern, workProduct)
+  );
+
+  if (
+    allowKeyedMiss &&
+    !matchedEntry &&
+    observedKeyedMiss(scoringSource, activationMap, resolvedMap, optionSets, workProduct)
+  ) {
+    matchedEntry = {
+      activatesObservable: false,
+      rationale: "The selected response is not the keyed option.",
+    };
+  }
+
+  if (!matchedEntry && (activationMap || []).length === 0 && evaluationProcedure?.artifact) {
+    const artifactResult = applyEvaluationArtifact(evaluationProcedure, workProduct);
+    if (artifactResult?.matched) {
+      if (typeof artifactResult.activatesObservable === "boolean") {
+        matchedEntry = {
+          responsePattern: artifactResult.responsePattern ?? null,
+          activatesObservable: artifactResult.activatesObservable,
+          rationale: artifactResult.rationale,
+        };
+      }
+    } else if (artifactResult?.warning) {
+      return applyPhaseGate(
+        {
+          observationId,
+          observableId,
+          activated: null,
+          direction: evidenceRule?.direction ?? null,
+          strength: null,
+          rationale: null,
+          evaluationMethod: evaluationProcedure.method ?? null,
+          evaluationProcedureId: evaluationProcedure.id ?? null,
+          warning: artifactResult.warning,
+          ...workProductMeta(item, evaluationProcedure, db),
+        },
+        evaluationProcedure
+      );
+    }
+  }
+
+  if (!matchedEntry) {
+    return applyPhaseGate(
+      {
+        observationId,
+        observableId,
+        activated: null,
+        direction: evidenceRule?.direction ?? null,
+        strength: null,
+        rationale: null,
+        evaluationMethod: evaluationProcedure?.method ?? null,
+        evaluationProcedureId: evaluationProcedure?.id ?? null,
+        warning: `Work product did not match any declared responsePattern on item '${item.id}'.`,
+        ...workProductMeta(item, evaluationProcedure, db),
+      },
+      evaluationProcedure
+    );
+  }
+
+  if (typeof matchedEntry.activatesObservable !== "boolean") {
+    return applyPhaseGate(
+      {
+        observationId,
+        observableId,
+        activated: null,
+        direction: evidenceRule?.direction ?? null,
+        strength: null,
+        rationale: matchedEntry.rationale ?? null,
+        evaluationMethod: evaluationProcedure?.method ?? null,
+        evaluationProcedureId: evaluationProcedure?.id ?? null,
+        warning: `Item '${item.id}''s matched activation rule does not declare activatesObservable as a boolean.`,
+        ...workProductMeta(item, evaluationProcedure, db),
+      },
+      evaluationProcedure
+    );
+  }
+
+  return applyPhaseGate(
+    {
+      observationId,
+      observableId,
+      activated: matchedEntry.activatesObservable,
+      direction: evidenceRule?.direction ?? null,
+      strength: matchedEntry.strengthOverride ?? evidenceRule?.strengthLevel ?? null,
+      rationale:
+        matchedEntry.rationale ??
+        evidenceRule?.justification ??
+        evaluationProcedure?.description ??
+        null,
+      evaluationMethod: evaluationProcedure?.method ?? null,
+      evaluationProcedureId: evaluationProcedure?.id ?? null,
+      ...workProductMeta(item, evaluationProcedure, db),
+    },
+    evaluationProcedure
+  );
+}
+
 /**
  * Identify the Observable Variable value a work product provides for one
  * Item, by matching it against the PACKAGE-BAKED evidenceActivationMap
@@ -188,6 +321,7 @@ function emptyIdentification(observationId, extras = {}) {
  *   rationale: string|null,
  *   evaluationMethod?: string|null,
  *   evaluationProcedureId?: string|null,
+ *   identifications?: object[],
  *   warning?: string,
  *   refused?: boolean,
  *   error?: string,
@@ -213,11 +347,6 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
 
   const entry = resolved.entry;
   const observationId = entry.observationId || item.observationId;
-  // The package entry's observationId IS the observable id in this chain
-  // (an Item's observationId must be declared on the Task Model and match
-  // an Evidence Model observable). The builder does not store a separate
-  // observableId field.
-  const observableId = observationId;
   const evidenceRule = entry.evidenceRule || null;
   const evaluationProcedure = entry.evaluationProcedure || null;
   const activationMap = entry.scoring?.evidenceActivationMap || [];
@@ -225,122 +354,48 @@ export function identifyEvidence(workProduct, item, db, options = {}) {
     interaction: entry.interactionParams || null,
     scoring: { method: entry.scoring?.method ?? null },
   };
-  const optionSets = componentSets(scoringSource);
-  const resolvedMap = activationMap.map((row) => ({
-    ...row,
-    responsePattern: patternResolvingEqualsCorrect(row.responsePattern, optionSets),
-  }));
 
-  // Prefer item activation map. Only when the map is empty, fall back to
-  // the baked evaluationProcedure artifact (EM-R1: key | rubric | auto |
-  // process_log). A non-empty map that fails to match stays a "no pattern"
-  // warning — do not reinterpret it as artifact-based non-activation.
-  // A keyed dichotomous miss is a scored 0. An empty or skipped work
-  // product stays unmatched (activated null) so calibration can keep it NA.
-  let matchedEntry = resolvedMap.find((entryRow) =>
-    matchesResponsePattern(entryRow.responsePattern, workProduct)
-  );
+  const primary = identifyObservable({
+    workProduct,
+    item,
+    db,
+    observationId,
+    evidenceRule,
+    evaluationProcedure,
+    activationMap,
+    scoringSource,
+  });
 
-  if (!matchedEntry && observedKeyedMiss(scoringSource, activationMap, resolvedMap, optionSets, workProduct)) {
-    matchedEntry = {
-      activatesObservable: false,
-      rationale: "The selected response is not the keyed option.",
-    };
-  }
-
-  if (!matchedEntry && activationMap.length === 0 && evaluationProcedure?.artifact) {
-    const artifactResult = applyEvaluationArtifact(evaluationProcedure, workProduct);
-    if (artifactResult?.matched) {
-      if (typeof artifactResult.activatesObservable === "boolean") {
-        matchedEntry = {
-          responsePattern: artifactResult.responsePattern ?? null,
-          activatesObservable: artifactResult.activatesObservable,
-          rationale: artifactResult.rationale,
-        };
-      }
-    } else if (artifactResult?.warning) {
-      return applyPhaseGate(
-        {
-          observationId,
-          observableId,
-          activated: null,
-          direction: evidenceRule?.direction ?? null,
-          strength: null,
-          rationale: null,
-          evaluationMethod: evaluationProcedure.method ?? null,
-          evaluationProcedureId: evaluationProcedure.id ?? null,
-          warning: artifactResult.warning,
-        },
-        evaluationProcedure
-      );
-    }
-  }
-
-  if (!matchedEntry) {
-    return applyPhaseGate(
-      {
-        observationId,
-        observableId,
-        activated: null,
-        direction: evidenceRule?.direction ?? null,
-        strength: null,
-        rationale: null,
-        evaluationMethod: evaluationProcedure?.method ?? null,
-        evaluationProcedureId: evaluationProcedure?.id ?? null,
-        warning: `Work product did not match any declared responsePattern on item '${item.id}'.`,
-      },
-      evaluationProcedure
+  const extras = [];
+  for (const extra of entry.additionalObservations || []) {
+    if (!extra?.observationId || extra.observationId === observationId) continue;
+    extras.push(
+      identifyObservable({
+        workProduct,
+        item,
+        db,
+        observationId: extra.observationId,
+        evidenceRule: extra.evidenceRule || null,
+        evaluationProcedure: extra.evaluationProcedure || null,
+        activationMap: [],
+        scoringSource,
+        allowKeyedMiss: false,
+      })
     );
   }
 
-  // A matched entry missing `activatesObservable` (an authoring mistake --
-  // schema.js requires it be a strict boolean at confirm-time, but this
-  // function accepts any item argument and shouldn't silently coerce
-  // `undefined` to `false`, indistinguishable from a deliberate
-  // non-activating rule). Caught by an adversarial review of this module.
-  if (typeof matchedEntry.activatesObservable !== "boolean") {
-    return applyPhaseGate(
-      {
-        observationId,
-        observableId,
-        activated: null,
-        direction: evidenceRule?.direction ?? null,
-        strength: null,
-        rationale: matchedEntry.rationale ?? null,
-        evaluationMethod: evaluationProcedure?.method ?? null,
-        evaluationProcedureId: evaluationProcedure?.id ?? null,
-        warning: `Item '${item.id}''s matched activation rule does not declare activatesObservable as a boolean.`,
-      },
-      evaluationProcedure
-    );
+  if (extras.length > 0) {
+    primary.identifications = [{ ...primary }, ...extras];
   }
+  return primary;
+}
 
-  return applyPhaseGate(
-    {
-      observationId,
-      observableId,
-      activated: matchedEntry.activatesObservable,
-      direction: evidenceRule?.direction ?? null,
-      strength: matchedEntry.strengthOverride ?? evidenceRule?.strengthLevel ?? null,
-      rationale:
-        matchedEntry.rationale ??
-        evidenceRule?.justification ??
-        evaluationProcedure?.description ??
-        null,
-      evaluationMethod: evaluationProcedure?.method ?? null,
-      evaluationProcedureId: evaluationProcedure?.id ?? null,
-      // D121: Identification runs against the work product; interaction is
-      // capture detail. Surface the bound Work Product id/type when present.
-      workProductId: item.interaction?.workProductId ?? null,
-      workProductType: (() => {
-        const wpId = item.interaction?.workProductId;
-        if (!wpId) return evaluationProcedure?.workProductType ?? null;
-        const wp = (db.workProducts || []).find((w) => w?.id === wpId);
-        return wp?.type ?? evaluationProcedure?.workProductType ?? null;
-      })(),
-    },
-    evaluationProcedure
-  );
+export function identificationsFrom(evidence) {
+  if (!evidence) return [];
+  if (Array.isArray(evidence.identifications) && evidence.identifications.length > 0) {
+    return evidence.identifications;
+  }
+  return [evidence];
 }
 
 /**
@@ -371,12 +426,15 @@ export function rescoreStoredItemResponses(db) {
       } catch {
         continue;
       }
-      if (!evidence || evidence.refused || typeof evidence.activated !== "boolean") continue;
-      response.activated = evidence.activated;
-      response.direction = evidence.direction ?? response.direction ?? null;
-      response.strength = evidence.strength ?? null;
-      response.rationale = evidence.rationale ?? null;
-      if (evidence.warning) response.warning = evidence.warning;
+      const match =
+        identificationsFrom(evidence).find((row) => row.observationId === response.observationId) ||
+        (response.observationId == null ? evidence : null);
+      if (!match || match.refused || typeof match.activated !== "boolean") continue;
+      response.activated = match.activated;
+      response.direction = match.direction ?? response.direction ?? null;
+      response.strength = match.strength ?? null;
+      response.rationale = match.rationale ?? null;
+      if (match.warning) response.warning = match.warning;
       else delete response.warning;
       updated += 1;
     }

@@ -293,8 +293,10 @@ function existingResponse(session, taskId) {
 
 /**
  * attempts is the maximum number of scored submits for one task.
- * A further submit replaces that task's response. It does not append a
- * second row, so accumulation still sees one answer.
+ * A further submit replaces that task's response rows. One submit can
+ * store several rows when one work product yields several observables
+ * (R4); they share the attempt number. Accumulation then sees one
+ * answer per observable, not per click.
  *
  * reviewAllowed false blocks that replacement. The cap still applies when
  * review is allowed. When review is off, a second submit is refused even
@@ -345,16 +347,21 @@ export function evaluateAttempt(session, taskId) {
 }
 
 export function placeAttempt(session, taskId, response, decision) {
-  if (decision?.nextAttempt) response.attempt = decision.nextAttempt;
+  return placeAttempts(session, taskId, [response], decision);
+}
+
+export function placeAttempts(session, taskId, responses, decision) {
+  const rows = (responses || []).filter(Boolean);
+  for (const response of rows) {
+    if (decision?.nextAttempt) response.attempt = decision.nextAttempt;
+  }
   if (decision?.action === "replace") {
-    const index = (session.responses || []).findIndex((row) => row && row.taskId === taskId);
-    if (index >= 0) {
-      session.responses[index] = response;
-      return "replace";
-    }
+    session.responses = (session.responses || []).filter((row) => !row || row.taskId !== taskId);
+    session.responses.push(...rows);
+    return "replace";
   }
   session.responses = session.responses || [];
-  session.responses.push(response);
+  session.responses.push(...rows);
   return "append";
 }
 

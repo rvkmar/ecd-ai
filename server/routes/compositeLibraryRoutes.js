@@ -117,6 +117,7 @@ router.get("/:id/staleness", (req, res) => {
       taskModel,
       evidenceModels,
       rubrics: db.rubrics || [],
+      items: db.items || [],
     });
     res.json({ id: row.id, taskModelId: row.taskModelId, stale });
   } catch (e) {

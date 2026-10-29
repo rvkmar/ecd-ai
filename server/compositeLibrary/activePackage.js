@@ -88,6 +88,7 @@ export function resolveIdentificationStructure(item, db, options = {}) {
     taskModel,
     evidenceModels: db.evidenceModels || [],
     rubrics: db.rubrics || [],
+    items: db.items || [],
   });
 
   if (stale) {

@@ -27,7 +27,7 @@ import {
   studentForbiddenFromSession,
 } from "../../src/utils/sessionPlay.js";
 import { applyWizardTimingToSession } from "../../src/utils/sessionWizardTiming.js";
-import { identifyEvidence, rescoreStoredItemResponses } from "../delivery/evidenceIdentification.js";
+import { identifyEvidence, identificationsFrom, rescoreStoredItemResponses } from "../delivery/evidenceIdentification.js";
 import {
   completeHumanEvaluation,
   pendingHumanRatingsFromSession,
@@ -75,6 +75,7 @@ import {
   evaluateAttempt,
   isPastDeliveryDeadline,
   placeAttempt,
+  placeAttempts,
   presentSession,
   stampDeliveryAdministration,
 } from "../delivery/deliveryAdministration.js";
@@ -763,49 +764,54 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
       return res.status(409).json({ error: evidence.error });
     }
 
+    const identifications = identificationsFrom(evidence);
+
     if (family === BAYESIAN_NETWORK_FAMILY) {
-      const networkError = bayesianObservableError({
-        statisticalModel: activeStatModel,
-        observableId: evidence.observableId,
-        parameterSource,
-        parameterSetId,
-        pilotParams,
-      });
-      if (networkError) return res.status(400).json({ error: networkError });
+      for (const identified of identifications) {
+        const networkError = bayesianObservableError({
+          statisticalModel: activeStatModel,
+          observableId: identified.observableId,
+          parameterSource,
+          parameterSetId,
+          pilotParams,
+        });
+        if (networkError) return res.status(400).json({ error: networkError });
+      }
     }
 
-    const response = {
-      taskId,
-      itemId,
-      itemVersion: item.versionNumber,
-      taskModelVersion: item.taskModelVersion,
-      evidenceModelId: item.evidenceModelId,
-      evidenceModelVersion: evidenceModelRecord.versionNumber,
-      parameterSetId,
-      parameterSource,
-      // Only present for parameterSource "pilot" -- the snapshot pin, see
-      // the comment above this block.
-      ...(pilotParams ? { pilotParams } : {}),
-      rawAnswer: rawAnswer ?? null,
-      observationId: evidence.observationId,
-      observableId: evidence.observableId,
-      // D123: when phases need human, activated stays null until rating;
-      // provisionalActivated is never the final OV.
-      activated: evidence.activated,
-      direction: evidence.direction,
-      strength: evidence.strength,
-      rationale: evidence.rationale,
-      evaluationStatus: evidence.evaluationStatus ?? EVALUATION_STATUS.COMPLETE,
-      timestamp: new Date().toISOString(),
-    };
-    if (evidence.warning) response.warning = evidence.warning;
-    if (evidence.evaluationStatus === EVALUATION_STATUS.PENDING_HUMAN) {
-      response.provisionalActivated = evidence.provisionalActivated ?? null;
-      response.provisionalStrength = evidence.provisionalStrength ?? null;
-      response.pendingPhase = evidence.pendingPhase ?? null;
-      response.automatedPhaseResult = evidence.automatedPhaseResult ?? null;
-      response.evaluationProcedureId = evidence.evaluationProcedureId ?? null;
-    }
+    const scoredAt = new Date().toISOString();
+    const responses = identifications.map((identified) => {
+      const row = {
+        taskId,
+        itemId,
+        itemVersion: item.versionNumber,
+        taskModelVersion: item.taskModelVersion,
+        evidenceModelId: item.evidenceModelId,
+        evidenceModelVersion: evidenceModelRecord.versionNumber,
+        parameterSetId,
+        parameterSource,
+        ...(pilotParams ? { pilotParams } : {}),
+        rawAnswer: rawAnswer ?? null,
+        observationId: identified.observationId,
+        observableId: identified.observableId,
+        activated: identified.activated,
+        direction: identified.direction,
+        strength: identified.strength,
+        rationale: identified.rationale,
+        evaluationStatus: identified.evaluationStatus ?? EVALUATION_STATUS.COMPLETE,
+        timestamp: scoredAt,
+      };
+      if (identified.warning) row.warning = identified.warning;
+      if (identified.evaluationStatus === EVALUATION_STATUS.PENDING_HUMAN) {
+        row.provisionalActivated = identified.provisionalActivated ?? null;
+        row.provisionalStrength = identified.provisionalStrength ?? null;
+        row.pendingPhase = identified.pendingPhase ?? null;
+        row.automatedPhaseResult = identified.automatedPhaseResult ?? null;
+        row.evaluationProcedureId = identified.evaluationProcedureId ?? null;
+      }
+      return row;
+    });
+    const response = responses[0];
 
     logger.info("session.submit.scored", {
       sessionId: id,
@@ -813,11 +819,12 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
       itemId,
       observationId: evidence.observationId,
       observableId: evidence.observableId,
+      observationCount: responses.length,
       parameterSource,
     });
 
     beginDeliveryClock(session);
-    const placed = placeAttempt(session, taskId, response, decision);
+    const placed = placeAttempts(session, taskId, responses, decision);
     if (placed === "append") {
       session.currentTaskIndex = Math.min(session.currentTaskIndex + 1, session.taskIds.length);
       noteDeliveredTask(session, taskId);
@@ -829,8 +836,10 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     if (!Array.isArray(task.generatedObservationIds)) {
       task.generatedObservationIds = [];
     }
-    if (evidence.observationId && !task.generatedObservationIds.includes(evidence.observationId)) {
-      task.generatedObservationIds.push(evidence.observationId);
+    for (const identified of identifications) {
+      if (identified.observationId && !task.generatedObservationIds.includes(identified.observationId)) {
+        task.generatedObservationIds.push(identified.observationId);
+      }
     }
     task.updatedAt = new Date().toISOString();
 

@@ -165,6 +165,44 @@ describe("buildCompositeLibrary — happy path", () => {
       artifactRef: "keys/o1.json",
       artifact: { kind: "key", correctPatterns: [{ selected: "opt_a" }] },
     });
+    expect(entry.additionalObservations).toEqual([]);
+  });
+
+  it("bakes sibling observations that share a work product when no other item owns them", () => {
+    const shared = {
+      ...evidenceModel,
+      evaluationProcedures: evidenceModel.evaluationProcedures.map((proc) => ({
+        ...proc,
+        workProductId: "wp-essay",
+        workProductType: "constructed_text",
+      })),
+    };
+    const db = makeDb({
+      evidenceModels: [shared],
+      items: [makeItem({ interaction: { type: "constructed", workProductId: "wp-essay", responseComponents: [] } })],
+    });
+    const { record } = buildCompositeLibrary(taskModel, db);
+    const entry = record.items.find((i) => i.itemId === "i1");
+    expect(entry.additionalObservations.map((row) => row.observationId)).toEqual(["o2"]);
+    expect(entry.additionalObservations[0].evaluationProcedure).toMatchObject({
+      id: "ep2",
+      observableId: "o2",
+      workProductId: "wp-essay",
+    });
+  });
+
+  it("does not bake a sibling observation that another item already elicits", () => {
+    const shared = {
+      ...evidenceModel,
+      evaluationProcedures: evidenceModel.evaluationProcedures.map((proc) => ({
+        ...proc,
+        workProductId: "wp-shared",
+      })),
+    };
+    const db = makeDb({ evidenceModels: [shared] });
+    const { record } = buildCompositeLibrary(taskModel, db);
+    const entry = record.items.find((i) => i.itemId === "i1");
+    expect(entry.additionalObservations).toEqual([]);
   });
 
   it("falls back to evidenceModel.evidenceRules[] when the observable has no embedded evidenceRule", () => {
