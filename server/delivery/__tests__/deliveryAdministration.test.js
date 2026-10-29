@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { validateEntity } from "../../../src/utils/schema.js";
 import {
-  CATALOG_LIST_PROJECTION,
+  CATALOG_SUMMARY_PROJECTION,
   RATING_QUEUE_PROJECTION,
+  catalogListSummary,
   projectSession,
 } from "../../sessions/sessionListProjection.js";
 import {
@@ -273,7 +274,13 @@ describe("list projection", () => {
       studentModel: { irtTheta: 0 },
       responses: [{ taskId: "t1", rationale: "secret", evaluationStatus: "pending_human" }],
     };
-    expect(projectSession(doc, CATALOG_LIST_PROJECTION).deliveryAdministration.attempts).toBe(1);
+    const summary = catalogListSummary(doc);
+    expect(summary.deliveryAdministration.attempts).toBe(1);
+    expect(summary.responses).toBeUndefined();
+    expect(summary.studentModel).toBeUndefined();
+    expect(summary.responseCount).toBe(1);
+    expect(summary.answeredTaskIds).toEqual(["t1"]);
+    expect(projectSession(doc, CATALOG_SUMMARY_PROJECTION).deliveryAdministration.attempts).toBe(1);
     const queued = projectSession(doc, RATING_QUEUE_PROJECTION);
     expect(queued.deliveryAdministration).toBeUndefined();
     expect(queued.responses[0].rationale).toBeUndefined();
@@ -317,10 +324,11 @@ describe("mongo session store", () => {
       const listed = await querySessions(
         { students: [], users: [] },
         { id: source.id },
-        { projection: CATALOG_LIST_PROJECTION }
+        { projection: CATALOG_SUMMARY_PROJECTION }
       );
       expect(listed[0].deliveryAdministration.feedbackMode).toBe("none");
       expect(listed[0].deliveryAdministration.reviewAllowed).toBe(false);
+      expect(listed[0].studentModel).toBeUndefined();
     } finally {
       await mongoRemove(source.id);
       resetSessionStoreForTests();

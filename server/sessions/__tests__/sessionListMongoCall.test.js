@@ -4,7 +4,7 @@ import request from "supertest";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { CATALOG_LIST_PROJECTION, RATING_QUEUE_PROJECTION } from "../sessionListProjection.js";
+import { CATALOG_SUMMARY_PROJECTION, RATING_QUEUE_PROJECTION } from "../sessionListProjection.js";
 import { EVALUATION_STATUS } from "../../delivery/evaluationPhases.js";
 
 vi.mock("../../utils/authMiddleware.js", () => ({
@@ -71,7 +71,7 @@ function projectionOf(call) {
 }
 
 describe("list routes call Mongo with a projection", () => {
-  it("uses the catalog projection for /, /active, /archived, and /mine", async () => {
+  it("uses the catalog summary projection for /, /active, /archived, and /mine", async () => {
     expect((await request(app).get("/api/sessions")).status).toBe(200);
     expect((await request(app).get("/api/sessions/active")).status).toBe(200);
     expect((await request(app).get("/api/sessions/archived")).status).toBe(200);
@@ -80,9 +80,10 @@ describe("list routes call Mongo with a projection", () => {
     const projections = mongoFind.mock.calls.map(projectionOf);
     expect(projections).toHaveLength(4);
     for (const projection of projections) {
-      expect(projection).toEqual(CATALOG_LIST_PROJECTION);
-      expect(projection.responses).toBe(1);
-      expect(projection.studentModel).toBe(1);
+      expect(projection).toEqual(CATALOG_SUMMARY_PROJECTION);
+      expect(projection.responses).toBeUndefined();
+      expect(projection.studentModel).toBeUndefined();
+      expect(projection["responses.taskId"]).toBe(1);
       expect(projection.studentId).toBe(1);
       expect(projection.studentIds).toBe(1);
     }

@@ -11,8 +11,9 @@ import {
 } from "../sessions/sessionRepository.js";
 import { canonicalSession } from "../sessions/sessionCanonical.js";
 import {
-  CATALOG_LIST_PROJECTION,
+  CATALOG_SUMMARY_PROJECTION,
   RATING_QUEUE_PROJECTION,
+  catalogListSummary,
 } from "../sessions/sessionListProjection.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
@@ -436,9 +437,9 @@ router.post("/", async (req, res) => {
 // ------------------------------
 router.get("/", async (req, res) => {
   const db = loadDB();
-  const sessions = await querySessions(db, {}, { projection: CATALOG_LIST_PROJECTION });
+  const sessions = await querySessions(db, {}, { projection: CATALOG_SUMMARY_PROJECTION });
   const visible = sessionsVisibleToUser(sessions, req.user, db.students || [], db.users || []);
-  res.json(visible.map((row) => sessionView(row, req.user)));
+  res.json(visible.map((row) => sessionView(catalogListSummary(row), req.user)));
 });
 
 // ------------------------------
@@ -446,9 +447,9 @@ router.get("/", async (req, res) => {
 // ------------------------------
 router.get("/active", async (req, res) => {
   const db = loadDB();
-  const active = await querySessions(db, { statusNe: "archived" }, { projection: CATALOG_LIST_PROJECTION });
+  const active = await querySessions(db, { statusNe: "archived" }, { projection: CATALOG_SUMMARY_PROJECTION });
   const visible = sessionsVisibleToUser(active, req.user, db.students || [], db.users || []);
-  res.json(visible.map((row) => sessionView(row, req.user)));
+  res.json(visible.map((row) => sessionView(catalogListSummary(row), req.user)));
 });
 
 // ------------------------------
@@ -456,9 +457,9 @@ router.get("/active", async (req, res) => {
 // ------------------------------
 router.get("/archived", async (req, res) => {
   const db = loadDB();
-  const archived = await querySessions(db, { status: "archived" }, { projection: CATALOG_LIST_PROJECTION });
+  const archived = await querySessions(db, { status: "archived" }, { projection: CATALOG_SUMMARY_PROJECTION });
   const visible = sessionsVisibleToUser(archived, req.user, db.students || [], db.users || []);
-  res.json(visible.map((row) => sessionView(row, req.user)));
+  res.json(visible.map((row) => sessionView(catalogListSummary(row), req.user)));
 });
 
 // ------------------------------
@@ -470,22 +471,26 @@ router.get("/archived", async (req, res) => {
 router.get("/mine", async (req, res) => {
   try {
     const db = loadDB();
-    const sessions = await querySessions(db, {}, { projection: CATALOG_LIST_PROJECTION });
+    const sessions = await querySessions(db, {}, { projection: CATALOG_SUMMARY_PROJECTION });
     const students = db.students || [];
     const users = db.users || [];
     const user = req.user || {};
     if (user.role === "student") {
       if (String(req.query.scope || "") === "history") {
         return res.json(
-          closedSessionsForStudent(sessions, user, students, users).map((row) => sessionView(row, user))
+          closedSessionsForStudent(sessions, user, students, users).map((row) =>
+            sessionView(catalogListSummary(row), user)
+          )
         );
       }
       return res.json(
-        attendableSessionsForStudent(sessions, user, students, users).map((row) => sessionView(row, user))
+        attendableSessionsForStudent(sessions, user, students, users).map((row) =>
+          sessionView(catalogListSummary(row), user)
+        )
       );
     }
     const live = sessions.filter((s) => s.status !== "archived");
-    return res.json(live.map((row) => sessionView(row, user)));
+    return res.json(live.map((row) => sessionView(catalogListSummary(row), user)));
   } catch (err) {
     // A thrown /mine must not become GET /:id's 404. Empty list is honest.
     console.error("GET /api/sessions/mine failed:", err);

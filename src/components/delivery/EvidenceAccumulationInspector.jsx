@@ -12,7 +12,7 @@ function posteriorSummary(session) {
       const id = p.smvId || "?";
       const est = p.estimate;
       const prec = p.precision;
-      const estText = typeof est === "number" ? est.toFixed(2) : String(est ?? "—");
+      const estText = typeof est === "number" ? est.toFixed(2) : String(est ?? "-");
       const precText = typeof prec === "number" ? ` ±${prec.toFixed(2)}` : "";
       return `${id}: ${estText}${precText}`;
     })
@@ -25,6 +25,9 @@ export default function EvidenceAccumulationInspector() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [previewError, setPreviewError] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,15 +53,43 @@ export default function EvidenceAccumulationInspector() {
     };
   }, [auth]);
 
+  useEffect(() => {
+    if (!selectedId || !auth) {
+      setPreview(null);
+      setPreviewError(null);
+      setPreviewLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setPreview(null);
+    setPreviewError(null);
+    setPreviewLoading(true);
+    apiFetch(`/api/sessions/${selectedId}`, {}, auth)
+      .then((detail) => {
+        if (cancelled) return;
+        setPreview(detail);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setPreviewError(err?.message || "Failed to load session");
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, auth]);
+
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-semibold">Evidence Accumulation (inspect)</h2>
         <p className="text-sm text-gray-500 mt-1">
           Read-only inspect of Student Model Variables written by the delivery
-          loop (PADI TR9 §2.5). This is not an authoring object. Open a session
-          to see the persisted posterior and classification on the existing
-          report.
+          loop (PADI TR9 §2.5). This is not an authoring object. Catalog lists
+          omit studentModel; Inspect loads GET /api/sessions/:id for the
+          persisted posterior and opens the existing report.
         </p>
       </div>
 
@@ -85,25 +116,32 @@ export default function EvidenceAccumulationInspector() {
                   </td>
                 </tr>
               ) : (
-                sessions.map((s) => (
-                  <tr key={s.id} className="border-t">
-                    <td className="px-3 py-2 font-mono">{s.id}</td>
-                    <td className="px-3 py-2">{s.status || "—"}</td>
-                    <td className="px-3 py-2">
-                      {s.stopped?.reason || (s.stopped ? "stopped" : "—")}
-                    </td>
-                    <td className="px-3 py-2">{posteriorSummary(s)}</td>
-                    <td className="px-3 py-2">
-                      <button
-                        type="button"
-                        className="px-2 py-1 rounded bg-gray-800 text-white"
-                        onClick={() => setSelectedId(s.id)}
-                      >
-                        Inspect
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                sessions.map((s) => {
+                  const isSelected = selectedId === s.id;
+                  let smvText = "Inspect to load";
+                  if (isSelected && previewLoading) smvText = "Loading…";
+                  else if (isSelected && previewError) smvText = previewError;
+                  else if (isSelected && preview) smvText = posteriorSummary(preview);
+                  return (
+                    <tr key={s.id} className="border-t">
+                      <td className="px-3 py-2 font-mono">{s.id}</td>
+                      <td className="px-3 py-2">{s.status || "-"}</td>
+                      <td className="px-3 py-2">
+                        {s.stopped?.reason || (s.stopped ? "stopped" : "-")}
+                      </td>
+                      <td className="px-3 py-2">{smvText}</td>
+                      <td className="px-3 py-2">
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded bg-gray-800 text-white"
+                          onClick={() => setSelectedId(s.id)}
+                        >
+                          Inspect
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

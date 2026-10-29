@@ -5,6 +5,7 @@ import { apiFetch, apiErrorMessage } from "@/api/apiClient";
 import SessionReport from "./SessionReport";
 import StudentModelRecordPanel from "@/components/reports/StudentModelRecordPanel";
 import { normalizeSessionStatus } from "@/utils/sessionStatus";
+import { sessionResponseCount } from "@/utils/sessionPlay";
 
 function statusLabel(session) {
   const status = normalizeSessionStatus(session.status);
@@ -88,7 +89,7 @@ export default function StudentSessionReports() {
               <div className="mt-1 text-sm text-slate-600">
                 {statusLabel(s)}
                 {" · "}
-                Responses: <strong>{(s.responses || []).length}</strong>
+                Responses: <strong>{sessionResponseCount(s)}</strong>
                 {" / "}
                 Tasks: <strong>{(s.taskIds || []).length}</strong>
               </div>
