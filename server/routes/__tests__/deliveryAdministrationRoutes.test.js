@@ -496,7 +496,9 @@ describe("feedback mode", () => {
 
     const listed = await request(app).get("/api/sessions/mine");
     expect(listed.body[0].studentModel).toBeUndefined();
-    expect(listed.body[0].responses[0].rationale).toBeUndefined();
+    expect(listed.body[0].responses).toBeUndefined();
+    expect(listed.body[0].responseCount).toBe(1);
+    expect(listed.body[0].answeredTaskIds).toEqual(["t1"]);
 
     teacher();
     const staff = await request(app).get("/api/sessions/s1");

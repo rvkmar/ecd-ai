@@ -184,12 +184,26 @@ export function canViewCompletedSession(session) {
   return isClosedSession(session);
 }
 
+// Catalog lists send answeredTaskIds / responseCount instead of responses.
+// Detail and player payloads still carry responses; both shapes work here.
+export function sessionResponseCount(session) {
+  if (typeof session?.responseCount === "number") return session.responseCount;
+  return (session?.responses || []).length;
+}
+
+export function sessionAnsweredTaskIds(session) {
+  if (Array.isArray(session?.answeredTaskIds)) {
+    return session.answeredTaskIds.filter((id) => id != null && id !== "");
+  }
+  return (session?.responses || []).map((r) => r.taskId).filter(Boolean);
+}
+
 export function canFinishSession(session) {
   if (!session || isClosedSession(session)) return false;
   const taskIds = session.taskIds || [];
-  const responses = session.responses || [];
-  if (taskIds.length === 0 || responses.length === 0) return false;
-  const answered = new Set(responses.map((r) => r.taskId).filter(Boolean));
+  const answeredIds = sessionAnsweredTaskIds(session);
+  if (taskIds.length === 0 || answeredIds.length === 0) return false;
+  const answered = new Set(answeredIds);
   return taskIds.every((id) => answered.has(id));
 }
 

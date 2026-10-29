@@ -9,6 +9,7 @@ import {
   canStartSession,
   isSessionClosedForStudent,
   isAttendableStatus,
+  sessionResponseCount,
 } from "@/utils/sessionPlay";
 import { SESSION_STATUS, normalizeSessionStatus } from "@/utils/sessionStatus";
 import toast from "react-hot-toast";
@@ -134,7 +135,7 @@ export default function StudentSessionList() {
               </div>
               <div className="text-sm text-slate-600">
                 Tasks: <strong>{(s.taskIds || []).length}</strong>
-                {" "}|&nbsp; Responses: <strong>{(s.responses || []).length}</strong>
+                {" "}|&nbsp; Responses: <strong>{sessionResponseCount(s)}</strong>
               </div>
             </div>
             <div className="flex flex-col items-end gap-2">

@@ -104,9 +104,11 @@ process.env.SESSIONS_BACKEND = "memory";
 const { querySessions, resetSessionStoreForTests, upsertSessions } = await import(
   "../server/sessions/sessionRepository.js"
 );
-const { CATALOG_LIST_PROJECTION, RATING_QUEUE_PROJECTION } = await import(
-  "../server/sessions/sessionListProjection.js"
-);
+const {
+  CATALOG_SUMMARY_PROJECTION,
+  RATING_QUEUE_PROJECTION,
+  catalogListSummary,
+} = await import("../server/sessions/sessionListProjection.js");
 const { blindedRatingQueueFromSessions } = await import("../server/delivery/raterQueue.js");
 
 resetSessionStoreForTests();
@@ -115,15 +117,15 @@ const db = { students: [{ id: "me", districtId: "d1" }, { id: "bulk", districtId
 
 const catalogMs = await timeList(async () => {
   const started = performance.now();
-  const listed = await querySessions(db, {}, { projection: CATALOG_LIST_PROJECTION });
-  JSON.stringify(listed);
+  const listed = await querySessions(db, {}, { projection: CATALOG_SUMMARY_PROJECTION });
+  JSON.stringify(listed.map(catalogListSummary));
   return performance.now() - started;
 });
 
 const activeMs = await timeList(async () => {
   const started = performance.now();
-  const listed = await querySessions(db, { statusNe: "archived" }, { projection: CATALOG_LIST_PROJECTION });
-  JSON.stringify(listed);
+  const listed = await querySessions(db, { statusNe: "archived" }, { projection: CATALOG_SUMMARY_PROJECTION });
+  JSON.stringify(listed.map(catalogListSummary));
   return performance.now() - started;
 });
 
@@ -148,7 +150,9 @@ const unprojectedMs = await timeList(async () => {
   return performance.now() - started;
 });
 
-const oneCatalog = await querySessions(db, {}, { projection: CATALOG_LIST_PROJECTION });
+const oneCatalog = (
+  await querySessions(db, {}, { projection: CATALOG_SUMMARY_PROJECTION })
+).map(catalogListSummary);
 const oneRating = await querySessions(db, { pendingRating: true }, { projection: RATING_QUEUE_PROJECTION });
 
 const report = {
@@ -177,8 +181,8 @@ if (process.env.MONGO_URI) {
     report.mongo = {
       catalogListMs: await timeList(async () => {
         const started = performance.now();
-        const listed = await querySessions(db, {}, { projection: CATALOG_LIST_PROJECTION });
-        JSON.stringify(listed);
+        const listed = await querySessions(db, {}, { projection: CATALOG_SUMMARY_PROJECTION });
+        JSON.stringify(listed.map(catalogListSummary));
         return performance.now() - started;
       }),
       activeListMs: await timeList(async () => {
@@ -186,9 +190,9 @@ if (process.env.MONGO_URI) {
         const listed = await querySessions(
           db,
           { statusNe: "archived" },
-          { projection: CATALOG_LIST_PROJECTION }
+          { projection: CATALOG_SUMMARY_PROJECTION }
         );
-        JSON.stringify(listed);
+        JSON.stringify(listed.map(catalogListSummary));
         return performance.now() - started;
       }),
       ratingQueueMs: await timeList(async () => {

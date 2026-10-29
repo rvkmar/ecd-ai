@@ -3,8 +3,9 @@ import express from "express";
 import request from "supertest";
 import { SESSION_INDEX_FIELDS } from "../sessionBackend.js";
 import {
-  CATALOG_LIST_PROJECTION,
+  CATALOG_SUMMARY_PROJECTION,
   RATING_QUEUE_PROJECTION,
+  catalogListSummary,
   projectSession,
 } from "../sessionListProjection.js";
 import {
@@ -64,6 +65,13 @@ function catalogSession(overrides = {}) {
         evaluationStatus: "complete",
         observationId: "o1",
       },
+      {
+        taskId: "t1",
+        itemId: "item1",
+        observationId: "o2",
+        rawAnswer: "extra-observable",
+        evaluationStatus: "complete",
+      },
     ],
     studentModel: {
       smvPosteriors: {
@@ -99,6 +107,10 @@ function catalogSession(overrides = {}) {
     schoolId: "sch1",
     ...overrides,
   };
+}
+
+function expectedCatalogSummary(session) {
+  return catalogListSummary(session);
 }
 
 function ratingSession() {
@@ -178,23 +190,41 @@ describe("session list projection", () => {
     expect(names).toContain("responses.evidenceModelId+status");
   });
 
-  it("keeps catalog list JSON identical on the file store and the memory store", async () => {
+  it("summary drops responses and studentModel and adds responseCount and answeredTaskIds", () => {
+    const session = catalogSession();
+    const summary = catalogListSummary(session);
+    expect(summary.responses).toBeUndefined();
+    expect(summary.studentModel).toBeUndefined();
+    expect(summary.responseCount).toBe(2);
+    expect(summary.answeredTaskIds).toEqual(["t1"]);
+    expect(summary.taskIds).toEqual(["t1", "t2"]);
+    expect(summary.deliveryModelId).toBe("dm1");
+    expect(JSON.stringify(summary)).not.toMatch(/secret|heavy|smvPosteriors|rawAnswer/);
+    expect(CATALOG_SUMMARY_PROJECTION.responses).toBeUndefined();
+    expect(CATALOG_SUMMARY_PROJECTION.studentModel).toBeUndefined();
+    expect(CATALOG_SUMMARY_PROJECTION["responses.taskId"]).toBe(1);
+  });
+
+  it("keeps catalog summary JSON identical on the file store and the memory store", async () => {
     const archived = catalogSession({
       id: "s-arch",
       status: "archived",
       isCompleted: true,
       autoFinished: true,
+      responses: [{ taskId: "t2", rawAnswer: heavy }],
     });
     const sessions = [catalogSession(), archived];
+    const expected = sessions.map(expectedCatalogSummary);
 
     const fromFile = await querySessions(
       { sessions, students: [], users: [] },
       {},
-      { projection: CATALOG_LIST_PROJECTION }
+      { projection: CATALOG_SUMMARY_PROJECTION }
     );
-    expect(JSON.stringify(fromFile)).toBe(JSON.stringify(sessions));
-    expect(fromFile[0].responses[0].rationale).toBe(heavy);
-    expect(fromFile[0].studentModel.smvPosteriors.theta.distribution).toEqual({ a: 0.2, b: 0.8 });
+    expect(fromFile.map(catalogListSummary)).toEqual(expected);
+    expect(fromFile[0].responses[0].taskId).toBe("t1");
+    expect(fromFile[0].responses[0].rationale).toBeUndefined();
+    expect(fromFile[0].studentModel).toBeUndefined();
 
     process.env.SESSIONS_BACKEND = "memory";
     resetSessionStoreForTests();
@@ -202,9 +232,9 @@ describe("session list projection", () => {
     const fromMemory = await querySessions(
       { students: [], users: [] },
       {},
-      { projection: CATALOG_LIST_PROJECTION }
+      { projection: CATALOG_SUMMARY_PROJECTION }
     );
-    expect(JSON.stringify(fromMemory)).toBe(JSON.stringify(sessions));
+    expect(fromMemory.map(catalogListSummary)).toEqual(expected);
   });
 
   it("rating-queue JSON matches the full-document queue while skipping unused fields", async () => {
@@ -252,7 +282,7 @@ describe("session list projection", () => {
 
   const mongoIt = process.env.MONGO_URI ? it : it.skip;
 
-  mongoIt("mongo returns the same catalog JSON and the same rating-queue JSON", async () => {
+  mongoIt("mongo returns the same catalog summary JSON and the same rating-queue JSON", async () => {
     const previous = process.env.SESSIONS_BACKEND;
     process.env.SESSIONS_BACKEND = "mongo";
     const live = catalogSession({ id: "mongo-live" });
@@ -264,10 +294,10 @@ describe("session list projection", () => {
       const listed = await querySessions(
         { students: [], users: [] },
         {},
-        { projection: CATALOG_LIST_PROJECTION }
+        { projection: CATALOG_SUMMARY_PROJECTION }
       );
       const byId = Object.fromEntries(listed.map((row) => [row.id, row]));
-      expect(JSON.stringify(byId["mongo-live"])).toBe(JSON.stringify(live));
+      expect(catalogListSummary(byId["mongo-live"])).toEqual(expectedCatalogSummary(live));
       const queued = await querySessions(
         { students: [], users: [] },
         { pendingRating: true },
@@ -291,7 +321,7 @@ describe("list route JSON", () => {
   app.use(express.json());
   app.use("/api/sessions", sessionRouter);
 
-  it("returns the same catalog bytes for /, /active, /archived, and /mine", async () => {
+  it("returns catalog summaries for /, /active, /archived, and /mine", async () => {
     const live = catalogSession();
     const archived = catalogSession({
       id: "s-arch",
@@ -299,6 +329,7 @@ describe("list route JSON", () => {
       isCompleted: true,
       studentId: "stu2",
       studentIds: ["stu2"],
+      responses: [{ taskId: "t2", rawAnswer: heavy }],
     });
     const history = catalogSession({
       id: "s-done",
@@ -306,6 +337,8 @@ describe("list route JSON", () => {
       isCompleted: true,
       studentId: "stu1",
       studentIds: ["stu1"],
+      taskIds: ["t1"],
+      responses: [{ taskId: "t1", rawAnswer: "done" }],
     });
     loadDB.mockReturnValue({
       sessions: [live, archived, history],
@@ -315,28 +348,43 @@ describe("list route JSON", () => {
 
     const all = await request(app).get("/api/sessions").set("x-role", "admin");
     expect(all.status).toBe(200);
-    expect(JSON.stringify(all.body)).toBe(JSON.stringify([live, archived, history]));
+    expect(all.body).toEqual([
+      expectedCatalogSummary(live),
+      expectedCatalogSummary(archived),
+      expectedCatalogSummary(history),
+    ]);
+    expect(all.body[0].responses).toBeUndefined();
+    expect(all.body[0].studentModel).toBeUndefined();
+    expect(all.body[0].responseCount).toBe(2);
+    expect(all.body[0].answeredTaskIds).toEqual(["t1"]);
+    expect(JSON.stringify(all.body)).not.toMatch(heavy);
 
     const active = await request(app).get("/api/sessions/active").set("x-role", "admin");
-    expect(JSON.stringify(active.body)).toBe(JSON.stringify([live, history]));
+    expect(active.body).toEqual([
+      expectedCatalogSummary(live),
+      expectedCatalogSummary(history),
+    ]);
 
     const archivedRes = await request(app).get("/api/sessions/archived").set("x-role", "admin");
-    expect(JSON.stringify(archivedRes.body)).toBe(JSON.stringify([archived]));
+    expect(archivedRes.body).toEqual([expectedCatalogSummary(archived)]);
 
     const mine = await request(app).get("/api/sessions/mine").set("x-role", "teacher").set("x-user-id", "teach1");
-    expect(JSON.stringify(mine.body)).toBe(JSON.stringify([live, history]));
+    expect(mine.body).toEqual([
+      expectedCatalogSummary(live),
+      expectedCatalogSummary(history),
+    ]);
 
     const studentMine = await request(app)
       .get("/api/sessions/mine")
       .set("x-role", "student")
       .set("x-user-id", "stu1");
-    expect(JSON.stringify(studentMine.body)).toBe(JSON.stringify([live]));
+    expect(studentMine.body).toEqual([expectedCatalogSummary(live)]);
 
     const studentHistory = await request(app)
       .get("/api/sessions/mine?scope=history")
       .set("x-role", "student")
       .set("x-user-id", "stu1");
-    expect(JSON.stringify(studentHistory.body)).toBe(JSON.stringify([history]));
+    expect(studentHistory.body).toEqual([expectedCatalogSummary(history)]);
   });
 
   it("returns the same rating-queue bytes as a full-document read", async () => {

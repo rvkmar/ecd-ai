@@ -16,6 +16,9 @@ import {
   canReviewSession,
   canViewCompletedSession,
   canViewSessionReport,
+  canFinishSession,
+  sessionResponseCount,
+  sessionAnsweredTaskIds,
   isAttendableStatus,
   isSessionClosedForStudent,
   buildAssignableRoster,
@@ -160,6 +163,32 @@ describe("staff Play / Pause / Operate exclusivity", () => {
     expect(canViewCompletedSession({ status: "completed", isCompleted: true })).toBe(true);
     expect(canViewSessionReport({ status: "reviewed" })).toBe(true);
     expect(canReviewSession({ status: "completed", isCompleted: true })).toBe(false);
+  });
+
+  it("Finish uses answeredTaskIds from catalog summaries and responses from detail", () => {
+    const summaryReady = {
+      status: "in_progress",
+      taskIds: ["t1", "t2"],
+      responseCount: 2,
+      answeredTaskIds: ["t1", "t2"],
+    };
+    const summaryPartial = {
+      status: "in_progress",
+      taskIds: ["t1", "t2"],
+      responseCount: 1,
+      answeredTaskIds: ["t1"],
+    };
+    const detailReady = {
+      status: "in_progress",
+      taskIds: ["t1", "t2"],
+      responses: [{ taskId: "t1" }, { taskId: "t2" }],
+    };
+    expect(canFinishSession(summaryReady)).toBe(true);
+    expect(canFinishSession(summaryPartial)).toBe(false);
+    expect(canFinishSession(detailReady)).toBe(true);
+    expect(sessionResponseCount(summaryReady)).toBe(2);
+    expect(sessionResponseCount(detailReady)).toBe(2);
+    expect(sessionAnsweredTaskIds(summaryReady)).toEqual(["t1", "t2"]);
   });
 
   it("closedSessionsForStudent returns only this student's closed work", () => {

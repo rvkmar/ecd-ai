@@ -8,6 +8,7 @@ import {
   canFinishSession,
   canViewCompletedSession,
   canViewSessionReport,
+  sessionResponseCount,
 } from "@/utils/sessionPlay";
 
 // Staff session list. Review = live examinee surface. View = completed
@@ -163,15 +164,6 @@ export default function SessionList({
                   Delivery model: <strong>{s.deliveryModelId}</strong>
                 </div>
               )}
-              {s.studentModel?.carriedForward && (
-                <div data-testid={`session-carried-${s.id}`}>
-                  Estimates carried forward
-                  {Array.isArray(s.studentModel.carriedForward.competencyModelIds) &&
-                  s.studentModel.carriedForward.competencyModelIds.length > 0
-                    ? ` (${s.studentModel.carriedForward.competencyModelIds.join(", ")})`
-                    : ""}
-                </div>
-              )}
               <div>
                 Strategy: <strong>{s.selectionStrategy || "fixed"}</strong>
                 {s.nextTaskPolicy?.policyId && (
@@ -182,7 +174,7 @@ export default function SessionList({
               </div>
               <div>
                 Tasks: <strong>{(s.taskIds || []).length}</strong> &nbsp;|&nbsp;
-                Responses: <strong>{(s.responses || []).length}</strong>
+                Responses: <strong>{sessionResponseCount(s)}</strong>
               </div>
               {renderTaskPreview(s)}
             </div>
