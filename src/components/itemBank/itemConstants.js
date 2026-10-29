@@ -717,8 +717,10 @@ export function itemReadiness(item = {}, ctx = {}) {
   // dinaParametersAreUsable() rather than a bare typeof check, matching
   // schema.js's strict gate exactly -- a slip/guess pair that is present
   // but out of range (or violates monotonicity) must show NOT READY here
-  // exactly when schema.js would refuse to confirm it.
-  const needsDina = activeStatisticalModel?.type === "dina";
+  // exactly when schema.js would refuse to confirm it. R8 asks the same
+  // pair of a G-DINA item (delivery expands it into a conjunctive table).
+  const needsDina = activeStatisticalModel?.type === "dina" || activeStatisticalModel?.type === "gdina";
+  const isGdinaPilot = activeStatisticalModel?.type === "gdina";
   const dina = item.psychometrics?.dinaParams || {};
 
   const difficultyPlacement = intendedDifficultyPlacement(
@@ -739,11 +741,13 @@ export function itemReadiness(item = {}, ctx = {}) {
     "dinaParams",
     "operations",
     needsDina
-      ? "DINA pilot parameters supplied"
+      ? (isGdinaPilot ? "G-DINA pilot slip/guess supplied" : "DINA pilot parameters supplied")
       : "DINA pilot parameters not required",
     needsDina ? dinaParametersAreUsable(dina) : true,
     needsDina
-      ? "A DINA-scored item must carry usable pilot slip/guess parameters (slip and guess each in [0,1), with guess < 1 - slip) before it can be confirmed. Pilot values are fine; calibration replaces them."
+      ? (isGdinaPilot
+        ? "A G-DINA-scored item must carry usable pilot slip/guess parameters (slip and guess each in [0,1), with guess < 1 - slip) before it can be confirmed. Delivery expands them into a conjunctive probability table. Pilot values are fine; calibration replaces them."
+        : "A DINA-scored item must carry usable pilot slip/guess parameters (slip and guess each in [0,1), with guess < 1 - slip) before it can be confirmed. Pilot values are fine; calibration replaces them.")
       : null
   );
 
@@ -898,12 +902,14 @@ export function itemCompatibilityNotes(item = {}, ctx = {}) {
     );
   }
 
-  /* DINA pilot parameters on a non-DINA model are rejected outright by
-     schema.js -- the D53b analogue of the IRT check above. */
+  /* DINA pilot parameters on a non-DINA / non-G-DINA model are rejected
+     outright by schema.js -- the D53b analogue of the IRT check above.
+     G-DINA reuses the same slip/guess pair as conjunctive starting values. */
   const dinaBlocking = item.psychometrics?.dinaParams || {};
   const hasDina = typeof dinaBlocking.slip === "number" || typeof dinaBlocking.guess === "number";
+  const dinaPilotFamilies = activeStatisticalModel?.type === "dina" || activeStatisticalModel?.type === "gdina";
 
-  if (hasDina && activeStatisticalModel && activeStatisticalModel.type !== "dina") {
+  if (hasDina && activeStatisticalModel && !dinaPilotFamilies) {
     push(
       "blocking",
       `DINA pilot parameters are present but the Evidence Model runs on '${activeStatisticalModel.type}'. Clear them.`

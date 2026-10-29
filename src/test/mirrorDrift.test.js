@@ -311,6 +311,40 @@ describe("schema.js — DINA pilot parameter strict-confirm gate", () => {
   });
 });
 
+describe("schema.js — G-DINA reuses DINA pilot slip/guess (R8)", () => {
+  function gdinaFixtures(dinaParams) {
+    const em = makeEvidenceModel({
+      statisticalModels: [{ id: "sm1", type: "gdina", active: true, structureConfig: { qMatrixId: "qm1" } }],
+    });
+    const tm = makeTaskModel();
+    const item = makeItem({
+      psychometrics: { statisticalModelType: "gdina", ...(dinaParams !== undefined ? { dinaParams } : {}) },
+    });
+    const db = makeDB({ item, taskModel: tm, evidenceModel: em });
+    return { item, db, em };
+  }
+
+  it("does not treat dinaParams on a G-DINA item as a wrong-family mistake", () => {
+    const { item, db, em } = gdinaFixtures({ slip: 0.1, guess: 0.2 });
+    const { errors } = validateEntity("items", item, db, { strict: false });
+    const notes = itemCompatibilityNotes(item, contextFor(item, em));
+    expect(errors.some((e) => /DINA pilot parameters are present/i.test(e))).toBe(false);
+    expect(notes.some((n) => n.severity === "blocking" && /DINA pilot parameters are present/i.test(n.message))).toBe(false);
+  });
+
+  it("refuses to confirm a gdina item with no dinaParams at all", () => {
+    const { item, db } = gdinaFixtures(undefined);
+    const { errors } = validateEntity("items", item, db);
+    expect(errors.some((e) => /G-DINA-scored item must carry usable pilot slip\/guess/i.test(e))).toBe(true);
+  });
+
+  it("accepts a usable pilot slip/guess pair on a G-DINA item at confirm time", () => {
+    const { item, db } = gdinaFixtures({ slip: 0.1, guess: 0.2 });
+    const { errors } = validateEntity("items", item, db);
+    expect(errors.some((e) => /must carry usable pilot slip\/guess parameters/i.test(e))).toBe(false);
+  });
+});
+
 /* =====================================================
    2. operationalReadiness() <-> validateItemLifecycle()'s `operational` block
 ===================================================== */

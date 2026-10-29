@@ -4558,11 +4558,14 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           // has real mathematical constraints a bare `typeof` check can't
           // see, so USABILITY is asked of the same predicate
           // attributeAccumulation.js scores against rather than re-checked
-          // here as a looser one.
+          // here as a looser one. R8 reuses that pair as G-DINA starting
+          // values (a conjunctive table of length 2^m); it is not a
+          // wrong-family mistake on 'gdina'.
           const dina = obj.psychometrics?.dinaParams;
           const hasDina = !!dina && (typeof dina.slip === "number" || typeof dina.guess === "number");
+          const dinaPilotFamilies = activeModel.type === "dina" || activeModel.type === "gdina";
 
-          if (activeModel.type !== "dina" && hasDina) {
+          if (!dinaPilotFamilies && hasDina) {
             errors.push(
               `DINA pilot parameters are present but the Evidence Model runs on '${activeModel.type}'. Clear them.`
             );
@@ -4583,6 +4586,12 @@ export function validateEntity(collection, obj, db = null, options = {}) {
             if (activeModel.type === "dina" && !dinaParametersAreUsable(dina)) {
               errors.push(
                 "A DINA-scored item must carry usable pilot slip/guess parameters (slip and guess each in [0,1), with guess < 1 - slip) before it can be confirmed. Pilot values are fine; calibration replaces them."
+              );
+            }
+
+            if (activeModel.type === "gdina" && !dinaParametersAreUsable(dina)) {
+              errors.push(
+                "A G-DINA-scored item must carry usable pilot slip/guess parameters (slip and guess each in [0,1), with guess < 1 - slip) before it can be confirmed. Delivery expands them into a conjunctive probability table. Pilot values are fine; calibration replaces them."
               );
             }
           }

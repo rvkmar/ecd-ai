@@ -325,6 +325,29 @@ export function gdinaParametersAreUsable(params, requiredCount) {
 }
 
 /**
+ * DINA-equivalent saturated G-DINA table of length 2^m.
+ *
+ * Graded-lex order puts all-unmastered first and all-mastered last, so
+ * the conjunctive identity is `[g, g, …, g, 1 − s]`: every reduced
+ * pattern except full mastery uses guess. This is the same identity
+ * `computeProfilePosterior` already treats as DINA ≡ G-DINA.
+ *
+ * R8: G-DINA has no separate authored probability-table field.
+ * `psychometrics.dinaParams` slip/guess are the starting values;
+ * calibration replaces the table. Returns null rather than inventing 0.5.
+ */
+export function conjunctiveGdinaTable(dinaParams, requiredCount) {
+  if (!Number.isInteger(requiredCount) || requiredCount < 1 || requiredCount > MAX_ATTRIBUTES) {
+    return null;
+  }
+  if (!dinaParametersAreUsable(dinaParams)) return null;
+  const length = 2 ** requiredCount;
+  const probabilities = new Array(length).fill(dinaParams.guess);
+  probabilities[length - 1] = 1 - dinaParams.slip;
+  return { probabilities };
+}
+
+/**
  * The graded-lexicographic row index (see REDUCED_PATTERN_ORDER /
  * `reducedPatternIndex` above) of the profile whose mastered-required-
  * attributes are given as a plain little-endian bitmask over `m` bits
@@ -829,10 +852,11 @@ export function accumulateAttributeMastery({
     parameterSetId,
     // Day 38 originally hardcoded "calibrated" here, because
     // accumulateEvidence() refused every pilot/not-applicable group before
-    // this function was ever called (no item-level pilot DINA/G-DINA field
-    // existed yet). D53b gave 'dina' a pilot path (item.psychometrics.
-    // dinaParams, pinned onto the response the same way IRT's pilot a/b/c
-    // already are); the CALLER now resolves and passes the real source, so
+    // this function was ever called. D53b gave 'dina' a pilot path
+    // (item.psychometrics.dinaParams, pinned onto the response the same
+    // way IRT's pilot a/b/c already are). R8 derives a conjunctive G-DINA
+    // table from that same slip/guess pair and pins `{ probabilities }`
+    // the same way. The CALLER now resolves and passes the real source, so
     // this simply carries it through rather than asserting one. Defaults to
     // "calibrated" only for a caller that omits it, matching every other
     // family's fallback.
@@ -945,6 +969,7 @@ export const __testing__ = {
   masteryPrior,
   dinaParametersAreUsable,
   gdinaParametersAreUsable,
+  conjunctiveGdinaTable,
   gdinaTableIsMonotonic,
   gdinaTableIsInverted,
   gdinaTableIsFlat,

@@ -101,6 +101,52 @@ describe("chooseSubmitParameterBinding", () => {
       pilotParams: null,
     });
   });
+
+  it("pins a conjunctive G-DINA table derived from slip/guess and the Q-vector", () => {
+    const item = {
+      id: "item1",
+      evidenceModelId: "em1",
+      observationId: "o1",
+      psychometrics: { dinaParams: { slip: 0.1, guess: 0.2 } },
+    };
+    const statisticalModel = { structureConfig: { qMatrixId: "qm1" } };
+    const db = {
+      qMatrixModels: [{
+        id: "qm1",
+        entries: [
+          { itemId: "item1", attributeId: "attr-a" },
+          { itemId: "item1", attributeId: "attr-b" },
+        ],
+      }],
+    };
+    const binding = chooseSubmitParameterBinding({
+      family: "gdina",
+      calibratedParameterSetId: null,
+      item,
+      statisticalModel,
+      db,
+    });
+    expect(binding).toEqual({
+      parameterSource: "pilot",
+      parameterSetId: null,
+      pilotParams: { probabilities: [0.2, 0.2, 0.2, 0.9] },
+    });
+  });
+
+  it("refuses a G-DINA pilot when the item has no Q-vector", () => {
+    const binding = chooseSubmitParameterBinding({
+      family: "gdina",
+      calibratedParameterSetId: null,
+      item: {
+        id: "item1",
+        evidenceModelId: "em1",
+        psychometrics: { dinaParams: { slip: 0.1, guess: 0.2 } },
+      },
+      statisticalModel: { structureConfig: { qMatrixId: "qm1" } },
+      db: { qMatrixModels: [] },
+    });
+    expect(binding.error).toMatch(/no usable G-DINA pilot/);
+  });
 });
 
 describe("calibratedIrtParams — D50 keying", () => {

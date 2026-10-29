@@ -680,11 +680,11 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     // evidenceAccumulation.js has never read a parameterSet, only Task
     // Model weights. D53b gave 'dina' the same fallback via a new
     // `psychometrics.dinaParams` field (slip/guess, the DINA analogue of
-    // `irtParams`) -- see the branch below. 'gdina' still has none: a
-    // saturated probability table sized to each item's own required-
-    // attribute count is real new authoring surface D53b did not build,
-    // so a 'gdina' item with no calibrated parameter set is still refused
-    // outright rather than given an invented fallback.
+    // `irtParams`) -- see the branch below. R8 reuses that pair for
+    // 'gdina': submit expands it into a conjunctive probability table of
+    // length 2^m from the item's Q-vector and pins `{ probabilities }`
+    // on the response. Missing slip/guess or a missing Q-vector is still
+    // refused rather than invented.
     // `CONTINUOUS_MODEL_FAMILIES` / `RAW_SCORE_MODEL_FAMILIES` are
     // imported from evidenceAccumulation.js rather than re-listed here, so
     // this gate and that file's own dispatch can never drift apart.

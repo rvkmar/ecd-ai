@@ -1010,11 +1010,11 @@ export function accumulateEvidence(session, db, options = {}) {
       /* D53b gave 'dina' an item-level pilot field
          (`psychometrics.dinaParams`, the slip/guess analogue of
          `psychometrics.irtParams`), mirroring the IRT pilot-vs-calibrated
-         split (Day 38). 'gdina' still has none -- a saturated probability
-         table sized to each item's own required-attribute count is real
-         new authoring surface, not this unit's scope, so it is refused
-         exactly as before, honestly, rather than invented. */
-      if (family === "dina" && parameterSource === "pilot") {
+         split (Day 38). R8 derives a conjunctive G-DINA table from that
+         same pair and pins `{ probabilities }` of length 2^m; submit
+         snapshots the expanded table so a later Q-vector edit cannot
+         silently rewrite a past session. */
+      if ((family === "dina" || family === "gdina") && parameterSource === "pilot") {
         /* Same discipline as the continuous branch below: read each
            response's PINNED `r.pilotParams` snapshot (sessionRoutes.js),
            never the item's CURRENT `psychometrics.dinaParams` -- an
@@ -1042,9 +1042,7 @@ export function accumulateEvidence(session, db, options = {}) {
         evidenceModelId,
         modelFamily: family,
         supported: false,
-        reason: family === "gdina"
-          ? `Evidence model '${evidenceModelId}' has no active calibrated parameter set. Pilot parameters are not yet supported for the 'gdina' family (no item-level pilot probability-table field exists) -- a 'dina' item with pinned pilot slip/guess, or a continuous (IRT/Rasch) item, can score against pilot values today.`
-          : `Evidence model '${evidenceModelId}' has no active calibrated parameter set, and these responses carry no pinned pilot parameters (parameterSource '${parameterSource}').`,
+        reason: `Evidence model '${evidenceModelId}' has no active calibrated parameter set, and these responses carry no pinned pilot parameters (parameterSource '${parameterSource}').`,
       });
       continue;
     }

@@ -760,6 +760,43 @@ describe("accumulateEvidence — refuses rather than guessing", () => {
     expect(posteriors[0].smvId).toBe("attr-a");
   });
 
+  it("dispatches a 'gdina' group with no parameterSetId but a pinned conjunctive table to the attribute-mastery branch", () => {
+    const db = {
+      competencyModels: [{
+        id: "cm1", versionNumber: 1,
+        smVariables: [{ id: "attr-a", type: "binary", priorDistribution: { family: "bernoulli", params: { p: 0.5 } } }],
+      }],
+      competencies: [{ id: "c1", modelId: "cm1" }],
+      evidenceModels: [{
+        id: "em1", competencyId: "c1", versionNumber: 1,
+        observables: [{ id: "o1", evidenceRule: { direction: "supports", strengthLevel: 4 } }],
+        statisticalModels: [{
+          id: "sm1", type: "gdina", active: true,
+          structureConfig: { qMatrixId: "qm1" }, parameterSets: [],
+        }],
+      }],
+      qMatrixModels: [{
+        id: "qm1", competencyModelId: "cm1", attributeIds: ["attr-a"],
+        entries: [{ itemId: "item1", attributeId: "attr-a" }],
+      }],
+    };
+
+    const response = {
+      taskId: "t1", itemId: "item1", evidenceModelId: "em1",
+      parameterSetId: null, parameterSource: "pilot",
+      pilotParams: { probabilities: [0.2, 0.9] },
+      observationId: "o1", observableId: "o1", activated: true, direction: "supports", strength: 4,
+    };
+
+    const { posteriors } = accumulateEvidence(sessionWith([response]), db);
+
+    expect(posteriors).toHaveLength(1);
+    expect(posteriors[0].supported).toBe(true);
+    expect(posteriors[0].parameterSource).toBe("pilot");
+    expect(posteriors[0].modelFamily).toBe("gdina");
+    expect(posteriors[0].smvId).toBe("attr-a");
+  });
+
   it("refuses when responses cite two different parameter sets", () => {
     // A session that spanned a recalibration. Averaging over mixed
     // calibrations would produce a number with no interpretation.

@@ -292,9 +292,9 @@ const DEAD_EXPORT_BASELINE = new Map([
     "server/delivery/evidenceAccumulation.js :: DIAGNOSTIC_MODEL_FAMILIES",
     "Used inside its own module's dispatch (three call sites). sessionRoutes.js " +
       "imports the CONTINUOUS and RAW_SCORE lists but deliberately NOT this one: " +
-      "DINA/G-DINA has no item-level pilot field, so a diagnostic family with no " +
-      "calibrated parameter set falls through to an explicit refusal rather than " +
-      "getting an invented fallback. Verified D49b — not a missing branch.",
+      "chooseSubmitParameterBinding already binds DINA and G-DINA (slip/guess, " +
+      "or a conjunctive table derived from them) without needing this list. " +
+      "Verified D49b — not a missing branch.",
   ],
   [
     "server/delivery/jointContinuousAccumulation.js :: estimateBivariateJoint",

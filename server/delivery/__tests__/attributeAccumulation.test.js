@@ -20,7 +20,7 @@
 
 import { describe, it, expect } from "vitest";
 import { accumulateEvidence } from "../evidenceAccumulation.js";
-import { accumulateAttributeMastery, computeGdinaExpectedInformationGain, __testing__ } from "../attributeAccumulation.js";
+import { accumulateAttributeMastery, computeGdinaExpectedInformationGain, conjunctiveGdinaTable, __testing__ } from "../attributeAccumulation.js";
 
 const {
   enumerateProfiles, reducedPatternIndex, masteryPrior,
@@ -222,6 +222,19 @@ describe("computeProfilePosterior — invariants any correct updater must satisf
 
     expect(asGdina.marginals[0]).toBeCloseTo(asDina.marginals[0], 15);
     expect(asGdina.marginals[1]).toBeCloseTo(asDina.marginals[1], 15);
+  });
+
+  it("conjunctiveGdinaTable is the DINA identity [g, …, 1-s] of length 2^m", () => {
+    expect(conjunctiveGdinaTable({ slip: 0.12, guess: 0.23 }, 1)).toEqual({
+      probabilities: [0.23, 0.88],
+    });
+    expect(conjunctiveGdinaTable({ slip: 0.12, guess: 0.23 }, 2)).toEqual({
+      probabilities: [0.23, 0.23, 0.23, 0.88],
+    });
+    expect(conjunctiveGdinaTable({ slip: 0.12, guess: 0.23 }, 0)).toBeNull();
+    expect(conjunctiveGdinaTable({ slip: 0.5, guess: 0.5 }, 1)).toBeNull();
+    expect(conjunctiveGdinaTable({ slip: 0.12, guess: 0.23 }, 1.5)).toBeNull();
+    expect(conjunctiveGdinaTable({ slip: 0.12, guess: 0.23 }, MAX_ATTRIBUTES + 1)).toBeNull();
   });
 
   it("a saturated G-DINA can express a DISJUNCTIVE item, which DINA cannot", () => {

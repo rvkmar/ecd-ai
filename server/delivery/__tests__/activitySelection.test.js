@@ -552,7 +552,7 @@ describe("selection and scoring agree on which parameters an item is delivered u
     expect(mine.params).toEqual({ a: 1, b: 0.25 });
   });
 
-  it("DINA: calibrated set wins, pilot is the fallback, gdina gets no pilot", () => {
+  it("DINA: calibrated set wins, pilot is the fallback; G-DINA derives a conjunctive table from the same pair", () => {
     const calibrated = {
       id: "sm2",
       active: true,
@@ -572,9 +572,13 @@ describe("selection and scoring agree on which parameters an item is delivered u
       params: { slip: 0.15, guess: 0.25 },
     });
     expect(resolveDinaParameters("item1", item, { ...uncalibrated, type: "gdina" }, "gdina").params).toBeUndefined();
+    expect(resolveDinaParameters("item1", item, { ...uncalibrated, type: "gdina" }, "gdina", {}, 1)).toMatchObject({
+      parameterSource: "pilot",
+      params: { probabilities: [0.25, 0.85] },
+    });
   });
 
-  it("G-DINA: a calibrated probability table is used, and there is still no pilot", () => {
+  it("G-DINA: a calibrated probability table is used; missing slip/guess still has no invented table", () => {
     const calibrated = {
       id: "sm2",
       active: true,
@@ -584,6 +588,7 @@ describe("selection and scoring agree on which parameters an item is delivered u
     };
     const uncalibrated = { id: "sm2", active: true, type: "gdina", activeParameterSetId: null, parameterSets: [] };
     const item = { id: "item1" };
+    const itemWithPilot = { id: "item1", psychometrics: { dinaParams: { slip: 0.1, guess: 0.2 } } };
 
     expect(resolveDinaParameters("item1", item, calibrated, "gdina", {}, 1)).toMatchObject({
       parameterSource: "calibrated",
@@ -592,6 +597,14 @@ describe("selection and scoring agree on which parameters an item is delivered u
     expect(resolveDinaParameters("item1", item, uncalibrated, "gdina", {}, 1).params).toBeUndefined();
     expect(resolveDinaParameters("item1", item, calibrated, "gdina").params).toBeUndefined();
     expect(resolveDinaParameters("item1", item, calibrated, "gdina", {}, 2).params).toBeUndefined();
+    expect(resolveDinaParameters("item1", itemWithPilot, uncalibrated, "gdina", {}, 1)).toMatchObject({
+      parameterSource: "pilot",
+      params: { probabilities: [0.2, 0.9] },
+    });
+    expect(resolveDinaParameters("item1", itemWithPilot, uncalibrated, "gdina", {}, 2)).toMatchObject({
+      parameterSource: "pilot",
+      params: { probabilities: [0.2, 0.2, 0.2, 0.9] },
+    });
   });
 });
 
@@ -853,9 +866,33 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
     expect(result.debug.totalGain).toBeCloseTo(computeExpectedInformationGain(0.5, 0.1, 0.2), 10);
   });
 
-  it("does not invent a G-DINA ranking from a missing table or a missing posterior", () => {
+  it("ranks an uncalibrated G-DINA item from the conjunctive table derived from slip/guess", () => {
     const db = dinaDb();
     db.evidenceModels[0].statisticalModels[0].type = "gdina";
+
+    const s = session({
+      taskIds: ["tA", "tB"],
+      selectionStrategy: "BayesianNetwork",
+      studentModel: {
+        smvPosteriors: {
+          attrA: smvPosterior({ smvId: "attrA", evidenceModelId: "emD", method: "map", modelFamily: "gdina", estimate: 0.97 }),
+          attrB: smvPosterior({ smvId: "attrB", evidenceModelId: "emD", method: "map", modelFamily: "gdina", estimate: 0.5 }),
+        },
+      },
+    });
+
+    const result = selectNextActivity(s, db);
+    expect(result.taskId).toBe("tB");
+    expect(result.debug.fallback).toBeUndefined();
+    expect(result.debug.family).toBe("gdina");
+    expect(result.debug.parameterSource).toBe("pilot");
+    expect(result.debug.totalGain).toBeCloseTo(computeExpectedInformationGain(0.5, 0.1, 0.2), 10);
+  });
+
+  it("does not invent a G-DINA ranking from missing slip/guess or a missing posterior", () => {
+    const db = dinaDb();
+    db.evidenceModels[0].statisticalModels[0].type = "gdina";
+    db.items = db.items.map((it) => ({ ...it, psychometrics: {} }));
 
     const settled = session({
       taskIds: ["tA", "tB"],
@@ -871,6 +908,7 @@ describe("BayesianNetwork selection now runs its own algorithm (F24)", () => {
     expect(uncalibrated.debug.fallback).toBe("pool-order");
     expect(uncalibrated.taskId).toBe("tA");
 
+    db.items = dinaDb().items;
     db.evidenceModels[0].statisticalModels[0].activeParameterSetId = "ps-g";
     db.evidenceModels[0].statisticalModels[0].parameterSets = [{
       parameterSetId: "ps-g",

@@ -114,15 +114,15 @@ export default function Step7Operations() {
   const canEditPilot = canEdit && isParametric && !isCalibrated;
 
   // D53b: the 'dina' analogue of isParametric/irtParams/canEditPilot above.
-  // Deliberately excludes 'gdina' -- its calibrated parameters are a
-  // probability TABLE sized to each item's own required-attribute count
-  // (from the bound Q-matrix), not a fixed pair, and authoring that table
-  // is real new surface this field does not attempt. There is also no
-  // DINA/G-DINA calibration submission endpoint yet (that is the D65
-  // calibration console's job, against the R service) -- so unlike IRT
-  // below, this section stops at the pilot estimate and offers no
-  // "Calibration from response data" panel.
-  const isDina = activeModel?.type === "dina";
+  // R8 also shows this panel for 'gdina': the author still enters slip and
+  // guess; delivery expands them into a conjunctive table of length 2^m.
+  // Authoring a saturated table by hand is still not this field's job.
+  // There is also no DINA/G-DINA calibration submission endpoint yet
+  // (that is the D65 calibration console's job, against the R service) --
+  // so unlike IRT below, this section stops at the pilot estimate and
+  // offers no "Calibration from response data" panel.
+  const isDina = activeModel?.type === "dina" || activeModel?.type === "gdina";
+  const isGdinaPilot = activeModel?.type === "gdina";
   const dinaParams = psychometrics.dinaParams || {};
   const canEditDinaPilot = canEdit && isDina && !isCalibrated;
 
@@ -328,12 +328,12 @@ export default function Step7Operations() {
         )}
       </section>
 
-      {/* --- DINA pilot parameters (D53b) --- */}
+      {/* --- DINA / G-DINA pilot parameters (D53b / R8) --- */}
       {isDina && (
         <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-800">
-              DINA pilot parameters
+              {isGdinaPilot ? "G-DINA pilot parameters" : "DINA pilot parameters"}
             </h3>
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
               {labelFor(CALIBRATION_STATUSES, psychometrics.calibrationStatus)}
@@ -343,7 +343,9 @@ export default function Step7Operations() {
           <p className="text-sm text-slate-600">
             {isCalibrated
               ? "These parameters were estimated from real response data. They are owned by the calibration and cannot be hand-edited here."
-              : "Enter the pilot slip/guess estimate this item starts life with. A DINA-scored item needs both, each in [0,1) with guess < 1 - slip, before it can be confirmed."}
+              : isGdinaPilot
+                ? "Enter the pilot slip/guess estimate this item starts life with. Delivery expands them into a conjunctive G-DINA table of length 2^m from the item's Q-vector (every pattern except full mastery uses guess). A G-DINA-scored item needs both, each in [0,1) with guess < 1 - slip, before it can be confirmed."
+                : "Enter the pilot slip/guess estimate this item starts life with. A DINA-scored item needs both, each in [0,1) with guess < 1 - slip, before it can be confirmed."}
           </p>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -392,9 +394,9 @@ export default function Step7Operations() {
             <Lock size={16} strokeWidth={2.25} className="mt-0.5 shrink-0" />
             <span>
               There is no calibration-from-response-data submission for DINA
-              yet — that is the calibration console's job. Pilot values are
-              hand-entered here and used to score sessions until a real
-              calibrated parameter set is ingested.
+              or G-DINA yet — that is the calibration console's job. Pilot
+              values are hand-entered here and used to score sessions until
+              a real calibrated parameter set is ingested.
             </span>
           </div>
         </section>

@@ -122,7 +122,10 @@
 // choice. On a roster session that order is the old first unanswered task.
 // G-DINA with a calibrated probability table is ranked by expected
 // posterior entropy over the reduced attribute pattern (R7). Without
-// that table it still uses this fallback (R8, D60 P1-5 remainder).
+// a calibrated set, R8 derives a conjunctive table from the item's
+// dinaParams slip/guess (the DINA identity [g, …, 1−s]) and ranks
+// that the same way. Missing slip/guess, a missing Q-vector, or a
+// missing posterior still uses this fallback.
 //
 // F24 (off calendar). Evidence Accumulation now writes bnPosteriors and
 // the distribution on smvPosteriors for a bayesian_network statistical
@@ -177,6 +180,7 @@ import {
   GOVERNING_ASSEMBLY_MODEL_STATUSES,
 } from "./assemblyProgress.js";
 import {
+  conjunctiveGdinaTable,
   dinaParametersAreUsable,
   gdinaParametersAreUsable,
   computeGdinaExpectedInformationGain,
@@ -332,6 +336,16 @@ function resolveDinaParameters(itemId, item, statisticalModel, family, freeze = 
     return {
       reason: `Parameter set '${calibratedId}' has no usable '${family}' parameters for item '${itemId}'.`,
     };
+  }
+
+  if (family === "gdina") {
+    const table = conjunctiveGdinaTable(item?.psychometrics?.dinaParams, requiredCount);
+    if (!table) {
+      return {
+        reason: `Item '${itemId}' carries no usable G-DINA pilot (psychometrics.dinaParams needs slip and guess each in [0,1), with guess < 1 - slip, and the item must require at least one Q-matrix attribute).`,
+      };
+    }
+    return { params: table, parameterSource: "pilot" };
   }
 
   if (family !== "dina") {

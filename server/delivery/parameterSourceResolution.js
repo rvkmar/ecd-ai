@@ -20,8 +20,9 @@ import {
   RAW_SCORE_MODEL_FAMILIES,
   itemParametersAreUsable,
 } from "./evidenceAccumulation.js";
-import { dinaParametersAreUsable } from "./attributeAccumulation.js";
+import { conjunctiveGdinaTable, dinaParametersAreUsable } from "./attributeAccumulation.js";
 import { snapshotBayesianPilot, BAYESIAN_NETWORK_FAMILY } from "./bayesianNetwork.js";
+import { attributeIdsForDeliveryItem } from "../../src/utils/qMatrixEntries.js";
 
 export function frozenScoringContext(session, evidenceModelId) {
   const relevant = (session?.responses || []).filter(
@@ -82,6 +83,29 @@ function snapshotDinaPilot(item) {
   const current = item?.psychometrics?.dinaParams;
   if (!dinaParametersAreUsable(current)) return null;
   return { slip: current.slip, guess: current.guess };
+}
+
+function requiredAttributeCountForItem({ item, evidenceModel, statisticalModel, db }) {
+  const qMatrixId = statisticalModel?.structureConfig?.qMatrixId;
+  if (!qMatrixId || !db) return null;
+  const qMatrix = (db.qMatrixModels || []).find((q) => q && q.id === qMatrixId);
+  if (!qMatrix) return null;
+  const ids = attributeIdsForDeliveryItem(qMatrix.entries, {
+    itemId: item?.id,
+    observableId: item?.observationId,
+    evidenceModelId: item?.evidenceModelId || evidenceModel?.id,
+  });
+  return ids.length;
+}
+
+function snapshotGdinaPilot({ item, evidenceModel, statisticalModel, db }) {
+  const requiredCount = requiredAttributeCountForItem({
+    item,
+    evidenceModel,
+    statisticalModel,
+    db,
+  });
+  return conjunctiveGdinaTable(item?.psychometrics?.dinaParams, requiredCount);
 }
 
 /**
@@ -145,6 +169,16 @@ export function chooseSubmitParameterBinding({
     if (!pilotParams) {
       return {
         error: `Evidence model '${item?.evidenceModelId}' has no active calibrated parameter set, and item '${item?.id}' carries no usable pilot DINA parameters (psychometrics.dinaParams needs slip and guess each in [0,1), with guess < 1 - slip) for a '${family}' model to fall back on.`,
+      };
+    }
+    return { parameterSource: "pilot", parameterSetId: null, pilotParams };
+  }
+
+  if (wantPilot && family === "gdina") {
+    const pilotParams = snapshotGdinaPilot({ item, evidenceModel, statisticalModel, db });
+    if (!pilotParams) {
+      return {
+        error: `Evidence model '${item?.evidenceModelId}' has no active calibrated parameter set, and item '${item?.id}' carries no usable G-DINA pilot (psychometrics.dinaParams needs slip and guess each in [0,1), with guess < 1 - slip, and the item must require at least one Q-matrix attribute so a conjunctive table of length 2^m can be derived).`,
       };
     }
     return { parameterSource: "pilot", parameterSetId: null, pilotParams };

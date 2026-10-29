@@ -352,9 +352,8 @@ describe("POST /:id/submit — item-based delivery (Day 28)", () => {
   });
 
   // D53b: the 'dina' analogue of the two IRT pilot tests above --
-  // `psychometrics.dinaParams` is the slip/guess pilot field, and the
-  // fallback is gated to 'dina' only ('gdina' still has none; see the
-  // dedicated refusal test below).
+  // `psychometrics.dinaParams` is the slip/guess pilot field. R8 reuses
+  // that pair for 'gdina' as a conjunctive table of length 2^m.
   it("refuses delivery when a 'dina' model has no calibrated set AND the item carries no usable pilot DINA parameters", async () => {
     const dinaNoCalibration = {
       ...evidenceModel,
@@ -397,7 +396,7 @@ describe("POST /:id/submit — item-based delivery (Day 28)", () => {
     expect(response.pilotParams).toEqual({ slip: 0.1, guess: 0.2 });
   });
 
-  it("still refuses a 'gdina' model with no calibrated set outright -- no pilot field exists for it", async () => {
+  it("falls back to a conjunctive G-DINA table derived from slip/guess when no calibrated set exists, and tags the response 'pilot'", async () => {
     const gdinaNoCalibration = {
       ...evidenceModel,
       statisticalModels: [{
@@ -405,8 +404,38 @@ describe("POST /:id/submit — item-based delivery (Day 28)", () => {
         structureConfig: { qMatrixId: "qm1" }, parameterSets: [], activeParameterSetId: undefined,
       }],
     };
-    // Even an item carrying dinaParams must not be consulted for 'gdina' --
-    // a slip/guess pair is not a valid pilot for a saturated model.
+    const pilotItem = { ...item, psychometrics: { statisticalModelType: "gdina", dinaParams: { slip: 0.1, guess: 0.2 } } };
+    const db = makeDb({
+      evidenceModels: [gdinaNoCalibration],
+      items: [pilotItem],
+      qMatrixModels: [{
+        id: "qm1",
+        competencyModelId: "cm1",
+        attributeIds: ["attr-a"],
+        entries: [{ itemId: "item1", attributeId: "attr-a" }],
+      }],
+    });
+    const app = buildApp(db);
+
+    const res = await request(app)
+      .post("/api/sessions/s1/submit")
+      .send({ taskId: "t1", itemId: "item1", rawAnswer: "opt_a" });
+
+    expect(res.status).toBe(200);
+    const response = res.body.responses[0];
+    expect(response.parameterSource).toBe("pilot");
+    expect(response.parameterSetId).toBeFalsy();
+    expect(response.pilotParams).toEqual({ probabilities: [0.2, 0.9] });
+  });
+
+  it("still refuses a 'gdina' model with no calibrated set when slip/guess cannot yield a table", async () => {
+    const gdinaNoCalibration = {
+      ...evidenceModel,
+      statisticalModels: [{
+        id: "sm1", type: "gdina", active: true,
+        structureConfig: { qMatrixId: "qm1" }, parameterSets: [], activeParameterSetId: undefined,
+      }],
+    };
     const pilotItem = { ...item, psychometrics: { statisticalModelType: "gdina", dinaParams: { slip: 0.1, guess: 0.2 } } };
     const db = makeDb({ evidenceModels: [gdinaNoCalibration], items: [pilotItem] });
     const app = buildApp(db);
@@ -416,7 +445,7 @@ describe("POST /:id/submit — item-based delivery (Day 28)", () => {
       .send({ taskId: "t1", itemId: "item1", rawAnswer: "opt_a" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/Pilot parameters are not yet supported for the 'gdina' family/);
+    expect(res.body.error).toMatch(/no usable G-DINA pilot/);
   });
 
   it("delivers a raw-score (CTT/sum/threshold) item with no parameter set at all, tagged 'not-applicable'", async () => {
