@@ -27,6 +27,15 @@ export function fetchAnalysisArtefactReport(id, auth) {
   return apiFetch(`/api/analysisArtefacts/${id}/report`, {}, auth);
 }
 
+export function fetchAnalysisArtefactScores(id, auth, { format } = {}) {
+  const qs = format === "csv" ? "?format=csv" : "";
+  return apiFetch(
+    `/api/analysisArtefacts/${id}/scores${qs}`,
+    format === "csv" ? { responseType: "text" } : {},
+    auth
+  );
+}
+
 export function useAnalysisArtefact(id, options = {}) {
   const { auth } = useAuth() || {};
   return useQuery({

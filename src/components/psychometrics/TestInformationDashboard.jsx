@@ -23,6 +23,7 @@ import {
   evaluateSemTarget,
   reliabilityFromArtefact,
 } from "./testInformationCurve";
+import { templateHonoursChapter } from "@/utils/psychometricReportTemplate";
 
 const NONE = "none";
 
@@ -198,23 +199,35 @@ export default function TestInformationDashboard() {
         </p>
       ) : (
         <>
+          {selected.payload?.reportTemplate?.name ? (
+            <p className="text-sm" data-testid="test-information-template-name">
+              Report template: {selected.payload.reportTemplate.name}
+            </p>
+          ) : null}
           <PsychometricExportToolbar
             view="test-information"
             provenance={provenance}
             artefact={selected}
           />
-          <TestInformationCharts
-            provenance={provenance}
-            points={points}
-            requiredSEM={requiredSEM}
-            evaluation={evaluation}
-          />
-          <ReliabilityPanel reliability={reliability} />
-          <IrtFitTable
-            parameters={selected.payload?.parameters}
-            standardErrors={selected.payload?.standardErrors}
-            itemFit={selected.payload?.fitStatistics?.itemFit}
-          />
+          {templateHonoursChapter(selected.payload?.reportTemplate, "irt-plots") ? (
+            <TestInformationCharts
+              provenance={provenance}
+              points={points}
+              requiredSEM={requiredSEM}
+              evaluation={evaluation}
+            />
+          ) : null}
+          {templateHonoursChapter(selected.payload?.reportTemplate, "reliability") ? (
+            <ReliabilityPanel reliability={reliability} />
+          ) : null}
+          {templateHonoursChapter(selected.payload?.reportTemplate, "item-pages") ||
+          templateHonoursChapter(selected.payload?.reportTemplate, "test-summary") ? (
+            <IrtFitTable
+              parameters={selected.payload?.parameters}
+              standardErrors={selected.payload?.standardErrors}
+              itemFit={selected.payload?.fitStatistics?.itemFit}
+            />
+          ) : null}
         </>
       )}
     </div>

@@ -726,6 +726,52 @@ export function validatePresentationModelLifecycle(presentationModel, db = null,
 }
 
 // -------------------------------------
+// Psychometric report template lifecycle
+// -------------------------------------
+export function validatePsychometricReportTemplateLifecycle(template, db = null) {
+  const errors = [];
+  const status = template.status || "draft";
+
+  if (db && template.id) {
+    const existing = db.psychometricReportTemplates?.find((m) => m.id === template.id);
+    if (existing && existing.status !== status && !canTransition(existing.status, status)) {
+      errors.push(
+        `Illegal report template status transition: '${existing.status}' -> '${status}'.`
+      );
+    }
+  }
+
+  if (["reviewed", "confirmed", "operational", "suspended"].includes(status)) {
+    if (!template.name) {
+      errors.push("Report template must have a name before review.");
+    }
+    if (!template.kind) {
+      errors.push("Report template must declare kind before review.");
+    }
+    if (!template.audience) {
+      errors.push("Report template must declare audience before review.");
+    }
+    if (!Array.isArray(template.chapters) || template.chapters.length < 1) {
+      errors.push("Report template must declare at least one chapter before review.");
+    }
+    if (!template.skinId) {
+      errors.push("Report template must declare skinId before review.");
+    }
+  }
+
+  if (["confirmed", "operational", "suspended"].includes(status)) {
+    if (!template.flags || typeof template.flags !== "object" || Array.isArray(template.flags)) {
+      errors.push("Report template must declare flags before confirmation.");
+    }
+    if (typeof template.nQuantiles !== "number" || template.nQuantiles < 2) {
+      errors.push("Report template must declare nQuantiles ≥ 2 before confirmation.");
+    }
+  }
+
+  return errors;
+}
+
+// -------------------------------------
 // Calibration job lifecycle — D62, W13
 // -------------------------------------
 // Jobs use CALIBRATION_JOB_STATUS, not the authored-entity STATUS list.

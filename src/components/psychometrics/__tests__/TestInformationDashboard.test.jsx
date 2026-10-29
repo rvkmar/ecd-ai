@@ -126,4 +126,22 @@ describe("TestInformationDashboard (D83)", () => {
     expect(screen.getByText("SE(a)")).toBeInTheDocument();
     expect(screen.getByText("Item.A")).toBeInTheDocument();
   });
+
+  it("shows the frozen template name", () => {
+    useAnalysisArtefacts.mockReturnValue({
+      data: [
+        {
+          ...CURVE_ARTEFACT,
+          payload: {
+            ...CURVE_ARTEFACT.payload,
+            reportTemplate: { name: "Xcalibre classic", chapters: ["cover", "irt-plots", "credits"] },
+          },
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    render(<TestInformationDashboard />);
+    expect(screen.getByTestId("test-information-template-name")).toHaveTextContent("Xcalibre classic");
+  });
 });

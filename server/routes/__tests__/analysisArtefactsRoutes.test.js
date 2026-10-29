@@ -197,6 +197,47 @@ describe("analysisArtefacts HTTP surface (D76)", () => {
     expect(html.text).toMatch(/Iteman-class report/);
   });
 
+  it("serves a scores sidecar and suppresses small cells for district", async () => {
+    const job = dbState.current.calibrationJobs[0];
+    job.kind = "item-analysis";
+    job.response.scores = [
+      { personId: "s1", raw: 3, rank: 1, percentile: 90 },
+      { personId: "s2", raw: 2, rank: 2, percentile: 50 },
+      { personId: "s3", raw: 1, rank: 3, percentile: 10 },
+    ];
+    job.response.credits = { rVersion: "R version 4.4.0", packages: ["TAM"] };
+    job.response.reportTemplate = { name: "Iteman classic", chapters: ["scores", "credits"] };
+    const { analysisArtefact } = ingestCalibrationJob(job, dbState.current);
+    expect(dbState.current.analysisArtefacts[0].payload.scores).toHaveLength(3);
+    expect(dbState.current.analysisArtefacts[0].payload.credits.rVersion).toMatch(/R version/);
+
+    const app = await artefactsApp();
+    const admin = { Authorization: `Bearer ${tokenFor("admin")}` };
+    const list = await request(app).get("/api/analysisArtefacts").set(admin);
+    expect(list.body[0].payload.scores).toBeUndefined();
+    expect(list.body[0].hasScores).toBe(true);
+    expect(list.body[0].payload.credits.rVersion).toMatch(/R version/);
+    expect(list.body[0].payload.reportTemplate.name).toBe("Iteman classic");
+
+    const scores = await request(app)
+      .get(`/api/analysisArtefacts/${analysisArtefact.id}/scores`)
+      .set(admin);
+    expect(scores.status).toBe(200);
+    expect(scores.body.rows[0].personId).toBe("s1");
+
+    const district = await request(app)
+      .get(`/api/analysisArtefacts/${analysisArtefact.id}/scores`)
+      .set("Authorization", `Bearer ${tokenFor("district")}`);
+    expect(district.status).toBe(200);
+    expect(district.body.suppressed).toBe(true);
+
+    const agg = await request(app)
+      .get(`/api/analysisArtefacts/${analysisArtefact.id}/aggregates?level=district`)
+      .set(admin);
+    expect(agg.status).toBe(200);
+    expect(agg.body.suppressed).toBe(true);
+  });
+
   it("gates teacher and student out of the collection", async () => {
     const app = await artefactsApp();
     for (const role of ["teacher", "student"]) {

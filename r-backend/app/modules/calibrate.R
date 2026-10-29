@@ -260,6 +260,101 @@ calibrate_dispatch <- function(req, res, family) {
   )
 }
 
+.packages_used <- function(...) {
+  pkgs <- unique(as.character(unlist(list(...), use.names = FALSE)))
+  pkgs[vapply(pkgs, function(p) requireNamespace(p, quietly = TRUE), logical(1))]
+}
+
+.credits_for <- function(...) {
+  if (!exists(".report_credits", mode = "function")) return(NULL)
+  tryCatch(.report_credits(.packages_used(...)), error = function(e) NULL)
+}
+
+.irt_person_score_rows <- function(person_scores) {
+  if (is.null(person_scores) || !is.list(person_scores)) return(NULL)
+  ids <- unlist(person_scores$personIds, use.names = FALSE)
+  th <- as.numeric(person_scores$theta)
+  se <- as.numeric(person_scores$se)
+  if (length(ids) != length(th)) return(NULL)
+  ok <- is.finite(th)
+  pct <- rep(NA_real_, length(th))
+  if (sum(ok) > 0L) pct[ok] <- rank(th[ok], ties.method = "average") / sum(ok) * 100
+  lapply(seq_along(ids), function(i) {
+    list(
+      personId = .as_char(ids[[i]]),
+      theta = as.numeric(th[[i]]),
+      se = as.numeric(se[[i]]),
+      percentile = as.numeric(pct[[i]]),
+      lz = NULL
+    )
+  })
+}
+
+.empirical_irf_for_items <- function(resp_df, theta, n_bins = 8L) {
+  th <- as.numeric(theta)
+  ok_p <- is.finite(th)
+  if (sum(ok_p) < 6L) return(NULL)
+  n_bins <- min(n_bins, max(3L, sum(ok_p) %/% 3L))
+  br <- unique(as.numeric(stats::quantile(th[ok_p], probs = seq(0, 1, length.out = n_bins + 1L), na.rm = TRUE)))
+  if (length(br) < 3L) return(NULL)
+  cuts <- cut(th, breaks = br, include.lowest = TRUE)
+  out <- list()
+  mat <- as.matrix(resp_df)
+  storage.mode(mat) <- "numeric"
+  for (id in colnames(mat)) {
+    y <- as.numeric(mat[, id])
+    rows <- lapply(seq_along(levels(cuts)), function(i) {
+      idx <- which(as.integer(cuts) == i)
+      n <- sum(is.finite(y[idx]) & is.finite(th[idx]))
+      if (n < 1L) return(NULL)
+      p <- mean(y[idx], na.rm = TRUE)
+      se <- if (n > 1L && is.finite(p) && p >= 0 && p <= 1) sqrt(p * (1 - p) / n) else NA_real_
+      list(theta = mean(th[idx], na.rm = TRUE), proportion = as.numeric(p), se = as.numeric(se), n = as.integer(n))
+    })
+    rows <- Filter(Negate(is.null), rows)
+    if (!length(rows)) next
+    out[[id]] <- list(
+      theta = vapply(rows, function(r) r$theta, numeric(1)),
+      proportion = vapply(rows, function(r) r$proportion, numeric(1)),
+      se = vapply(rows, function(r) r$se, numeric(1))
+    )
+  }
+  if (!length(out)) NULL else out
+}
+
+.attach_empirical_irf <- function(plots, empirical) {
+  if (is.null(plots) || !is.list(plots$items) || is.null(empirical)) return(plots)
+  for (id in names(plots$items)) {
+    if (!is.null(empirical[[id]])) plots$items[[id]]$empirical <- empirical[[id]]
+  }
+  plots
+}
+
+.domain_tif <- function(plots, domains) {
+  if (is.null(plots) || is.null(domains) || !is.list(plots$items)) return(NULL)
+  rows <- if (is.data.frame(domains)) {
+    lapply(seq_len(nrow(domains)), function(i) as.list(domains[i, , drop = FALSE]))
+  } else {
+    as.list(domains)
+  }
+  out <- list()
+  th_len <- length(plots$theta)
+  for (row in rows) {
+    if (!is.list(row)) next
+    did <- .as_char(row$id)
+    ids <- unique(as.character(unlist(row$itemIds, use.names = FALSE)))
+    ids <- ids[ids %in% names(plots$items)]
+    if (!nzchar(did) || !length(ids)) next
+    acc <- rep(0, th_len)
+    for (id in ids) {
+      iif <- as.numeric(plots$items[[id]]$iif)
+      if (length(iif) == th_len) acc <- acc + iif
+    }
+    out[[did]] <- acc
+  }
+  if (!length(out)) NULL else out
+}
+
 calibrate_irt <- function(body, res) {
   if (!requireNamespace("mirt", quietly = TRUE)) {
     res$status <- 500
@@ -422,11 +517,27 @@ calibrate_irt <- function(body, res) {
     irt_curve_payload(dichotomous_params, person_theta = person_scores$theta),
     error = function(e) NULL
   )
+  if (is.list(person_scores) && length(person_scores$theta) == nrow(resp_df)) {
+    for (id in names(parameters)) {
+      if (!id %in% colnames(resp_df)) next
+      y <- as.numeric(resp_df[[id]])
+      r <- suppressWarnings(stats::cor(y, person_scores$theta, use = "pairwise.complete.obs"))
+      parameters[[id]]$thetaPointBiserial <- if (is.finite(r)) as.numeric(r) else NA_real_
+    }
+    emp <- tryCatch(.empirical_irf_for_items(resp_df, person_scores$theta), error = function(e) NULL)
+    plots <- .attach_empirical_irf(plots, emp)
+  }
+  domain_tif <- tryCatch(.domain_tif(plots, body$domains), error = function(e) NULL)
+  if (!is.null(domain_tif) && is.list(plots)) plots$domainTif <- domain_tif
+  scores <- tryCatch(.irt_person_score_rows(person_scores), error = function(e) NULL)
+  credits <- .credits_for("mirt", "ggplot2", "svglite")
   calibrated_at <- format(Sys.time(), tz = "UTC", usetz = TRUE)
+  tpl <- body$reportTemplate
   report_html <- tryCatch(
     build_irt_html(
       .as_char(body$jobId), pkg_ver, nrow(resp_df), calibrated_at,
-      parameters, standard_errors, fit_stats, plots
+      parameters, standard_errors, fit_stats, plots,
+      template = tpl, credits = credits
     ),
     error = function(e) NULL
   )
@@ -442,6 +553,11 @@ calibrate_irt <- function(body, res) {
     standardErrors = standard_errors,
     fitStatistics = fit_stats,
     reportHtml = report_html,
+    scores = scores,
+    tifCsv = tryCatch(.tif_csv(plots), error = function(e) NULL),
+    iifCsv = tryCatch(.iif_csv(plots), error = function(e) NULL),
+    credits = credits,
+    reportTemplate = tpl,
     diagnostics = list(
       iterations = tryCatch(mirt::extract.mirt(fit, "iterations"), error = function(e) NA_integer_),
       elapsedSeconds = elapsed,
@@ -1066,13 +1182,23 @@ calibrate_item_analysis <- function(body, res) {
     fit_stats$spearmanBrownSplitHalf <- test_level$reliability$spearmanBrownSplitHalf
     fit_stats$sem <- test_level$reliability$sem
   }
+  scores <- tryCatch({
+    n_q <- .quantile_groups(score, if (is.list(test_level)) test_level$nQuantiles else 5L)
+    classical_person_scores(
+      body$responseMatrix$personIds, score, n_q,
+      if (is.list(test_level)) test_level$domains else NULL, resp_mat
+    )
+  }, error = function(e) NULL)
+  credits <- .credits_for("TAM", "ggplot2", "svglite")
+  tpl <- body$reportTemplate
   report_html <- tryCatch({
     if (!is.list(test_level)) {
       NULL
     } else {
       build_item_analysis_html(
         .as_char(body$jobId), pkg_ver, nrow(resp_mat), calibrated_at,
-        test_level, parameters, list(authority = authority_note), NULL
+        test_level, parameters, list(authority = authority_note), NULL,
+        template = tpl, credits = credits
       )
     }
   }, error = function(e) NULL)
@@ -1088,6 +1214,9 @@ calibrate_item_analysis <- function(body, res) {
     standardErrors = NULL,
     fitStatistics = fit_stats,
     reportHtml = report_html,
+    scores = scores,
+    credits = credits,
+    reportTemplate = tpl,
     diagnostics = list(
       iterations = 1L,
       elapsedSeconds = elapsed,
@@ -1399,12 +1528,22 @@ calibrate_test_information <- function(body, res) {
   }
 
   calibrated_at <- format(Sys.time(), tz = "UTC", usetz = TRUE)
-  report_html <- tryCatch({
-    html_params <- parameters
-    html_params$conditionalSEM <- vapply(conditional_sem, function(x) {
+  credits <- .credits_for("mirt", "ggplot2", "svglite")
+  tpl <- body$reportTemplate
+  tif_plots <- list(
+    theta = as.numeric(theta),
+    tif = as.numeric(information),
+    csem = vapply(conditional_sem, function(x) {
       if (is.null(x)) NA_real_ else as.numeric(x)[[1]]
     }, numeric(1))
-    build_testinfo_html(.as_char(body$jobId), pkg_ver, sample_size, calibrated_at, html_params)
+  )
+  report_html <- tryCatch({
+    html_params <- parameters
+    html_params$conditionalSEM <- tif_plots$csem
+    build_testinfo_html(
+      .as_char(body$jobId), pkg_ver, sample_size, calibrated_at, html_params,
+      template = tpl, credits = credits
+    )
   }, error = function(e) NULL)
 
   list(
@@ -1418,6 +1557,9 @@ calibrate_test_information <- function(body, res) {
     standardErrors = NULL,
     fitStatistics = fit_stats,
     reportHtml = report_html,
+    tifCsv = tryCatch(.tif_csv(tif_plots), error = function(e) NULL),
+    credits = credits,
+    reportTemplate = tpl,
     diagnostics = list(
       iterations = 1L,
       elapsedSeconds = elapsed,

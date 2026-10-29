@@ -146,6 +146,7 @@ function defaultDB() {
     workProducts: [],
     rubrics: [],
     templates: [],
+    psychometricReportTemplates: [],
     taskSpecs: [],
     deliveryModels: [],
     designPatterns: [],

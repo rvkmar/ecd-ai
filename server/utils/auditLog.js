@@ -24,6 +24,7 @@ const LIFECYCLE_ENTITY_COLLECTIONS = Object.freeze([
   "assemblyModels",
   "qMatrixModels",
   "presentationModels",
+  "psychometricReportTemplates",
   "policies",
   "curricularPolicies",
 ]);

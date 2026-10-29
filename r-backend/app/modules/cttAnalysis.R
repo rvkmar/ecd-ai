@@ -297,27 +297,38 @@
   list(groups = groups, nQuantiles = n_q)
 }
 
+.is_omit_code <- function(x) {
+  v <- tolower(trimws(as.character(x)))
+  !is.na(x) & v %in% c("", "omit", ".", "*")
+}
+
 .distractors_for_item <- function(choices, keyed, option_ids, score, n_q_groups) {
   if (is.null(choices) || all(is.na(choices))) return(NULL)
-  ids <- unique(c(option_ids, as.character(choices[!is.na(choices)]), keyed))
+  omit_mask <- .is_omit_code(choices)
+  n_omit <- sum(omit_mask)
+  n_na <- sum(is.na(choices))
+  n_admin <- sum(!is.na(choices) & !omit_mask)
+  ids <- unique(c(option_ids, as.character(choices[!is.na(choices) & !omit_mask]), keyed))
   ids <- ids[!is.na(ids) & nzchar(ids)]
-  if (!length(ids)) return(NULL)
-  n_admin <- sum(!is.na(choices))
+  ids <- ids[!.is_omit_code(ids)]
+  if (!length(ids) && n_omit == 0L && n_na == 0L) return(NULL)
   corrected <- score
-  # Spuriousness correction: option-total rpb uses the item-deleted total
-  # when the choice is the keyed option on a scored 0/1 item.
   out <- list()
   for (oid in ids) {
-    dummy <- as.numeric(!is.na(choices) & as.character(choices) == oid)
-    dummy[is.na(choices)] <- NA_real_
+    dummy <- as.numeric(!is.na(choices) & !omit_mask & as.character(choices) == oid)
+    dummy[is.na(choices) | omit_mask] <- NA_real_
     n_ch <- sum(dummy == 1, na.rm = TRUE)
     prop <- if (n_admin > 0) n_ch / n_admin else NA_real_
     rpb <- .point_biserial(dummy, corrected)
+    choosers <- which(!is.na(choices) & !omit_mask & as.character(choices) == oid)
+    opt_mean <- if (length(choosers)) mean(score[choosers], na.rm = TRUE) else NA_real_
+    opt_sd <- if (length(choosers) > 1L) stats::sd(score[choosers], na.rm = TRUE) else NA_real_
     qprops <- lapply(seq_len(n_q_groups$nQuantiles), function(q) {
       idx <- which(n_q_groups$groups == q)
       if (!length(idx)) return(list(quantile = as.integer(q), proportion = NA_real_, n = 0L))
       ch <- choices[idx]
-      admin <- sum(!is.na(ch))
+      om <- omit_mask[idx]
+      admin <- sum(!is.na(ch) & !om)
       list(
         quantile = as.integer(q),
         proportion = if (admin > 0) sum(ch == oid, na.rm = TRUE) / admin else NA_real_,
@@ -329,10 +340,36 @@
       n = as.integer(n_ch),
       proportion = as.numeric(prop),
       pointBiserial = as.numeric(rpb),
+      mean = as.numeric(opt_mean),
+      sd = as.numeric(opt_sd),
       keyed = identical(oid, keyed),
+      role = if (identical(oid, keyed)) "key" else "distractor",
       quantiles = qprops
     )
   }
+  n_total <- length(choices)
+  out[["omit"]] <- list(
+    id = "omit",
+    n = as.integer(n_omit),
+    proportion = if (n_total > 0) as.numeric(n_omit / n_total) else NA_real_,
+    pointBiserial = NA_real_,
+    mean = NA_real_,
+    sd = NA_real_,
+    keyed = FALSE,
+    role = "omit",
+    quantiles = list()
+  )
+  out[["notAdministered"]] <- list(
+    id = "notAdministered",
+    n = as.integer(n_na),
+    proportion = if (n_total > 0) as.numeric(n_na / n_total) else NA_real_,
+    pointBiserial = NA_real_,
+    mean = NA_real_,
+    sd = NA_real_,
+    keyed = FALSE,
+    role = "not-administered",
+    quantiles = list()
+  )
   out
 }
 
@@ -457,6 +494,27 @@ classical_item_overlay <- function(resp_mat, tam_parameters, option_mat, item_ke
     if (is.list(distractors) && nzchar(keyed) && !is.null(distractors[[keyed]])) {
       quantile_key <- distractors[[keyed]]$quantiles
     }
+    domain_rpb <- NULL
+    domains <- test_level$domains
+    if (is.list(domains) && length(domains) >= 2L) {
+      domain_rpb <- list()
+      item_col <- resp_mat[, id]
+      for (did in names(domains)) {
+        d <- domains[[did]]
+        ids <- unique(as.character(unlist(d$itemIds, use.names = FALSE)))
+        if (!(id %in% ids)) next
+        other <- setdiff(ids, id)
+        other <- other[other %in% colnames(resp_mat)]
+        if (!length(other)) next
+        dscore <- rowSums(resp_mat[, other, drop = FALSE], na.rm = TRUE)
+        drpb <- .point_biserial(item_col, dscore)
+        domain_rpb[[did]] <- list(
+          pointBiserial = as.numeric(drpb),
+          biserial = .biserial_from_rpb(drpb, p)
+        )
+      }
+      if (!length(domain_rpb)) domain_rpb <- NULL
+    }
     parameters[[id]] <- list(
       pValue = as.numeric(p),
       pointBiserial = as.numeric(rpb),
@@ -465,8 +523,47 @@ classical_item_overlay <- function(resp_mat, tam_parameters, option_mat, item_ke
       alphaWithout = if (!is.null(alpha_del[[id]])) as.numeric(alpha_del[[id]]) else NA_real_,
       distractors = distractors,
       keyQuantiles = quantile_key,
+      domainPointBiserial = domain_rpb,
       flags = flags
     )
   }
   parameters
+}
+
+classical_person_scores <- function(person_ids, score, n_q_groups, domains, mat) {
+  n <- length(score)
+  ids <- vapply(as.list(person_ids), function(x) {
+    if (exists(".as_char", mode = "function", inherits = TRUE)) .as_char(x) else as.character(x)[[1]]
+  }, character(1))
+  if (length(ids) != n) ids <- as.character(seq_len(n))
+  ok <- is.finite(score)
+  rnk <- rep(NA_real_, n)
+  pct <- rep(NA_real_, n)
+  if (sum(ok) > 0L) {
+    rnk[ok] <- rank(-score[ok], ties.method = "min")
+    pct[ok] <- rank(score[ok], ties.method = "average") / sum(ok) * 100
+  }
+  domain_cols <- list()
+  if (is.list(domains) && length(domains) && !is.null(mat)) {
+    for (did in names(domains)) {
+      d <- domains[[did]]
+      item_ids <- unique(as.character(unlist(d$itemIds, use.names = FALSE)))
+      item_ids <- item_ids[item_ids %in% colnames(mat)]
+      if (!length(item_ids)) next
+      domain_cols[[did]] <- rowSums(mat[, item_ids, drop = FALSE], na.rm = TRUE)
+    }
+  }
+  lapply(seq_len(n), function(i) {
+    row <- list(
+      personId = ids[[i]],
+      raw = as.numeric(score[[i]]),
+      rank = as.numeric(rnk[[i]]),
+      percentile = as.numeric(pct[[i]]),
+      quantileGroup = as.integer(n_q_groups$groups[[i]])
+    )
+    for (did in names(domain_cols)) {
+      row[[paste0("domain.", did)]] <- as.numeric(domain_cols[[did]][[i]])
+    }
+    row
+  })
 }

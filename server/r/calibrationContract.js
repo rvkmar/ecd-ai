@@ -360,6 +360,12 @@ function validateOptionalAnalysisFields(body, model, rm) {
     }
   }
 
+  if (body.reportTemplate !== undefined && body.reportTemplate !== null) {
+    if (typeof body.reportTemplate !== "object" || Array.isArray(body.reportTemplate)) {
+      errors.push("reportTemplate should be object");
+    }
+  }
+
   if (body.itemModels !== undefined && body.itemModels !== null) {
     if (typeof body.itemModels !== "object" || Array.isArray(body.itemModels)) {
       errors.push("itemModels should be object");

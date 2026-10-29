@@ -15,6 +15,8 @@ import {
   useEnqueueCalibrationJob,
   useSessionItemAnalysisPreview,
 } from "@/api/queries/calibrationJobs";
+import { usePsychometricReportTemplates } from "@/api/queries/psychometricReportTemplates";
+import { templatesCompatibleWithJobKind } from "@/utils/psychometricReportTemplate";
 import {
   namedCalibrationFixture,
   NAMED_CALIBRATION_FIXTURES,
@@ -32,6 +34,8 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
   const [evidenceModelId, setEvidenceModelId] = useState("");
   const [statisticalModelId, setStatisticalModelId] = useState("");
   const [formError, setFormError] = useState(null);
+  const [templateId, setTemplateId] = useState("");
+  const { data: reportTemplates = [] } = usePsychometricReportTemplates();
 
   const fromSessions = source === "sessions";
   const fixture = namedCalibrationFixture(fixtureId);
@@ -54,6 +58,14 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
   const selectedModel = bindableModels.find((em) => em.id === evidenceModelId);
   const statisticalModels = statisticalModelsForFixture(selectedModel, bindTypes);
   const sessionReady = fromSessions && preview.data?.ok === true;
+  const jobKind = fromSessions ? liveJob.kind : fixture.kind;
+  const compatibleKinds = templatesCompatibleWithJobKind(jobKind);
+  const adoptables = (reportTemplates || []).filter(
+    (tpl) =>
+      tpl &&
+      compatibleKinds.includes(tpl.kind) &&
+      (tpl.status === "operational" || tpl.status === "confirmed")
+  );
 
   function handleSourceChange(next) {
     setSource(next);
@@ -108,12 +120,14 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
               kind: liveJob.kind,
               evidenceModelId,
               statisticalModelId,
+              ...(templateId ? { templateId } : {}),
             }
           : {
               fixture: fixture.id,
               kind: fixture.kind,
               evidenceModelId,
               statisticalModelId,
+              ...(templateId ? { templateId } : {}),
             }
       );
       toast.success(fromSessions ? `${liveJob.label} job queued from finished sessions.` : fixture.successToast);
@@ -224,6 +238,27 @@ export default function EnqueueCalibrationForm({ onEnqueued }) {
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="calibration-report-template">Adopt report template</Label>
+        <select
+          id="calibration-report-template"
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm md:max-w-sm"
+          value={templateId}
+          onChange={(e) => setTemplateId(e.target.value)}
+        >
+          <option value="">Default chapters (no template)</option>
+          {adoptables.map((tpl) => (
+            <option key={tpl.id} value={tpl.id}>
+              {tpl.name} ({tpl.kind} · {tpl.status})
+            </option>
+          ))}
+        </select>
+        <p className="text-caption text-muted-foreground">
+          Adoption freezes a snapshot on this job. Editing the template later does
+          not rewrite reports already ingested.
+        </p>
       </div>
 
       {bindableModels.length === 0 && (

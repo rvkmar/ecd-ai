@@ -120,6 +120,21 @@ describe("request envelope", () => {
     expect(validateCalibrationRequest(body).join(" ")).toMatch(/optionMatrix/);
   });
 
+  it("accepts an additive frozen reportTemplate snapshot", () => {
+    const body = readFix("valid-request.json");
+    body.reportTemplate = {
+      templateId: "prt1",
+      name: "Iteman classic",
+      kind: "iteman-ctt",
+      audience: "psychometrician",
+      chapters: ["cover", "credits"],
+      flags: { tooHard: 0.2 },
+      nQuantiles: 5,
+      skinId: "iteman-classic",
+    };
+    expect(validateCalibrationRequest(body)).toEqual([]);
+  });
+
   it("accepts IRT subtypes GRM/GPCM/PCM", () => {
     const body = readFix("valid-request.json");
     body.model.subtype = "GRM";

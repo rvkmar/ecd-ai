@@ -105,6 +105,16 @@ function analysisArtefactFromCalibrationResponse(response, extras = {}) {
       fitStatistics: response.fitStatistics ?? undefined,
       diagnostics: response.diagnostics ?? undefined,
       reportHtml: typeof response.reportHtml === "string" ? response.reportHtml : undefined,
+      scores: Array.isArray(response.scores) ? response.scores : undefined,
+      scoresCsv: typeof response.scoresCsv === "string" ? response.scoresCsv : undefined,
+      tifCsv: typeof response.tifCsv === "string" ? response.tifCsv : undefined,
+      iifCsv: typeof response.iifCsv === "string" ? response.iifCsv : undefined,
+      credits: response.credits && typeof response.credits === "object" ? response.credits : undefined,
+      reportTemplate:
+        extras.reportTemplate ||
+        (response.reportTemplate && typeof response.reportTemplate === "object"
+          ? response.reportTemplate
+          : undefined),
       converged: response.converged,
       calibratedBy: extras.calibratedBy || "r-backend",
       calibrationMethod: extras.calibrationMethod || "r-job",
@@ -162,6 +172,7 @@ export function ingestCalibrationJob(job, db, extras = {}) {
       calibrationMethod:
         job.kind === "attribute-profile-summary" ? "node-job" : "r-job",
       notes: extras.notes || "",
+      reportTemplate: extras.reportTemplate || job.request?.reportTemplate || null,
     });
 
     const { valid, errors } = validateEntity("analysisArtefacts", artefact, db, { strict: false });

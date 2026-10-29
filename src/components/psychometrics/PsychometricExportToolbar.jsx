@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/AuthProvider";
 import { apiFetch } from "@/api/apiClient";
 import { exportViewToFiles } from "./exportProvenance";
+import { fetchAnalysisArtefactScores } from "@/api/queries/analysisArtefacts";
+import { templateHonoursChapter } from "@/utils/psychometricReportTemplate";
 
 export default function PsychometricExportToolbar({
   view,
@@ -14,7 +16,10 @@ export default function PsychometricExportToolbar({
 }) {
   const { auth } = useAuth() || {};
   const canExport = Boolean(provenance && artefact) && !disabled;
+  const snapshot = artefact?.payload?.reportTemplate;
   const hasReport = Boolean(artefact?.hasReport || artefact?.payload?.reportHtml);
+  const hasScores =
+    Boolean(artefact?.hasScores) && templateHonoursChapter(snapshot, "scores");
 
   const onExport = () => {
     exportViewToFiles(view, {
@@ -32,6 +37,18 @@ export default function PsychometricExportToolbar({
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const onDownloadScores = async () => {
+    if (!artefact?.id) return;
+    const csv = await fetchAnalysisArtefactScores(artefact.id, auth, { format: "csv" });
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${artefact.id}-scores.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -56,6 +73,18 @@ export default function PsychometricExportToolbar({
           aria-label={`Open HTML technical report for ${view}`}
         >
           Open HTML report
+        </Button>
+      ) : null}
+      {hasScores ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onDownloadScores}
+          data-testid={`download-scores-${view}`}
+          aria-label={`Download scores CSV for ${view}`}
+        >
+          Download scores CSV
         </Button>
       ) : null}
       <span className="text-caption text-muted-foreground">

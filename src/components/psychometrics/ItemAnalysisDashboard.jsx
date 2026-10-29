@@ -19,6 +19,7 @@ import ItemAnalysisTable from "./ItemAnalysisTable";
 import PsychometricExportToolbar from "./PsychometricExportToolbar";
 import { itemRowsFromArtefact } from "./itemAnalysisFlags";
 import { provenanceFromArtefact } from "./provenance";
+import { templateHonoursChapter } from "@/utils/psychometricReportTemplate";
 
 const ALL = "all";
 
@@ -75,17 +76,21 @@ function DistractorPanel({ rows, diagnostics }) {
                     <th className="pr-3">Role</th>
                     <th className="pr-3">n</th>
                     <th className="pr-3">p</th>
-                    <th>rpb</th>
+                    <th className="pr-3">rpb</th>
+                    <th className="pr-3">Mean</th>
+                    <th>SD</th>
                   </tr>
                 </thead>
                 <tbody>
                   {optionEntries(row.distractors).map(([oid, d]) => (
                     <tr key={oid}>
                       <td className="pr-3 font-mono">{d?.id || oid}</td>
-                      <td className="pr-3">{d?.keyed ? "key" : "distractor"}</td>
+                      <td className="pr-3">{d?.role || (d?.keyed ? "key" : "distractor")}</td>
                       <td className="pr-3">{d?.n ?? "—"}</td>
                       <td className="pr-3">{formatStat(d?.proportion)}</td>
-                      <td>{formatStat(d?.pointBiserial)}</td>
+                      <td className="pr-3">{formatStat(d?.pointBiserial)}</td>
+                      <td className="pr-3">{formatStat(d?.mean)}</td>
+                      <td>{formatStat(d?.sd)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -272,26 +277,63 @@ export default function ItemAnalysisDashboard() {
         </p>
       ) : (
         <>
+          {selected.payload?.reportTemplate?.name ? (
+            <p className="text-sm" data-testid="item-analysis-template-name">
+              Report template: {selected.payload.reportTemplate.name}
+              {selected.payload.reportTemplate.audience
+                ? ` · ${selected.payload.reportTemplate.audience}`
+                : ""}
+            </p>
+          ) : null}
+          {selected.payload?.reportTemplate?.audience === "student" ? (
+            <p className="text-sm text-muted-foreground" data-testid="item-analysis-student-audience">
+              Student-facing scores stay on the Session report. This artefact does
+              not list other examinees or item keys.
+            </p>
+          ) : null}
           <PsychometricExportToolbar
             view="item-analysis"
             provenance={provenance}
             artefact={selected}
           />
-          <ReliabilityPanel
-            fitStatistics={selected.payload?.fitStatistics}
-            testLevel={selected.payload?.diagnostics?.testLevel}
-          />
-          <ItemAnalysisCharts
-            provenance={provenance}
-            rows={rows}
-            scoreFrequency={scoreFrequency}
-            quantileRow={quantileRow || null}
-          />
-          <ItemAnalysisTable rows={rows} />
-          <DistractorPanel
-            rows={rows}
-            diagnostics={selected.payload?.diagnostics}
-          />
+          {templateHonoursChapter(selected.payload?.reportTemplate, "reliability") ? (
+            <ReliabilityPanel
+              fitStatistics={selected.payload?.fitStatistics}
+              testLevel={selected.payload?.diagnostics?.testLevel}
+            />
+          ) : null}
+          {templateHonoursChapter(selected.payload?.reportTemplate, "distribution") ||
+          templateHonoursChapter(selected.payload?.reportTemplate, "item-pages") ? (
+            <ItemAnalysisCharts
+              provenance={provenance}
+              rows={rows}
+              scoreFrequency={
+                templateHonoursChapter(selected.payload?.reportTemplate, "distribution")
+                  ? scoreFrequency
+                  : []
+              }
+              quantileRow={
+                templateHonoursChapter(selected.payload?.reportTemplate, "item-pages")
+                  ? quantileRow || null
+                  : null
+              }
+            />
+          ) : null}
+          {templateHonoursChapter(selected.payload?.reportTemplate, "flags") ? (
+            <ItemAnalysisTable rows={rows} />
+          ) : null}
+          {templateHonoursChapter(selected.payload?.reportTemplate, "item-pages") &&
+          selected.payload?.reportTemplate?.audience !== "student" ? (
+            <DistractorPanel
+              rows={rows}
+              diagnostics={selected.payload?.diagnostics}
+            />
+          ) : null}
+          {selected.payload?.credits ? (
+            <p className="text-caption text-muted-foreground" data-testid="item-analysis-credits">
+              {selected.payload.credits.rVersion}
+            </p>
+          ) : null}
           {selected.payload?.diagnostics?.authority ? (
             <p className="text-caption text-muted-foreground">
               {selected.payload.diagnostics.authority}

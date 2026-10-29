@@ -38,6 +38,8 @@ import {
   namedAggregateScope,
   redactCalibrationJobForViewer,
 } from "../utils/aggregatePrivacy.js";
+import { adoptReportTemplate, applySnapshotToRequest } from "../../src/utils/psychometricReportTemplate.js";
+import { stripJobSidecars } from "../../src/utils/analysisSidecars.js";
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -56,14 +58,7 @@ function retainUntilFrom(requestedAt) {
 }
 
 function stripJobReportHtml(job) {
-  if (!job?.response?.reportHtml) {
-    return {
-      ...job,
-      hasReport: Boolean(job?.hasReport),
-    };
-  }
-  const { reportHtml, ...response } = job.response;
-  return { ...job, response, hasReport: true };
+  return stripJobSidecars(job);
 }
 
 // ------------------------------
@@ -233,11 +228,23 @@ router.post("/", canAuthor, async (req, res) => {
     throw err;
   }
 
-  const request = {
+  const templateId =
+    typeof req.body?.templateId === "string" && req.body.templateId.trim()
+      ? req.body.templateId.trim()
+      : null;
+  const adopted = adoptReportTemplate(db, templateId, { role: req.user?.role });
+  if (!adopted.ok) {
+    return res.status(adopted.status || 400).json({ error: adopted.error });
+  }
+
+  let request = {
     ...(incoming?.request || {}),
     contractVersion: incoming?.request?.contractVersion || CALIBRATION_CONTRACT_VERSION,
     jobId: id,
   };
+  if (adopted.snapshot) {
+    request = applySnapshotToRequest(request, adopted.snapshot);
+  }
 
   const record = {
     id,
@@ -261,6 +268,7 @@ router.post("/", canAuthor, async (req, res) => {
     retainUntil: retainUntilFrom(now),
     createdAt: now,
     updatedAt: now,
+    ...(templateId ? { templateId } : {}),
   };
 
   if (liveStamp) {

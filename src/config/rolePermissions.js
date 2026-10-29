@@ -59,6 +59,7 @@ export const rolePermissions = {
       // D76: immutable analysis artefacts (DIF / equating / …). Written
       // only by job ingest; admin + district may read for provenance.
       "analysisArtefacts",
+      "psychometricReportTemplates",
       // D101: append-only audit trail. Admin-only read; writes via saveDB /
       // recordAuditEvent. Cross-tenant by nature — D105 viewer must keep
       // this admin-scoped.
@@ -93,7 +94,8 @@ export const rolePermissions = {
       "assemblyModels",
       "presentationModels",
       "deliveryModels",
-      "calibrationJobs"
+      "calibrationJobs",
+      "psychometricReportTemplates",
     ],
     canApprove: ["questions", "items"], // promote from review → confirmed
     canDelete: [
@@ -119,6 +121,7 @@ export const rolePermissions = {
       "presentationModels",
       "deliveryModels",
       "calibrationJobs",
+      "psychometricReportTemplates",
       "announcements",
     ],
     // "students" was declared in canView but never in canCreate/canDelete
@@ -126,7 +129,7 @@ export const rolePermissions = {
     // caller -- the RBAC sweep found this the same way it found items/
     // student being absent before. Admin-only until a real enrollment
     // workflow exists for district/teacher.
-    canCreate: ["students", "calibrationJobs", "announcements"],
+    canCreate: ["students", "calibrationJobs", "psychometricReportTemplates", "announcements"],
   },
 
   district: {
@@ -158,6 +161,7 @@ export const rolePermissions = {
       "deliveryModels",
       "calibrationJobs",
       "analysisArtefacts",
+      "psychometricReportTemplates",
       "studentModelRecords",
       "announcements",
     ],

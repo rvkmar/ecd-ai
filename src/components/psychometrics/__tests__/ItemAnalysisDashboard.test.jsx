@@ -144,4 +144,30 @@ describe("ItemAnalysisDashboard (D82)", () => {
     expect(screen.getByTestId("item-analysis-quantile-plot")).toBeInTheDocument();
     expect(screen.getByTestId("open-html-report-item-analysis")).toBeInTheDocument();
   });
+
+  it("shows the frozen template name and hides chapters the snapshot turned off", () => {
+    useAnalysisArtefacts.mockReturnValue({
+      data: [
+        {
+          ...SAMPLE_ARTEFACT,
+          hasScores: true,
+          payload: {
+            ...SAMPLE_ARTEFACT.payload,
+            reportTemplate: {
+              name: "Reviewer CTT",
+              audience: "item-reviewer",
+              chapters: ["cover", "flags", "scores", "credits"],
+            },
+            fitStatistics: { kr20: 0.71 },
+          },
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    render(<ItemAnalysisDashboard />);
+    expect(screen.getByTestId("item-analysis-template-name")).toHaveTextContent("Reviewer CTT");
+    expect(screen.queryByTestId("item-analysis-reliability")).not.toBeInTheDocument();
+    expect(screen.getByTestId("item-analysis-table")).toBeInTheDocument();
+  });
 });

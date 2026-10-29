@@ -65,6 +65,12 @@ import {
   taskModelVariableValueIds,
   WORK_PRODUCT_TYPE_VALUES,
 } from "./ecdVocabulary.js";
+import {
+  REPORT_TEMPLATE_KIND_VALUES,
+  REPORT_TEMPLATE_AUDIENCE_VALUES,
+  REPORT_TEMPLATE_CHAPTER_VALUES,
+  REPORT_TEMPLATE_SKIN_VALUES,
+} from "./psychometricReportTemplate.js";
 import { ADDITIONAL_KSA_RELATIONSHIP_VALUES } from "./additionalKsaAdvisory.js";
 import { ksaStudentModelLinkErrors } from "./ksaStudentModelLink.js";
 import {
@@ -1205,6 +1211,7 @@ export const schema = {
     sourceSessionIds: 'array',
     sourceSessionCount: 'number',
     sourceSessionIdsHash: 'string',
+    templateId: 'string',
   },
 
   // ------------------------------------------------------------------
@@ -1227,6 +1234,32 @@ export const schema = {
     computedAt: 'date',
     payload: 'object',
     createdAt: 'date',
+  },
+
+  // ------------------------------------------------------------------
+  // psychometricReportTemplates — Iteman/Xcalibre-class report templates.
+  // Governed on the usual STATUS machine. Distinct from ECD task
+  // `templates` (D126 family-generating blueprints). A calibration job
+  // cites templateId; ingest stores a frozen snapshot on the artefact.
+  // ------------------------------------------------------------------
+  psychometricReportTemplates: {
+    id: 'string',
+    name: 'string',
+    description: 'string',
+    kind: 'string',
+    audience: 'string',
+    chapters: 'array',
+    flags: 'object',
+    nQuantiles: 'number',
+    includePretest: 'boolean',
+    includeDif: 'boolean',
+    cutScoreLabels: 'object',
+    skinId: 'string',
+    status: 'string',
+    locked: 'boolean',
+    versionNumber: 'number',
+    createdAt: 'date',
+    updatedAt: 'date',
   },
 
   // ------------------------------------------------------------------
@@ -6813,6 +6846,68 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
   if (collection === "studentModelRecords") {
     errors.push(...studentModelRecordErrors(obj, db));
+  }
+
+  if (collection === "psychometricReportTemplates") {
+    if (!obj.name || String(obj.name).trim() === "") {
+      errors.push("Report template name is required.");
+    }
+    if (!obj.status) {
+      errors.push("status is required.");
+    } else if (!STATUS.includes(obj.status)) {
+      errors.push(`Invalid report template status '${obj.status}'.`);
+    }
+    if (obj.status === "confirmed" && !obj.locked) {
+      errors.push("Confirmed report templates must be locked.");
+    }
+    if (!obj.kind) {
+      errors.push("kind is required.");
+    } else if (!REPORT_TEMPLATE_KIND_VALUES.includes(obj.kind)) {
+      errors.push(
+        `Invalid report template kind '${obj.kind}'. Must be one of: ${REPORT_TEMPLATE_KIND_VALUES.join(", ")}.`
+      );
+    }
+    if (!obj.audience) {
+      errors.push("audience is required.");
+    } else if (!REPORT_TEMPLATE_AUDIENCE_VALUES.includes(obj.audience)) {
+      errors.push(
+        `Invalid report template audience '${obj.audience}'. Must be one of: ${REPORT_TEMPLATE_AUDIENCE_VALUES.join(", ")}.`
+      );
+    }
+    if (obj.chapters !== undefined && obj.chapters !== null) {
+      if (!Array.isArray(obj.chapters)) {
+        errors.push("chapters should be array");
+      } else {
+        obj.chapters.forEach((ch, i) => {
+          if (!REPORT_TEMPLATE_CHAPTER_VALUES.includes(ch)) {
+            errors.push(
+              `Invalid chapters[${i}] '${ch}'. Must be one of: ${REPORT_TEMPLATE_CHAPTER_VALUES.join(", ")}.`
+            );
+          }
+        });
+      }
+    }
+    if (obj.skinId && !REPORT_TEMPLATE_SKIN_VALUES.includes(obj.skinId)) {
+      errors.push(
+        `Invalid skinId '${obj.skinId}'. Must be one of: ${REPORT_TEMPLATE_SKIN_VALUES.join(", ")}.`
+      );
+    }
+    if (obj.nQuantiles !== undefined && obj.nQuantiles !== null) {
+      if (typeof obj.nQuantiles !== "number" || !Number.isFinite(obj.nQuantiles) || obj.nQuantiles < 2) {
+        errors.push("nQuantiles must be a number ≥ 2.");
+      }
+    }
+    if (obj.flags !== undefined && obj.flags !== null) {
+      if (typeof obj.flags !== "object" || Array.isArray(obj.flags)) {
+        errors.push("flags should be object");
+      } else {
+        for (const key of ["tooHard", "tooEasy", "lowDiscrimination", "unusedProportion", "attractiveRpb"]) {
+          if (obj.flags[key] !== undefined && (typeof obj.flags[key] !== "number" || !Number.isFinite(obj.flags[key]))) {
+            errors.push(`flags.${key} must be a finite number.`);
+          }
+        }
+      }
+    }
   }
 
   if (collection === "templates") {

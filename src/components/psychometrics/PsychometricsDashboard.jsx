@@ -21,6 +21,7 @@ import DifDashboard from "./DifDashboard";
 import ItemAnalysisDashboard from "./ItemAnalysisDashboard";
 import ProvenanceStamp from "./ProvenanceStamp";
 import ReferenceInformationChart from "./ReferenceInformationChart";
+import ReportTemplatesPanel from "./ReportTemplatesPanel";
 import TestInformationDashboard from "./TestInformationDashboard";
 import { provenanceFromArtefact } from "./provenance";
 
@@ -89,6 +90,7 @@ export default function PsychometricsDashboard() {
           <TabsTrigger value="test-information">Test information</TabsTrigger>
           <TabsTrigger value="attribute-profile">Attribute profiles</TabsTrigger>
           <TabsTrigger value="dif">DIF</TabsTrigger>
+          <TabsTrigger value="templates">Report templates</TabsTrigger>
           <TabsTrigger value="catalogue">Artefact catalogue</TabsTrigger>
           <TabsTrigger value="reference">Reference chrome</TabsTrigger>
         </TabsList>
@@ -107,6 +109,10 @@ export default function PsychometricsDashboard() {
 
         <TabsContent value="dif" className="mt-6">
           <DifDashboard />
+        </TabsContent>
+
+        <TabsContent value="templates" className="mt-6">
+          <ReportTemplatesPanel />
         </TabsContent>
 
         <TabsContent value="catalogue" className="mt-6 space-y-4">

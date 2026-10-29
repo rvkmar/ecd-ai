@@ -17,6 +17,11 @@ vi.mock("@/api/queries/taskModels", () => ({
 vi.mock("@/api/queries/assemblyModels", () => ({
   useAssemblyModels: vi.fn(() => ({ data: [] })),
 }));
+vi.mock("@/api/queries/psychometricReportTemplates", () => ({
+  usePsychometricReportTemplates: () => ({ data: [], isLoading: false }),
+  useCreatePsychometricReportTemplate: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useTransitionPsychometricReportTemplate: () => ({ mutateAsync: vi.fn() }),
+}));
 
 import { useAnalysisArtefacts } from "@/api/queries/analysisArtefacts";
 

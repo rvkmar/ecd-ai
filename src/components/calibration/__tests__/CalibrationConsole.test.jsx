@@ -133,6 +133,10 @@ function succeededResponse({ converged = true } = {}) {
   };
 }
 
+vi.mock("@/api/queries/psychometricReportTemplates", () => ({
+  usePsychometricReportTemplates: () => ({ data: [], isLoading: false }),
+}));
+
 vi.mock("@/api/queries/evidenceModels", () => ({
   useEvidenceModels: () => ({ data: fx.evidenceModels, isLoading: false }),
   useEvidenceModel: (id) => ({

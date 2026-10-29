@@ -114,6 +114,12 @@ export const BACKUP_INVENTORY = Object.freeze([
     reason: "Included — D113 Presentation Model overlay; delivery chrome is authored here.",
   },
   {
+    id: "psychometricReportTemplates",
+    store: "ecd-json",
+    pathInArchive: "ecd/db.json",
+    reason: "Included — Iteman/Xcalibre-class report templates; jobs cite a frozen snapshot.",
+  },
+  {
     id: "compositeLibrary",
     store: "ecd-json",
     pathInArchive: "ecd/db.json",

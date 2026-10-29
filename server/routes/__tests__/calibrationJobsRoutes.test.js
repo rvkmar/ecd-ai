@@ -180,6 +180,43 @@ describe("enqueue", () => {
     expect(res.status).toBe(400);
     expect(res.body.details.join(" ")).toMatch(/seed/);
   });
+
+  it("freezes an adopted report template snapshot on the job", async () => {
+    dbState.current.psychometricReportTemplates = [
+      {
+        id: "prt-irt",
+        name: "Xcalibre classic",
+        kind: "xcalibre-irt",
+        audience: "psychometrician",
+        chapters: ["cover", "irt-plots", "credits"],
+        flags: { tooHard: 0.15 },
+        nQuantiles: 5,
+        skinId: "xcalibre-classic",
+        status: "operational",
+        locked: true,
+      },
+    ];
+    const app = await jobsApp();
+    const res = await request(app)
+      .post("/api/calibrationJobs/")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`)
+      .send({
+        kind: "irt-parameters",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+        templateId: "prt-irt",
+        request: validRequest(),
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.templateId).toBe("prt-irt");
+    expect(res.body.request.reportTemplate.name).toBe("Xcalibre classic");
+    expect(res.body.request.reportTemplate.chapters).toContain("irt-plots");
+    expect(res.body.request.options.flags.tooHard).toBe(0.15);
+
+    dbState.current.psychometricReportTemplates[0].name = "rewritten later";
+    const stored = dbState.current.calibrationJobs[0];
+    expect(stored.request.reportTemplate.name).toBe("Xcalibre classic");
+  });
 });
 
 describe("cancel and retry", () => {

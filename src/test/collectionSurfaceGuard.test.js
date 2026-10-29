@@ -344,6 +344,24 @@ describe("taskSpecs (D151) specifically", () => {
   });
 });
 
+describe("psychometricReportTemplates specifically", () => {
+  it("has a route file, is mounted, and is gated", () => {
+    const file = "psychometricReportTemplatesRoutes.js";
+    const full = path.join(ROUTES_DIR, file);
+    expect(fs.existsSync(full), `${file} should exist`).toBe(true);
+    const src = liveCode(fs.readFileSync(full, "utf8"));
+    expect(src, `${file} should apply authenticateToken in LIVE code`).toMatch(
+      HAS_ROUTER_GATE
+    );
+    expect(src, `${file} should import authorizeRole for its write gates`).toContain(
+      "authorizeRole"
+    );
+    expect(INDEX, "psychometricReportTemplates should be mounted in server/index.js").toContain(
+      `app.use("/api/psychometricReportTemplates"`
+    );
+  });
+});
+
 describe("templates (D126) specifically", () => {
   it("has a route file, is mounted, and is gated", () => {
     const file = "templatesRoutes.js";

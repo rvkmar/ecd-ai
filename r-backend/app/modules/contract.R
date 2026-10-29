@@ -222,6 +222,10 @@ validate_calibration_request <- function(body) {
     }
   }
 
+  if (!is.null(body$reportTemplate) && !is.list(body$reportTemplate)) {
+    errors <- c(errors, "reportTemplate should be object")
+  }
+
   errors
 }
 
