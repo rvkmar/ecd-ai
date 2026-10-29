@@ -57,7 +57,7 @@ import {
   confirmRequirementItems,
 } from "./domainAnalysisForm";
 
-/** focus, id, or the domainAnalysisId the Q-matrix handoff leaves on the URL. */
+/** focus, id, or the domainAnalysisId a Q-matrix / Student Model / Design Pattern handoff leaves on the URL. */
 export function domainAnalysisFocusId(searchParams) {
   return (
     searchParams.get("focus") ||
@@ -65,6 +65,15 @@ export function domainAnalysisFocusId(searchParams) {
     searchParams.get("domainAnalysisId") ||
     ""
   );
+}
+
+export function openFromDomainAnalysis(searchParams, { tab, domainAnalysisId }) {
+  const next = new URLSearchParams(searchParams);
+  next.set("tab", tab);
+  next.set("domainAnalysisId", domainAnalysisId);
+  next.delete("focus");
+  next.delete("id");
+  return next;
 }
 
 function ContentStandardsView({ standards }) {
@@ -426,6 +435,48 @@ export function DomainAnalysisWorkspace({
               <p className="text-sm leading-6 text-slate-700">
                 A draft can be saved before a perspective is declared. Confirm requires one.
               </p>
+              {editingId && editingRow?.status === "confirmed" ? (
+                <section aria-label="Author from this analysis" className="rounded-md border border-slate-200 p-3">
+                  <h3 className="text-sm font-medium text-slate-900">Author from this analysis</h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Opens a Student Model or a Design Pattern with this analysis named. It does not create either record.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setSearchParams(
+                          openFromDomainAnalysis(searchParams, {
+                            tab: "student",
+                            domainAnalysisId: editingId,
+                          })
+                        );
+                      }}
+                    >
+                      Author a Student Model
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setSearchParams(
+                          openFromDomainAnalysis(searchParams, {
+                            tab: "designpatterns",
+                            domainAnalysisId: editingId,
+                          })
+                        );
+                      }}
+                    >
+                      Author a Design Pattern
+                    </Button>
+                  </div>
+                </section>
+              ) : editingId ? (
+                <p className="text-sm text-slate-600">
+                  Confirm this analysis to author a Student Model or a Design Pattern from it. A Student Model can still be started with no analysis.
+                </p>
+              ) : null}
             </TabsContent>
 
             {activeSection ? (

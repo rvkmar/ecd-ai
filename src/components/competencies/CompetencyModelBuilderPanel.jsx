@@ -12,9 +12,10 @@
 // here never touches that outer nav state.
 // ------------------------------------------------------------
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Plus } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import CompetencyModelList from "./CompetencyModelList";
 import CompetencyWizard from "./CompetencyWizard/CompetencyWizard";
@@ -28,14 +29,28 @@ import {
 } from "@/api/queries/competencies";
 import { isLinkableCompetencyModel, canArchiveCompetencyModel } from "@/utils/schema";
 
-export default function CompetencyModelBuilderPanel() {
-    const [mode, setMode] = useState("list"); // list | create | edit
+export default function CompetencyModelBuilderPanel({ domainAnalysisId = "" } = {}) {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [mode, setMode] = useState(domainAnalysisId ? "create" : "list"); // list | create | edit
     const [selectedModelId, setSelectedModelId] = useState(null);
 
     const { data: models = [], isLoading: loading } = useCompetencyModels();
     const deleteCompetencyModel = useDeleteCompetencyModel();
     const cloneCompetencyModel = useCloneCompetencyModel();
     const archiveCompetencyModel = useArchiveCompetencyModel();
+
+    function clearDomainAnalysisHandoff() {
+        if (!searchParams.get("domainAnalysisId")) return;
+        const next = new URLSearchParams(searchParams);
+        next.delete("domainAnalysisId");
+        setSearchParams(next, { replace: true });
+    }
+
+    useEffect(() => {
+        if (!domainAnalysisId) return;
+        setSelectedModelId(null);
+        setMode("create");
+    }, [domainAnalysisId]);
 
     function handleCreate() {
         setSelectedModelId(null);
@@ -101,6 +116,7 @@ export default function CompetencyModelBuilderPanel() {
     }
 
     function handleWizardConfirmed() {
+        clearDomainAnalysisHandoff();
         setSelectedModelId(null);
         setMode("list");
         // No manual refetch needed -- confirmModel()'s mutation (in
@@ -114,6 +130,7 @@ export default function CompetencyModelBuilderPanel() {
     }
 
     function handleCancelWizard() {
+        clearDomainAnalysisHandoff();
         setSelectedModelId(null);
         setMode("list");
     }
@@ -126,6 +143,7 @@ export default function CompetencyModelBuilderPanel() {
         return (
             <CompetencyWizardProvider
                 modelId={selectedModelId}
+                domainAnalysisId={selectedModelId ? "" : domainAnalysisId}
                 onConfirmed={handleWizardConfirmed}
                 onCloned={handleWizardCloned}
             >

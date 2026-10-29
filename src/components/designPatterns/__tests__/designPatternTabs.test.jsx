@@ -125,6 +125,18 @@ describe("Design Pattern three-tab shell", () => {
     expect(screen.queryByRole("heading", { name: "Design Pattern Dashboard" })).not.toBeInTheDocument();
   });
 
+  it("opens a new pattern with the Domain Analysis from the URL", () => {
+    useDomainAnalyses.mockReturnValue(
+      query([{ id: "da-plant", name: "Fractions", psychologicalPerspective: "trait" }])
+    );
+    renderBuilder("/admin?tab=designpatterns&domainAnalysisId=da-plant");
+
+    expect(screen.getByRole("button", { name: "Manage Design Pattern" })).toHaveClass("bg-primary");
+    expect(screen.getByRole("button", { name: "Create draft" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Title")).toHaveValue("");
+    expect(screen.getByLabelText("Domain Analysis")).toHaveValue("da-plant");
+  });
+
   it("opens Manage with the focused pattern loaded", () => {
     renderBuilder(`/admin?tab=designpatterns&focus=${readyDraft.id}`);
 

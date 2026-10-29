@@ -10,7 +10,8 @@
 //   the wizard full-screen the moment its own "+ New Competency
 //   Model" button is clicked -- this shell never sees that switch.
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import CompetencyDashboard from "./CompetencyDashboard";
 import CompetencyTable from "./CompetencyTable";
@@ -18,7 +19,13 @@ import CompetencyModelBuilderPanel from "./CompetencyModelBuilderPanel";
 import { Button } from "@/components/ui/button";
 
 export default function CompetencyModelBuilder() {
-    const [mode, setMode] = useState("dashboard"); // dashboard | list | create
+    const [searchParams] = useSearchParams();
+    const domainAnalysisId = searchParams.get("domainAnalysisId") || "";
+    const [mode, setMode] = useState(domainAnalysisId ? "create" : "dashboard"); // dashboard | list | create
+
+    useEffect(() => {
+        if (domainAnalysisId) setMode("create");
+    }, [domainAnalysisId]);
 
     return (
         <div className="space-y-8">
@@ -49,7 +56,9 @@ export default function CompetencyModelBuilder() {
             <div>
                 {mode === "dashboard" && <CompetencyDashboard />}
                 {mode === "list" && <CompetencyTable />}
-                {mode === "create" && <CompetencyModelBuilderPanel />}
+                {mode === "create" && (
+                    <CompetencyModelBuilderPanel domainAnalysisId={domainAnalysisId} />
+                )}
             </div>
         </div>
     );

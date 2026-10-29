@@ -1845,8 +1845,11 @@ function DesignPatternManage() {
   const { auth } = useAuth() || {};
   const [searchParams, setSearchParams] = useSearchParams();
   const focusId = searchParams.get("focus");
-  const [screen, setScreen] = useState(focusId ? "edit" : "list");
-  const [seedForm, setSeedForm] = useState(null);
+  const analysisId = searchParams.get("domainAnalysisId") || "";
+  const [screen, setScreen] = useState(focusId ? "edit" : analysisId ? "create" : "list");
+  const [seedForm, setSeedForm] = useState(
+    analysisId && !focusId ? { ...emptyForm(), domainAnalysisId: analysisId } : null
+  );
   const [pendingDelete, setPendingDelete] = useState(null);
   const { data: patterns = [], isLoading, error } = useDesignPatterns();
   const { data: domainAnalyses = [] } = useDomainAnalyses();
@@ -1870,13 +1873,21 @@ function DesignPatternManage() {
   const deleteMut = useDeleteDesignPattern();
 
   useEffect(() => {
-    if (focusId) setScreen("edit");
-  }, [focusId]);
+    if (focusId) {
+      setScreen("edit");
+      return;
+    }
+    if (analysisId) {
+      setSeedForm({ ...emptyForm(), domainAnalysisId: analysisId });
+      setScreen("create");
+    }
+  }, [focusId, analysisId]);
 
   function clearFocus() {
-    if (!searchParams.get("focus")) return;
+    if (!searchParams.get("focus") && !searchParams.get("domainAnalysisId")) return;
     const next = new URLSearchParams(searchParams);
     next.delete("focus");
+    next.delete("domainAnalysisId");
     setSearchParams(next, { replace: true });
   }
 
@@ -2132,11 +2143,12 @@ function DesignPatternManage() {
 export default function DesignPatternBuilder() {
   const [searchParams] = useSearchParams();
   const focusId = searchParams.get("focus");
-  const [mode, setMode] = useState(focusId ? "manage" : "dashboard");
+  const analysisId = searchParams.get("domainAnalysisId") || "";
+  const [mode, setMode] = useState(focusId || analysisId ? "manage" : "dashboard");
 
   useEffect(() => {
-    if (focusId) setMode("manage");
-  }, [focusId]);
+    if (focusId || analysisId) setMode("manage");
+  }, [focusId, analysisId]);
 
   return (
     <ModelTabShell

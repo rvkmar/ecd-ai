@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Wave 3 / W29: a confirmed Domain Analysis Overview can author a Student
+  Model or a Design Pattern with that analysis named
+  (`?tab=student|designpatterns&domainAnalysisId=`). It does not create
+  either record. A draft analysis tells the author to confirm first. New
+  Student Model with no analysis still opens. Q-matrix handoff is
+  unchanged. Handoff: `claude/day146ad-offcal-wave3-w29-forward-controls.md`.
+
+
 - D116: Task Model Variables (W24 G13). `taskModelVariables` is a library
   collection of typed reusable design features (no CAF status machine).
   One variable is consumed by any number of Task Models via

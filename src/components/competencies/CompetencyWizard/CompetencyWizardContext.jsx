@@ -34,6 +34,8 @@ import { syncSmVariablesFromCompetencies } from "./smVariableSync";
 import { PSYCHOLOGICAL_PERSPECTIVE_VALUES } from "@/utils/ecdVocabulary";
 import { constructFrameworkGrounded } from "@/utils/constructGrounding";
 import { useCurricularPolicies } from "@/api/queries/curricularPolicies";
+import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import { applyDomainAnalysisChoice } from "@/utils/perspectiveInheritance";
 
 const CompetencyWizardContext = createContext(null);
 
@@ -49,6 +51,7 @@ export function useCompetencyWizard() {
 
 export function CompetencyWizardProvider({
   modelId,
+  domainAnalysisId = "",
   onConfirmed,
   onCloned,
   children,
@@ -75,6 +78,7 @@ export function CompetencyWizardProvider({
   // models list already uses (CompetencyModelBuilderPanel, CompetencyTable,
   // CompetencyDashboard), so this doesn't add a redundant fetch.
   const { data: allModels = [] } = useCompetencyModels();
+  const { data: domainAnalyses = [], isLoading: analysesLoading } = useDomainAnalyses();
   const policiesQuery = useCurricularPolicies();
   const curricularPolicies = policiesQuery.isSuccess
     ? policiesQuery.data || []
@@ -86,7 +90,8 @@ export function CompetencyWizardProvider({
   useEffect(() => {
     async function loadModel() {
       if (!modelId) {
-        setModel({
+        if (domainAnalysisId && analysesLoading) return;
+        const blank = {
           name: "",
           description: "",
           measurementIntent: "",
@@ -95,7 +100,17 @@ export function CompetencyWizardProvider({
           smVariables: [],
           status: "draft",
           locked: false,
-        });
+        };
+        setModel(
+          domainAnalysisId
+            ? applyDomainAnalysisChoice({
+                model: blank,
+                domainAnalysisId,
+                analyses: domainAnalyses,
+                baselinePerspective: "",
+              })
+            : blank
+        );
         setCompetencies([]);
         setIsDirty(false);
         setLoading(false);
@@ -123,7 +138,7 @@ export function CompetencyWizardProvider({
 
     loadModel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modelId]);
+  }, [modelId, domainAnalysisId, analysesLoading]);
 
   /* =====================================================
      🔹 MARK DIRTY HELPER

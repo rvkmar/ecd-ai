@@ -132,6 +132,38 @@ describe("Domain Analysis confirm checklist", () => {
     expect(screen.queryByRole("textbox", { name: "Knowledge structure" })).not.toBeInTheDocument();
   });
 
+  it("offers Student Model and Design Pattern authoring only after confirm", async () => {
+    const user = userEvent.setup();
+    const draft = renderEditor(["/?tab=domainanalyses"]);
+    await user.click(screen.getByRole("button", { name: /Explaining a labelled scientific diagram/ }));
+
+    expect(screen.queryByRole("button", { name: "Author a Student Model" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Author a Design Pattern" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Confirm this analysis to author a Student Model/)).toBeInTheDocument();
+    draft.unmount();
+
+    useDomainAnalyses.mockReturnValue({
+      data: [{ ...uploaded, status: "confirmed" }],
+      isLoading: false,
+    });
+    const student = renderEditor(["/?tab=domainanalyses"]);
+    await user.click(screen.getByRole("button", { name: /Explaining a labelled scientific diagram/ }));
+    await user.click(screen.getByRole("button", { name: "Author a Student Model" }));
+    expect(screen.getByTestId("search").textContent).toContain("tab=student");
+    expect(screen.getByTestId("search").textContent).toContain("domainAnalysisId=da-uploaded");
+    student.unmount();
+
+    useDomainAnalyses.mockReturnValue({
+      data: [{ ...uploaded, status: "confirmed" }],
+      isLoading: false,
+    });
+    renderEditor(["/?tab=domainanalyses"]);
+    await user.click(screen.getByRole("button", { name: /Explaining a labelled scientific diagram/ }));
+    await user.click(screen.getByRole("button", { name: "Author a Design Pattern" }));
+    expect(screen.getByTestId("search").textContent).toContain("tab=designpatterns");
+    expect(screen.getByTestId("search").textContent).toContain("domainAnalysisId=da-uploaded");
+  });
+
   it("keeps the Q-matrix author button on its tab and leaves content standards out of the save", async () => {
     const user = userEvent.setup();
     renderEditor(["/?tab=domainanalyses"]);
