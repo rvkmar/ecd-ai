@@ -229,6 +229,22 @@ router.delete("/:id", canDelete, (req, res) => {
     });
   }
 
+  // R14: seeded evidence and task models keep seededFrom.designPatternId.
+  // Deleting the pattern would 404 GET descendants while those rows still
+  // name it. Name the first citer so the author can unlink or archive it.
+  for (const collection of ["evidenceModels", "taskModels"]) {
+    const citer = (db[collection] || []).find(
+      (row) => row?.seededFrom?.designPatternId === existing.id
+    );
+    if (citer) {
+      return res.status(409).json({
+        error: `${collection} ${citer.id} still cites this design pattern on seededFrom.designPatternId.`,
+        collection,
+        id: citer.id,
+      });
+    }
+  }
+
   db.designPatterns = rows.filter((v) => v.id !== existing.id);
   saveDB(db);
   res.json({ success: true });

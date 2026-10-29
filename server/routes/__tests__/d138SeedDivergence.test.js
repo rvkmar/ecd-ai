@@ -146,4 +146,42 @@ describe("D138 seed snapshot divergence", () => {
     expect(evidenceRow.divergences[0].label).toBe("Names the claim");
     expect(JSON.stringify(evidenceRow.divergences)).not.toMatch(/Traces the arrow/);
   });
+
+  it("R14: refuses delete while a seeded evidence or task model still cites the pattern", async () => {
+    const expressApp = await app();
+    const admin = tokenFor("admin");
+    const seeded = await request(expressApp)
+      .post("/api/designPatterns/dp1/seed")
+      .set("Authorization", `Bearer ${admin}`)
+      .send({
+        competencyId: "c1",
+        selections: { potentialObservations: [0], variableFeatures: [0] },
+      });
+    expect(seeded.status).toBe(201);
+    const evidenceId = seeded.body.evidenceModel.id;
+    const taskId = seeded.body.taskModel.id;
+
+    const descendants = await request(expressApp)
+      .get("/api/designPatterns/dp1/descendants")
+      .set("Authorization", `Bearer ${admin}`);
+    expect(descendants.status).toBe(200);
+    expect(descendants.body.descendants.map((row) => row.id).sort()).toEqual(
+      [evidenceId, taskId].sort()
+    );
+
+    const blocked = await request(expressApp)
+      .delete("/api/designPatterns/dp1")
+      .set("Authorization", `Bearer ${admin}`);
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.collection).toBe("evidenceModels");
+    expect(blocked.body.id).toBe(evidenceId);
+    expect(blocked.body.error).toMatch(/seededFrom\.designPatternId/);
+
+    dbState.current.evidenceModels = [];
+    dbState.current.taskModels = [];
+    const removed = await request(expressApp)
+      .delete("/api/designPatterns/dp1")
+      .set("Authorization", `Bearer ${admin}`);
+    expect(removed.status).toBe(200);
+  });
 });

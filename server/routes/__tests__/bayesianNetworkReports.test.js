@@ -58,6 +58,37 @@ beforeEach(() => {
     taskModels: [],
     evidenceModels: [],
     policies: [],
+    studentModelRecords: [
+      {
+        id: "smr1",
+        studentId: "stu1",
+        displayName: "Pat",
+        competencyModelId: "cm1",
+        competencyModelName: "CM",
+        smvPosteriors: {
+          smv1: { smvId: "smv1", estimate: 0.8, updatedAt: "2026-10-29T00:00:00.000Z" },
+        },
+        history: [
+          {
+            sessionId: "s-bn",
+            timestamp: "2026-10-28T00:00:00.000Z",
+            posteriorSnapshot: { smv1: { smvId: "smv1", estimate: 0.5 } },
+          },
+          {
+            sessionId: "s-bn-2",
+            timestamp: "2026-10-29T00:00:00.000Z",
+            posteriorSnapshot: { smv1: { smvId: "smv1", estimate: 0.8 } },
+          },
+        ],
+      },
+      {
+        id: "smr-other",
+        studentId: "stu-other",
+        competencyModelId: "cm1",
+        smvPosteriors: {},
+        history: [{ sessionId: "s-secret", timestamp: "2026-10-29T00:00:00.000Z", posteriorSnapshot: {} }],
+      },
+    ],
   };
 });
 
@@ -100,5 +131,30 @@ describe("Bayesian network posteriors on reports", () => {
       distribution,
     });
     expect(typeof res.body.modelSummary.BayesianNetwork.smv1.posterior).toBe("number");
+  });
+
+  it("R11: session reports attach this examinee's studentModelRecords history, not a peer's", async () => {
+    const sessionRes = await request(app())
+      .get("/api/reports/session/s-bn")
+      .set("Authorization", `Bearer ${tokenFor("student")}`);
+    expect(sessionRes.status).toBe(200);
+    expect(sessionRes.body.studentModelRecords).toHaveLength(1);
+    expect(sessionRes.body.studentModelRecords[0].id).toBe("smr1");
+    expect(sessionRes.body.studentModelRecords[0].history.map((row) => row.sessionId)).toEqual([
+      "s-bn",
+      "s-bn-2",
+    ]);
+    expect(sessionRes.body.studentModelRecords[0].smvPosteriors.smv1.estimate).toBe(0.8);
+
+    const learner = await request(app())
+      .get("/api/reports/session/s-bn/learner-feedback")
+      .set("Authorization", `Bearer ${tokenFor("student")}`);
+    expect(learner.body.studentModelRecords[0].history).toHaveLength(2);
+
+    const teacher = await request(app())
+      .get("/api/reports/session/s-bn/teacher-report")
+      .set("Authorization", `Bearer ${tokenFor("teacher")}`);
+    expect(teacher.body.studentModelRecords[0].id).toBe("smr1");
+    expect(teacher.body.studentModelRecords.some((row) => row.id === "smr-other")).toBe(false);
   });
 });

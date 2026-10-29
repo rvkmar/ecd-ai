@@ -56,6 +56,12 @@
 // the submit branch retargeted. Until then a question-only session with no
 // delivery model still selects as it does today.
 //
+// R12 records that as a design limit, not a deletion. Item IRT is max
+// Fisher at the live EAP. Legacy question IRT is nearest difficulty at
+// studentModel.irtTheta. Swapping Fisher onto b-only question rows would
+// be a no-op (1PL peaks at b = theta) and would still rank on a different
+// ability scale. The retirement program is not this gap.
+//
 // ------------------------------------------------------------------
 // G20. Adaptive candidates for a cited delivery model.
 // ------------------------------------------------------------------
@@ -67,20 +73,25 @@
 // record is not a candidate: delivery still presents a task.
 //
 // session.taskIds is the seed. It is not an allow-list, and it is not
-// ignored. Fixed order still walks the seed and does not pull a task from
-// outside it. IRT and BayesianNetwork, on a session that cites a delivery
-// model, rank this package pool. Pool order is the seed first, then every
-// other pool task by task id. A tie keeps the earlier task. A seed task
-// that is not in the pool is not ranked, and a warning says so.
+// ignored. A roster fixed form still walks the seed and does not pull a
+// task from outside it (D56). A cited delivery model walks remaining
+// unanswered pool ids in that same pool order (R13). IRT and
+// BayesianNetwork, on a session that cites a delivery model, rank this
+// package pool. Pool order is the seed first, then every other pool task
+// by task id. A tie keeps the earlier task. A seed task that is not in
+// the pool is not ranked, and a warning says so.
 //
 // If no active package belongs to the assembly model, adaptive selection
 // stays on the seed and a warning says so. A session with no delivery
 // model keeps the roster path exactly, including the legacy question reader.
 //
-// G19 constraints, exposure, and enemies filter this same pool. Exposure
-// is still the count of that item id in this session's responses. Selection
-// does not read or write item.exposureControl.usageCount. Submit still
-// increments that counter when an operational item is delivered.
+// G19 constraints, exposure, and enemies filter this same pool. Session
+// exposure is still the count of that item id in this session's responses.
+// Adaptive ranking then takes a top-N information window and prefers the
+// lowest item.exposureControl.usageCount inside it (R13). That is not
+// Sympson-Hetter: there is no P(A) table. Equal usageCount keeps
+// first-wins. Submit still increments the counter when an operational
+// item is delivered. Retirement remains status-based on that increment.
 //
 // Submit appends a delivered task id that was not in the seed. Reports
 // also union response task ids, so a stored response whose task was never
@@ -767,8 +778,6 @@ export function taskIsInSessionDelivery(session, db, taskId) {
   const resolution = resolveAssemblyModelForSession(session, db);
   if (!resolution?.assemblyModel || resolution.authoritative !== true) return false;
   const resolved = selectionPolicyForDelivery(resolution.deliveryModel, db);
-  const strategy = resolved.policy?.type || session.selectionStrategy;
-  if (strategy === "fixed") return false;
   const pool = buildAssemblyPackagePool(session, db, resolution.assemblyModel);
   return pool.source === "packages" && pool.ids.includes(taskId);
 }
@@ -993,7 +1002,16 @@ function selectLegacyQuestionCandidate(task, db, theta) {
   const b = question.metadata?.b;
   if (typeof b !== "number") return null;
 
-  return { score: -Math.abs(b - theta), debug: { theta, b, diff: Math.abs(b - theta), source: "legacy-question" } };
+  return {
+    score: -Math.abs(b - theta),
+    debug: {
+      theta,
+      b,
+      diff: Math.abs(b - theta),
+      source: "legacy-question",
+      criterion: "nearest-difficulty",
+    },
+  };
 }
 
 /**
@@ -1039,6 +1057,64 @@ function selectFixed(session) {
       taskId: session.taskIds[session.currentTaskIndex],
       strategy: "fixed",
       debug: { index: session.currentTaskIndex },
+    };
+  }
+  return {};
+}
+
+/** R13. Top-N information window before usageCount is consulted. */
+const ADAPTIVE_EXPOSURE_WINDOW = 5;
+
+function itemUsageCount(itemId, db) {
+  const item = (db?.items || []).find((row) => row && row.id === itemId);
+  const n = item?.exposureControl?.usageCount;
+  return typeof n === "number" && Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Rank by score (Fisher / entropy), then among the top N pick the lowest
+ * global usageCount. Equal usageCount keeps first-wins. Not Sympson-Hetter.
+ */
+function pickByInformationThenExposure(ranked, db) {
+  if (!ranked.length) return null;
+  const remaining = ranked.slice();
+  const ordered = [];
+  while (remaining.length) {
+    let bestI = 0;
+    for (let i = 1; i < remaining.length; i += 1) {
+      if (remaining[i].score > remaining[bestI].score) bestI = i;
+    }
+    ordered.push(remaining.splice(bestI, 1)[0]);
+  }
+  const window = ordered.slice(0, ADAPTIVE_EXPOSURE_WINDOW);
+  let pick = window[0];
+  let pickUsage = itemUsageCount(pick.debug?.itemId, db);
+  for (let i = 1; i < window.length; i += 1) {
+    const usage = itemUsageCount(window[i].debug?.itemId, db);
+    if (usage < pickUsage) {
+      pick = window[i];
+      pickUsage = usage;
+    }
+  }
+  return {
+    ...pick,
+    debug: { ...pick.debug, usageCount: pickUsage, exposureWindow: window.length },
+  };
+}
+
+/** R13. Unanswered remaining pool ids, in G20 pool order. */
+function selectFixedFromPool(session, poolIds) {
+  const answered = new Set(
+    (session?.responses || []).map((response) => response?.taskId).filter(Boolean)
+  );
+  const ids = Array.isArray(poolIds) ? poolIds : [];
+  for (let index = 0; index < ids.length; index += 1) {
+    const taskId = ids[index];
+    if (answered.has(taskId)) continue;
+    return {
+      taskId,
+      strategy: "fixed",
+      debug: { index, source: "package-pool" },
     };
   }
   return {};
@@ -1093,17 +1169,19 @@ function selectIrt(session, db, warnings) {
   candidates = gated.candidates;
   const skipped = gated.blocked.map((b) => ({ taskId: b.taskId, reason: b.reason }));
 
-  let best = null;
+  const ranked = [];
+  let bestLegacy = null;
 
   for (const { taskId, task } of candidates) {
     if (!task.itemId) {
-      // LEGACY quarantine -- see selectLegacyQuestionCandidate.
+      // LEGACY quarantine -- see selectLegacyQuestionCandidate. R12: nearest
+      // difficulty at irtTheta, not the item Fisher window.
       const legacy = selectLegacyQuestionCandidate(task, db, session.studentModel?.irtTheta ?? 0);
       if (!legacy) {
         skipped.push({ taskId, reason: "No itemId, and no legacy question with a numeric difficulty." });
         continue;
       }
-      if (!best || legacy.score > best.score) best = { taskId, ...legacy };
+      if (!bestLegacy || legacy.score > bestLegacy.score) bestLegacy = { taskId, ...legacy };
       continue;
     }
 
@@ -1161,8 +1239,10 @@ function selectIrt(session, db, warnings) {
       },
     };
 
-    if (!best || candidate.score > best.score) best = candidate;
+    ranked.push(candidate);
   }
+
+  const best = ranked.length > 0 ? pickByInformationThenExposure(ranked, db) : bestLegacy;
 
   if (!best) {
     if (skipped.length > 0) {
@@ -1195,7 +1275,7 @@ function selectBayesianNetwork(session, db, warnings) {
   candidates = gated.candidates;
   const posteriors = session.studentModel?.smvPosteriors || {};
 
-  let best = null;
+  const ranked = [];
   const unrankable = gated.blocked.map((b) => ({ taskId: b.taskId, reason: b.reason }));
 
   for (const { taskId, task } of candidates) {
@@ -1291,7 +1371,7 @@ function selectBayesianNetwork(session, db, warnings) {
           source: "composite-library",
         },
       };
-      if (!best || candidate.score > best.score) best = candidate;
+      ranked.push(candidate);
       continue;
     }
 
@@ -1387,7 +1467,7 @@ function selectBayesianNetwork(session, db, warnings) {
           source: "composite-library",
         },
       };
-      if (!best || candidate.score > best.score) best = candidate;
+      ranked.push(candidate);
       continue;
     }
 
@@ -1434,9 +1514,10 @@ function selectBayesianNetwork(session, db, warnings) {
       },
     };
 
-    if (!best || candidate.score > best.score) best = candidate;
+    ranked.push(candidate);
   }
 
+  const best = pickByInformationThenExposure(ranked, db);
   if (best) {
     return { taskId: best.taskId, strategy: "BayesianNetwork", debug: { ...best.debug, unrankable } };
   }
@@ -1549,7 +1630,7 @@ export function selectNextActivity(session, db) {
       }
     }
 
-    if (authoritative && strategy !== "fixed") {
+    if (authoritative) {
       packagePool = buildAssemblyPackagePool(session, db, assemblyModel);
       warnings.push(...packagePool.warnings);
     }
@@ -1601,7 +1682,9 @@ export function selectNextActivity(session, db) {
   let result;
   switch (strategy) {
     case "fixed":
-      result = selectFixed(selectionSession);
+      result = packageIds
+        ? selectFixedFromPool(session, packageIds)
+        : selectFixed(selectionSession);
       break;
     case "IRT":
       result = selectIrt(selectionSession, db, warnings);
@@ -1639,6 +1722,8 @@ export const __testing__ = {
   selectionPolicyForDelivery,
   liveThetaFor,
   selectFixed,
+  selectFixedFromPool,
+  pickByInformationThenExposure,
   itemInformationFisher,
   GOVERNING_ASSEMBLY_MODEL_STATUSES,
 };

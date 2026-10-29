@@ -17,7 +17,7 @@ function formatWhen(value) {
   return date.toLocaleString();
 }
 
-function RecordCard({ record }) {
+export function RecordCard({ record }) {
   const posteriors = Object.values(record.smvPosteriors || {});
   const history = Array.isArray(record.history) ? record.history : [];
   return (

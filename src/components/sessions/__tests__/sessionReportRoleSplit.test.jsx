@@ -47,6 +47,14 @@ vi.mock("../../../api/apiClient", () => ({
         recommendations: { individualLevel: [], groupLevel: [] },
         stopped,
         attributeProfile,
+        studentModelRecords: [
+          {
+            id: "smr1",
+            competencyModelName: "Fractions",
+            smvPosteriors: { smv1: { smvId: "smv1", estimate: 0.8, updatedAt: "2026-10-29T00:00:00.000Z" } },
+            history: [{ sessionId: "s-d59", timestamp: "2026-10-29T00:00:00.000Z", posteriorSnapshot: {} }],
+          },
+        ],
       });
     }
     if (String(url).includes("learner-feedback")) {
@@ -66,6 +74,14 @@ vi.mock("../../../api/apiClient", () => ({
             distribution: { not_mastered: 0.2, mastered: 0.8 },
           },
         },
+        studentModelRecords: [
+          {
+            id: "smr1",
+            competencyModelName: "Fractions",
+            smvPosteriors: { smv1: { smvId: "smv1", estimate: 0.8, updatedAt: "2026-10-29T00:00:00.000Z" } },
+            history: [{ sessionId: "s-d59", timestamp: "2026-10-29T00:00:00.000Z", posteriorSnapshot: {} }],
+          },
+        ],
       });
     }
     return Promise.resolve({
@@ -134,6 +150,14 @@ describe("SessionReport — classification and stop on report surfaces", () => {
     expect(await screen.findByText("Why this session ended")).toBeInTheDocument();
     expect(screen.getByText("Attribute profile")).toBeInTheDocument();
     expect(screen.getByText("attrA")).toBeInTheDocument();
+  });
+
+  it("R11: shows the examinee's scoring record history on the learner tab", async () => {
+    render(<SessionReport sessionId="s-d59" />);
+    const panel = await screen.findByTestId("student-model-records");
+    expect(within(panel).getByText("Across occasions")).toBeInTheDocument();
+    expect(within(panel).getByText("s-d59")).toBeInTheDocument();
+    expect(within(panel).getByText("Fractions")).toBeInTheDocument();
   });
 
   it("lists Bayesian network posteriors for the learner and the teacher", async () => {

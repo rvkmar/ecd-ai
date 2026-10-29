@@ -6,6 +6,7 @@ import { can } from "../../config/rolePermissions";
 import { measurementStopHeading, measurementStopDetails } from "./measurementStop";
 import { assemblyProgressLine } from "../../utils/assemblyConstraints";
 import AttributeProfileList from "./AttributeProfileList";
+import { RecordCard } from "../reports/StudentModelRecordPanel";
 
 function formatProbability(value) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "unknown";
@@ -256,6 +257,15 @@ export default function SessionReport({ sessionId, onClose }) {
           )}
 
           <p className="italic text-gray-600 mt-2">{learnerFeedback.encouragement}</p>
+
+          {learnerFeedback.studentModelRecords?.length > 0 && (
+            <div data-testid="student-model-records">
+              <h4 className="font-semibold">Across occasions</h4>
+              {learnerFeedback.studentModelRecords.map((record) => (
+                <RecordCard key={record.id} record={record} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -315,6 +325,15 @@ export default function SessionReport({ sessionId, onClose }) {
             <h4 className="font-semibold">Model Summary</h4>
             <pre className="bg-gray-100 p-2 rounded text-xs overflow-auto">{JSON.stringify(teacherReport.modelSummary, null, 2)}</pre>
           </div>
+
+          {teacherReport.studentModelRecords?.length > 0 && (
+            <div data-testid="teacher-student-model-records">
+              <h4 className="font-semibold">Across occasions</h4>
+              {teacherReport.studentModelRecords.map((record) => (
+                <RecordCard key={record.id} record={record} />
+              ))}
+            </div>
+          )}
 
           <div>
             <h4 className="font-semibold">Recommendations</h4>

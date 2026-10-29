@@ -1531,6 +1531,7 @@ describe("the legacy question path still works and is the only db.questions read
 
     expect(result.taskId).toBe("t2");
     expect(result.debug.source).toBe("legacy-question");
+    expect(result.debug.criterion).toBe("nearest-difficulty");
     expect(result.debug.theta).toBe(0.9);
     expect(result.debug.b).toBe(1);
   });
@@ -1764,4 +1765,96 @@ describe("assembly model content constraints", () => {
     expect(result.taskId).toBe("t3");
   });
 
+});
+
+describe("R12 — legacy nearest-difficulty is the recorded design limit", () => {
+  it("does not rank a legacy question with max Fisher", () => {
+    const db = irtDb({
+      tasks: [
+        { id: "t1", taskModelId: "tm1", itemId: null, questionId: "q1" },
+        { id: "t2", taskModelId: "tm1", itemId: null, questionId: "q2" },
+      ],
+      questions: [
+        { id: "q1", metadata: { a: 3, b: -1, c: 0 } },
+        { id: "q2", metadata: { a: 0.4, b: 1, c: 0 } },
+      ],
+    });
+    const result = selectNextActivity(
+      session({ selectionStrategy: "IRT", studentModel: { irtTheta: 0.9 } }),
+      db
+    );
+    expect(result.taskId).toBe("t2");
+    expect(result.debug.criterion).toBe("nearest-difficulty");
+    expect(result.debug.information).toBeUndefined();
+  });
+});
+
+describe("R13 — delivery-model fixed forms walk the package pool; adaptive uses usageCount", () => {
+  function fixedDeliveryDb() {
+    return irtDb({
+      assemblyModels: [
+        assemblyModel({
+          id: "am-live",
+          status: "confirmed",
+          stoppingRules: { maxItems: 99 },
+          selectionAlgorithm: { policyId: "p-fixed" },
+        }),
+      ],
+      deliveryModels: [
+        {
+          id: "dm1",
+          competencyModelId: "cm1",
+          assemblyModelId: "am-live",
+          policyId: "p-fixed",
+          presentationModelId: null,
+        },
+      ],
+    });
+  }
+
+  it("after the seed task is answered, next is the remaining pool task", () => {
+    const db = fixedDeliveryDb();
+    const s = session({
+      deliveryModelId: "dm1",
+      selectionStrategy: "fixed",
+      taskIds: ["t1"],
+      responses: [{ taskId: "t1" }],
+    });
+    const result = selectNextActivity(s, db);
+    expect(result.strategy).toBe("fixed");
+    expect(result.taskId).toBe("t2");
+    expect(result.debug.source).toBe("package-pool");
+    expect(__testing__.taskIsInSessionDelivery(s, db, "t2")).toBe(true);
+  });
+
+  it("a roster fixed form still does not pull a task from outside the seed", () => {
+    const db = irtDb();
+    const s = session({
+      selectionStrategy: "fixed",
+      taskIds: ["t1"],
+      currentTaskIndex: 1,
+      responses: [{ taskId: "t1" }],
+    });
+    expect(selectNextActivity(s, db)).toEqual({});
+  });
+
+  it("among a Fisher window, the lower usageCount wins; equal counts keep max Fisher", () => {
+    const db = irtDb();
+    db.evidenceModels[0].statisticalModels[0].parameterSets[0].parameters = {
+      o1: { a: 0.4, b: 0.05, c: 0 },
+      o2: { a: 2.0, b: 0.8, c: 0 },
+    };
+    const s = session({
+      selectionStrategy: "IRT",
+      studentModel: { smvPosteriors: { "smv-theta": smvPosterior({ estimate: 0 }) } },
+    });
+    expect(selectNextActivity(s, db).taskId).toBe("t2");
+
+    db.items[1].exposureControl = { usageCount: 9 };
+    db.items[0].exposureControl = { usageCount: 0 };
+    const exposed = selectNextActivity(s, db);
+    expect(exposed.taskId).toBe("t1");
+    expect(exposed.debug.usageCount).toBe(0);
+    expect(exposed.debug.criterion).toBe("max-fisher");
+  });
 });

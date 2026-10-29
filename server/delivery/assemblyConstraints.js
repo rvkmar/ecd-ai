@@ -257,14 +257,11 @@ function violates(feature, delivered, constraints) {
 }
 
 export function selectFixedConstrained(session, eligibleIds) {
-  const allowed = new Set(eligibleIds || []);
   const answered = new Set((session?.responses || []).map((response) => response?.taskId).filter(Boolean));
-  const ids = session?.taskIds || [];
-  const start = Math.max(0, session?.currentTaskIndex || 0);
-  for (let index = start; index < ids.length; index += 1) {
+  const ids = Array.isArray(eligibleIds) ? eligibleIds : (session?.taskIds || []);
+  for (let index = 0; index < ids.length; index += 1) {
     const taskId = ids[index];
     if (answered.has(taskId)) continue;
-    if (!allowed.has(taskId)) continue;
     return {
       taskId,
       strategy: "fixed",
