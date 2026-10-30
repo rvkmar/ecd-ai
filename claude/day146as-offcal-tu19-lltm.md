@@ -32,7 +32,11 @@ No migration.
 
 ## What was not done
 
-No automatic activation, and no copy of the prediction onto an evidence-model parameter set. Numeric Task Model Variables are a single column when they vary. A level the fit never saw is not given a difficulty. The mirt path was not executed here: this machine has eRm 1.0.4 and does not have mirt. The projection that the mirt path uses was checked on a shifted difficulty vector. The hub image has mirt and may not have eRm, so CI runs the mirt path.
+No automatic activation, and no copy of the prediction onto an evidence-model parameter set. Numeric Task Model Variables are a single column when they vary. A level the fit never saw is not given a difficulty. CI does not need eRm on the image.
+
+## CI fix
+
+`rvkmar/r-backend:latest` has mirt 1.48 and not eRm, so CI takes the mirt path. `lm()` rewrites a covariate name such as `bloom=understand` to `bloom.understand`. The projection then looked the original name up in `coef()` and stopped with `subscript out of bounds`. Slopes are now taken by position (intercept first, then design columns). Rasch difficulties come from `coef(..., IRTpars = TRUE, simplify = TRUE)$items`, matched to the item names, with a list-form fallback that drops `GroupPars`. `test-lltm.R` runs that path with `engine = "mirt"` whenever mirt is installed, including when eRm is also present. With eRm moved aside, the default engine is mirt and the same recovery passes.
 
 ## Rollback
 
@@ -51,7 +55,12 @@ There is no lint script and no ESLint config. Node on this machine is v22.23.4. 
 
 ```
 Rscript r-backend/app/tests/test-lltm.R
-  LLTM recovery passed (eRm::LLTM)
+  LLTM recovery passed (default, eRm::LLTM)
+  LLTM recovery passed (mirt, mirt Rasch linear item covariates)
+
+With eRm hidden and mirt 1.48 on the path (the CI package layout):
+  LLTM recovery passed (default, mirt Rasch linear item covariates)
+  LLTM recovery passed (mirt, mirt Rasch linear item covariates)
 
 Rscript r-backend/app/tests/test-contract.R
   R contract tests passed
@@ -60,11 +69,11 @@ Rscript r-backend/app/tests/test-diagnostic-keys.R
   R diagnostic key tests passed (GDINA not installed; fit skipped)
 
 Rscript r-backend/app/tests/test-bundle-grm.R
-  mirt not installed; skipped bundle GRM fixture
+  bundle GRM fixture ok
   R bundle GRM tests passed
 
 Rscript r-backend/app/tests/test-model-criticism.R
-  mirt not installed; skipped LSAT7 fixture
+  LSAT7 fixture criticism ok
   GDINA not installed; skipped sim10GDINA fixture
   R model criticism tests passed
 ```

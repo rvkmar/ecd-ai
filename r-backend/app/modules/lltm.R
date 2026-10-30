@@ -69,27 +69,75 @@
 }
 
 .lltm_project_difficulties_fit <- function(b, W, column_names) {
-  frame <- as.data.frame(W)
-  names(frame) <- column_names
-  frame$b <- as.numeric(b)
-  fit <- stats::lm(b ~ ., data = frame)
+  # lm() rewrites non-syntactic names (bloom=understand becomes
+  # bloom.understand). Match slopes by position, not by those names.
+  b <- as.numeric(b)
+  design <- matrix(as.numeric(W), nrow = length(b), ncol = length(column_names))
+  colnames(design) <- NULL
+  fit <- stats::lm(b ~ design)
   coefs <- stats::coef(fit)
-  ses <- summary(fit)$coefficients[, "Std. Error"]
-  V <- stats::vcov(fit)
+  if (length(coefs) != length(column_names) + 1L) {
+    stop("projection coefficient length does not match the design", call. = FALSE)
+  }
+  sm <- summary(fit)$coefficients
+  ses <- rep(NA_real_, length(coefs))
+  if (!is.null(sm) && !is.null(rownames(sm))) {
+    hit <- match(rownames(sm), names(coefs))
+    hit <- hit[!is.na(hit)]
+    if (length(hit)) ses[hit] <- sm[, "Std. Error"]
+  }
   intercept <- list(
-    estimate = .lltm_finite(coefs[["(Intercept)"]]),
-    se = .lltm_finite(ses[["(Intercept)"]])
+    estimate = .lltm_finite(coefs[[1]]),
+    se = .lltm_finite(ses[[1]])
   )
-  effects <- lapply(column_names, function(name) {
+  effects <- lapply(seq_along(column_names), function(j) {
     list(
-      name = name,
-      estimate = .lltm_finite(coefs[[name]]),
-      se = .lltm_finite(ses[[name]])
+      name = column_names[[j]],
+      estimate = .lltm_finite(coefs[[j + 1L]]),
+      se = .lltm_finite(ses[[j + 1L]])
     )
   })
-  order_names <- c("(Intercept)", column_names)
-  V <- V[order_names, order_names, drop = FALSE]
-  list(intercept = intercept, effects = unname(effects), vcov = V, fitted = as.numeric(stats::fitted(fit)))
+  # vcov row 1 is the intercept. Later rows follow the design columns.
+  list(
+    intercept = intercept,
+    effects = unname(effects),
+    vcov = stats::vcov(fit),
+    fitted = as.numeric(stats::fitted(fit))
+  )
+}
+
+# Rasch difficulties in the same order as the response columns.
+# simplify=TRUE drops GroupPars into $items. The list form is the fallback
+# and skips GroupPars explicitly.
+.lltm_mirt_difficulties <- function(fit, item_ids) {
+  n_items <- length(item_ids)
+  simplified <- tryCatch(
+    mirt::coef(fit, IRTpars = TRUE, simplify = TRUE),
+    error = function(e) NULL
+  )
+  items <- if (is.list(simplified)) simplified$items else NULL
+  if (is.matrix(items) && "b" %in% colnames(items) && nrow(items) == n_items) {
+    wanted <- make.names(item_ids, unique = TRUE)
+    if (!is.null(rownames(items)) && all(wanted %in% rownames(items))) {
+      return(as.numeric(items[wanted, "b"]))
+    }
+    return(as.numeric(items[, "b"]))
+  }
+  raw <- tryCatch(mirt::coef(fit, IRTpars = TRUE), error = function(e) NULL)
+  if (!is.list(raw)) return(NULL)
+  raw$GroupPars <- NULL
+  raw <- raw[!names(raw) %in% c("GroupPars", "mean", "cov", "means", "covs")]
+  if (length(raw) != n_items) return(NULL)
+  b <- vapply(raw, function(tab) {
+    if (is.matrix(tab) || is.data.frame(tab)) {
+      cn <- colnames(tab)
+      if ("b" %in% cn) return(as.numeric(tab[1, "b"]))
+      if ("b1" %in% cn) return(as.numeric(tab[1, "b1"]))
+    }
+    NA_real_
+  }, numeric(1))
+  if (length(b) != n_items || any(!is.finite(b))) return(NULL)
+  as.numeric(b)
 }
 
 .lltm_delta_se <- function(x, V) {
@@ -197,13 +245,9 @@
   if (!converged) {
     return(list(ok = FALSE, message = "mirt Rasch fit did not converge, so the covariate projection was not run."))
   }
-  coefs <- mirt::coef(fit, IRTpars = TRUE, simplify = TRUE)$items
-  if (is.null(coefs) || !"b" %in% colnames(coefs)) {
-    return(list(ok = FALSE, message = "mirt did not return Rasch difficulties."))
-  }
-  b <- as.numeric(coefs[, "b"])
-  if (length(b) != nrow(W)) {
-    return(list(ok = FALSE, message = "mirt difficulty vector does not match the design."))
+  b <- .lltm_mirt_difficulties(fit, item_ids)
+  if (is.null(b) || length(b) != nrow(W)) {
+    return(list(ok = FALSE, message = "mirt did not return Rasch difficulties in item order."))
   }
   projected <- .lltm_project_difficulties(b, W, column_names)
   if (any(vapply(projected$effects, function(effect) is.null(effect$estimate), logical(1)))) {
@@ -240,7 +284,7 @@
 
 # responses: persons x items, 0/1, NA allowed.
 # W: items x covariates, no intercept column, full column rank.
-fit_lltm_matrix <- function(X, W, item_ids, column_names) {
+fit_lltm_matrix <- function(X, W, item_ids, column_names, engine = NULL) {
   if (!is.matrix(X) || !is.numeric(X)) {
     return(list(ok = FALSE, message = "Response matrix must be numeric."))
   }
@@ -268,10 +312,23 @@ fit_lltm_matrix <- function(X, W, item_ids, column_names) {
   if (qr(W)$rank < ncol(W)) {
     return(list(ok = FALSE, message = "The covariate design is not full rank."))
   }
-  if (requireNamespace("eRm", quietly = TRUE)) {
+  # engine is NULL in production: eRm when it is installed, otherwise mirt.
+  # Tests pass engine = "mirt" so the fallback is checked even if eRm is present.
+  choice <- if (is.null(engine)) "" else as.character(engine[[1]])
+  if (!nzchar(choice)) {
+    if (requireNamespace("eRm", quietly = TRUE)) choice <- "eRm"
+    else if (requireNamespace("mirt", quietly = TRUE)) choice <- "mirt"
+  }
+  if (identical(choice, "eRm")) {
+    if (!requireNamespace("eRm", quietly = TRUE)) {
+      return(list(ok = FALSE, message = "eRm is not installed."))
+    }
     return(.lltm_fit_erm(X, W, item_ids, column_names))
   }
-  if (requireNamespace("mirt", quietly = TRUE)) {
+  if (identical(choice, "mirt")) {
+    if (!requireNamespace("mirt", quietly = TRUE)) {
+      return(list(ok = FALSE, message = "mirt is not installed."))
+    }
     return(.lltm_fit_mirt(X, W, item_ids, column_names))
   }
   list(ok = FALSE, message = "LLTM needs eRm or mirt, and neither is installed.")
