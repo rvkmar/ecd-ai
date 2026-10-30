@@ -2,6 +2,7 @@ import React from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useActivateParameterSet } from "@/api/queries/evidenceModels";
 import { apiErrorMessage } from "@/api/apiClient";
+import ModelCriticismPanel from "@/components/calibration/ModelCriticismPanel";
 
 export default function ParameterSetViewer({
     model,
@@ -148,6 +149,11 @@ export default function ParameterSetViewer({
                                         {ps.sampleSize}
                                     </div>
                                 </div>
+
+                                <ModelCriticismPanel
+                                    fitStatistics={ps.fitStatistics}
+                                    jobId={ps.calibrationJobId}
+                                />
 
                                 <details className="text-xs">
                                     <summary className="cursor-pointer text-slate-500 hover:text-slate-800">

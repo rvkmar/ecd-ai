@@ -4,6 +4,10 @@
 // contract tests read r-backend/app/tests/fixtures/*.json.
 
 import { CALIBRATION_JOB_KIND_VALUES } from "../../src/utils/ecdVocabulary.js";
+import {
+  fitStatisticsForParameterSet,
+  modelCriticismResponseErrors,
+} from "../../src/utils/modelCriticism.js";
 
 export const CALIBRATION_CONTRACT_VERSION = "1.0";
 
@@ -527,6 +531,7 @@ export function validateCalibrationResponse(body) {
       }
     }
   }
+  errors.push(...modelCriticismResponseErrors(body));
   return errors;
 }
 
@@ -537,7 +542,7 @@ export function parameterSetFromCalibrationResponse(response, extras = {}) {
     parameterSetId: extras.parameterSetId,
     parameters: response.parameters,
     standardErrors: response.standardErrors ?? undefined,
-    fitStatistics: response.fitStatistics ?? undefined,
+    fitStatistics: fitStatisticsForParameterSet(response.fitStatistics),
     packageVersion: response.packageVersion,
     converged: response.converged,
     sampleSize: response.sampleSize,

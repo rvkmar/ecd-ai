@@ -26,6 +26,7 @@ import { observableParameterEntries } from "../engines/calibrationFile";
 import { resolveCalibrationWindow } from "../engines/effectiveModel";
 import ParameterSetDiff from "./ParameterSetDiff";
 import ParameterSetReport from "./ParameterSetReport";
+import ModelCriticismPanel from "@/components/calibration/ModelCriticismPanel";
 
 export default function ParameterSetRegistry({
     evidenceModel,
@@ -290,6 +291,10 @@ export default function ParameterSetRegistry({
                                 <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
 
                                     <ParameterSetReport parameterSet={ps} />
+                                    <ModelCriticismPanel
+                                        fitStatistics={ps.fitStatistics}
+                                        jobId={ps.calibrationJobId}
+                                    />
 
                                     {ps.parameters?._fit && (
                                         <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">

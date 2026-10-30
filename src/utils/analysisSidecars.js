@@ -1,7 +1,17 @@
 // Sidecar CSV helpers for analysis artefacts. Person scores, TIF, and IIF
 // stay off list/detail JSON (same pattern as reportHtml).
 
-const SIDECAR_KEYS = ["reportHtml", "scores", "scoresCsv", "tifCsv", "iifCsv", "tifGrid", "iifGrid"];
+const SIDECAR_KEYS = [
+  "reportHtml",
+  "scores",
+  "scoresCsv",
+  "tifCsv",
+  "iifCsv",
+  "tifGrid",
+  "iifGrid",
+  "personFitRows",
+  "q3Matrix",
+];
 
 export function stripArtefactSidecars(row) {
   if (!row) return row;
@@ -21,6 +31,10 @@ export function stripArtefactSidecars(row) {
     Boolean(row.hasScores);
   const hasTif = Boolean(payload.tifCsv) || Boolean(payload.tifGrid) || Boolean(row.hasTif);
   const hasIif = Boolean(payload.iifCsv) || Boolean(payload.iifGrid) || Boolean(row.hasIif);
+  const hasPersonFit =
+    (Array.isArray(payload.personFitRows) && payload.personFitRows.length > 0) ||
+    Boolean(row.hasPersonFit);
+  const hasQ3 = Boolean(payload.q3Matrix) || Boolean(row.hasQ3);
   for (const key of SIDECAR_KEYS) {
     if (key in next) delete next[key];
   }
@@ -31,6 +45,8 @@ export function stripArtefactSidecars(row) {
     hasScores,
     hasTif,
     hasIif,
+    hasPersonFit,
+    hasQ3,
   };
 }
 
@@ -48,10 +64,14 @@ export function stripJobSidecars(job) {
     (Array.isArray(response.scores) && response.scores.length > 0) ||
     (typeof response.scoresCsv === "string" && response.scoresCsv.trim()) ||
     Boolean(job.hasScores);
+  const hasPersonFit =
+    (Array.isArray(response.personFitRows) && response.personFitRows.length > 0) ||
+    Boolean(job.hasPersonFit);
+  const hasQ3 = Boolean(response.q3Matrix) || Boolean(job.hasQ3);
   for (const key of SIDECAR_KEYS) {
     if (key in response) delete response[key];
   }
-  return { ...job, response, hasReport, hasScores };
+  return { ...job, response, hasReport, hasScores, hasPersonFit, hasQ3 };
 }
 
 function csvEscape(value) {
@@ -82,6 +102,15 @@ export function scoresFromPayload(payload) {
   if (!payload) return [];
   if (Array.isArray(payload.scores)) return payload.scores;
   return [];
+}
+
+export function redactPersonFitRows(rows) {
+  return (rows || []).map((row, i) => ({
+    Zh: row?.Zh ?? null,
+    misfit: Boolean(row?.misfit),
+    personId: `row-${i + 1}`,
+    personIdRedacted: true,
+  }));
 }
 
 export function redactScoreRows(rows) {

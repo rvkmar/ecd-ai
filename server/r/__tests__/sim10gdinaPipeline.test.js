@@ -29,6 +29,7 @@ import {
   SIM10_REQUIRED_COUNTS,
   checkSim10GdinaAcceptance,
 } from "./benchmarkAcceptance.js";
+import { cdmCriticismProblems } from "./modelCriticismAcceptance.js";
 
 const tokenFor = (role) =>
   jwt.sign({ username: `${role}1`, role }, JWT_SECRET, { expiresIn: "1h" });
@@ -376,12 +377,20 @@ describe.skipIf(!liveR)("sim10GDINA live R pipeline", () => {
     });
     expect(acceptance.ok, acceptance.failures.join("; ") || liveDump).toBe(true);
 
+    const criticism = cdmCriticismProblems(job.response, { nItems: itemIds.length });
+    expect(criticism, criticism.join("; ") || liveDump).toEqual([]);
+
     const ingested = await request(app)
       .post(`/api/calibrationJobs/${jobId}/ingest`)
       .set("Authorization", `Bearer ${tokenFor("admin")}`);
     expect(ingested.status).toBe(200);
     expect(ingested.body.parameterSet.calibrationJobId).toBe(jobId);
     expect(ingested.body.parameterSet.packageVersion).toMatch(/^GDINA /);
+    const storedCriticism = cdmCriticismProblems(ingested.body.parameterSet, {
+      nItems: itemIds.length,
+      stored: true,
+    });
+    expect(storedCriticism, storedCriticism.join("; ")).toEqual([]);
     expect(dbState.current.evidenceModels[0].statisticalModels[0].parameterSets).toHaveLength(1);
   }, 180_000);
 
@@ -439,11 +448,21 @@ describe.skipIf(!liveR)("sim10GDINA live R pipeline", () => {
       expect(par.guess).toBeLessThan(1 - par.slip);
     }
 
+    const criticism = cdmCriticismProblems(job.response, {
+      nItems: enqueue.body.request.model.itemIds.length,
+    });
+    expect(criticism, criticism.join("; ") || liveDump).toEqual([]);
+
     const ingested = await request(app)
       .post(`/api/calibrationJobs/${jobId}/ingest`)
       .set("Authorization", `Bearer ${tokenFor("admin")}`);
     expect(ingested.status).toBe(200);
     expect(ingested.body.parameterSet.parameters["Item.1"].slip).toBeDefined();
+    const storedCriticism = cdmCriticismProblems(ingested.body.parameterSet, {
+      nItems: enqueue.body.request.model.itemIds.length,
+      stored: true,
+    });
+    expect(storedCriticism, storedCriticism.join("; ")).toEqual([]);
     expect(dbState.current.evidenceModels[0].statisticalModels[1].parameterSets).toHaveLength(1);
   }, 180_000);
 });

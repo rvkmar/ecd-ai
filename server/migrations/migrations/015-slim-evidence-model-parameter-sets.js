@@ -147,22 +147,11 @@ function presentPayload(value) {
 
 function scalarFit(fit) {
   if (!fit || typeof fit !== "object" || Array.isArray(fit)) return null;
-  const kept = {};
-  for (const [key, value] of Object.entries(fit)) {
-    if (key === "personScores" || key === "scores" || key === "scoresCsv") continue;
-    if (isPersonPayload(value)) continue;
-    kept[key] = value;
-  }
-  return Object.keys(kept).length ? kept : null;
-}
-
-function isPersonPayload(value) {
-  if (Array.isArray(value)) {
-    return value.some((row) => row && typeof row === "object" && ("personId" in row || "studentId" in row));
-  }
-  if (!value || typeof value !== "object") return false;
-  return (Array.isArray(value.personIds) && value.personIds.length > 0)
-    || (Array.isArray(value.studentIds) && value.studentIds.length > 0);
+  // Same kept-fit rules as the writer. Summaries stay. Person rows and
+  // the Q3 matrix do not.
+  const { parameterSet, stripped } = slimParameterSet({ fitStatistics: fit });
+  if (!stripped) return fit;
+  return parameterSet.fitStatistics ?? null;
 }
 
 function findMatch(artefacts, stripped, parameterSetId) {

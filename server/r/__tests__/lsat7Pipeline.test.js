@@ -26,6 +26,7 @@ import { postCalibration, getRHealth } from "../rClient.js";
 import { applyNamedCalibrationFixture } from "../calibrationFixtures.js";
 import { validateCalibrationRequest, CALIBRATION_CONTRACT_VERSION } from "../calibrationContract.js";
 import { checkLsat7IrtAcceptance } from "./benchmarkAcceptance.js";
+import { irtCriticismProblems } from "./modelCriticismAcceptance.js";
 
 const tokenFor = (role) =>
   jwt.sign({ username: `${role}1`, role }, JWT_SECRET, { expiresIn: "1h" });
@@ -309,12 +310,35 @@ describe.skipIf(!liveR)("LSAT7 live R pipeline", () => {
     const acceptance = checkLsat7IrtAcceptance(job.response, { itemIds });
     expect(acceptance.ok, acceptance.failures.join("; ") || liveDump).toBe(true);
 
+    const criticism = irtCriticismProblems(job.response, {
+      sampleSize: 1000,
+      nItems: itemIds.length,
+    });
+    expect(criticism, criticism.join("; ") || liveDump).toEqual([]);
+
     const ingested = await request(app)
       .post(`/api/calibrationJobs/${jobId}/ingest`)
       .set("Authorization", `Bearer ${tokenFor("admin")}`);
     expect(ingested.status).toBe(200);
     expect(ingested.body.parameterSet.calibrationJobId).toBe(jobId);
     expect(ingested.body.parameterSet.packageVersion).toMatch(/^mirt /);
+    const storedCriticism = irtCriticismProblems(ingested.body.parameterSet, {
+      sampleSize: 1000,
+      nItems: itemIds.length,
+      stored: true,
+    });
+    expect(storedCriticism, storedCriticism.join("; ")).toEqual([]);
     expect(dbState.current.evidenceModels[0].statisticalModels[0].parameterSets).toHaveLength(1);
+
+    const auth = { Authorization: `Bearer ${tokenFor("admin")}` };
+    const detail = await request(app).get(`/api/calibrationJobs/${jobId}`).set(auth);
+    expect(detail.body.response.personFitRows).toBeUndefined();
+    expect(detail.body.response.q3Matrix).toBeUndefined();
+    expect(detail.body.hasPersonFit).toBe(true);
+    expect(detail.body.hasQ3).toBe(true);
+    expect(detail.body.response.fitStatistics.personFit.nPersons).toBe(1000);
+    const flags = await request(app).get(`/api/calibrationJobs/${jobId}/person-fit`).set(auth);
+    expect(flags.status).toBe(200);
+    expect(flags.body.rows).toHaveLength(1000);
   }, 180_000);
 });

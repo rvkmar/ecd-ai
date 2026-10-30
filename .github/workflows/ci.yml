@@ -125,6 +125,9 @@ jobs:
             console.log('D88 Hub package gate ok');
           " "$health"
 
+      - name: R model-criticism tests on the fixtures
+        run: docker exec -e ECD_REQUIRE_MODEL_CRITICISM_PACKAGES=1 r-backend Rscript /home/app/tests/test-model-criticism.R
+
       - name: D88 perturbation predicates (always-run)
         run: npx vitest run server/r/__tests__/benchmarkPerturbation.test.js
 

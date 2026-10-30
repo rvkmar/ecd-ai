@@ -108,6 +108,93 @@ describe("slimParameterSet", () => {
     expect(cited.parameterSet.parameters).toEqual({ item_a: { a: 1 } });
   });
 
+  it("keeps model-criticism summaries and strips person rows and the Q3 matrix", () => {
+    const input = fatSet({
+      personFitRows: [{ personId: "stud-9", Zh: -2.4, misfit: true }],
+      q3Matrix: { itemIds: ["item_a", "item_b"], values: [[1, 0.4], [0.4, 1]] },
+      fitStatistics: {
+        global: { RMSEA: 0.031, M2: 12.4 },
+        itemFit: { item_a: { S_X2: 1.1 } },
+        kr20: 0.81,
+        cdmFit: { M2: 8, df: 4, p: 0.09, RMSEA2: 0.02, SRMSR: 0.03 },
+        qValidation: {
+          eps: 0.95,
+          nItems: 2,
+          nChanged: 1,
+          suggestions: [{ itemId: "item_b", original: [1, 0], suggested: [0, 1], pvaf: 0.97 }],
+        },
+        personFit: {
+          statistic: "Zh",
+          cutoff: -2,
+          nPersons: 2,
+          nMisfit: 1,
+          proportionMisfit: 0.5,
+          rows: [{ personId: "stud-9", Zh: -2.4, misfit: true }],
+        },
+        localDependence: {
+          statistic: "Q3",
+          threshold: 0.2,
+          maxAbsQ3: 0.4,
+          nFlaggedPairs: 1,
+          flaggedPairs: [{ itemId1: "item_a", itemId2: "item_b", q3: 0.4 }],
+          q3Matrix: { itemIds: ["item_a", "item_b"], values: [[1, 0.4], [0.4, 1]] },
+        },
+        personScores: {
+          method: "EAP",
+          personIds: ["stud-1", "stud-2"],
+          theta: [0.2, -0.4],
+          se: [0.3, 0.31],
+        },
+      },
+    });
+    const { parameterSet, stripped } = slimParameterSet(input);
+    expect(parameterSet.personFitRows).toBeUndefined();
+    expect(parameterSet.q3Matrix).toBeUndefined();
+    expect(parameterSet.fitStatistics.cdmFit).toEqual({ M2: 8, df: 4, p: 0.09, RMSEA2: 0.02, SRMSR: 0.03 });
+    expect(parameterSet.fitStatistics.qValidation.suggestions[0].pvaf).toBe(0.97);
+    expect(parameterSet.fitStatistics.personFit).toEqual({
+      statistic: "Zh",
+      cutoff: -2,
+      nPersons: 2,
+      nMisfit: 1,
+      proportionMisfit: 0.5,
+    });
+    expect(parameterSet.fitStatistics.localDependence.flaggedPairs).toEqual([
+      { itemId1: "item_a", itemId2: "item_b", q3: 0.4 },
+    ]);
+    expect(parameterSet.fitStatistics.localDependence.q3Matrix).toBeUndefined();
+    expect(parameterSet.fitStatistics.personScores).toBeUndefined();
+    expect(parameterSet.fitStatistics.kr20).toBe(0.81);
+    expect(JSON.stringify(parameterSet)).not.toMatch(/stud-9/);
+    expect(stripped.personFitRows[0].personId).toBe("stud-9");
+    expect(stripped.q3Matrix.values[0][1]).toBe(0.4);
+    expect(stripped.fitStatistics.personFit.rows[0].personId).toBe("stud-9");
+    expect(stripped.fitStatistics.localDependence.q3Matrix.itemIds).toEqual(["item_a", "item_b"]);
+  });
+
+  it("leaves criticism summaries in place when no sidecar is present", () => {
+    const input = {
+      parameterSetId: "ps-fit",
+      parameters: { item_a: { a: 1 } },
+      fitStatistics: {
+        cdmFit: { M2: 8, RMSEA2: 0.02, SRMSR: 0.03 },
+        qValidation: { eps: 0.95, nItems: 1, nChanged: 0, suggestions: [] },
+        personFit: { statistic: "Zh", cutoff: -2, nPersons: 10, nMisfit: 1, proportionMisfit: 0.1 },
+        localDependence: {
+          statistic: "Q3",
+          threshold: 0.2,
+          maxAbsQ3: 0.11,
+          nFlaggedPairs: 0,
+          flaggedPairs: [],
+        },
+      },
+    };
+    const result = slimParameterSet(input);
+    expect(result.changed).toBe(false);
+    expect(result.parameterSet).toBe(input);
+    expect(result.stripped).toBeNull();
+  });
+
   it("leaves a parameter set with only scalar fit untouched", () => {
     const input = {
       parameterSetId: "ps-ok",

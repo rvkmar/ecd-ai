@@ -6,6 +6,7 @@
 // that owns them and are not re-run just because a candidate was stored.
 
 import { isParameterSetStatus } from "./parameterSetStatus.js";
+import { bulkyFitStatisticsErrors } from "./modelCriticism.js";
 import {
   CALIBRATION_FILE_KIND_VALUES,
   statisticalModelTypesForCalibrationKind,
@@ -55,6 +56,10 @@ export function parameterSetStorageErrors(parameterSet, statisticalModel) {
   if (ps.fitStatistics !== undefined && ps.fitStatistics !== null) {
     if (typeof ps.fitStatistics !== "object" || Array.isArray(ps.fitStatistics)) {
       errors.push(`Parameter set ${psTag} on model ${smId} has invalid fitStatistics: should be object.`);
+    } else {
+      for (const message of bulkyFitStatisticsErrors(ps.fitStatistics)) {
+        errors.push(`Parameter set ${psTag} on model ${smId}: ${message}`);
+      }
     }
   }
   if (ps.qMatrixId != null && typeof ps.qMatrixId !== "string") {
