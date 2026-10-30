@@ -309,7 +309,7 @@ function resolveContinuousParameters(observationId, evidenceModel, item, freeze 
 
 /**
  * DINA slip/guess for a candidate item: calibrated parameter set first
- * (keyed by ITEM id), then the item's pilot `psychometrics.dinaParams`
+ * (observable id, then the item id), then the item's pilot `psychometrics.dinaParams`
  * (D53b). G-DINA uses the calibrated saturated probability table when
  * one exists (R7). It deliberately gets no pilot fallback here, exactly
  * as it gets none in sessionRoutes.js's submit path -- no item-level

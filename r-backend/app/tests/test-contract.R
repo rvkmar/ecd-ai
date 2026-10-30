@@ -59,4 +59,52 @@ sim10_n <- sum(vapply(sim10$patterns, function(p) as.integer(p$freq), integer(1)
 .stop_if(length(sim10$attributeIds) != 3L, "sim10GDINA must have 3 attribute ids")
 .stop_if(length(sim10$qMatrix) != 10L, "sim10GDINA Q must have 10 item rows")
 
+# TU15: DINA/G-DINA parameter keys. Legacy (no observableIds) stays on
+# the item id. A unique observable id becomes the key. A blank or a
+# repeated observable stays on the item id. A collision is refused.
+items <- list("item-a", "item-b", "item-c")
+legacy <- diagnostic_parameter_keys(items, NULL)
+.stop_if(!identical(legacy$keys, c("item-a", "item-b", "item-c")), "legacy keys must be item ids")
+.stop_if(length(legacy$errors) != 0L, "legacy keys must not error")
+
+fresh <- diagnostic_parameter_keys(items, list("obs-a", "obs-b", "obs-c"))
+.stop_if(!identical(fresh$keys, c("obs-a", "obs-b", "obs-c")), "unique observables must key the map")
+.stop_if(length(fresh$errors) != 0L, "unique observables must not error")
+
+mixed <- diagnostic_parameter_keys(items, list("obs-a", "", "obs-a"))
+.stop_if(
+  !identical(mixed$keys, c("item-a", "item-b", "item-c")),
+  "a repeated observable must stay on the item id for every column that shares it"
+)
+blank_one <- diagnostic_parameter_keys(items, c("obs-a", "", "obs-c"))
+.stop_if(
+  !identical(blank_one$keys, c("obs-a", "item-b", "obs-c")),
+  "a mixed set keys unique observables and leaves a blank column on the item id"
+)
+
+clash <- diagnostic_parameter_keys(items, list("item-b", "", "obs-c"))
+.stop_if(length(clash$errors) == 0L, "an observable id that collides with an item id was accepted")
+.stop_if(!grepl("not unique", clash$errors[[1]]), "collision error must say the key is not unique")
+
+short <- diagnostic_parameter_keys(items, list("obs-a"))
+.stop_if(is.null(short$errors) || !grepl("length must match", short$errors[[1]]), "short observableIds was accepted")
+
+dina_req <- valid_req
+dina_req$model$family <- "dina"
+dina_req$model$subtype <- NULL
+dina_req$qMatrix <- list(
+  attributeIds = list("A1"),
+  itemIds = dina_req$model$itemIds,
+  data = list(list(1), list(1), list(0))
+)
+dina_req$model$observableIds <- list("obs-a", "", "obs-c")
+.stop_if(!is.null(validate_calibration_request(dina_req)), "mixed observableIds request was refused")
+
+dina_req$model$observableIds <- NULL
+.stop_if(!is.null(validate_calibration_request(dina_req)), "dina request without observableIds was refused")
+
+bad_obs <- dina_req
+bad_obs$model$observableIds <- list("item_b", "", "obs-c")
+.stop_if(is.null(validate_calibration_request(bad_obs)), "colliding observableIds request was accepted")
+
 cat("R contract tests passed\n")

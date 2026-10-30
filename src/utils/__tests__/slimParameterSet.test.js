@@ -65,6 +65,30 @@ describe("slimParameterSet", () => {
     expect(stripped.diagnostics.plots.information).toEqual([1, 2]);
   });
 
+  it("keeps observable-keyed DINA and G-DINA parameters when sidecars are stripped", () => {
+    const parameters = {
+      "obs-a": { slip: 0.1, guess: 0.2 },
+      "item-b": { slip: 0.15, guess: 0.1 },
+      "obs-c": { probabilities: [0.2, 0.2, 0.2, 0.85] },
+    };
+    const standardErrors = {
+      "obs-a": { slip: 0.02, guess: 0.03 },
+      "item-b": { slip: 0.04, guess: 0.02 },
+      "obs-c": { probabilities: [0.01, 0.01, 0.01, 0.02] },
+    };
+    const input = fatSet({
+      parameters,
+      standardErrors,
+      calibrationKind: "dina-parameters",
+    });
+    const { parameterSet, changed } = slimParameterSet(input, { calibrationJobId: "job-1" });
+    expect(changed).toBe(true);
+    expect(parameterSet.reportHtml).toBeUndefined();
+    expect(parameterSet.parameters).toEqual(parameters);
+    expect(parameterSet.standardErrors).toEqual(standardErrors);
+    expect(Object.keys(parameterSet.parameters)).toEqual(["obs-a", "item-b", "obs-c"]);
+  });
+
   it("is idempotent and adds a reference only when one is known and missing", () => {
     const once = slimParameterSet(fatSet(), { analysisArtefactId: "aa-9" });
     const twice = slimParameterSet(once.parameterSet, { analysisArtefactId: "aa-other", calibrationJobId: "job-other" });

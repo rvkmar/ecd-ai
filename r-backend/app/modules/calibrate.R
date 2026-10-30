@@ -750,9 +750,25 @@ calibrate_diagnostic <- function(body, res) {
     ))
   }
 
+  # TU15: slip/guess and G-DINA probabilities are keyed by observable id
+  # when that id is unique in model$observableIds. A blank or repeated
+  # observable stays on the item id. Absent observableIds (sim10GDINA,
+  # and any set already stored) stay item-keyed. item.names above stay
+  # the request item ids so the fit itself is unchanged.
+  keyed <- diagnostic_parameter_keys(request_item_ids, body$model$observableIds)
+  if (length(keyed$errors)) {
+    res$status <- 200
+    return(.failure(
+      body$jobId,
+      paste(keyed$errors, collapse = "; "),
+      "ContractError",
+      paste(stderr_lines, collapse = "\n")
+    ))
+  }
+
   parameters <- list()
   for (i in seq_along(catprob)) {
-    id <- request_item_ids[[i]]
+    id <- keyed$keys[[i]]
     probs <- as.numeric(unname(catprob[[i]]))
     if (identical(family, "dina")) {
       guess <- probs[[1]]

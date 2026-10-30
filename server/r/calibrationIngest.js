@@ -15,6 +15,7 @@ import {
   placeAnalysisArtefact,
 } from "../analysisArtefacts/analysisArtefactRepository.js";
 import {
+  diagnosticParameterKeyErrors,
   parameterSetFromCalibrationResponse,
   validateCalibrationResponse,
 } from "./calibrationContract.js";
@@ -71,6 +72,10 @@ export function ingestRefusal(job, db) {
     return writesArtefact
       ? "Ingestion refuses converged: false — the job stays inspectable and never becomes an analysis artefact"
       : "Ingestion refuses converged: false — the job stays inspectable and never becomes a parameter set";
+  }
+  if (writesParams) {
+    const keyErrors = diagnosticParameterKeyErrors(job.request, job.response?.parameters);
+    if (keyErrors.length > 0) return keyErrors.join(" ");
   }
   if (db) {
     const em = db.evidenceModels?.find((m) => m.id === job.evidenceModelId);

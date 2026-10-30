@@ -664,6 +664,65 @@ describe("accumulateAttributeMastery — the full branch", () => {
     expect(posteriors[0].estimate).toBeCloseTo(11 / 15, 12);
   });
 
+  it("TU15: a mixed set uses the observable row and the item fallback", () => {
+    const parameters = {
+      o1: { slip: 0.1, guess: 0.2 },
+      i2: { slip: 0.05, guess: 0.05 },
+      i1: { slip: 0.4, guess: 0.3 },
+    };
+    const oneAttribute = {
+      entries: [
+        { itemId: "i1", attributeId: "attr-a" },
+        { itemId: "i2", attributeId: "attr-a" },
+      ],
+      attributeIds: ["attr-a"],
+      smVariables: [binaryAttr("attr-a", 0.5)],
+    };
+    const group = [
+      { itemId: "i1", observableId: "o1", activated: true, direction: "supports" },
+      { itemId: "i2", observableId: "o-missing", activated: true, direction: "supports" },
+    ];
+    const both = accumulateAttributeMastery(makeContext({ ...oneAttribute, parameters, group }).args);
+    expect(both[0].supported).toBe(true);
+    expect(both[0].responsesUsed).toBe(2);
+
+    const onlyObservable = accumulateAttributeMastery(makeContext({
+      ...oneAttribute,
+      entries: [{ itemId: "i1", attributeId: "attr-a" }],
+      parameters,
+      group: [group[0]],
+    }).args);
+    const onlyItem = accumulateAttributeMastery(makeContext({
+      ...oneAttribute,
+      entries: [{ itemId: "i2", attributeId: "attr-a" }],
+      parameters,
+      group: [group[1]],
+    }).args);
+    expect(both[0].estimate).not.toBeCloseTo(onlyObservable[0].estimate, 5);
+    expect(both[0].estimate).not.toBeCloseTo(onlyItem[0].estimate, 5);
+
+    const dropped = accumulateAttributeMastery(makeContext({
+      ...oneAttribute,
+      parameters: { o1: { slip: 0.1, guess: 0.2 } },
+      group,
+    }).args);
+    expect(dropped[0].responsesUsed).toBe(1);
+    expect(dropped[0].responsesExcluded).toBe(1);
+
+    const gdina = {
+      "obs-g": { probabilities: [0.2, 0.2, 0.2, 0.9] },
+      "item-g": { probabilities: [0.4, 0.4, 0.4, 0.5] },
+    };
+    expect(calibratedDiagnosticParams(
+      { parameters: gdina },
+      { observableId: "obs-g", itemId: "item-g" }
+    )).toEqual({ params: gdina["obs-g"], keyedBy: "observableId" });
+    expect(calibratedDiagnosticParams(
+      { parameters: { "item-g": gdina["item-g"] } },
+      { observableId: "obs-missing", itemId: "item-g" }
+    )).toEqual({ params: gdina["item-g"], keyedBy: "itemId" });
+  });
+
   it("R9: an item-keyed set still scores when no observable row exists", () => {
     const { args } = makeContext({
       parameters: { i1: { slip: 0.1, guess: 0.2 } },

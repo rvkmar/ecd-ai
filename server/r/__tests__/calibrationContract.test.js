@@ -8,6 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   CALIBRATION_CONTRACT_VERSION,
+  diagnosticParameterKeyErrors,
   validateCalibrationRequest,
   validateCalibrationResponse,
   unboxPlumberScalars,
@@ -161,6 +162,81 @@ describe("request envelope", () => {
     expect(validateCalibrationRequest(body)).toEqual([]);
     expect(body.model.family).toBe("test-information");
     expect(body.responseMatrix.personIds).toHaveLength(1000);
+  });
+});
+
+describe("TU15 diagnostic parameter keys", () => {
+  const itemIds = ["item-a", "item-b", "item-c"];
+
+  function accepted(observableIds, keys) {
+    const request = {
+      model: { family: "dina", itemIds, observableIds },
+    };
+    const parameters = Object.fromEntries(keys.map((key) => [key, { slip: 0.1, guess: 0.2 }]));
+    expect(diagnosticParameterKeyErrors(request, parameters)).toEqual([]);
+  }
+
+  it("keys a new set by unique observable ids", () => {
+    accepted(["obs-a", "obs-b", "obs-c"], ["obs-a", "obs-b", "obs-c"]);
+  });
+
+  it("keeps a legacy set on item ids when observableIds is absent", () => {
+    expect(diagnosticParameterKeyErrors(
+      { model: { family: "dina", itemIds } },
+      { "item-a": { slip: 0.1, guess: 0.2 } }
+    )).toEqual([]);
+  });
+
+  it("mixes a unique observable with a blank column and a repeated observable", () => {
+    accepted(["obs-a", "", "obs-c"], ["obs-a", "item-b", "obs-c"]);
+    accepted(["obs-a", "obs-a", "obs-c"], ["item-a", "item-b", "obs-c"]);
+  });
+
+  function dinaRequest(observableIds) {
+    const body = readFix("valid-request.json");
+    body.model = { family: "dina", itemIds: body.model.itemIds };
+    body.qMatrix = {
+      attributeIds: ["A1"],
+      itemIds: body.model.itemIds,
+      data: [[1], [1], [0]],
+    };
+    if (observableIds !== undefined) body.model.observableIds = observableIds;
+    return body;
+  }
+
+  it("refuses a length mismatch, a non-array, and a key collision", () => {
+    expect(validateCalibrationRequest(dinaRequest(["obs-a"])).join(" ")).toMatch(/length must match/);
+    const named = dinaRequest();
+    named.model.observableIds = { a: "obs-a" };
+    expect(validateCalibrationRequest(named).join(" ")).toMatch(/must be an array/);
+    expect(validateCalibrationRequest(dinaRequest(["item_b", "", "obs-c"])).join(" ")).toMatch(
+      /not unique/
+    );
+  });
+
+  it("accepts a dina request with no observableIds and one with a mixed vector", () => {
+    expect(validateCalibrationRequest(dinaRequest())).toEqual([]);
+    const mixed = dinaRequest(["obs-a", "", "obs-c"]);
+    expect(validateCalibrationRequest(mixed)).toEqual([]);
+    expect(diagnosticParameterKeyErrors(mixed, {
+      "obs-a": { slip: 0.1, guess: 0.2 },
+      item_b: { slip: 0.2, guess: 0.1 },
+      "obs-c": { probabilities: [0.2, 0.9] },
+    })).toEqual([]);
+  });
+
+  it("refuses parameter keys that ignore the observable ids", () => {
+    const request = dinaRequest(["obs-a", "obs-b", "obs-c"]);
+    expect(validateCalibrationRequest(request)).toEqual([]);
+    const errors = diagnosticParameterKeyErrors(request, {
+      item_a: { slip: 0.1, guess: 0.2 },
+      item_b: { slip: 0.1, guess: 0.2 },
+      item_c: { slip: 0.1, guess: 0.2 },
+    });
+    expect(errors.join(" ")).toMatch(/keyed by observable id/);
+    expect(diagnosticParameterKeyErrors({ model: { family: "dina", itemIds } }, {
+      "item-a": { slip: 0.1, guess: 0.2 },
+    })).toEqual([]);
   });
 });
 

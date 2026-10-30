@@ -57,13 +57,13 @@ import { activePackageFor, packageEntryFor } from "../compositeLibrary/activePac
 export const CONTINUOUS_MODEL_FAMILIES = ["irt", "rasch"];
 
 /**
- * D50 / D68 / R9: calibrated parameters are keyed by observableId.
+ * D50 / D68 / R9 / TU15: calibrated parameters are keyed by observableId.
  * Distinct item difficulties (IRT) or slip/guess (DINA/G-DINA) require
- * distinct observables — items that share an observation correctly share
- * one row. R jobs often key columns by model.itemIds; if the observable
- * key is absent, fall back to itemId so an ingested set is not silently
- * unused. When both exist, observable wins. R4's two observables on one
- * item are why DINA cannot stay item-only.
+ * distinct observables. Items that share an observation share one row.
+ * A new DINA/G-DINA set keys a unique observable by that id. A blank or
+ * shared observable, and any set written before TU15, stays on the item
+ * id. If the observable key is absent, fall back to itemId. When both
+ * exist, observable wins.
  */
 export function calibratedIrtParams(parameterSet, { observableId, itemId } = {}) {
   const map = parameterSet?.parameters || {};

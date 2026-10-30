@@ -233,6 +233,7 @@ describe("live response matrix", () => {
     expect(assessed.ok).toBe(true);
     expect(assessed.qMatrixId).toBe("qm1");
     expect(assessed.request.model.family).toBe("dina");
+    expect(assessed.request.model.observableIds).toEqual(["obs-a", "obs-b", ""]);
     expect(assessed.request.qMatrix).toEqual({
       id: "qm1",
       attributeIds: ["attr-1", "attr-2"],

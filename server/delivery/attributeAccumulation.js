@@ -31,7 +31,9 @@ import { entriesForResponse } from "../../src/utils/qMatrixEntries.js";
 //    should not. Lookup is therefore the D50 rule: observableId wins
 //    when the parameter set has that key, else itemId. Two items that
 //    share an observation share a row when the set is keyed that way;
-//    an R-ingested set that still keys by item (R1) still scores.
+//    TU15 writes a new set under a unique observable id. A blank or
+//    shared observable, and any set already stored under the item id,
+//    still scores through the item fallback.
 //    Pilot `psychometrics.dinaParams` stay on the item.
 //
 // 2. THE PRIOR ASSUMES ATTRIBUTE INDEPENDENCE; THE POSTERIOR DOES NOT.
@@ -321,9 +323,10 @@ export function gdinaParametersAreUsable(params, requiredCount) {
 }
 
 /**
- * D50 / R9: the same observable-then-item lookup IRT uses. Lives here
- * rather than importing evidenceAccumulation.js (that file imports this
- * one). Keep the two copies in step: observable wins when present.
+ * D50 / R9 / TU15: the same observable-then-item lookup IRT uses. Lives
+ * here rather than importing evidenceAccumulation.js (that file imports
+ * this one). Keep the two copies in step: observable wins when present,
+ * otherwise the item id. A mixed set uses whichever key that column has.
  */
 export function calibratedDiagnosticParams(parameterSet, { observableId, itemId } = {}) {
   const map = parameterSet?.parameters || {};
