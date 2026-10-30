@@ -224,7 +224,9 @@ export function ingestCalibrationJob(job, db, extras = {}) {
   sm.parameterSets.push(parameterSet);
   // A candidate is stored and not live. Scoring and selection keep reading
   // activeParameterSetId. A person activates the candidate on
-  // POST /evidenceModels/:id/activate-parameter-set. In-flight sessions
+  // POST /evidenceModels/:id/activate-parameter-set, which applies the TU5
+  // fit gate. Ingest does not activate, so a poor fit can still be stored
+  // and inspected before that decision. In-flight sessions
   // stay on their opening freeze (D68). A confirmed model may have no
   // active set yet; that is the first-calibration window. Ingest checks
   // the new row's provenance only. Decision rules, assembly floors, and

@@ -27,6 +27,7 @@ import { resolveCalibrationWindow } from "../engines/effectiveModel";
 import ParameterSetDiff from "./ParameterSetDiff";
 import ParameterSetReport from "./ParameterSetReport";
 import ModelCriticismPanel from "@/components/calibration/ModelCriticismPanel";
+import { FitGateOverrideForm, FitGateSummary } from "./FitGateNotice";
 
 export default function ParameterSetRegistry({
     evidenceModel,
@@ -36,6 +37,7 @@ export default function ParameterSetRegistry({
 
     const [expanded, setExpanded] = useState(null);
     const [compareWith, setCompareWith] = useState(null);
+    const [overrideTarget, setOverrideTarget] = useState(null);
 
     const activateParameterSet = useActivateParameterSet();
 
@@ -63,15 +65,22 @@ export default function ParameterSetRegistry({
         ps => ps.parameterSetId === statisticalModel?.activeParameterSetId
     );
 
-    const handleActivate = (parameterSetId) => {
+    const handleActivate = (parameterSetId, reason) => {
         if (!window_.open) return;
-        activateParameterSet.mutate({
-            id: evidenceModel.id,
-            payload: {
-                statisticalModelId: statisticalModel.id,
-                parameterSetId,
-            },
-        });
+        const payload = {
+            statisticalModelId: statisticalModel.id,
+            parameterSetId,
+        };
+        if (typeof reason === "string") payload.fitOverride = { reason };
+        activateParameterSet.mutate(
+            { id: evidenceModel.id, payload },
+            {
+                onSuccess: () => setOverrideTarget(null),
+                onError: (err) => {
+                    if (err?.body?.fitGate?.status === "fail") setOverrideTarget(parameterSetId);
+                },
+            }
+        );
     };
 
     /* =====================================================
@@ -258,6 +267,10 @@ export default function ParameterSetRegistry({
                                         <div className="mt-2 text-xs text-slate-500">{ps.notes}</div>
                                     )}
 
+                                    <div className="mt-2">
+                                        <FitGateSummary fitGate={ps.fitGate} alreadyActive={isActive} />
+                                    </div>
+
                                 </div>
 
                                 <div className="flex shrink-0 gap-2">
@@ -285,6 +298,13 @@ export default function ParameterSetRegistry({
                                 </div>
 
                             </div>
+
+                            {overrideTarget === ps.parameterSetId && (
+                                <FitGateOverrideForm
+                                    disabled={activateParameterSet.isPending || !window_.open}
+                                    onSubmit={(reason) => handleActivate(ps.parameterSetId, reason)}
+                                />
+                            )}
 
                             {isOpen && (
 

@@ -29,6 +29,7 @@ import { deliveryAdministrationErrors } from "../../server/delivery/deliveryAdmi
 import { bayesianNetworkAuthoringErrors } from "../../server/delivery/bayesianNetwork.js";
 import { evaluateAssemblySufficiency } from "./assemblySufficiency.js";
 import { parameterSetStorageErrors } from "./parameterSetRecord.js";
+import { FIT_THRESHOLD_KEYS } from "./fitActivationGate.js";
 import { assemblyConstraintErrors } from "./assemblyConstraints.js";
 
 // The shared ECD response vocabulary. Imported rather than restated so the
@@ -397,6 +398,9 @@ export const schema = {
         status: 'string',
         activatedAt: 'date',
         activatedBy: 'string',
+        // TU5. Activation decision. Optional. Absent on sets that were
+        // already active before the gate (those stay active).
+        fitGate: 'object',
       }],
       activeParameterSetId: 'string',
     }],
@@ -2688,6 +2692,23 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           errors.push("calibrationPlan.scheduledEnqueue should be object");
         } else if (se.jobs !== undefined && se.jobs !== null && !Array.isArray(se.jobs)) {
           errors.push("calibrationPlan.scheduledEnqueue.jobs should be an array");
+        }
+      }
+      if (
+        obj.calibrationPlan.fitThresholds !== undefined &&
+        obj.calibrationPlan.fitThresholds !== null
+      ) {
+        const thresholds = obj.calibrationPlan.fitThresholds;
+        if (typeof thresholds !== "object" || Array.isArray(thresholds)) {
+          errors.push("calibrationPlan.fitThresholds should be object");
+        } else {
+          for (const key of FIT_THRESHOLD_KEYS) {
+            const value = thresholds[key];
+            if (value == null) continue;
+            if (typeof value !== "number" || !Number.isFinite(value)) {
+              errors.push(`calibrationPlan.fitThresholds.${key} should be a number`);
+            }
+          }
         }
       }
     }

@@ -16,6 +16,8 @@ const SIDECAR_KEYS = [
 
 // TU4. Person-fit rows and the Q3 matrix are sidecars. The summaries
 // (personFit, localDependence, cdmFit, qValidation) are not in this list.
+// TU5. fitGate (the activation decision, failed checks, and any override
+// reason) is a record on the parameter set, not a sidecar. It stays.
 const CRITICISM_SIDECAR_KEYS = ["personFitRows", "q3Matrix"];
 
 const TOP_LEVEL_KEYS = [

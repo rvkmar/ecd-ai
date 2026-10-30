@@ -70,6 +70,30 @@ function buildAuditEntry(partial = {}) {
   return makeAuditEntry(partial);
 }
 
+function fitGateAuditDetail(parameterSet) {
+  const gate = parameterSet?.fitGate;
+  if (!gate || typeof gate !== "object" || Array.isArray(gate)) return null;
+  const detail = {
+    status: gate.status ?? null,
+    family: gate.family ?? null,
+  };
+  const failed = Array.isArray(gate.failedChecks) ? gate.failedChecks : [];
+  if (failed.length) {
+    detail.failedChecks = failed.map((check) => ({
+      id: check?.id ?? null,
+      message: check?.message ?? null,
+    }));
+  }
+  if (gate.override && typeof gate.override === "object") {
+    detail.override = {
+      reason: gate.override.reason ?? null,
+      by: gate.override.by ?? null,
+      at: gate.override.at ?? null,
+    };
+  }
+  return detail;
+}
+
 function pushTraitDiagnosticProceed(entries, collection, prev, row, before, after) {
   if (collection !== "evidenceModels") return;
   const next = traitDiagnosticDeparture(row, after);
@@ -219,6 +243,9 @@ function collectSaveAudits(before, after) {
   }
 
   // Active parameter-set pointer changes (ingest or activate-parameter-set).
+  // TU5: when the new set carries a fitGate, the same entry records the
+  // gate result. An override also records the reason, the user, and the
+  // checks that failed.
   {
     const prevMap = indexById(before?.evidenceModels);
     for (const em of after.evidenceModels || []) {
@@ -232,6 +259,16 @@ function collectSaveAudits(before, after) {
         const prevActive = prevSm?.activeParameterSetId ?? null;
         const nextActive = sm.activeParameterSetId ?? null;
         if (prevActive !== nextActive) {
+          const chosen = (sm.parameterSets || []).find(
+            (ps) => ps?.parameterSetId === nextActive
+          );
+          const detail = {
+            statisticalModelId: sm.id,
+            from: prevActive,
+            to: nextActive,
+          };
+          const fitGateDetail = fitGateAuditDetail(chosen);
+          if (fitGateDetail) detail.fitGate = fitGateDetail;
           entries.push(
             buildAuditEntry({
               action: "parameter_set.replace",
@@ -240,11 +277,7 @@ function collectSaveAudits(before, after) {
                 id: em.id,
                 version: entityVersion(em),
               },
-              detail: {
-                statisticalModelId: sm.id,
-                from: prevActive,
-                to: nextActive,
-              },
+              detail,
             })
           );
         }
