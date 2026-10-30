@@ -314,6 +314,23 @@
   max-height: 28rem;
 }
 
+.ecd-credits {
+  margin-top: 2.5rem;
+  padding-top: 0.35rem;
+}
+
+.ecd-credits-body {
+  font-family: "Source Sans 3", "Segoe UI", sans-serif;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  background: var(--ecd-paper);
+  border: 1px solid var(--ecd-rule);
+  padding: 1rem 1.15rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: var(--ecd-ink);
+}
+
 @media print {
   .ecd-sheet {
     background: white;

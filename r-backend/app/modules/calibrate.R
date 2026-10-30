@@ -266,8 +266,15 @@ calibrate_dispatch <- function(req, res, family) {
 }
 
 .credits_for <- function(...) {
-  if (!exists(".report_credits", mode = "function")) return(NULL)
-  tryCatch(.report_credits(.packages_used(...)), error = function(e) NULL)
+  pkgs <- tryCatch(.packages_used(...), error = function(e) character())
+  fallback <- list(
+    rVersion = R.version.string,
+    r = R.version.string,
+    packages = list(),
+    packageNames = as.list(pkgs)
+  )
+  if (!exists(".report_credits", mode = "function")) return(fallback)
+  tryCatch(.report_credits(pkgs), error = function(e) fallback)
 }
 
 .irt_person_score_rows <- function(person_scores) {

@@ -17,6 +17,7 @@ import {
 import ItemAnalysisCharts from "./ItemAnalysisCharts";
 import ItemAnalysisTable from "./ItemAnalysisTable";
 import PsychometricExportToolbar from "./PsychometricExportToolbar";
+import SoftwareCredits from "./SoftwareCredits";
 import { itemRowsFromArtefact } from "./itemAnalysisFlags";
 import { provenanceFromArtefact } from "./provenance";
 import { templateHonoursChapter } from "@/utils/psychometricReportTemplate";
@@ -329,11 +330,11 @@ export default function ItemAnalysisDashboard() {
               diagnostics={selected.payload?.diagnostics}
             />
           ) : null}
-          {selected.payload?.credits ? (
-            <p className="text-caption text-muted-foreground" data-testid="item-analysis-credits">
-              {selected.payload.credits.rVersion}
-            </p>
-          ) : null}
+          <SoftwareCredits
+            credits={selected.payload?.credits}
+            packageVersion={selected.packageVersion}
+            testId="item-analysis-credits"
+          />
           {selected.payload?.diagnostics?.authority ? (
             <p className="text-caption text-muted-foreground">
               {selected.payload.diagnostics.authority}

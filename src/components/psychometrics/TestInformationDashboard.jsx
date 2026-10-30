@@ -16,6 +16,7 @@ import {
 import TestInformationCharts from "./TestInformationCharts";
 import IrtFitTable from "./IrtFitTable";
 import PsychometricExportToolbar from "./PsychometricExportToolbar";
+import SoftwareCredits from "./SoftwareCredits";
 import { provenanceFromArtefact } from "./provenance";
 import {
   continuousSemTargetsFromAssemblyModels,
@@ -228,6 +229,11 @@ export default function TestInformationDashboard() {
               itemFit={selected.payload?.fitStatistics?.itemFit}
             />
           ) : null}
+          <SoftwareCredits
+            credits={selected.payload?.credits}
+            packageVersion={selected.packageVersion}
+            testId="test-information-credits"
+          />
         </>
       )}
     </div>

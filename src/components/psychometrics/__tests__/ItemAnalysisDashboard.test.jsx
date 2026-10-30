@@ -75,6 +75,8 @@ describe("ItemAnalysisDashboard (D82)", () => {
     expect(hardFlag.textContent).toMatch(/0\.20/);
     expect(hardFlag.textContent).toMatch(/simplify|keying/i);
 
+    expect(screen.getByTestId("item-analysis-credits")).toHaveTextContent("Software and packages");
+    expect(screen.getByTestId("item-analysis-credits")).toHaveTextContent("TAM 4.3.25");
     expect(screen.getByTestId("item-analysis-distractors")).toBeInTheDocument();
     expect(
       screen.getByText(/Dichotomous 0\/1 LSAT7 has no option-level distractors/)

@@ -188,6 +188,7 @@ describe("analysisArtefacts HTTP surface (D76)", () => {
       .set(auth);
     expect(report.status).toBe(200);
     expect(report.body.html).toMatch(/Iteman-class report/);
+    expect(report.body.html).toMatch(/Software and packages/);
 
     const html = await request(app)
       .get(`/api/analysisArtefacts/${analysisArtefact.id}/report?format=html`)

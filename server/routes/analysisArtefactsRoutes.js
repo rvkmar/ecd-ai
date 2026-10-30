@@ -27,6 +27,7 @@ import {
   aggregateArtefactScores,
   buildDistrictAggregateHtml,
 } from "../analysisArtefacts/cohortAggregates.js";
+import { ensureReportCreditsHtml } from "../../src/utils/softwareCredits.js";
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -74,10 +75,15 @@ router.get("/:id/report", canView, async (req, res) => {
   const db = loadDB();
   const row = await getAnalysisArtefactById(db, req.params.id);
   if (!row) return res.status(404).json({ error: "Analysis artefact not found" });
-  const html = row.payload?.reportHtml;
-  if (typeof html !== "string" || !html.trim()) {
+  const rawHtml = row.payload?.reportHtml;
+  if (typeof rawHtml !== "string" || !rawHtml.trim()) {
     return res.status(404).json({ error: "No HTML report on this artefact." });
   }
+  const html = ensureReportCreditsHtml(
+    rawHtml,
+    row.payload?.credits,
+    row.packageVersion
+  );
   const asHtml = req.query.format === "html" || String(req.headers.accept || "").includes("text/html");
   if (asHtml) {
     res.setHeader("Content-Type", "text/html; charset=utf-8");

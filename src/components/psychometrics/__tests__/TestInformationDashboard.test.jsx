@@ -143,5 +143,7 @@ describe("TestInformationDashboard (D83)", () => {
     });
     render(<TestInformationDashboard />);
     expect(screen.getByTestId("test-information-template-name")).toHaveTextContent("Xcalibre classic");
+    expect(screen.getByTestId("test-information-credits")).toHaveTextContent("Software and packages");
+    expect(screen.getByTestId("test-information-credits")).toHaveTextContent("analytic-2PL Fisher");
   });
 });

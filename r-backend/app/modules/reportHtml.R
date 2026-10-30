@@ -49,13 +49,14 @@
   paste(.report_layout_css(), tokens, sep = "\n")
 }
 
-.html_document <- function(title, css, body) {
+.html_document <- function(title, css, body, credits = NULL) {
   paste0(
     "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'/>",
     "<meta name='viewport' content='width=device-width, initial-scale=1'/>",
     "<title>", .html_escape(title), "</title>",
     "<style>", css, "</style></head><body><main class='report'>",
     body,
+    .credits_html(credits),
     "<footer class='colophon'>ECD Assessment Platform &middot; psychometric analysis bureau</footer>",
     "</main></body></html>"
   )
@@ -132,7 +133,9 @@
   r_txt <- tryCatch(paste(format(utils::citation(), style = "text"), collapse = "\n"), error = function(e) R.version.string)
   pkg_txt <- lapply(pkgs, function(pkg) {
     if (!requireNamespace(pkg, quietly = TRUE)) return(NULL)
-    tryCatch(paste(format(utils::citation(pkg), style = "text"), collapse = "\n"), error = function(e) pkg)
+    ver <- tryCatch(as.character(utils::packageVersion(pkg)), error = function(e) "")
+    cite <- tryCatch(paste(format(utils::citation(pkg), style = "text"), collapse = "\n"), error = function(e) pkg)
+    if (nzchar(ver)) paste0(pkg, " ", ver, "\n", cite) else cite
   })
   pkg_txt <- Filter(Negate(is.null), pkg_txt)
   list(
@@ -144,8 +147,22 @@
 }
 
 .credits_html <- function(credits) {
-  if (is.null(credits) || !is.list(credits)) return("")
-  body <- paste(c(credits$rVersion, credits$r, unlist(credits$packages, use.names = FALSE)), collapse = "\n\n")
+  if (is.null(credits) || !is.list(credits)) {
+    credits <- tryCatch(.report_credits(character()), error = function(e) {
+      list(rVersion = R.version.string, r = R.version.string, packages = list(), packageNames = list())
+    })
+  }
+  names <- unlist(credits$packageNames, use.names = FALSE)
+  names <- as.character(names[!is.na(names) & nzchar(names)])
+  used <- if (length(names)) {
+    paste0("Packages used to generate this report: ", paste(names, collapse = ", "), ".")
+  } else {
+    "This report was produced by the ECD R bureau."
+  }
+  body <- paste(
+    c(used, credits$rVersion, credits$r, unlist(credits$packages, use.names = FALSE)),
+    collapse = "\n\n"
+  )
   paste0(
     "<section class='credits-block' id='credits'>",
     "<h2>Software and packages</h2>",
@@ -852,10 +869,9 @@ build_item_analysis_html <- function(job_id, package_version, sample_size, calib
       )
     ) else "",
     if (.chapter_on(template, "item-pages")) paste0("<h2>Item pages</h2>", paste(item_pages, collapse = "\n")) else "",
-    if (.chapter_on(template, "irt-plots")) .irt_chapter_html(irt_plots) else "",
-    if (.chapter_on(template, "credits")) .credits_html(credits) else ""
+    if (.chapter_on(template, "irt-plots")) .irt_chapter_html(irt_plots) else ""
   )
-  .html_document(paste("Item analysis", job_id), .html_css(skin_obj), body)
+  .html_document(paste("Item analysis", job_id), .html_css(skin_obj), body, credits)
 }
 
 build_irt_html <- function(job_id, package_version, sample_size, calibrated_at,
@@ -918,10 +934,9 @@ build_irt_html <- function(job_id, package_version, sample_size, calibrated_at,
       )
     ) else "",
     fit_html,
-    if (.chapter_on(template, "irt-plots")) .irt_chapter_html(plots) else "",
-    if (.chapter_on(template, "credits")) .credits_html(credits) else ""
+    if (.chapter_on(template, "irt-plots")) .irt_chapter_html(plots) else ""
   )
-  .html_document(paste("IRT calibration", job_id), .html_css(skin_obj), body)
+  .html_document(paste("IRT calibration", job_id), .html_css(skin_obj), body, credits)
 }
 
 build_testinfo_html <- function(job_id, package_version, sample_size, calibrated_at, parameters,
@@ -940,8 +955,7 @@ build_testinfo_html <- function(job_id, package_version, sample_size, calibrated
     if (.chapter_on(template, "irt-plots")) paste0(
       .polyline_svg(th, info, "Test information", "theta", "I(theta)"),
       .polyline_svg(th, sem, "Conditional SEM", "theta", "CSEM")
-    ) else "",
-    if (.chapter_on(template, "credits")) .credits_html(credits) else ""
+    ) else ""
   )
-  .html_document(paste("Test information", job_id), .html_css(skin_obj), body)
+  .html_document(paste("Test information", job_id), .html_css(skin_obj), body, credits)
 }

@@ -1,4 +1,5 @@
 import React from "react";
+import EcdSoftwareCredits from "../reports/EcdSoftwareCredits.jsx";
 import "@fontsource/source-sans-3/400.css";
 import "@fontsource/source-sans-3/600.css";
 import "@fontsource/source-sans-3/700.css";
@@ -353,6 +354,8 @@ export default function StudentEcdReportView({ report }) {
         points={report.occasions}
         caption="Figure 3. Student-model estimate across completed occasions for this examinee."
       />
+
+      <EcdSoftwareCredits variant="session" />
     </div>
   );
 }

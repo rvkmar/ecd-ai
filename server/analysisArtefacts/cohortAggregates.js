@@ -3,6 +3,7 @@
 
 import { MIN_CELL_SIZE } from "../utils/aggregatePrivacy.js";
 import { templateHonoursChapter } from "../../src/utils/psychometricReportTemplate.js";
+import { formatSoftwareCredits } from "../../src/utils/softwareCredits.js";
 
 function mean(values) {
   const xs = values.filter((v) => typeof v === "number" && Number.isFinite(v));
@@ -187,10 +188,12 @@ export function buildDistrictAggregateHtml(artefact, aggregate, { snapshot } = {
       `<tr><td>${esc(d.id)}</td><td class="n">${esc(d.nItems)}</td><td class="n">${esc(fmt(d.mean))}</td><td class="n">${esc(fmt(d.sd))}</td></tr>`
   );
   const rel = aggregate?.reliability || {};
-  const credits = artefact?.payload?.credits;
-  const creditHtml = credits
-    ? `<section class="credits-block"><h2>Software and packages</h2><pre class="credits">${esc(
-        [credits.rVersion, credits.r, ...(credits.packages || [])].filter(Boolean).join("\n\n")
+  const creditText = formatSoftwareCredits(artefact?.payload?.credits, {
+    packageVersion: artefact?.packageVersion,
+  });
+  const creditHtml = creditText
+    ? `<section class="credits-block" id="credits"><h2>Software and packages</h2><p class="note">This report was produced by the ECD R bureau. It is not Iteman or Xcalibre software.</p><pre class="credits">${esc(
+        creditText
       )}</pre></section>`
     : "";
 
@@ -234,7 +237,7 @@ ${
     ? `<h2>Domain means</h2><div class="table-wrap"><table><caption>Domain means for this aggregate</caption><thead><tr><th>Domain</th><th class="n">Items</th><th class="n">Mean</th><th class="n">SD</th></tr></thead><tbody>${domainRows.join("")}</tbody></table></div>`
     : ""
 }
-${show("credits") ? creditHtml : ""}
+${creditHtml}
 <footer class="colophon">ECD Assessment Platform · psychometric analysis bureau</footer>
 </main>
 </body></html>`;

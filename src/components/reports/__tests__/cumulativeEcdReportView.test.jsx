@@ -41,6 +41,9 @@ describe("CumulativeEcdReportView", () => {
     expect(screen.getByText(/Revisit Plant part naming/)).toBeInTheDocument();
     expect(screen.getByText(/62.5/)).toBeInTheDocument();
     expect(screen.getByText(/Third quartile/)).toBeInTheDocument();
+    expect(screen.getByTestId("ecd-software-credits")).toHaveTextContent("Software and packages");
+    expect(screen.getByTestId("ecd-software-credits")).toHaveTextContent(/R type-7/);
+    expect(screen.getByTestId("ecd-software-credits")).toHaveTextContent(/stats::quantile/);
   });
 
   it("renders named students on the teacher classroom report", () => {

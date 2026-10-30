@@ -35,13 +35,20 @@ export default function ReportTemplatesPanel() {
   const [chapters, setChapters] = useState([...REPORT_TEMPLATE_CHAPTER_VALUES]);
 
   function toggleChapter(ch) {
+    if (ch === "credits") return;
     setChapters((prev) => (prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]));
   }
 
   async function handleCreate(event) {
     event.preventDefault();
     try {
-      await create.mutateAsync({ name, kind, audience, skinId, chapters });
+      await create.mutateAsync({
+        name,
+        kind,
+        audience,
+        skinId,
+        chapters: Array.from(new Set([...chapters, "credits"])),
+      });
       toast.success("Report template saved as a draft.");
     } catch (err) {
       toast.error(apiErrorMessage(err, "Could not save the report template."));
@@ -66,7 +73,8 @@ export default function ReportTemplatesPanel() {
         <p className="mt-1 text-sm text-muted-foreground">
           Governed Iteman/Xcalibre-class report layouts. Adopting a template on a
           new calibration job freezes a snapshot — later edits never rewrite old
-          artefacts. This is not an ECD task template.
+          artefacts. Software credits for R and the packages that produced the
+          report are always included. This is not an ECD task template.
         </p>
       </div>
 
@@ -135,7 +143,8 @@ export default function ReportTemplatesPanel() {
               <label key={ch} className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
-                  checked={chapters.includes(ch)}
+                  checked={ch === "credits" || chapters.includes(ch)}
+                  disabled={ch === "credits"}
                   onChange={() => toggleChapter(ch)}
                 />
                 {ch}

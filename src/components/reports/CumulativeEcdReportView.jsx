@@ -1,5 +1,6 @@
 import React from "react";
 import { Band, PercentBarChart } from "../sessions/StudentEcdReportView.jsx";
+import EcdSoftwareCredits from "./EcdSoftwareCredits.jsx";
 import "../sessions/StudentEcdReport.css";
 
 function fmt(n, digits = 1) {
@@ -593,6 +594,8 @@ export default function CumulativeEcdReportView({ report }) {
             ? " Named ranks are this classroom's roster."
             : " Named students are omitted. Cells below n = 5 suppress ranks so a small group cannot identify a child."}
       </p>
+
+      <EcdSoftwareCredits variant="cumulative" />
 
     </div>
   );

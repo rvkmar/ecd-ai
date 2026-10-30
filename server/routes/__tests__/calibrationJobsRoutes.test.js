@@ -598,5 +598,7 @@ describe("HTML technical report", () => {
     const report = await request(app).get("/api/calibrationJobs/job-html/report").set(auth);
     expect(report.status).toBe(200);
     expect(report.body.html).toMatch(/Xcalibre-class report/);
+    expect(report.body.html).toMatch(/Software and packages/);
+    expect(report.body.html).toMatch(/mirt 1.47/);
   });
 });

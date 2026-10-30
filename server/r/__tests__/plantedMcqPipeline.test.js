@@ -109,6 +109,8 @@ describe.skipIf(!liveR)("planted MCQ live R", () => {
     expect(response.fitStatistics.cronbachAlpha).toBeGreaterThan(0);
     expect(typeof response.reportHtml).toBe("string");
     expect(response.reportHtml).toMatch(/Classical item analysis/);
+    expect(response.reportHtml).toMatch(/Software and packages/);
+    expect(response.credits?.rVersion).toMatch(/R version/);
     expect(response.diagnostics.testLevel.domains.algebra).toBeTruthy();
   }, 180_000);
 });

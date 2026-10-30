@@ -56,5 +56,30 @@ describe("cohort / district score aggregates", () => {
     expect(html).toMatch(/<header class="cover">/);
     expect(html).toMatch(/District \/ cohort summary/);
     expect(html).toMatch(/psychometric analysis bureau/);
+    expect(html).toMatch(/Software and packages/);
+    expect(html).toMatch(/mirt 1.48/);
+  });
+
+  it("prints R citations even when the template omitted the credits chapter", () => {
+    const html = buildDistrictAggregateHtml(
+      {
+        id: "aa1",
+        jobId: "job1",
+        packageVersion: "TAM 4.3.25",
+        payload: {
+          credits: {
+            rVersion: "R version 4.4.1",
+            r: "R Core Team (2024). R: A language and environment for statistical computing.",
+            packageNames: ["TAM", "ggplot2"],
+            packages: ["Robitzsch, A. TAM.", "Wickham, H. ggplot2."],
+          },
+          reportTemplate: { chapters: ["cover", "reliability"] },
+        },
+      },
+      { level: "district", minCellSize: MIN_CELL_SIZE, cells: {}, flagCounts: {}, domains: [], reliability: {} }
+    );
+    expect(html).toMatch(/Software and packages/);
+    expect(html).toMatch(/Packages used to generate this report: TAM, ggplot2/);
+    expect(html).toMatch(/R Core Team/);
   });
 });

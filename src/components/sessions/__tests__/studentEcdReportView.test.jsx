@@ -85,5 +85,7 @@ describe("StudentEcdReportView", () => {
     expect(screen.getByText("Where to focus")).toBeInTheDocument();
     expect(screen.getByLabelText(/Mean score by competency/)).toBeInTheDocument();
     expect(screen.getByLabelText(/across completed occasions/)).toBeInTheDocument();
+    expect(screen.getByTestId("ecd-software-credits")).toHaveTextContent("Software and packages");
+    expect(screen.getByTestId("ecd-software-credits")).toHaveTextContent(/R Core Team/);
   });
 });

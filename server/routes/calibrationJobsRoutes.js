@@ -39,6 +39,7 @@ import {
   redactCalibrationJobForViewer,
 } from "../utils/aggregatePrivacy.js";
 import { adoptReportTemplate, applySnapshotToRequest } from "../../src/utils/psychometricReportTemplate.js";
+import { ensureReportCreditsHtml } from "../../src/utils/softwareCredits.js";
 import { stripJobSidecars } from "../../src/utils/analysisSidecars.js";
 
 const router = express.Router();
@@ -93,10 +94,15 @@ router.get("/:id/report", canView, async (req, res) => {
   const db = loadDB();
   const row = await getCalibrationJobById(db, req.params.id);
   if (!row) return res.status(404).json({ error: "Calibration job not found" });
-  const html = row.response?.reportHtml;
-  if (typeof html !== "string" || !html.trim()) {
+  const rawHtml = row.response?.reportHtml;
+  if (typeof rawHtml !== "string" || !rawHtml.trim()) {
     return res.status(404).json({ error: "No HTML report on this job." });
   }
+  const html = ensureReportCreditsHtml(
+    rawHtml,
+    row.response?.credits,
+    row.response?.packageVersion
+  );
   const asHtml =
     req.query.format === "html" || String(req.headers.accept || "").includes("text/html");
   if (asHtml) {
