@@ -43,6 +43,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Textbook ECD gap audit 2 (2026-10-29) | 28 gaps T1–T28 on main 2d5ada6 (3 High, 14 Med, 11 Low; 18 new, 9 tracked, 1 partly tracked). Fix plan TU1–TU27. Source: claude/day146af-offcal-ecd-textbook-gaps-t.md. **Not D146.** |
 | Off-calendar (2026-10-30, TU1) | **TU1** done. T2 closed. Classification and the report attribute profile use an authored cut. Precedence: SMV `masteryThreshold`, Assembly Model `masteryThreshold`, a mastery `decisionRule` cut, then 0.5. No migration. Suite 2958 passed / 13 skipped. No lint script. Handoff: `claude/day146aj-offcal-tu1-decision-rule.md`. **Not D146.** |
 | Off-calendar (2026-10-30, TU2) | ~~T15~~ closed. Optional `performanceLevels` on a competency (`label`, `descriptor`, `cut`) with scale `theta` or `probability`. Competency Wizard step 9 and an Angoff/bookmark worksheet write the cuts. `levelForScore` is ready for TU3. Reports are unchanged. No migration. Handoff: `claude/day146ak-offcal-tu2-performance-levels.md`. **Not D146.** |
+| Off-calendar (2026-10-30, TU3) | **TU3** done. ~~T1~~ closed. Session, learner, teacher, class, and district reports quote `claimStatement`, show theta SE or posterior SD, and take levels from `levelForScore` or the labelled default cuts. Mastery stays `classifyByRule`. Lane A (TU1, TU2, TU3) is complete. No migration. Suite 2995 passed / 13 skipped. No lint script. Handoff: `claude/day146al-offcal-tu3-claim-tied-reports.md`. **Not D146.** |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -681,6 +682,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-29 | off-calendar | Iteman/Xcalibre live walk | Discharged H/I live R HTML and `:6060`. CTT `reportHtml` added; omit unused-flag skip; TIF template stamp. Jobs `job1793294039843006` / `job1793293875202004` / `job1793293874775002` / `job1793294040102007`. **Not D156.** |
 | 2026-10-30 | off-calendar | ECD reporting | Session ECD paper document; cumulative student / classroom / curriculum; midrank PR and P10–P90. Live `:6060` walked (stud1 PR 99.2 / 600; teacher P10–P90 20–85; district names omitted). Product `7ca4935`…`0494d90`. **Not D156.** Handoff: `claude/day146ai-offcal-ecd-reporting.md`. |
 | 2026-10-30 | close | — | ECD reporting recording close. Last completed stays D155. Close re-run **2924 passed / 6 skipped**. Build green. Calendar D156 unmarked (search skipped). |
+| 2026-10-30 | off-calendar | TU3 / ~~T1~~ | Score reports quote the evidence claim, show SE or posterior SD, and resolve levels in one module. Unauthored content keeps Advanced / Proficient / Needs Support and Strong / Developing / Needs Support, labelled default cut. Lane A complete. Suite **2995 passed / 13 skipped**. **Not D146.** Handoff: `claude/day146al-offcal-tu3-claim-tied-reports.md`. |
 
 
 
@@ -1113,7 +1115,7 @@ Corrections from that re-audit:
 
 Textbook gaps T1–T28 (2026-10-29), from `claude/day146af-offcal-ecd-textbook-gaps-t.md` (**Not D146**). Audited at main `2d5ada6`. Eighteen new lines below (id, title, severity, fix unit). T2 is the partly tracked line and points at the struck mastery-cut bullet. The nine fully tracked gaps are cross-references only. No existing line is un-struck.
 
-- T1. Score reports not tied to claims. High. TU3.
+- ~~T1. Score reports not tied to claims.~~ Closed 2026-10-30 by TU3. Reports quote the Evidence Model claim, show theta SE or posterior SD, and take levels from authored cuts with a labelled default. Lane A complete. Handoff: `claude/day146al-offcal-tu3-claim-tied-reports.md`.
 - T3. No model criticism before activation. High. TU4, TU5.
 - T4. Alternative explanations not first-class in the argument. Medium. TU16.
 - T5. No empirical validity evidence. Medium. TU17.

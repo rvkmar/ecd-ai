@@ -8,6 +8,7 @@ import { assemblyProgressLine } from "../../utils/assemblyConstraints";
 import AttributeProfileList from "./AttributeProfileList";
 import { RecordCard } from "../reports/StudentModelRecordPanel";
 import StudentEcdReportView from "./StudentEcdReportView";
+import { ReportClaims, ReportLevelMeta } from "../reports/ReportLevelBits";
 import "./StudentEcdReport.css";
 
 function formatProbability(value) {
@@ -34,7 +35,9 @@ function BnPosteriorList({ nodes }) {
               {": "}
               {formatProbability(row.probability ?? row.posterior)}
               {row.level ? ` (${row.level})` : ""}
+              <ReportLevelMeta row={row} />
               {distribution ? <span className="text-gray-600"> {distribution}</span> : null}
+              <ReportClaims row={row} className="text-sm text-gray-600" />
             </li>
           );
         })}
@@ -201,7 +204,11 @@ export default function SessionReport({ sessionId, onClose }) {
           {learnerFeedback && (
             <>
           <h3 className="font-semibold">Summary</h3>
-          <p className="text-gray-700">Level: {learnerFeedback.summary?.level}</p>
+          <p className="text-gray-700">
+            Level: {learnerFeedback.summary?.level}
+            <ReportLevelMeta row={learnerFeedback.summary} />
+          </p>
+          <ReportClaims row={learnerFeedback.summary} className="text-sm text-gray-700" />
           <p className="text-gray-700">{learnerFeedback.summary?.message}</p>
 
           {learnerFeedback.assemblyProgress?.assemblyModelId && (
@@ -321,6 +328,18 @@ export default function SessionReport({ sessionId, onClose }) {
           </div>
 
           <BnPosteriorList nodes={teacherReport.modelSummary?.BayesianNetwork} />
+
+          {teacherReport.modelSummary?.IRT && (
+            <div data-testid="teacher-irt">
+              <h4 className="font-semibold">IRT</h4>
+              <p className="text-gray-700">
+                Theta: {teacherReport.modelSummary.IRT.theta}
+                {teacherReport.modelSummary.IRT.level ? ` (${teacherReport.modelSummary.IRT.level})` : ""}
+                <ReportLevelMeta row={teacherReport.modelSummary.IRT} />
+              </p>
+              <ReportClaims row={teacherReport.modelSummary.IRT} className="text-sm text-gray-700" />
+            </div>
+          )}
 
           <div>
             <h4 className="font-semibold">Model Summary</h4>

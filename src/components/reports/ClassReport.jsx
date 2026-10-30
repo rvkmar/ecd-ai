@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/auth/AuthProvider";
 import { apiFetch, apiErrorMessage } from "@/api/apiClient";
+import { ReportClaims, ReportLevelMeta } from "./ReportLevelBits";
+
+function formatStat(value) {
+  if (!Number.isFinite(value)) return null;
+  return String(Math.round(value * 1000) / 1000);
+}
 
 export default function ClassReport({ classId, onClose }) {
   const { auth } = useAuth() || {};
@@ -34,6 +40,45 @@ export default function ClassReport({ classId, onClose }) {
           </button>
         )}
       </div>
+
+      {report.summary?.IRT && (
+        <div className="mb-4" data-testid="class-irt">
+          <h3 className="font-semibold">IRT</h3>
+          {report.summary.IRT.suppressed ? (
+            <p className="text-sm text-gray-600">Class theta is withheld for a small class.</p>
+          ) : (
+            <p className="text-sm text-gray-700">
+              Mean {formatStat(report.summary.IRT.mean)}
+              {report.summary.IRT.level ? ` (${report.summary.IRT.level})` : ""}
+              <ReportLevelMeta row={report.summary.IRT} />
+            </p>
+          )}
+          <ReportClaims row={report.summary.IRT} className="text-sm text-gray-700" />
+        </div>
+      )}
+
+      {report.summary?.BayesianNetwork && Object.keys(report.summary.BayesianNetwork).length > 0 && (
+        <div className="mb-4" data-testid="class-bn">
+          <h3 className="font-semibold">Bayesian network</h3>
+          <ul className="text-sm text-gray-700 list-disc ml-5">
+            {Object.entries(report.summary.BayesianNetwork).map(([node, row]) => (
+              <li key={node}>
+                <span className="font-medium">{node}</span>
+                {row?.suppressed ? (
+                  ": withheld for a small class"
+                ) : (
+                  <>
+                    {Number.isFinite(row?.mean) ? `: ${formatStat(row.mean)}` : ""}
+                    {row?.level ? ` (${row.level})` : ""}
+                    <ReportLevelMeta row={row} />
+                  </>
+                )}
+                <ReportClaims row={row} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Example summary */}
       {report.summary && (

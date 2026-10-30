@@ -8,6 +8,9 @@
 // The payload is student-visible. It never includes answer keys,
 // isCorrect flags, or keyedOptionId.
 
+import { levelForScore } from "../../src/utils/performanceLevels.js";
+import { findCompetency, resolveReportLevel } from "./reportLevels.js";
+
 export const BANDS = [
   { id: "secure", min: 0.85, label: "Secure" },
   { id: "mostly-secure", min: 0.7, label: "Mostly secure" },
@@ -322,6 +325,50 @@ export function collectSessionItemRows(db, session, indexes) {
   });
 }
 
+function authoredProbabilityLevel(db, row) {
+  if (!row || !Number.isFinite(row.percent)) return row;
+  const level = levelForScore(findCompetency(db, row.id), row.percent, "probability");
+  if (!level) return row;
+  const descriptor = typeof level.descriptor === "string" ? level.descriptor.trim() : "";
+  return {
+    ...row,
+    level: level.label,
+    levelText: descriptor || level.label,
+    levelSource: "authored",
+    ...(descriptor ? { descriptor } : {}),
+  };
+}
+
+function attachEvidenceClaims(itemRows, evidenceRows, competencyRows) {
+  const evidenceClaims = new Map();
+  const competencyClaims = new Map();
+  for (const row of itemRows) {
+    if (row.evidenceModelId && row.evidenceClaim && !evidenceClaims.has(row.evidenceModelId)) {
+      evidenceClaims.set(row.evidenceModelId, row.evidenceClaim);
+    }
+    if (row.competencyId && row.evidenceClaim) {
+      if (!competencyClaims.has(row.competencyId)) competencyClaims.set(row.competencyId, new Map());
+      competencyClaims.get(row.competencyId).set(row.evidenceModelId || row.evidenceClaim, {
+        evidenceModelId: row.evidenceModelId || null,
+        claimStatement: row.evidenceClaim,
+      });
+    }
+  }
+  const evidence = evidenceRows.map((row) => {
+    const claimStatement = evidenceClaims.get(row.id) || null;
+    return claimStatement ? { ...row, claimStatement } : row;
+  });
+  const competencies = competencyRows.map((row) => {
+    const map = competencyClaims.get(row.id);
+    if (!map || map.size === 0) return row;
+    const claims = [...map.values()];
+    const next = { ...row, claims };
+    if (claims.length === 1) next.claimStatement = claims[0].claimStatement;
+    return next;
+  });
+  return { evidence, competencies };
+}
+
 export function buildStudentEcdReport(db, session, options = {}) {
   const student = options.student || null;
   const measurement = options.measurement || { stopped: null, attributeProfile: [] };
@@ -344,8 +391,17 @@ export function buildStudentEcdReport(db, session, options = {}) {
     session?.studentModel?.irtSe ??
     (nScored > 0 ? 1 / Math.sqrt(nScored) : null);
 
-  const competencies = aggregate(itemRows, "competencyId", (row, id) => row.competencyName || id);
-  const evidence = aggregate(itemRows, "evidenceModelId", (row, id) => row.evidenceModelName || id);
+  const claimed = attachEvidenceClaims(
+    itemRows,
+    aggregate(itemRows, "evidenceModelId", (row, id) => row.evidenceModelName || id),
+    aggregate(itemRows, "competencyId", (row, id) => row.competencyName || id)
+  );
+  const competencies = claimed.competencies.map((row) => authoredProbabilityLevel(db, row));
+  const evidence = claimed.evidence;
+  const thetaCompetency = competencies.length === 1 ? findCompetency(db, competencies[0].id) : null;
+  const thetaLevel = Number.isFinite(theta)
+    ? resolveReportLevel({ value: theta, scale: "theta", competency: thetaCompetency })
+    : null;
   const taskSummaries = aggregate(itemRows, "taskId", (row, id) => row.taskName || id);
   const taskModelsSummary = aggregate(itemRows, "taskModelId", (row, id) => row.taskModelName || id);
 
@@ -401,6 +457,10 @@ export function buildStudentEcdReport(db, session, options = {}) {
       se: roundStat(se),
       theta: Number.isFinite(theta) ? roundStat(theta, 3) : null,
       thetaSe: Number.isFinite(thetaSe) ? roundStat(thetaSe, 3) : null,
+      level: thetaLevel?.level ?? null,
+      levelText: thetaLevel?.levelText ?? null,
+      levelSource: thetaLevel?.levelSource ?? null,
+      levelNote: thetaLevel?.levelNote ?? null,
       selectionStrategy: session?.selectionStrategy || null,
       band: bandFor(percent)?.id || null,
       bandLabel: bandFor(percent)?.label || null,

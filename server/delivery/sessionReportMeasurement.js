@@ -18,6 +18,7 @@ import {
   classifyByRule,
   sourcesForPosterior,
 } from "./attributeClassification.js";
+import { attributeReportFields } from "./reportLevels.js";
 
 const CLASSIFIABLE_METHOD = "attribute-mastery-posterior";
 
@@ -57,6 +58,7 @@ function attributeProfileFor(session, db) {
       classification: classified.classification,
       expectedClassificationAccuracy: classified.expectedClassificationAccuracy,
       masteryThreshold: classified.threshold,
+      ...attributeReportFields(posterior, db, session),
     });
   }
   return profile;
