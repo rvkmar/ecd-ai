@@ -814,6 +814,11 @@ calibrate_diagnostic <- function(body, res) {
     .cdm_model_criticism(fit, request_item_ids, attr_ids, opts),
     error = function(e) list(warnings = paste("model criticism:", conditionMessage(e)))
   )
+  if (is.list(cdm_criticism$qValidation)) {
+    cdm_criticism$qValidation <- .relabel_q_validation(
+      cdm_criticism$qValidation, request_item_ids, keyed$keys
+    )
+  }
   if (is.list(cdm_criticism$cdmFit)) fit_stats$cdmFit <- cdm_criticism$cdmFit
   if (is.list(cdm_criticism$qValidation)) fit_stats$qValidation <- cdm_criticism$qValidation
   if (length(cdm_criticism$warnings)) warnings_acc <- c(warnings_acc, cdm_criticism$warnings)

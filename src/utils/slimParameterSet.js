@@ -14,8 +14,13 @@ const SIDECAR_KEYS = [
   "iifGrid",
 ];
 
+// TU4. Person-fit rows and the Q3 matrix are sidecars. The summaries
+// (personFit, localDependence, cdmFit, qValidation) are not in this list.
+const CRITICISM_SIDECAR_KEYS = ["personFitRows", "q3Matrix"];
+
 const TOP_LEVEL_KEYS = [
   ...SIDECAR_KEYS,
+  ...CRITICISM_SIDECAR_KEYS,
   "personScores",
   "responseMatrix",
   "optionMatrix",
@@ -23,11 +28,17 @@ const TOP_LEVEL_KEYS = [
 
 const DIAGNOSTIC_KEYS = new Set([
   ...SIDECAR_KEYS,
+  ...CRITICISM_SIDECAR_KEYS,
   "personScores",
   "responseMatrix",
   "optionMatrix",
   "plots",
 ]);
+
+const NESTED_SUMMARY_DROPS = {
+  personFit: ["rows", "persons", "personIds"],
+  localDependence: ["matrix", "values", "q3Matrix"],
+};
 
 function present(value) {
   if (value == null) return false;
@@ -72,6 +83,36 @@ function takeKeys(source, keys, { personLevel = false } = {}) {
   };
 }
 
+function peelSummarySidecars(fit) {
+  if (!fit || typeof fit !== "object" || Array.isArray(fit)) {
+    return { kept: fit, stripped: null };
+  }
+  const kept = { ...fit };
+  const stripped = {};
+  for (const [childKey, dropKeys] of Object.entries(NESTED_SUMMARY_DROPS)) {
+    const child = kept[childKey];
+    if (!child || typeof child !== "object" || Array.isArray(child)) continue;
+    const nextChild = { ...child };
+    const dropped = {};
+    for (const key of dropKeys) {
+      if (!present(nextChild[key])) continue;
+      dropped[key] = nextChild[key];
+      delete nextChild[key];
+    }
+    if (childKey === "personFit" && Array.isArray(nextChild.Zh)) {
+      dropped.Zh = nextChild.Zh;
+      delete nextChild.Zh;
+    }
+    if (!Object.keys(dropped).length) continue;
+    kept[childKey] = nextChild;
+    stripped[childKey] = dropped;
+  }
+  return {
+    kept,
+    stripped: Object.keys(stripped).length ? stripped : null,
+  };
+}
+
 function knownId(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
@@ -100,9 +141,10 @@ export function slimParameterSet(parameterSet, refs = {}) {
 
   if (present(next.fitStatistics) && typeof next.fitStatistics === "object" && !Array.isArray(next.fitStatistics)) {
     const fit = takeKeys(next.fitStatistics, DIAGNOSTIC_KEYS, { personLevel: true });
-    if (fit.stripped) {
-      stripped.fitStatistics = fit.stripped;
-      if (fit.kept) next.fitStatistics = fit.kept;
+    const peeled = peelSummarySidecars(fit.stripped ? (fit.kept || {}) : next.fitStatistics);
+    if (fit.stripped || peeled.stripped) {
+      stripped.fitStatistics = { ...(fit.stripped || {}), ...(peeled.stripped || {}) };
+      if (peeled.kept && Object.keys(peeled.kept).length) next.fitStatistics = peeled.kept;
       else delete next.fitStatistics;
     }
   }

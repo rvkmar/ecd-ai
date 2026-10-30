@@ -264,6 +264,23 @@ Q3_ABS_THRESHOLD <- 0.2
   )
 }
 
+# Qval rows follow GDINA item.names (the request item ids). Parameter
+# maps may use a unique observable id (TU15). Rename suggestion item
+# ids onto those keys. Item-keyed fits pass identical vectors.
+.relabel_q_validation <- function(q_sum, from_ids, to_ids) {
+  if (!is.list(q_sum) || isTRUE(q_sum$available == FALSE)) return(q_sum)
+  if (!is.list(q_sum$suggestions) || !length(q_sum$suggestions)) return(q_sum)
+  from_ids <- as.character(unlist(from_ids, use.names = FALSE))
+  to_ids <- as.character(unlist(to_ids, use.names = FALSE))
+  if (length(from_ids) != length(to_ids)) return(q_sum)
+  for (i in seq_along(q_sum$suggestions)) {
+    item <- as.character(q_sum$suggestions[[i]]$itemId)
+    hit <- match(item, from_ids)
+    if (!is.na(hit)) q_sum$suggestions[[i]]$itemId <- to_ids[[hit]]
+  }
+  q_sum
+}
+
 .qval_summary_from_obj <- function(qv, item_ids, attribute_ids) {
   sug <- tryCatch(GDINA::extract(qv, what = "sug.Q"), error = function(e) qv$sug.Q)
   orig <- tryCatch(GDINA::extract(qv, what = "Q"), error = function(e) qv$Q)

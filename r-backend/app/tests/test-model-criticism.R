@@ -67,6 +67,9 @@ qv <- .q_validation_summary(
 .stop_if(qv$suggestions[[1]]$itemId != "Item.2", "Item.2 changed")
 .stop_if(abs(qv$suggestions[[1]]$pvaf - 0.97) > 1e-9, "PVAF is the suggested q-vector, not the original")
 .stop_if(!identical(unlist(qv$suggestions[[1]]$suggested), c(0L, 1L, 0L)), "suggested q-vector")
+relabelled <- .relabel_q_validation(qv, c("Item.1", "Item.2"), c("Item.1", "obs-2"))
+.stop_if(relabelled$suggestions[[1]]$itemId != "obs-2", "Qval suggestion follows the observable key")
+.stop_if(qv$suggestions[[1]]$itemId != "Item.2", "relabel does not rewrite the source summary")
 
 cdm <- .cdm_fit_summary(list(M2 = 10, M2.df = 4, M2.pvalue = 0.04, RMSEA2 = 0.02, SRMSR = 0.03))
 .stop_if(!isTRUE(cdm$available), "cdm fit available")
