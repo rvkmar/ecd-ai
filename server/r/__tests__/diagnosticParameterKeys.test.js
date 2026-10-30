@@ -63,10 +63,19 @@ function db(type = "dina") {
 describe("TU15 diagnostic ingest keying", () => {
   it("stores a new DINA set keyed by observable id and leaves the active set", () => {
     const store = db();
-    const result = ingestCalibrationJob(job(), store, { parameterSetId: "ps-new" });
+    const incoming = job();
+    incoming.response.reportHtml = "<html>keep off the model</html>";
+    incoming.response.standardErrors = {
+      "obs-a": { slip: 0.02, guess: 0.03 },
+      "obs-b": { slip: 0.02, guess: 0.02 },
+      "obs-c": { slip: 0.01, guess: 0.01 },
+    };
+    const result = ingestCalibrationJob(incoming, store, { parameterSetId: "ps-new" });
     expect(result.ok).toBe(true);
+    expect(result.parameterSet.reportHtml).toBeUndefined();
     expect(Object.keys(result.parameterSet.parameters)).toEqual(["obs-a", "obs-b", "obs-c"]);
     expect(result.parameterSet.parameters["obs-a"]).toEqual({ slip: 0.1, guess: 0.2 });
+    expect(result.parameterSet.standardErrors["obs-c"]).toEqual({ slip: 0.01, guess: 0.01 });
     expect(store.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe("ps-old");
     expect(store.evidenceModels[0].statisticalModels[0].parameterSets[0].parameters).toEqual({
       "item-a": { slip: 0.4, guess: 0.3 },
