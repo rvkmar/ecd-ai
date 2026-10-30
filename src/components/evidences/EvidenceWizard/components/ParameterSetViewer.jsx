@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useActivateParameterSet } from "@/api/queries/evidenceModels";
 import { apiErrorMessage } from "@/api/apiClient";
 import ModelCriticismPanel from "@/components/calibration/ModelCriticismPanel";
+import { FitGateOverrideForm, FitGateSummary } from "@/components/evidences/calibration/panels/FitGateNotice";
 
 export default function ParameterSetViewer({
     model,
@@ -10,6 +11,7 @@ export default function ParameterSetViewer({
     locked
 }) {
     const activateParameterSet = useActivateParameterSet();
+    const [overrideTarget, setOverrideTarget] = useState(null);
     const loading = activateParameterSet.isPending;
     const error = activateParameterSet.error
         ? apiErrorMessage(activateParameterSet.error, "Activation failed.")
@@ -28,11 +30,18 @@ export default function ParameterSetViewer({
     // this evidence model's query on success instead, so the surrounding
     // wizard just re-renders with fresh data -- no full page reload, no
     // lost scroll position / wizard step.
-    const handleActivate = (parameterSetId) => {
-        activateParameterSet.mutate({
-            id: evidenceModelId,
-            payload: { statisticalModelId: model.id, parameterSetId },
-        });
+    const handleActivate = (parameterSetId, reason) => {
+        const payload = { statisticalModelId: model.id, parameterSetId };
+        if (typeof reason === "string") payload.fitOverride = { reason };
+        activateParameterSet.mutate(
+            { id: evidenceModelId, payload },
+            {
+                onSuccess: () => setOverrideTarget(null),
+                onError: (err) => {
+                    if (err?.body?.fitGate?.status === "fail") setOverrideTarget(parameterSetId);
+                },
+            }
+        );
     };
 
     return (
@@ -149,6 +158,15 @@ export default function ParameterSetViewer({
                                         {ps.sampleSize}
                                     </div>
                                 </div>
+
+                                <FitGateSummary fitGate={ps.fitGate} alreadyActive={isActive} />
+
+                                {overrideTarget === ps.parameterSetId && (
+                                    <FitGateOverrideForm
+                                        disabled={loading}
+                                        onSubmit={(reason) => handleActivate(ps.parameterSetId, reason)}
+                                    />
+                                )}
 
                                 <ModelCriticismPanel
                                     fitStatistics={ps.fitStatistics}

@@ -12,6 +12,7 @@ import { attachEvidenceSessions } from "../sessions/sessionRepository.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { applyParameterSetActivation } from "../../src/utils/parameterSetStatus.js";
 import { slimParameterSet, slimStatisticalModels } from "../../src/utils/slimParameterSet.js";
+import { evaluateFitActivation, readFitOverride } from "../../src/utils/fitActivationGate.js";
 import {
   qMatrixCitesObservableOnModel,
   qMatrixEntriesCitingEvidenceModel,
@@ -66,6 +67,24 @@ export function calibrationGate(model, action) {
   }
 
   return null;
+}
+
+function fitActor(req) {
+  const user = req.user || {};
+  if (typeof user.username === "string" && user.username.trim()) return user.username.trim();
+  if (user.id != null && String(user.id).trim()) return String(user.id).trim();
+  return null;
+}
+
+function sendFitGateRefusal(res, gate) {
+  const failed = Array.isArray(gate.failedChecks) ? gate.failedChecks : [];
+  return res.status(400).json({
+    error: gate.overrideRejected
+      ? "A fit override requires a non-empty reason."
+      : "Parameter set activation refused: fit thresholds were not met.",
+    details: failed.map((check) => check.message).filter(Boolean),
+    fitGate: gate.fitGate,
+  });
 }
 
 /* =====================================================
@@ -835,6 +854,17 @@ router.post("/:id/recalibrate", canAuthor, async (req, res) => {
     return res.status(400).json({ error: "calibrationMethod is required." });
   }
 
+  const activatedAt = new Date().toISOString();
+  const fitGate = evaluateFitActivation({
+    statisticalModel: sm,
+    parameterSet: { fitStatistics },
+    calibrationPlan: model.calibrationPlan,
+    override: readFitOverride(req.body),
+    by: fitActor(req),
+    at: activatedAt,
+  });
+  if (!fitGate.ok) return sendFitGateRefusal(res, fitGate);
+
   const newParamSet = slimParameterSet(
     {
       parameterSetId: parameterSetId || genId("ps"),
@@ -852,6 +882,7 @@ router.post("/:id/recalibrate", canAuthor, async (req, res) => {
       ...(req.body.scores !== undefined ? { scores: req.body.scores } : {}),
       ...(req.body.calibrationJobId ? { calibrationJobId: req.body.calibrationJobId } : {}),
       ...(req.body.analysisArtefactId ? { analysisArtefactId: req.body.analysisArtefactId } : {}),
+      fitGate: fitGate.fitGate,
     },
     {
       calibrationJobId: req.body.calibrationJobId,
@@ -861,14 +892,18 @@ router.post("/:id/recalibrate", canAuthor, async (req, res) => {
 
   sm.parameterSets = sm.parameterSets || [];
   sm.parameterSets.push(newParamSet);
-  model.updatedAt = new Date().toISOString();
+  model.updatedAt = activatedAt;
   applyParameterSetActivation(sm, newParamSet.parameterSetId, {
-    activatedBy: req.user?.username || req.user?.id || newParamSet.calibratedBy,
-    activatedAt: model.updatedAt,
+    activatedBy: fitActor(req) || newParamSet.calibratedBy,
+    activatedAt,
   });
 
   saveDB(db);
-  res.json({ message: "Recalibration successful.", parameterSet: newParamSet });
+  res.json({
+    message: "Recalibration successful.",
+    parameterSet: newParamSet,
+    fitGate: newParamSet.fitGate,
+  });
 });
 
 /* =====================================================
@@ -990,14 +1025,38 @@ router.post("/:id/activate-parameter-set", canAuthor, async (req, res) => {
     });
   }
 
-  model.updatedAt = new Date().toISOString();
+  const activatedAt = new Date().toISOString();
+  const fitGate = evaluateFitActivation({
+    alreadyActive: statModel.activeParameterSetId === parameterSetId,
+    statisticalModel: statModel,
+    parameterSet: paramSet,
+    calibrationPlan: model.calibrationPlan,
+    override: readFitOverride(req.body),
+    by: fitActor(req),
+    at: activatedAt,
+  });
+  if (fitGate.grandfathered) {
+    return res.json({
+      message: "Parameter set is already active. The fit gate does not re-check it.",
+      parameterSet: paramSet,
+      fitGate: fitGate.fitGate,
+    });
+  }
+  if (!fitGate.ok) return sendFitGateRefusal(res, fitGate);
+
+  paramSet.fitGate = fitGate.fitGate;
+  model.updatedAt = activatedAt;
   applyParameterSetActivation(statModel, parameterSetId, {
-    activatedBy: req.user?.username || req.user?.id || null,
-    activatedAt: model.updatedAt,
+    activatedBy: fitActor(req),
+    activatedAt,
   });
 
   saveDB(db);
-  res.json({ message: "Parameter set activated successfully.", parameterSet: paramSet });
+  res.json({
+    message: "Parameter set activated successfully.",
+    parameterSet: paramSet,
+    fitGate: paramSet.fitGate,
+  });
 });
 
 /* =====================================================

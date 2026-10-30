@@ -172,6 +172,73 @@ describe("D101 auditLog chokepoint", () => {
     });
   });
 
+  it("records a fit override reason, user, and failing checks on the replacement", () => {
+    beginAuditRequest("req-fit-gate");
+    bindAuditActor({ userId: "ada", role: "admin" });
+    const before = {
+      evidenceModels: [
+        {
+          id: "em1",
+          versionNumber: 1,
+          statisticalModels: [{ id: "sm1", activeParameterSetId: "ps1" }],
+        },
+      ],
+    };
+    const after = {
+      evidenceModels: [
+        {
+          id: "em1",
+          versionNumber: 1,
+          statisticalModels: [
+            {
+              id: "sm1",
+              activeParameterSetId: "ps2",
+              parameterSets: [
+                {
+                  parameterSetId: "ps2",
+                  fitGate: {
+                    status: "override",
+                    family: "irt",
+                    failedChecks: [
+                      { id: "irt.rmsea", message: "M2 RMSEA is 0.09, above the maximum 0.05." },
+                    ],
+                    override: {
+                      reason: "Pilot sample accepted by the committee",
+                      by: "ada",
+                      at: "2026-10-30T12:00:00.000Z",
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      auditLog: [],
+    };
+    applySaveAudits(before, after);
+    expect(after.auditLog).toHaveLength(1);
+    expect(after.auditLog[0].action).toBe("parameter_set.replace");
+    expect(after.auditLog[0].actor).toEqual({ userId: "ada", role: "admin" });
+    expect(after.auditLog[0].detail).toEqual({
+      statisticalModelId: "sm1",
+      from: "ps1",
+      to: "ps2",
+      fitGate: {
+        status: "override",
+        family: "irt",
+        failedChecks: [
+          { id: "irt.rmsea", message: "M2 RMSEA is 0.09, above the maximum 0.05." },
+        ],
+        override: {
+          reason: "Pilot sample accepted by the committee",
+          by: "ada",
+          at: "2026-10-30T12:00:00.000Z",
+        },
+      },
+    });
+  });
+
   it("applySaveAudits records entity.create for bulk-style inserts", () => {
     const before = { items: [] };
     const after = { items: [{ id: "i1", status: "draft", versionNumber: 1 }], auditLog: [] };

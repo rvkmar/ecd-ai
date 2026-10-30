@@ -20,6 +20,7 @@ import {
 } from "@/api/queries/calibrationJobs";
 import { useActivateParameterSet, useEvidenceModel } from "@/api/queries/evidenceModels";
 import ParameterSetDiff from "@/components/evidences/calibration/panels/ParameterSetDiff";
+import { FitGateOverrideForm, FitGateSummary } from "@/components/evidences/calibration/panels/FitGateNotice";
 import CalibrationJobStatusBadge from "./CalibrationJobStatusBadge";
 import {
   convergedLabel,
@@ -72,6 +73,8 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
   const [actionError, setActionError] = useState(null);
   const [ingestResult, setIngestResult] = useState(null);
   const [activatedId, setActivatedId] = useState(null);
+  const [activationGate, setActivationGate] = useState(null);
+  const [fitOverrideOpen, setFitOverrideOpen] = useState(false);
 
   if (!job) {
     return <p className="text-sm text-muted-foreground">Select a job to inspect it.</p>;
@@ -119,6 +122,8 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
         }
         setIngestResult(result.parameterSet || { parameterSetId, status: "candidate" });
         setActivatedId(null);
+        setActivationGate(null);
+        setFitOverrideOpen(false);
         toast.success(`Saved candidate parameter set ${parameterSetId}. It is not active yet.`);
         return;
       }
@@ -126,6 +131,30 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
     } catch (err) {
       const message = apiErrorMessage(err, `${label} failed.`);
       if (label === "Ingest") setIngestResult(null);
+      setActionError(message);
+      toast.error(message);
+    }
+  }
+
+  async function activateCandidate(reason) {
+    if (!ingestResult?.parameterSetId) return;
+    setActionError(null);
+    try {
+      const result = await activate.mutateAsync({
+        id: job.evidenceModelId,
+        payload: {
+          statisticalModelId: job.statisticalModelId,
+          parameterSetId: ingestResult.parameterSetId,
+          ...(typeof reason === "string" ? { fitOverride: { reason } } : {}),
+        },
+      });
+      setActivatedId(ingestResult.parameterSetId);
+      setActivationGate(result?.fitGate || result?.parameterSet?.fitGate || null);
+      setFitOverrideOpen(false);
+      toast.success(`Activated parameter set ${ingestResult.parameterSetId}.`);
+    } catch (err) {
+      const message = apiErrorMessage(err, "Activation failed.");
+      if (err?.body?.fitGate?.status === "fail") setFitOverrideOpen(true);
       setActionError(message);
       toast.error(message);
     }
@@ -211,32 +240,24 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
               size="sm"
               variant="outline"
               disabled={activate.isPending}
-              onClick={async () => {
-                setActionError(null);
-                try {
-                  await activate.mutateAsync({
-                    id: job.evidenceModelId,
-                    payload: {
-                      statisticalModelId: job.statisticalModelId,
-                      parameterSetId: ingestResult.parameterSetId,
-                    },
-                  });
-                  setActivatedId(ingestResult.parameterSetId);
-                  toast.success(`Activated parameter set ${ingestResult.parameterSetId}.`);
-                } catch (err) {
-                  const message = apiErrorMessage(err, "Activation failed.");
-                  setActionError(message);
-                  toast.error(message);
-                }
-              }}
+              onClick={() => activateCandidate()}
             >
               {activate.isPending ? "Activating…" : "Activate candidate"}
             </Button>
           )}
+          {fitOverrideOpen && activatedId !== ingestResult.parameterSetId && (
+            <FitGateOverrideForm
+              disabled={activate.isPending}
+              onSubmit={(reason) => activateCandidate(reason)}
+            />
+          )}
           {activatedId === ingestResult.parameterSetId && (
-            <p className="text-sm">
-              Activated <strong>{activatedId}</strong>. New sessions use this set.
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm">
+                Activated <strong>{activatedId}</strong>. New sessions use this set.
+              </p>
+              <FitGateSummary fitGate={activationGate} />
+            </div>
           )}
         </div>
       )}

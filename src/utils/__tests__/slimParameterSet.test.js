@@ -195,6 +195,34 @@ describe("slimParameterSet", () => {
     expect(result.stripped).toBeNull();
   });
 
+  it("keeps an activation fitGate, including the override reason", () => {
+    const input = {
+      parameterSetId: "ps-gate",
+      parameters: { item_a: { a: 1 } },
+      reportHtml: "<p>report</p>",
+      fitStatistics: {
+        global: { RMSEA: 0.08 },
+        personFitRows: [{ personId: "stud-1", Zh: -2.4, misfit: true }],
+      },
+      fitGate: {
+        status: "override",
+        family: "irt",
+        failedChecks: [{ id: "irt.rmsea", message: "M2 RMSEA is 0.08, above the maximum 0.05." }],
+        override: {
+          reason: "Pilot sample accepted by the committee",
+          by: "ada",
+          at: "2026-10-30T12:00:00.000Z",
+        },
+      },
+    };
+    const { parameterSet, stripped } = slimParameterSet(input);
+    expect(parameterSet.fitGate).toEqual(input.fitGate);
+    expect(parameterSet.fitStatistics.global.RMSEA).toBe(0.08);
+    expect(parameterSet.reportHtml).toBeUndefined();
+    expect(stripped.reportHtml).toBe("<p>report</p>");
+    expect(JSON.stringify(parameterSet)).not.toMatch(/stud-1/);
+  });
+
   it("leaves a parameter set with only scalar fit untouched", () => {
     const input = {
       parameterSetId: "ps-ok",

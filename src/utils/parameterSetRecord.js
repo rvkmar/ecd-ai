@@ -7,6 +7,7 @@
 
 import { isParameterSetStatus } from "./parameterSetStatus.js";
 import { bulkyFitStatisticsErrors } from "./modelCriticism.js";
+import { fitGateStorageErrors } from "./fitActivationGate.js";
 import {
   CALIBRATION_FILE_KIND_VALUES,
   statisticalModelTypesForCalibrationKind,
@@ -92,6 +93,7 @@ export function parameterSetStorageErrors(parameterSet, statisticalModel) {
   if (ps.activatedBy != null && typeof ps.activatedBy !== "string") {
     errors.push(`Parameter set ${psTag} on model ${smId} has invalid activatedBy: should be string.`);
   }
+  errors.push(...fitGateStorageErrors(ps.fitGate, `Parameter set ${psTag} on model ${smId}`));
 
   return errors;
 }
