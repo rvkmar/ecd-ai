@@ -137,6 +137,10 @@ vi.mock("@/api/queries/psychometricReportTemplates", () => ({
   usePsychometricReportTemplates: () => ({ data: [], isLoading: false }),
 }));
 
+vi.mock("@/api/queries/items", () => ({
+  useItems: () => ({ data: [], isLoading: false }),
+}));
+
 vi.mock("@/api/queries/evidenceModels", () => ({
   useEvidenceModels: () => ({ data: fx.evidenceModels, isLoading: false }),
   useEvidenceModel: (id) => ({
@@ -151,6 +155,10 @@ vi.mock("@/api/queries/evidenceModels", () => ({
       fx.activatePayloads.push(payload);
       return { message: "Parameter set activated successfully." };
     },
+  }),
+  useUpdateScoringBundles: () => ({
+    isPending: false,
+    mutateAsync: async () => ({ scoringBundles: [] }),
   }),
 }));
 

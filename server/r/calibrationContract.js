@@ -8,6 +8,10 @@ import {
   fitStatisticsForParameterSet,
   modelCriticismResponseErrors,
 } from "../../src/utils/modelCriticism.js";
+import {
+  calibrationBundleRequestErrors,
+  scoringBundlesForParameterSet,
+} from "../../src/utils/scoringBundles.js";
 
 export const CALIBRATION_CONTRACT_VERSION = "1.0";
 
@@ -452,6 +456,8 @@ function validateOptionalAnalysisFields(body, model, rm) {
     }
   }
 
+  errors.push(...calibrationBundleRequestErrors(body));
+
   if (body.itemModels !== undefined && body.itemModels !== null) {
     if (typeof body.itemModels !== "object" || Array.isArray(body.itemModels)) {
       errors.push("itemModels should be object");
@@ -538,7 +544,7 @@ export function validateCalibrationResponse(body) {
 // Build the parameterSets[] entry stored on ingest. Maps 1:1 from the R
 // response -- no reshaping of parameters / SEs / fit (ADR 0002).
 export function parameterSetFromCalibrationResponse(response, extras = {}) {
-  return {
+  const set = {
     parameterSetId: extras.parameterSetId,
     parameters: response.parameters,
     standardErrors: response.standardErrors ?? undefined,
@@ -554,6 +560,10 @@ export function parameterSetFromCalibrationResponse(response, extras = {}) {
     notes: extras.notes || "",
     reportHtml: typeof response.reportHtml === "string" ? response.reportHtml : undefined,
   };
+  // Item ids and the GRM marker only. A matrix on the response is dropped.
+  const scoringBundles = scoringBundlesForParameterSet(response?.scoringBundles);
+  if (scoringBundles) set.scoringBundles = scoringBundles;
+  return set;
 }
 
 export function isDeclaredJobKind(kind) {

@@ -79,5 +79,36 @@ describe("ModelCriticismPanel", () => {
       {},
       { token: "t" }
     );
+
+    await user.click(screen.getByRole("button", { name: /show q3 matrix/i }));
+    expect(await screen.findByTestId("q3-matrix")).toHaveTextContent("0.310");
+    expect(screen.getByTestId("q3-mean")).toHaveTextContent("0.310");
+    expect(screen.getByTestId("model-criticism-q3")).toHaveTextContent("Yen");
+    expect(screen.getByTestId("model-criticism-q3")).toHaveTextContent("|Q3| > 0.20");
+  });
+
+  it("suggests a bundle for flagged items that share a work product", async () => {
+    const onEnableBundle = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ModelCriticismPanel
+        fitStatistics={fit}
+        items={[
+          { id: "Item.1", interaction: { workProductId: "wp_passage" } },
+          { id: "Item.2", interaction: { workProductId: "wp_passage" } },
+        ]}
+        onEnableBundle={onEnableBundle}
+      />
+    );
+    expect(screen.getByTestId("bundle-candidates")).toHaveTextContent("wp_passage");
+    expect(screen.getByTestId("bundle-candidates")).toHaveTextContent("Item.1");
+    await user.click(screen.getByRole("button", { name: /enable bundle scoring/i }));
+    expect(onEnableBundle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        basis: "workProduct",
+        sourceId: "wp_passage",
+        itemIds: ["Item.1", "Item.2"],
+      })
+    );
   });
 });

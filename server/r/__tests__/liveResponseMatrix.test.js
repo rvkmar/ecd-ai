@@ -92,7 +92,63 @@ describe("live response matrix", () => {
     expect(assessed.sourceSessionIds).toEqual(["s00", "s01"]);
     expect(assessed.qMatrixId).toBeNull();
     expect(assessed.request.qMatrix).toBeUndefined();
+    expect(assessed.request.bundles).toBeUndefined();
     expect(validateCalibrationRequest({ ...assessed.request, contractVersion: "1.0", jobId: "job-live" })).toEqual([]);
+  });
+
+  it("attaches an enabled scoring bundle and leaves a disabled one off the request", () => {
+    const sessions = students(3, (i) => [
+      scored("item-a", i !== 1),
+      scored("item-b", i !== 2),
+      scored("item-c", true),
+      scored("item-d", i === 0),
+    ]);
+    const db = {
+      ...irtModel(),
+      sessions,
+      evidenceModels: [
+        {
+          id: "em1",
+          statisticalModels: [{ id: "sm1", type: "irt", subtype: "2pl", active: true, parameterSets: [] }],
+          scoringBundles: [
+            {
+              id: "bundle_workProduct_wp_passage",
+              enabled: true,
+              basis: "workProduct",
+              sourceId: "wp_passage",
+              itemIds: ["item-a", "item-b"],
+            },
+            {
+              id: "bundle_off",
+              enabled: false,
+              basis: "workProduct",
+              sourceId: "wp_other",
+              itemIds: ["item-c", "item-d"],
+            },
+          ],
+        },
+      ],
+    };
+    const assessed = assessLiveResponseMatrix(db, {
+      evidenceModelId: "em1",
+      statisticalModelId: "sm1",
+      kind: "irt-parameters",
+    });
+    expect(assessed.ok).toBe(true);
+    expect(assessed.request.responseMatrix.itemIds).toEqual(["item-a", "item-b", "item-c", "item-d"]);
+    expect(assessed.request.bundles).toEqual([
+      {
+        id: "bundle_workProduct_wp_passage",
+        basis: "workProduct",
+        sourceId: "wp_passage",
+        itemIds: ["item-a", "item-b"],
+      },
+    ]);
+    expect(validateCalibrationRequest({
+      ...assessed.request,
+      contractVersion: "1.0",
+      jobId: "job-bundle",
+    })).toEqual([]);
   });
 
   it("encodes GRM cells as ordinal categories, not 0/1", () => {

@@ -33,6 +33,8 @@ export default function ParameterSetRegistry({
     evidenceModel,
     statisticalModel,
     observables = [],
+    items,
+    onEnableBundle,
 }) {
 
     const [expanded, setExpanded] = useState(null);
@@ -314,6 +316,9 @@ export default function ParameterSetRegistry({
                                     <ModelCriticismPanel
                                         fitStatistics={ps.fitStatistics}
                                         jobId={ps.calibrationJobId}
+                                        items={items}
+                                        scoringBundles={evidenceModel?.scoringBundles}
+                                        onEnableBundle={onEnableBundle}
                                     />
 
                                     {ps.parameters?._fit && (

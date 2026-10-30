@@ -1,3 +1,5 @@
+import { scoringBundleEntryIsSlim, scoringBundlesForParameterSet } from "./scoringBundles.js";
+
 // Parameter sets on an evidence model keep item parameters, standard
 // errors, and scalar fit indices. HTML reports, person-score arrays,
 // and the other sidecar blobs stay on the calibration job or an
@@ -157,6 +159,18 @@ export function slimParameterSet(parameterSet, refs = {}) {
       stripped.diagnostics = diag.stripped;
       if (diag.kept) next.diagnostics = diag.kept;
       else delete next.diagnostics;
+    }
+  }
+
+  // TU6. A bundle summary is a few ids. A matrix or response column on
+  // the same object is a sidecar and does not stay on the parameter set.
+  if (Array.isArray(next.scoringBundles)) {
+    const heavy = next.scoringBundles.some((row) => !scoringBundleEntryIsSlim(row));
+    if (heavy) {
+      stripped.scoringBundles = next.scoringBundles;
+      const kept = scoringBundlesForParameterSet(next.scoringBundles);
+      if (kept) next.scoringBundles = kept;
+      else delete next.scoringBundles;
     }
   }
 

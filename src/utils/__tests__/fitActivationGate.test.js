@@ -5,6 +5,7 @@ import {
   readFitOverride,
 } from "../fitActivationGate.js";
 import { parameterSetStorageErrors } from "../parameterSetRecord.js";
+import { slimParameterSet } from "../slimParameterSet.js";
 
 const irtModel = { id: "sm1", type: "irt", subtype: "2pl" };
 const cdmModel = { id: "sm-d", type: "gdina" };
@@ -112,6 +113,89 @@ describe("fit activation gate", () => {
     expect(gate.fitGate.status).toBe("grandfathered");
     expect(gate.fitGate.checks).toBeUndefined();
     expect(gate.failedChecks).toEqual([]);
+  });
+
+  it("gates a bundle GRM parameter set on maxAbsQ3 and keeps the bundle with the gate record", () => {
+    const bundleSet = {
+      parameterSetId: "ps-bundle",
+      parameters: {
+        passage_1: { a: 1.1, b: [-0.5, 0.2, 0.9], c: 0, model: "GRM" },
+        A: { a: 1, b: -0.2, c: 0 },
+      },
+      scoringBundles: [{
+        id: "passage_1",
+        itemIds: ["P1", "P2", "P3"],
+        model: "GRM",
+        maxScore: 3,
+      }],
+      packageVersion: "mirt 1.48",
+      sampleSize: 500,
+      calibratedAt: "2026-10-30T12:00:00.000Z",
+      converged: true,
+      fitStatistics: {
+        ...passingIrtFit,
+        itemFit: {
+          passage_1: { "p.S_X2": 0.3 },
+          A: { "p.S_X2": 0.5 },
+        },
+        localDependence: {
+          statistic: "Q3",
+          threshold: 0.2,
+          maxAbsQ3: 0.11,
+          nFlaggedPairs: 0,
+          flaggedPairs: [],
+          q3Matrix: { itemIds: ["passage_1", "A"], values: [[1, 0.11], [0.11, 1]] },
+        },
+      },
+      q3Matrix: { itemIds: ["passage_1", "A"], values: [[1, 0.11], [0.11, 1]] },
+    };
+    const slimmed = slimParameterSet(bundleSet);
+    expect(slimmed.parameterSet.parameters.passage_1.b).toEqual([-0.5, 0.2, 0.9]);
+    expect(slimmed.parameterSet.scoringBundles).toEqual(bundleSet.scoringBundles);
+    expect(slimmed.parameterSet.fitStatistics.localDependence.maxAbsQ3).toBe(0.11);
+    expect(slimmed.parameterSet.fitStatistics.localDependence.q3Matrix).toBeUndefined();
+    expect(slimmed.parameterSet.q3Matrix).toBeUndefined();
+
+    const pass = evaluateFitActivation({
+      statisticalModel: irtModel,
+      parameterSet: slimmed.parameterSet,
+      by: "ada",
+      at: "2026-10-30T12:00:00.000Z",
+    });
+    expect(pass.ok).toBe(true);
+    expect(pass.fitGate.status).toBe("pass");
+    expect(pass.fitGate.checks.find((check) => check.id === "irt.localDependence")).toMatchObject({
+      status: "pass",
+      statistic: 0.11,
+      threshold: 0.2,
+    });
+
+    const stored = slimParameterSet({ ...slimmed.parameterSet, fitGate: pass.fitGate });
+    expect(stored.parameterSet.fitGate.status).toBe("pass");
+    expect(stored.parameterSet.scoringBundles[0].itemIds).toEqual(["P1", "P2", "P3"]);
+    expect(parameterSetStorageErrors(stored.parameterSet, irtModel)).toEqual([]);
+
+    const fail = evaluateFitActivation({
+      statisticalModel: irtModel,
+      parameterSet: {
+        ...slimmed.parameterSet,
+        fitStatistics: {
+          ...slimmed.parameterSet.fitStatistics,
+          localDependence: {
+            statistic: "Q3",
+            threshold: 0.2,
+            maxAbsQ3: 0.33,
+            nFlaggedPairs: 1,
+            flaggedPairs: [{ itemId1: "passage_1", itemId2: "A", q3: 0.33 }],
+          },
+        },
+      },
+      by: "ada",
+      at: "2026-10-30T12:00:00.000Z",
+    });
+    expect(fail.ok).toBe(false);
+    expect(fail.failedChecks.map((check) => check.id)).toEqual(["irt.localDependence"]);
+    expect(fail.fitGate.failedChecks[0].message).toMatch(/0\.33/);
   });
 
   it("does not treat missing fit statistics as a failure", () => {

@@ -46,6 +46,7 @@ import { accumulateAttributeMastery } from "./attributeAccumulation.js";
 import { accumulateBayesianNetwork, BAYESIAN_NETWORK_FAMILY } from "./bayesianNetwork.js";
 import { decideJointContinuousUpdate, estimateJointContinuousPosterior } from "./jointContinuousAccumulation.js";
 import { activePackageFor, packageEntryFor } from "../compositeLibrary/activePackage.js";
+import { planBundleScoring } from "../../src/utils/scoringBundles.js";
 
 /* Families that update a CONTINUOUS latent variable via a posterior over
    theta. Everything else dispatches to an explicit not-yet-supported
@@ -1099,12 +1100,33 @@ export function accumulateEvidence(session, db, options = {}) {
       continue;
     }
 
-    /* Score each response and attach its item parameters. */
+    /* Score each response and attach its item parameters.
+       TU6: a parameter set that records scoringBundles replaces those
+       items with one graded sum. A set with no scoringBundles is scored
+       one response at a time, as before. Pilot parameters are item-level
+       and are never bundled. */
     const scoredObservations = [];
     let excluded = 0;
     const itemKeyedIrt = new Set();
+    const bundlePlan = parameterSource === "pilot"
+      ? { observations: [], consumed: new Set(), warnings: [], excluded: 0 }
+      : planBundleScoring(group, parameterSet, scoreResponse);
+    for (const warning of bundlePlan.warnings) warnings.push(warning);
+    excluded += bundlePlan.excluded;
+    for (const obs of bundlePlan.observations) {
+      if (!itemParametersAreUsable(obs.params)) {
+        excluded += 1;
+        warnings.push(
+          `Bundle '${obs.itemId}' has unusable graded parameters and was excluded.`
+        );
+        continue;
+      }
+      scoredObservations.push(obs);
+    }
 
-    for (const r of group) {
+    for (let responseIndex = 0; responseIndex < group.length; responseIndex += 1) {
+      if (bundlePlan.consumed.has(responseIndex)) continue;
+      const r = group[responseIndex];
       const { u, category, reason } = scoreResponse(r);
 
       if (u === null) {

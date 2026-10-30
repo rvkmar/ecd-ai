@@ -1981,3 +1981,88 @@ describe("accumulateEvidence — R5 GRM ordinal", () => {
     expect(rasch.estimate).toBeGreaterThan(0);
   });
 });
+
+describe("accumulateEvidence — TU6 bundle scoring", () => {
+  const grmParams = { a: 1, thresholds: [-1, 1] };
+
+  function bundleDb(withBundle) {
+    return makeDb({
+      evidenceModels: [{
+        id: "em1",
+        competencyId: "c1",
+        versionNumber: 1,
+        observables: [
+          { id: "o1", evidenceRule: { direction: "supports", strengthLevel: 4 } },
+          { id: "o2", evidenceRule: { direction: "supports", strengthLevel: 4 } },
+        ],
+        statisticalModels: [{
+          id: "sm1",
+          type: "irt",
+          subtype: "2pl",
+          active: true,
+          structureConfig: {},
+          parameterSets: [{
+            parameterSetId: "ps1",
+            parameters: withBundle
+              ? { bundle_wp: grmParams }
+              : { itemA: { a: 1, b: 0 }, itemB: { a: 1, b: 0 } },
+            ...(withBundle
+              ? {
+                  scoringBundles: [{
+                    id: "bundle_wp",
+                    itemIds: ["itemA", "itemB"],
+                    model: "GRM",
+                    maxScore: 2,
+                  }],
+                }
+              : {}),
+            packageVersion: "mirt 1.48",
+            converged: true,
+            sampleSize: 400,
+            calibratedAt: "2026-10-30T00:00:00.000Z",
+          }],
+          activeParameterSetId: "ps1",
+        }],
+      }],
+    });
+  }
+
+  function pair(extra = {}) {
+    return sessionWith([
+      makeResponse({ itemId: "itemA", observableId: "o1", ...extra }),
+      makeResponse({ itemId: "itemB", observableId: "o2", activated: true, ...extra }),
+    ]);
+  }
+
+  it("scores an enabled bundle as one graded sum and leaves a set without bundles independent", () => {
+    const bundled = accumulateEvidence(pair(), bundleDb(true));
+    const separate = accumulateEvidence(pair(), bundleDb(false));
+    const asOneCategory = accumulateEvidence(
+      sessionWith([makeResponse({
+        itemId: "bundle_wp",
+        observableId: "bundle_wp",
+        activated: true,
+        category: 2,
+        value: 2,
+      })]),
+      bundleDb(true)
+    );
+
+    expect(bundled.warnings).toEqual([]);
+    expect(bundled.posteriors[0].supported).toBe(true);
+    expect(bundled.posteriors[0].responsesUsed).toBe(1);
+    expect(bundled.posteriors[0].estimate).toBeCloseTo(asOneCategory.posteriors[0].estimate, 8);
+    expect(separate.posteriors[0].supported).toBe(true);
+    expect(separate.posteriors[0].responsesUsed).toBe(2);
+    expect(separate.posteriors[0].estimate).not.toBeCloseTo(bundled.posteriors[0].estimate, 2);
+  });
+
+  it("does not score one member of a bundle as its own item", () => {
+    const result = accumulateEvidence(
+      sessionWith([makeResponse({ itemId: "itemA", observableId: "o1" })]),
+      bundleDb(true)
+    );
+    expect(result.posteriors[0].supported).toBe(false);
+    expect(result.warnings.join(" ")).toMatch(/missing a member/);
+  });
+});

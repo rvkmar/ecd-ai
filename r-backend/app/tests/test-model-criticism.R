@@ -144,6 +144,7 @@ if (requireNamespace("mirt", quietly = TRUE)) {
   .stop_if(is.null(out$q3Matrix) || length(out$q3Matrix$itemIds) != 5L, "LSAT7 Q3 matrix")
   .stop_if(!is.null(out$fitStatistics$q3Matrix), "Q3 matrix must stay off fitStatistics")
   .stop_if(ld$nFlaggedPairs != length(ld$flaggedPairs), "LSAT7 flagged pair count")
+  .stop_if(!is.null(out$scoringBundles), "LSAT7 must not add scoringBundles")
   cat("LSAT7 fixture criticism ok\n")
 } else {
   cat("mirt not installed; skipped LSAT7 fixture\n")
