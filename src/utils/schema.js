@@ -887,6 +887,8 @@ export const schema = {
     // Optional content constraints. Absent means delivery is unchanged.
     // Shape is checked in the assemblyModels block via assemblyConstraintErrors.
     constraints: 'object',
+    // Optional attribute-mastery cut. Validated as (0, 1) below.
+    masteryThreshold: 'number',
     status: 'string',
     // Day 21 (Week 5): lifecycle wiring. `locked`/`versionNumber`/
     // `parentModelId` bring this entity's shape in line with every other
@@ -6154,6 +6156,13 @@ export function validateEntity(collection, obj, db = null, options = {}) {
             }
           }
         }
+
+        if (smv.masteryThreshold !== undefined && smv.masteryThreshold !== null) {
+          const cut = smv.masteryThreshold;
+          if (typeof cut !== "number" || !Number.isFinite(cut) || !(cut > 0 && cut < 1)) {
+            errors.push(`${tag} masteryThreshold must be a number in (0, 1).`);
+          }
+        }
       });
     }
 
@@ -6299,6 +6308,13 @@ export function validateEntity(collection, obj, db = null, options = {}) {
 
     if (obj.constraints !== undefined && obj.constraints !== null) {
       errors.push(...assemblyConstraintErrors(obj.constraints, db));
+    }
+
+    if (obj.masteryThreshold !== undefined && obj.masteryThreshold !== null) {
+      const cut = obj.masteryThreshold;
+      if (typeof cut !== "number" || !Number.isFinite(cut) || !(cut > 0 && cut < 1)) {
+        errors.push("masteryThreshold must be a number in (0, 1).");
+      }
     }
   }
 

@@ -60,4 +60,78 @@ describe("sessionMeasurementReport", () => {
       attributeProfile: [],
     });
   });
+
+  it("classifies the report profile at 0.5 when no cut is authored", () => {
+    const session = {
+      studentModel: {
+        smvPosteriors: {
+          attrA: {
+            smvId: "attrA",
+            method: "attribute-mastery-posterior",
+            modelFamily: "dina",
+            estimate: 0.6,
+            evidenceModelId: "em1",
+            competencyModelId: "cm1",
+          },
+        },
+      },
+    };
+    const db = {
+      evidenceModels: [{
+        id: "em1",
+        decisionRule: { type: "posterior_threshold", threshold: 0.3, direction: "above" },
+      }],
+    };
+    expect(sessionMeasurementReport(session, db).attributeProfile[0]).toMatchObject({
+      classification: "master",
+      masteryThreshold: 0.5,
+    });
+    expect(sessionMeasurementReport(session).attributeProfile[0].classification).toBe("master");
+  });
+
+  it("applies a mastery decision rule to the level the report shows", () => {
+    const session = {
+      assemblyProgress: { assemblyModelId: "am1" },
+      studentModel: {
+        smvPosteriors: {
+          attrA: {
+            smvId: "attrA",
+            method: "attribute-mastery-posterior",
+            modelFamily: "dina",
+            estimate: 0.6,
+            evidenceModelId: "em1",
+            competencyModelId: "cm1",
+          },
+        },
+      },
+    };
+    const db = {
+      assemblyModels: [{ id: "am1", competencyModelId: "cm1", masteryThreshold: 0.75 }],
+      competencyModels: [{
+        id: "cm1",
+        smVariables: [{ id: "attrA", type: "binary", masteryThreshold: 0.55 }],
+      }],
+      evidenceModels: [{
+        id: "em1",
+        decisionRule: { type: "mastery", threshold: 0.9, direction: "above" },
+      }],
+    };
+    expect(sessionMeasurementReport(session, db).attributeProfile[0]).toMatchObject({
+      classification: "master",
+      masteryThreshold: 0.55,
+      expectedClassificationAccuracy: 0.6,
+    });
+
+    delete db.competencyModels[0].smVariables[0].masteryThreshold;
+    expect(sessionMeasurementReport(session, db).attributeProfile[0]).toMatchObject({
+      classification: "nonmaster",
+      masteryThreshold: 0.75,
+    });
+
+    delete db.assemblyModels[0].masteryThreshold;
+    expect(sessionMeasurementReport(session, db).attributeProfile[0]).toMatchObject({
+      classification: "nonmaster",
+      masteryThreshold: 0.9,
+    });
+  });
 });

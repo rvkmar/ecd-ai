@@ -38,7 +38,11 @@
 // branch below and ADR 0004. It remains tri-state: null still means "no
 // one evaluated this", which is not the same statement as false.
 
-import { evaluateClassificationTarget } from "./attributeClassification.js";
+import {
+  evaluateClassificationTarget,
+  resolveDecision,
+  sourcesForPosterior,
+} from "./attributeClassification.js";
 
 /* Shared with activitySelection.js so the module that ENDS a session and
    the module that reports progress toward that end agree on which AM
@@ -146,7 +150,18 @@ export function resolveAssemblyProgress(posteriors, db, options = {}) {
          the module before it can be found the hard way. */
       entry.requiredClassificationAccuracy = target.requiredClassificationAccuracy;
 
-      const decision = evaluateClassificationTarget(posterior, target.requiredClassificationAccuracy);
+      /* TU1: SMV cut, then this Assembly Model's cut, then a mastery
+         decisionRule on the posterior's evidence model, then 0.5.
+         With none of those authored, resolveDecision returns 0.5 and
+         the comparison is the one this branch has always made. */
+      const { threshold } = resolveDecision(
+        sourcesForPosterior(posterior, db, { assemblyModel })
+      );
+      const decision = evaluateClassificationTarget(
+        posterior,
+        target.requiredClassificationAccuracy,
+        threshold
+      );
       entry.stoppingCriterionMet = decision.met;
 
       if (decision.classification !== undefined) {

@@ -389,6 +389,75 @@ describe("evaluateDeclaredTargets", () => {
     expect(evaluateDeclaredTargets(assemblyModel({ targetsBySMV: undefined }), []).allScoredAndMet).toBe(false);
   });
 
+  it("classifies with an authored cut: SMV, then Assembly Model, then mastery rule", () => {
+    const target = { smvId: "smv1", requiredClassificationAccuracy: 0.9 };
+    const am = assemblyModel({
+      masteryThreshold: 0.8,
+      targetsBySMV: [target],
+    });
+    const ruleOnly = resolveAssemblyProgress(
+      [masteryPosterior({ estimate: 0.6, evidenceModelId: "em1" })],
+      {
+        assemblyModels: [assemblyModel({ targetsBySMV: [target] })],
+        evidenceModels: [{
+          id: "em1",
+          decisionRule: { type: "mastery", threshold: 0.65, direction: "above" },
+        }],
+      }
+    );
+    expect(ruleOnly[0].classification).toBe("nonmaster");
+    expect(ruleOnly[0].masteryThreshold).toBe(0.65);
+
+    const fromAssembly = resolveAssemblyProgress(
+      [masteryPosterior({ estimate: 0.7, evidenceModelId: "em1" })],
+      {
+        assemblyModels: [am],
+        evidenceModels: [{
+          id: "em1",
+          decisionRule: { type: "mastery", threshold: 0.65, direction: "above" },
+        }],
+      }
+    );
+    expect(fromAssembly[0].classification).toBe("nonmaster");
+    expect(fromAssembly[0].masteryThreshold).toBe(0.8);
+    expect(fromAssembly[0].expectedClassificationAccuracy).toBeCloseTo(0.3, 10);
+
+    const fromSmv = resolveAssemblyProgress(
+      [masteryPosterior({ estimate: 0.7, evidenceModelId: "em1" })],
+      {
+        assemblyModels: [am],
+        competencyModels: [{
+          id: "cm1",
+          smVariables: [{ id: "smv1", type: "binary", masteryThreshold: 0.6 }],
+        }],
+        evidenceModels: [{
+          id: "em1",
+          decisionRule: { type: "posterior_threshold", threshold: 0.3, direction: "above" },
+        }],
+      }
+    );
+    expect(fromSmv[0].classification).toBe("master");
+    expect(fromSmv[0].masteryThreshold).toBe(0.6);
+  });
+
+  it("does not treat a theta decision rule as a mastery probability cut", () => {
+    const am = assemblyModel({
+      targetsBySMV: [{ smvId: "smv1", requiredClassificationAccuracy: 0.8 }],
+    });
+    const result = resolveAssemblyProgress(
+      [masteryPosterior({ estimate: 0.4, evidenceModelId: "em1" })],
+      {
+        assemblyModels: [am],
+        evidenceModels: [{
+          id: "em1",
+          decisionRule: { type: "posterior_threshold", threshold: 0.3, direction: "above" },
+        }],
+      }
+    );
+    expect(result[0].classification).toBe("nonmaster");
+    expect(result[0].masteryThreshold).toBe(0.5);
+  });
+
   it("does not count a progress row from a different Assembly Model as scored", () => {
     const am = assemblyModel({ id: "am-governing" });
     const result = evaluateDeclaredTargets(am, [{

@@ -94,6 +94,8 @@ router.post("/", canAuthor, (req, res) => {
     });
   }
 
+  if (record.masteryThreshold == null) delete record.masteryThreshold;
+
   db.assemblyModels = db.assemblyModels || [];
   db.assemblyModels.push(record);
   saveDB(db);
@@ -158,6 +160,9 @@ router.put("/:id", canAuthor, (req, res) => {
 
   if (Object.prototype.hasOwnProperty.call(req.body || {}, "constraints") && req.body.constraints == null) {
     delete updated.constraints;
+  }
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, "masteryThreshold") && req.body.masteryThreshold == null) {
+    delete updated.masteryThreshold;
   }
 
   db.assemblyModels[idx] = updated;
@@ -275,6 +280,7 @@ export function createAssemblyModelRecord(payload = {}, db, idSuffix = "", optio
     stoppingRules: payload.stoppingRules || {},
     selectionAlgorithm,
     ...(payload.constraints != null ? { constraints: payload.constraints } : {}),
+    ...(typeof payload.masteryThreshold === "number" ? { masteryThreshold: payload.masteryThreshold } : {}),
     status: preserve && payload.status ? payload.status : "draft",
     locked: preserve && typeof payload.locked === "boolean" ? payload.locked : false,
     versionNumber: payload.versionNumber ?? 1,

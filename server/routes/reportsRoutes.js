@@ -148,7 +148,7 @@ router.get("/session/:id", async (req, res) => {
     policyDetails = policies.find(p => p.type === session.selectionStrategy);
   }
 
-  const measurement = sessionMeasurementReport(session);
+  const measurement = sessionMeasurementReport(session, db);
 
   const report = {
     sessionId: id,
@@ -314,7 +314,7 @@ router.get("/session/:id/learner-feedback", async (req, res) => {
     policyDetails = policies.find(p => p.type === session.selectionStrategy);
   }
 
-  const measurement = sessionMeasurementReport(session);
+  const measurement = sessionMeasurementReport(session, db);
 
   const feedback = {
     sessionId: id,
@@ -440,7 +440,7 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, async (req, res
     evidenceModelMap[em.id] = { ...em, _obsMap: obsMap, _constructMap: constructMap };
   }
 
-  const measurement = sessionMeasurementReport(session);
+  const measurement = sessionMeasurementReport(session, db);
 
   const report = {
     sessionId: id,

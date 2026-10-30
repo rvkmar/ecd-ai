@@ -85,6 +85,7 @@ export default function Step5Review() {
           {hasStoppingRule ? " declared" : " not yet declared"} · selection
           policy {hasPolicy ? "bound" : "not yet bound"}
           {assemblyConstraintsActive(draft.constraints) ? " · content constraints set" : " · no content constraints"}
+          {typeof draft.masteryThreshold === "number" ? ` · mastery cut ${draft.masteryThreshold}` : ""}
         </p>
       </div>
 

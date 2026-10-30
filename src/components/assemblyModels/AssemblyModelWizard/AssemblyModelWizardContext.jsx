@@ -92,6 +92,7 @@ function draftFromSeed(seed) {
       ? { policyId: seed.selectionAlgorithm.policyId }
       : {},
     constraints: seed.constraints ? structuredClone(seed.constraints) : undefined,
+    ...(typeof seed.masteryThreshold === "number" ? { masteryThreshold: seed.masteryThreshold } : {}),
   };
 }
 
@@ -250,6 +251,10 @@ export function AssemblyModelWizardProvider({
       stoppingRules: hasStoppingRule ? draft.stoppingRules : undefined,
       selectionAlgorithm: draft.selectionAlgorithm?.policyId ? draft.selectionAlgorithm : undefined,
       constraints: assemblyConstraintsActive(draft.constraints) ? draft.constraints : null,
+      masteryThreshold:
+        typeof draft.masteryThreshold === "number" && Number.isFinite(draft.masteryThreshold)
+          ? draft.masteryThreshold
+          : null,
     };
 
     try {

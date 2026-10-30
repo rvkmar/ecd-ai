@@ -1,6 +1,6 @@
 # ADR 0004 — Mastery classification decision rule
 
-**Status:** Accepted
+**Status:** Accepted (decision 5 amended 2026-10-30, TU1)
 **Date:** 2026-09-13 (Day 57, Week 12)
 **Deciders:** ecd-claude build
 **Depends on:** Day 36's `delivery/attributeAccumulation.js` (the marginal mastery
@@ -138,6 +138,45 @@ binding another way instead; this follows that precedent. Because the threshold 
 a parameter and the accuracy math is already written in its general form, that future unit
 plumbs a value through and adds no mathematics.
 
+### Amendment (TU1, 2026-10-30): the cut is authorable
+
+Decision 5 recorded the threshold as a constant because authoring it was a
+separate schema unit. That unit is TU1. Decisions 1 to 4 and 6 to 7 are
+unchanged. The comparison is still `p > tau`, `p < tau`, `p === tau`. The
+accuracy is still the probability of the assigned class. Nothing is stored.
+
+`tau` is resolved by `resolveDecision` in `server/delivery/attributeClassification.js`:
+
+1. Student Model Variable `masteryThreshold`, when it is a finite number in (0, 1).
+2. Assembly Model `masteryThreshold`, on the same interval.
+3. The Evidence Model `decisionRule`, when that rule defines a mastery cut:
+   `type` is `mastery`, `threshold` is a finite number in [0, 1], and
+   `direction` is `above` or omitted (the authoring panel's default).
+4. `DEFAULT_MASTERY_THRESHOLD`, which remains 0.5.
+
+An invalid `masteryThreshold` (missing, 0, 1, outside (0, 1), or not a
+finite number) is skipped, not applied. A decision rule of type
+`classification`, `posterior_threshold`, or `score_band`, or a mastery
+rule whose direction is `below` or `within`, does not define this cut.
+The resolver falls through. `posterior_threshold` is a theta, so a value
+that happens to lie in (0, 1) is still not used as a mastery probability.
+A mastery rule may state 0 or 1 (the extreme-justification band). Those
+are cuts. The new field may not.
+
+When none of the three sources supplies a usable cut, classification is
+the comparison at 0.5 this ADR originally specified. No stored posterior
+is rewritten. There is no migration.
+
+Assembly progress passes the Assembly Model it already chose, so a second
+model for the same competency cannot change the cut. A report resolves
+the Assembly Model from the session snapshot (`assemblyProgress`, then
+`stopped`), then the cited delivery model, then a unique Assembly Model
+for that competency. If several could apply and the session names none,
+that source is skipped.
+
+The floor advisory in decision 6 moves with `tau`. The original text
+already required that.
+
 ### 6. A target at or below the accuracy floor is met, and says so
 
 At `tau = 0.5` a decided classification always has `expectedClassificationAccuracy >= 0.5`,
@@ -201,3 +240,4 @@ named here so nobody later mistakes the individual quantity for it.
   Lewis & Sheehan (1990); Vos (1999); Rudner (2002).
 - Day 39 adversarial review, finding P1-6 (the `method`-not-`smvType` scale guard this
   ADR mirrors): `claude/day39-adversarial-review-accumulation-math.md`.
+- TU1 amendment (authored cut precedence): `claude/day146aj-offcal-tu1-decision-rule.md`.
