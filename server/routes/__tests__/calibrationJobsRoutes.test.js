@@ -615,6 +615,94 @@ describe("session item analysis enqueue", () => {
   });
 });
 
+describe("model criticism sidecars", () => {
+  it("omits person rows and the Q3 matrix from detail and serves them back", async () => {
+    dbState.current.calibrationJobs = [
+      {
+        id: "job-fit",
+        kind: "irt-parameters",
+        status: "succeeded",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+        requestedBy: "admin1",
+        requestedAt: "2026-10-30T09:00:00Z",
+        request: validRequest(),
+        response: {
+          contractVersion: "1.0",
+          jobId: "job-fit",
+          converged: true,
+          packageVersion: "mirt 1.47",
+          sampleSize: 6,
+          calibratedAt: "2026-10-30T09:01:00Z",
+          parameters: { item_a: { a: 1, b: 0, c: 0 }, item_b: { a: 1, b: 0, c: 0 } },
+          fitStatistics: {
+            personFit: {
+              statistic: "Zh",
+              cutoff: -2,
+              rule: "Zh < cutoff",
+              nPersons: 6,
+              nFinite: 6,
+              nMisfit: 1,
+              proportionMisfit: 1 / 6,
+            },
+            localDependence: {
+              statistic: "Q3",
+              threshold: 0.2,
+              maxAbsQ3: 0.4,
+              nPairs: 1,
+              nFlaggedPairs: 1,
+              flaggedPairs: [{ itemId1: "item_a", itemId2: "item_b", q3: 0.4 }],
+            },
+          },
+          personFitRows: ["s1", "s2", "s3", "s4", "s5", "s6"].map((personId, i) => ({
+            personId,
+            Zh: i === 0 ? -2.5 : 0.1,
+            misfit: i === 0,
+          })),
+          q3Matrix: {
+            itemIds: ["item_a", "item_b"],
+            values: [
+              [1, 0.4],
+              [0.4, 1],
+            ],
+          },
+        },
+        error: null,
+        attempts: 1,
+        maxAttempts: 3,
+        ingestedParameterSetId: null,
+      },
+    ];
+    const app = await jobsApp();
+    const admin = { Authorization: `Bearer ${tokenFor("admin")}` };
+    const detail = await request(app).get("/api/calibrationJobs/job-fit").set(admin);
+    expect(detail.status).toBe(200);
+    expect(detail.body.response.personFitRows).toBeUndefined();
+    expect(detail.body.response.q3Matrix).toBeUndefined();
+    expect(detail.body.hasPersonFit).toBe(true);
+    expect(detail.body.hasQ3).toBe(true);
+    expect(detail.body.response.fitStatistics.personFit.nMisfit).toBe(1);
+    expect(detail.body.response.fitStatistics.localDependence.maxAbsQ3).toBe(0.4);
+
+    const flags = await request(app).get("/api/calibrationJobs/job-fit/person-fit").set(admin);
+    expect(flags.status).toBe(200);
+    expect(flags.body.rows[0].personId).toBe("s1");
+    expect(flags.body.nMisfit).toBe(1);
+
+    const district = await request(app)
+      .get("/api/calibrationJobs/job-fit/person-fit")
+      .set("Authorization", `Bearer ${tokenFor("district")}`);
+    expect(district.status).toBe(200);
+    expect(district.body.rows[0].personId).toBe("row-1");
+    expect(district.body.personIdRedacted).toBe(true);
+
+    const matrix = await request(app).get("/api/calibrationJobs/job-fit/q3").set(admin);
+    expect(matrix.status).toBe(200);
+    expect(matrix.body.itemIds).toEqual(["item_a", "item_b"]);
+    expect(matrix.body.values[0][1]).toBe(0.4);
+  });
+});
+
 describe("HTML technical report", () => {
   it("omits reportHtml from list/detail and serves it at /:id/report", async () => {
     dbState.current.calibrationJobs = [

@@ -18,6 +18,7 @@ import {
   suppressArtefactSmallCells,
 } from "../utils/aggregatePrivacy.js";
 import {
+  redactPersonFitRows,
   redactScoreRows,
   rowsToCsv,
   scoresFromPayload,
@@ -135,6 +136,46 @@ router.get("/:id/scores", canView, async (req, res) => {
     n: rows.length,
     minCellSize: MIN_CELL_SIZE,
   });
+});
+
+router.get("/:id/person-fit", canView, async (req, res) => {
+  const db = loadDB();
+  const row = await getAnalysisArtefactById(db, req.params.id);
+  if (!row) return res.status(404).json({ error: "Analysis artefact not found" });
+  const rows = row.payload?.personFitRows;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(404).json({ error: "No person-fit sidecar on this artefact." });
+  }
+  const isAdmin = req.user?.role === "admin";
+  if (!isAdmin && rows.length < MIN_CELL_SIZE) {
+    return res.status(200).json({
+      id: row.id,
+      suppressed: true,
+      reason: `n < ${MIN_CELL_SIZE}`,
+      n: null,
+      minCellSize: MIN_CELL_SIZE,
+    });
+  }
+  const out = isAdmin ? rows : redactPersonFitRows(rows);
+  return res.json({
+    id: row.id,
+    rows: out,
+    n: out.length,
+    nMisfit: out.filter((r) => r.misfit).length,
+    personIdRedacted: !isAdmin,
+    minCellSize: MIN_CELL_SIZE,
+  });
+});
+
+router.get("/:id/q3", canView, async (req, res) => {
+  const db = loadDB();
+  const row = await getAnalysisArtefactById(db, req.params.id);
+  if (!row) return res.status(404).json({ error: "Analysis artefact not found" });
+  const matrix = row.payload?.q3Matrix;
+  if (!matrix || !Array.isArray(matrix.itemIds) || !Array.isArray(matrix.values)) {
+    return res.status(404).json({ error: "No Q3 matrix on this artefact." });
+  }
+  return res.json({ id: row.id, itemIds: matrix.itemIds, values: matrix.values });
 });
 
 router.get("/:id/tif", canView, async (req, res) => {

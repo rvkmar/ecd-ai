@@ -40,7 +40,7 @@ import {
 } from "../utils/aggregatePrivacy.js";
 import { adoptReportTemplate, applySnapshotToRequest } from "../../src/utils/psychometricReportTemplate.js";
 import { ensureReportCreditsHtml } from "../../src/utils/softwareCredits.js";
-import { stripJobSidecars } from "../../src/utils/analysisSidecars.js";
+import { redactPersonFitRows, stripJobSidecars } from "../../src/utils/analysisSidecars.js";
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -84,6 +84,65 @@ router.get("/", canView, async (req, res) => {
       minCellSize: MIN_CELL_SIZE,
     }))
   );
+});
+
+function sendPersonFit(res, row, isAdmin) {
+  const rows = row?.response?.personFitRows;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(404).json({ error: "No person-fit sidecar on this job." });
+  }
+  if (!isAdmin && rows.length < MIN_CELL_SIZE) {
+    return res.status(200).json({
+      id: row.id,
+      suppressed: true,
+      reason: `n < ${MIN_CELL_SIZE}`,
+      n: null,
+      minCellSize: MIN_CELL_SIZE,
+    });
+  }
+  const out = isAdmin ? rows : redactPersonFitRows(rows);
+  return res.json({
+    id: row.id,
+    rows: out,
+    n: out.length,
+    nMisfit: out.filter((r) => r.misfit).length,
+    personIdRedacted: !isAdmin,
+    minCellSize: MIN_CELL_SIZE,
+  });
+}
+
+function sendQ3(res, row) {
+  const matrix = row?.response?.q3Matrix;
+  if (!matrix || !Array.isArray(matrix.itemIds) || !Array.isArray(matrix.values)) {
+    return res.status(404).json({ error: "No Q3 matrix on this job." });
+  }
+  return res.json({
+    id: row.id,
+    itemIds: matrix.itemIds,
+    values: matrix.values,
+  });
+}
+
+// ------------------------------
+// GET /api/calibrationJobs/:id/person-fit
+// Per-person Zh flags. List/detail omit the rows. Admin sees ids.
+// ------------------------------
+router.get("/:id/person-fit", canView, async (req, res) => {
+  const db = loadDB();
+  const row = await getCalibrationJobById(db, req.params.id);
+  if (!row) return res.status(404).json({ error: "Calibration job not found" });
+  return sendPersonFit(res, row, req.user?.role === "admin");
+});
+
+// ------------------------------
+// GET /api/calibrationJobs/:id/q3
+// Yen Q3 matrix. List/detail omit it. Item-level, no person ids.
+// ------------------------------
+router.get("/:id/q3", canView, async (req, res) => {
+  const db = loadDB();
+  const row = await getCalibrationJobById(db, req.params.id);
+  if (!row) return res.status(404).json({ error: "Calibration job not found" });
+  return sendQ3(res, row);
 });
 
 // ------------------------------

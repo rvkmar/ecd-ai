@@ -115,6 +115,11 @@ function analysisArtefactFromCalibrationResponse(response, extras = {}) {
       scoresCsv: typeof response.scoresCsv === "string" ? response.scoresCsv : undefined,
       tifCsv: typeof response.tifCsv === "string" ? response.tifCsv : undefined,
       iifCsv: typeof response.iifCsv === "string" ? response.iifCsv : undefined,
+      personFitRows: Array.isArray(response.personFitRows) ? response.personFitRows : undefined,
+      q3Matrix:
+        response.q3Matrix && typeof response.q3Matrix === "object" && !Array.isArray(response.q3Matrix)
+          ? response.q3Matrix
+          : undefined,
       credits: response.credits && typeof response.credits === "object" ? response.credits : undefined,
       reportTemplate:
         extras.reportTemplate ||

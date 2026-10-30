@@ -512,6 +512,16 @@ calibrate_irt <- function(body, res) {
   if (is.list(item_fit)) fit_stats$itemFit <- item_fit
   if (is.list(person_scores)) fit_stats$personScores <- person_scores
 
+  # TU4. Summaries stay on fitStatistics. Zh rows and the Q3 matrix are
+  # top-level sidecars. A criticism failure does not fail a converged fit.
+  criticism <- tryCatch(
+    .irt_model_criticism(fit, body$responseMatrix$personIds, item_ids, opts, person_scores),
+    error = function(e) list(warnings = paste("model criticism:", conditionMessage(e)))
+  )
+  if (is.list(criticism$personFit)) fit_stats$personFit <- criticism$personFit
+  if (is.list(criticism$localDependence)) fit_stats$localDependence <- criticism$localDependence
+  if (length(criticism$warnings)) warnings_acc <- c(warnings_acc, criticism$warnings)
+
   dichotomous_params <- lapply(parameters, function(p) {
     b <- unlist(p$b, use.names = FALSE)
     list(
@@ -549,7 +559,7 @@ calibrate_irt <- function(body, res) {
     error = function(e) NULL
   )
 
-  list(
+  out <- list(
     contractVersion = CALIBRATION_CONTRACT_VERSION,
     jobId = .as_char(body$jobId),
     converged = TRUE,
@@ -573,6 +583,13 @@ calibrate_irt <- function(body, res) {
       warnings = as.list(warnings_acc)
     )
   )
+  if (is.list(criticism$personFitRows) && length(criticism$personFitRows)) {
+    out$personFitRows <- criticism$personFitRows
+  }
+  if (is.list(criticism$q3Matrix) && length(criticism$q3Matrix$itemIds)) {
+    out$q3Matrix <- criticism$q3Matrix
+  }
+  out
 }
 
 calibrate_diagnostic <- function(body, res) {
@@ -789,6 +806,17 @@ calibrate_diagnostic <- function(body, res) {
   }, error = function(e) {
     list(note = conditionMessage(e))
   })
+
+  # TU4. Absolute fit and Q-matrix suggestions. Scalar summaries only.
+  # A criticism failure does not fail a converged fit.
+  attr_ids <- vapply(as.list(body$qMatrix$attributeIds), .as_char, character(1))
+  cdm_criticism <- tryCatch(
+    .cdm_model_criticism(fit, request_item_ids, attr_ids, opts),
+    error = function(e) list(warnings = paste("model criticism:", conditionMessage(e)))
+  )
+  if (is.list(cdm_criticism$cdmFit)) fit_stats$cdmFit <- cdm_criticism$cdmFit
+  if (is.list(cdm_criticism$qValidation)) fit_stats$qValidation <- cdm_criticism$qValidation
+  if (length(cdm_criticism$warnings)) warnings_acc <- c(warnings_acc, cdm_criticism$warnings)
 
   list(
     contractVersion = CALIBRATION_CONTRACT_VERSION,

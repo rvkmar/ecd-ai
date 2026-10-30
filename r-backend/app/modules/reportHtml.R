@@ -874,6 +874,38 @@ build_item_analysis_html <- function(job_id, package_version, sample_size, calib
   .html_document(paste("Item analysis", job_id), .html_css(skin_obj), body, credits)
 }
 
+.model_criticism_html <- function(fit_statistics) {
+  if (!is.list(fit_statistics)) return("")
+  pf <- fit_statistics$personFit
+  ld <- fit_statistics$localDependence
+  bits <- character(0)
+  if (is.list(pf) && !isTRUE(pf$available == FALSE)) {
+    bits <- c(bits, sprintf(
+      "<tr><th>Person fit (Zh &lt; %s)</th><td>%s of %s (%s)</td></tr>",
+      .html_escape(.fmt(pf$cutoff, 1)),
+      .html_escape(.fmt(pf$nMisfit, 0)),
+      .html_escape(.fmt(pf$nFinite, 0)),
+      .html_escape(.fmt(pf$proportionMisfit, 3))
+    ))
+  }
+  if (is.list(ld) && !isTRUE(ld$available == FALSE)) {
+    bits <- c(bits, sprintf(
+      "<tr><th>Q3 threshold</th><td>%s</td></tr><tr><th>max |Q3|</th><td>%s</td></tr><tr><th>Flagged pairs</th><td>%s</td></tr>",
+      .html_escape(.fmt(ld$threshold, 2)),
+      .html_escape(.fmt(ld$maxAbsQ3, 3)),
+      .html_escape(.fmt(ld$nFlaggedPairs, 0))
+    ))
+  }
+  if (!length(bits)) return("")
+  paste0(
+    "<h2>Model criticism</h2>",
+    "<p>Counts only. Per-person Zh flags and the Q3 matrix stay on the calibration job.</p>",
+    "<table class='kv'><tbody>",
+    paste(bits, collapse = ""),
+    "</tbody></table>"
+  )
+}
+
 build_irt_html <- function(job_id, package_version, sample_size, calibrated_at,
                            parameters, standard_errors, fit_statistics, plots,
                            template = NULL, credits = NULL, skin = NULL) {
@@ -934,6 +966,7 @@ build_irt_html <- function(job_id, package_version, sample_size, calibrated_at,
       )
     ) else "",
     fit_html,
+    .model_criticism_html(fit_statistics),
     if (.chapter_on(template, "irt-plots")) .irt_chapter_html(plots) else ""
   )
   .html_document(paste("IRT calibration", job_id), .html_css(skin_obj), body, credits)

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { apiErrorMessage, apiFetch } from "@/api/apiClient";
 import { useAuth } from "@/auth/AuthProvider";
 import IrtFitTable from "@/components/psychometrics/IrtFitTable";
+import ModelCriticismPanel from "./ModelCriticismPanel";
 import {
   useCancelCalibrationJob,
   useIngestCalibrationJob,
@@ -418,6 +419,7 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
                 empty="No standard errors on this response."
               />
             </div>
+            <ModelCriticismPanel fitStatistics={response.fitStatistics} jobId={job.id} />
             <div>
               <h4 className="mb-1 text-caption font-medium text-muted-foreground">Fit</h4>
               <JsonBlock
