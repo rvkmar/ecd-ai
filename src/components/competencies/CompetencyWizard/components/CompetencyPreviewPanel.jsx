@@ -162,6 +162,29 @@ export default function CompetencyPreviewPanel({
                             </div>
                         )}
 
+                        {Array.isArray(comp.performanceLevels) &&
+                            comp.performanceLevels.length > 0 && (
+                                <div className="text-sm text-slate-700">
+                                    <strong className="text-slate-800">
+                                        Performance levels
+                                        {comp.performanceLevelScale
+                                            ? ` (${comp.performanceLevelScale})`
+                                            : ""}
+                                        :
+                                    </strong>
+                                    <ul className="mt-1 list-disc pl-5">
+                                        {comp.performanceLevels.map((level, idx) => (
+                                            <li key={`${level.label}-${idx}`}>
+                                                {level.label} (cut {level.cut})
+                                                {level.descriptor
+                                                    ? `: ${level.descriptor}`
+                                                    : ""}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
                         {/* Relationships */}
                         {(comp.relationships || []).length > 0 && (
                             <div className="text-sm text-slate-700">

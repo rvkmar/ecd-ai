@@ -42,6 +42,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | Textbook ECD re-audit | **~~R1–R14~~ complete** 2026-10-29. Product `78151e3`. All fourteen re-audit gaps closed (1 High, 6 Med, 7 Low). ~~R15~~ already closed. G15–G22 and F24 stay closed. D129 stays closed. Last handoff: `claude/day146t-offcal-r11-r14-remaining-lows.md`. **Not D146.** |
 | Textbook ECD gap audit 2 (2026-10-29) | 28 gaps T1–T28 on main 2d5ada6 (3 High, 14 Med, 11 Low; 18 new, 9 tracked, 1 partly tracked). Fix plan TU1–TU27. Source: claude/day146af-offcal-ecd-textbook-gaps-t.md. **Not D146.** |
 | Off-calendar (2026-10-30, TU1) | **TU1** done. T2 closed. Classification and the report attribute profile use an authored cut. Precedence: SMV `masteryThreshold`, Assembly Model `masteryThreshold`, a mastery `decisionRule` cut, then 0.5. No migration. Suite 2958 passed / 13 skipped. No lint script. Handoff: `claude/day146aj-offcal-tu1-decision-rule.md`. **Not D146.** |
+| Off-calendar (2026-10-30, TU2) | ~~T15~~ closed. Optional `performanceLevels` on a competency (`label`, `descriptor`, `cut`) with scale `theta` or `probability`. Competency Wizard step 9 and an Angoff/bookmark worksheet write the cuts. `levelForScore` is ready for TU3. Reports are unchanged. No migration. Handoff: `claude/day146ak-offcal-tu2-performance-levels.md`. **Not D146.** |
 
 | Off-calendar (2026-09-18) | TN 38-district roster seed + EMIS/UDISE login (`a8c4e7b`); hardened `rvkmar/ecd-node` + `ecd-nginx` digest pins (`7639477`). Close-gate: unexport dead TN helpers / resurrect `createUserRecord` baseline. **Not D96.** |
 
@@ -1124,7 +1125,7 @@ Textbook gaps T1–T28 (2026-10-29), from `claude/day146af-offcal-ecd-textbook-g
 - T11. Composite tasks are never delivered. Medium. TU18.
 - T12. No family-level psychometrics for generated tasks. Medium. TU19. Related to D155.
 - T14. Design-layer and delivery records are not versioned. Medium. TU20.
-- T15. No standard setting or performance-level descriptors. Medium. TU2.
+- ~~T15. No standard setting or performance-level descriptors.~~ Closed 2026-10-30 by TU2. Optional performance levels and an Angoff/bookmark worksheet. Handoff: `claude/day146ak-offcal-tu2-performance-levels.md`.
 - T18. No response timing or process data. Low. TU9.
 - T19. Task-level time and attempt limits not enforced. Low. TU10.
 - T20. No rater-agreement statistics. Low. TU22.

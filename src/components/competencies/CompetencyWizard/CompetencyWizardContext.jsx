@@ -33,6 +33,7 @@ import {
 import { syncSmVariablesFromCompetencies } from "./smVariableSync";
 import { PSYCHOLOGICAL_PERSPECTIVE_VALUES } from "@/utils/ecdVocabulary";
 import { constructFrameworkGrounded } from "@/utils/constructGrounding";
+import { performanceLevelsReady } from "@/utils/performanceLevels";
 import { useCurricularPolicies } from "@/api/queries/curricularPolicies";
 import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
 import { applyDomainAnalysisChoice } from "@/utils/perspectiveInheritance";
@@ -60,6 +61,11 @@ export function CompetencyWizardProvider({
   const [competencies, setCompetencies] = useState([]);
 
   const [currentStep, setCurrentStep] = useState(1);
+  // Step 9 holds an in-progress worksheet that is not written onto the
+  // competency until the levels are valid. False blocks Next so a half
+  // finished row cannot be skipped. Unmounting the step resets this.
+  const [performanceLevelsDraftReady, setPerformanceLevelsDraftReady] =
+    useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -410,17 +416,31 @@ export function CompetencyWizardProvider({
       policies: curricularPolicies,
     }).allPassed;
 
-    // Step 9. Save for Review stays available on a draft (the audit on
+    // Step 9 is optional. Empty levels are valid. A row that is present
+    // must already satisfy the schema, and an unsaved draft that does not
+    // must not advance.
+    validity[9] =
+      performanceLevelsDraftReady &&
+      competencies.every((c) => performanceLevelsReady(c));
+
+    // Step 10. Save for Review stays available on a draft (the audit on
     // step 8 is what blocks an incomplete model). Lock & Confirm, which
     // is the only promote action once status is reviewed, stays disabled
     // until a same-author admin has checked the acknowledgment and given
     // a reason the confirm route will accept.
     const sameAuthor = isSameAuthorConfirmation(model, auth?.username);
-    validity[9] =
+    validity[10] =
       !sameAuthor || sameAuthorAcknowledgementReady(confirmAck);
 
     return validity;
-  }, [model, competencies, confirmAck, auth?.username, curricularPolicies]);
+  }, [
+    model,
+    competencies,
+    confirmAck,
+    auth?.username,
+    curricularPolicies,
+    performanceLevelsDraftReady,
+  ]);
 
   function canProceed(step) {
     return stepValidity[step] ?? true;
@@ -736,6 +756,7 @@ export function CompetencyWizardProvider({
     allModels,
     currentStep,
     setCurrentStep,
+    setPerformanceLevelsDraftReady,
     loading,
     saving,
     isDirty,
