@@ -89,6 +89,7 @@ import { exemplarCount, levelValues } from "./rubricDelivery.js";
 import { jointPriorErrors, jointPriorPartnerLimitErrors } from "./jointPrior.js";
 import { deliveryModelBindingErrors } from "./deliveryModelReadiness.js";
 import { studentModelRecordErrors } from "./studentModelRecord.js";
+import { performanceLevelErrors } from "./performanceLevels.js";
 import { taskSpecErrors } from "./taskSpecReadiness.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 
@@ -300,6 +301,11 @@ export const schema = {
     domain: 'string',
     strand: 'string',
     facet: 'string',
+    // TU2 (T15). Optional performance-level descriptors. Each cut is the
+    // lowest score for that level. performanceLevelScale is "theta" or
+    // "probability". Absent or empty levels leave today's behaviour in place.
+    performanceLevels: 'array',
+    performanceLevelScale: 'string',
     modelId: 'string',
     createdAt: 'date',
     updatedAt: 'date',
@@ -4899,6 +4905,8 @@ export function validateEntity(collection, obj, db = null, options = {}) {
         }
       }
     }
+
+    errors.push(...performanceLevelErrors(obj));
   }
 
     /* =====================================================

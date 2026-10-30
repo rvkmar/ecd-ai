@@ -56,7 +56,7 @@ export default function Step9Confirmation() {
         return (
             <div className="space-y-6">
                 <h2 className="text-lg font-semibold text-slate-900">
-                    Step 9 — Confirmation
+                    Step 10: Confirmation
                 </h2>
 
                 <div
@@ -138,7 +138,7 @@ export default function Step9Confirmation() {
         <div className="space-y-6">
             <div>
                 <h2 className="text-lg font-semibold text-slate-900">
-                    Step 9 — Confirmation
+                    Step 10: Confirmation
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 max-w-3xl">
                     Review the full structural definition of this Student Model

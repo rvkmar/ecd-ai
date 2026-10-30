@@ -181,6 +181,12 @@ export function buildStudentModelSpecification({ model, competencies }) {
       strand: c.strand || "",
       facet: c.facet || "",
       relationships: c.relationships || [],
+      ...(Array.isArray(c.performanceLevels) && c.performanceLevels.length > 0
+        ? {
+            performanceLevels: c.performanceLevels,
+            performanceLevelScale: c.performanceLevelScale || null,
+          }
+        : {}),
     })),
     relationships,
     typeCoherenceAdvisories: typeCoherenceAdvisories(

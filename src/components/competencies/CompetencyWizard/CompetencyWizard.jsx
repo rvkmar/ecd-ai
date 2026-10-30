@@ -23,9 +23,10 @@ import Step5StateSpaceScale from "./steps/Step5StateSpaceScale";
 import Step6StructuralRelationships from "./steps/Step6StructuralRelationships";
 import Step7DomainClassification from "./steps/Step7DomainClassification";
 import Step8StructuralAudit from "./steps/Step8StructuralAudit";
+import StepPerformanceLevels from "./steps/StepPerformanceLevels";
 import Step9Confirmation from "./steps/Step9Confirmation";
 
-const STEP_CONFIG = [
+export const STEP_CONFIG = [
     { id: 1, label: "Model Identity" },
     { id: 2, label: "Measurement Intent" },
     { id: 3, label: "Construct Framework" },
@@ -34,7 +35,8 @@ const STEP_CONFIG = [
     { id: 6, label: "Structural Relationships" },
     { id: 7, label: "Domain Classification" },
     { id: 8, label: "Structural Audit" },
-    { id: 9, label: "Confirmation" },
+    { id: 9, label: "Performance Levels" },
+    { id: 10, label: "Confirmation" },
 ];
 
 export default function CompetencyWizard({ onCancel }) {
@@ -118,6 +120,8 @@ export default function CompetencyWizard({ onCancel }) {
             case 8:
                 return <Step8StructuralAudit />;
             case 9:
+                return <StepPerformanceLevels />;
+            case 10:
                 return <Step9Confirmation />;
             default:
                 return null;
