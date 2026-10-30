@@ -136,6 +136,17 @@ describe("request envelope", () => {
     expect(validateCalibrationRequest(body)).toEqual([]);
   });
 
+  it("accepts a dichotomous IRT bundle and rejects a bundle on the wrong family", () => {
+    const body = readFix("valid-request.json");
+    body.bundles = [
+      { id: "bundle_wp", basis: "workProduct", sourceId: "wp1", itemIds: ["item_a", "item_b"] },
+    ];
+    expect(validateCalibrationRequest(body)).toEqual([]);
+    body.model.family = "ctt";
+    delete body.model.subtype;
+    expect(validateCalibrationRequest(body).join(" ")).toMatch(/bundles are only supported/);
+  });
+
   it("accepts IRT subtypes GRM/GPCM/PCM", () => {
     const body = readFix("valid-request.json");
     body.model.subtype = "GRM";

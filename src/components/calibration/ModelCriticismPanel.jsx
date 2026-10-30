@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { apiErrorMessage, apiFetch } from "@/api/apiClient";
 import { useAuth } from "@/auth/AuthProvider";
 import { hasModelCriticism } from "@/utils/modelCriticism";
+import {
+  Q3_ABS_THRESHOLD,
+  bundleAlreadyEnabled,
+  bundleCandidates,
+} from "@/utils/scoringBundles";
 
 function fmt(value, digits = 3) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "n/a";
@@ -15,6 +20,24 @@ function fmt(value, digits = 3) {
 function qText(vec) {
   if (!Array.isArray(vec) || vec.length === 0) return "n/a";
   return vec.map((cell) => (typeof cell === "number" ? String(cell) : "?")).join("");
+}
+
+function offDiagonalMean(matrix) {
+  const values = matrix?.values;
+  if (!Array.isArray(values)) return null;
+  let sum = 0;
+  let n = 0;
+  for (let i = 0; i < values.length; i += 1) {
+    const row = values[i];
+    if (!Array.isArray(row)) continue;
+    for (let j = i + 1; j < row.length; j += 1) {
+      const cell = row[j];
+      if (typeof cell !== "number" || !Number.isFinite(cell)) continue;
+      sum += Math.abs(cell);
+      n += 1;
+    }
+  }
+  return n ? sum / n : null;
 }
 
 function countLine(summary) {
@@ -29,7 +52,13 @@ function countLine(summary) {
   return `${n} of ${of ?? "n/a"}${pct}`;
 }
 
-export default function ModelCriticismPanel({ fitStatistics, jobId }) {
+export default function ModelCriticismPanel({
+  fitStatistics,
+  jobId,
+  items,
+  scoringBundles,
+  onEnableBundle,
+}) {
   const { auth } = useAuth() || {};
   const [personRows, setPersonRows] = useState(null);
   const [personNote, setPersonNote] = useState("");
@@ -81,6 +110,9 @@ export default function ModelCriticismPanel({ fitStatistics, jobId }) {
   }
 
   const misfits = (personRows || []).filter((row) => row.misfit);
+  const threshold = typeof ld?.threshold === "number" ? ld.threshold : Q3_ABS_THRESHOLD;
+  const candidates = bundleCandidates(ld?.flaggedPairs, items);
+  const meanAbs = offDiagonalMean(q3);
 
   return (
     <section className="space-y-3" data-testid="model-criticism">
@@ -209,15 +241,16 @@ export default function ModelCriticismPanel({ fitStatistics, jobId }) {
       )}
 
       {ld && (
-        <div data-testid="model-criticism-q3" className="space-y-1 text-sm">
+        <div data-testid="model-criticism-q3" className="space-y-2 text-sm">
           <div className="font-medium">Local dependence (Q3)</div>
           {ld.available === false ? (
             <p className="text-muted-foreground">{ld.note || "Not available."}</p>
           ) : (
             <>
               <p>
-                Threshold {fmt(ld.threshold, 2)}. max |Q3| {fmt(ld.maxAbsQ3, 3)}. Flagged pairs{" "}
-                {ld.nFlaggedPairs ?? 0}.
+                Yen&apos;s Q3 flags a pair when the absolute residual correlation is above{" "}
+                {fmt(threshold, 2)} (Yen 1984). The default threshold is {fmt(Q3_ABS_THRESHOLD, 2)}.
+                max |Q3| {fmt(ld.maxAbsQ3, 3)}. Flagged pairs {ld.nFlaggedPairs ?? 0}.
               </p>
               {Array.isArray(ld.flaggedPairs) && ld.flaggedPairs.length > 0 ? (
                 <div className="max-h-48 overflow-auto">
@@ -226,7 +259,8 @@ export default function ModelCriticismPanel({ fitStatistics, jobId }) {
                       <tr className="text-left text-muted-foreground">
                         <th className="pr-3">Item</th>
                         <th className="pr-3">Item</th>
-                        <th>Q3</th>
+                        <th className="pr-3">Q3</th>
+                        <th>Flag</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -234,7 +268,8 @@ export default function ModelCriticismPanel({ fitStatistics, jobId }) {
                         <tr key={`${pair.itemId1}-${pair.itemId2}`}>
                           <td className="pr-3 font-mono">{pair.itemId1}</td>
                           <td className="pr-3 font-mono">{pair.itemId2}</td>
-                          <td>{fmt(pair.q3, 3)}</td>
+                          <td className="pr-3 tabular-nums">{fmt(pair.q3, 3)}</td>
+                          <td>|Q3| &gt; {fmt(threshold, 2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -243,16 +278,90 @@ export default function ModelCriticismPanel({ fitStatistics, jobId }) {
               ) : (
                 <p className="text-caption text-muted-foreground">No pair above the threshold.</p>
               )}
+              {candidates.length > 0 && (
+                <div className="space-y-2" data-testid="bundle-candidates">
+                  <p className="text-caption text-muted-foreground">
+                    Flagged items that share a work product or a passage can be scored as one
+                    bundle: a single graded sum, instead of separate 0/1 items. Bundle scoring
+                    stays off until you enable it. The next calibration fits that sum. Delivery
+                    uses it only after that parameter set is active.
+                  </p>
+                  {candidates.map((candidate) => {
+                    const on = bundleAlreadyEnabled(scoringBundles, candidate);
+                    const shared =
+                      candidate.basis === "workProduct"
+                        ? `work product ${candidate.sourceId}`
+                        : `passage ${candidate.sourceId}`;
+                    return (
+                      <div key={candidate.id} className="rounded-md border border-border px-3 py-2">
+                        <p>
+                          {candidate.itemIds.join(", ")} share {shared}.
+                        </p>
+                        {on ? (
+                          <p className="text-caption text-muted-foreground">Bundle scoring is on for these items.</p>
+                        ) : onEnableBundle ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => onEnableBundle(candidate)}
+                          >
+                            Enable bundle scoring
+                          </Button>
+                        ) : (
+                          <p className="text-caption text-muted-foreground">
+                            Bundle scoring is off. An admin can enable it from this review.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               {jobId && (
                 <Button type="button" variant="outline" size="sm" onClick={loadQ3} disabled={q3Loading}>
                   {q3Loading ? "Loading Q3 matrix" : "Show Q3 matrix"}
                 </Button>
               )}
               {q3Note && <p className="text-caption text-muted-foreground">{q3Note}</p>}
-              {q3?.values && (
-                <pre className="max-h-48 overflow-auto rounded-md border border-border bg-muted/40 p-3 text-caption">
-                  {q3.itemIds.join(" ") + "\n" + q3.values.map((row) => row.map((cell) => fmt(cell, 3)).join(" ")).join("\n")}
-                </pre>
+              {meanAbs != null && (
+                <p className="text-caption text-muted-foreground" data-testid="q3-mean">
+                  Mean absolute off-diagonal Q3 is {fmt(meanAbs, 3)}. The flag stays the fixed
+                  threshold above, so a pair can sit above this mean and still be unflagged.
+                </p>
+              )}
+              {Array.isArray(q3?.itemIds) && Array.isArray(q3?.values) && (
+                <div className="max-h-64 overflow-auto rounded-md border border-border">
+                  <table className="w-full text-caption" data-testid="q3-matrix">
+                    <thead>
+                      <tr className="text-left text-muted-foreground">
+                        <th className="px-2 py-1">Item</th>
+                        {q3.itemIds.map((id) => (
+                          <th key={id} className="px-2 py-1 font-mono">{id}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {q3.values.map((row, i) => (
+                        <tr key={q3.itemIds[i] || i}>
+                          <th className="px-2 py-1 text-left font-mono font-normal">{q3.itemIds[i]}</th>
+                          {row.map((cell, j) => {
+                            const flagged = i !== j && typeof cell === "number" && Math.abs(cell) > threshold;
+                            return (
+                              <td
+                                key={`${i}-${j}`}
+                                className={flagged ? "bg-amber-100 px-2 py-1 tabular-nums font-medium" : "px-2 py-1 tabular-nums text-muted-foreground"}
+                              >
+                                {fmt(cell, 3)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </>
           )}

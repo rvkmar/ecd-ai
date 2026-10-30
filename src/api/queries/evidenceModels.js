@@ -111,6 +111,23 @@ export function useActivateParameterSet() {
   });
 }
 
+export function useUpdateScoringBundles() {
+  const { auth } = useAuth() || {};
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, scoringBundles }) =>
+      apiFetch(
+        `/api/evidenceModels/${id}/scoring-bundles`,
+        { method: "PUT", body: JSON.stringify({ scoringBundles }) },
+        auth
+      ),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: evidenceModelsKey });
+      queryClient.invalidateQueries({ queryKey: evidenceModelKey(id) });
+    },
+  });
+}
+
 export function useUpdateDecisionRule() {
   const { auth } = useAuth() || {};
   const queryClient = useQueryClient();

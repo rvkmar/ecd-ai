@@ -157,6 +157,27 @@ calibrate_dispatch <- function(req, res, family) {
   .failure(body$jobId, paste0("Unsupported family: ", family), "NotImplemented")
 }
 
+# TU6 helper lives in bundleScoring.R. api.R sources that file first.
+# A test that sources only calibrate.R still finds it.
+.ensure_bundle_scoring <- function() {
+  if (exists(".collapse_scoring_bundles", mode = "function", inherits = TRUE)) {
+    return(invisible(TRUE))
+  }
+  candidates <- c(
+    file.path(Sys.getenv("R_BACKEND_APP_DIR", unset = ""), "modules", "bundleScoring.R"),
+    "/home/app/modules/bundleScoring.R",
+    file.path(getwd(), "modules", "bundleScoring.R"),
+    file.path(getwd(), "r-backend", "app", "modules", "bundleScoring.R")
+  )
+  for (p in candidates) {
+    if (is.character(p) && nzchar(p) && file.exists(p)) {
+      source(p, local = FALSE)
+      return(invisible(TRUE))
+    }
+  }
+  stop("bundleScoring.R was not found", call. = FALSE)
+}
+
 .mirt_itemtype <- function(subtype) {
   switch(
     .as_char(subtype),
@@ -178,8 +199,14 @@ calibrate_dispatch <- function(req, res, family) {
     id <- item_ids[[i]]
     a <- if ("a" %in% colnames(coefs)) unname(coefs[i, "a"]) else if ("a1" %in% colnames(coefs)) unname(coefs[i, "a1"]) else 1
     c <- if ("g" %in% colnames(coefs)) unname(coefs[i, "g"]) else 0
-    if (length(b_cols) > 1) {
-      thresholds <- as.numeric(unname(coefs[i, b_cols]))
+    # A mixed 2PL + GRM table has one b column per graded threshold.
+    # Dichotomous rows are NA in the extra columns. Drop those trailing
+    # NAs so a 2PL item keeps a scalar b. A real GRM row keeps the vector.
+    thresholds <- as.numeric(unname(coefs[i, b_cols, drop = TRUE]))
+    while (length(thresholds) > 1L && !is.finite(thresholds[[length(thresholds)]])) {
+      thresholds <- thresholds[-length(thresholds)]
+    }
+    if (length(thresholds) > 1) {
       parameters[[id]] <- list(
         a = as.numeric(a),
         b = as.numeric(thresholds),
@@ -187,7 +214,13 @@ calibrate_dispatch <- function(req, res, family) {
         model = .as_char(subtype)
       )
     } else {
-      b <- if ("b" %in% colnames(coefs)) unname(coefs[i, "b"]) else 0
+      b <- if (length(thresholds) == 1L && is.finite(thresholds[[1]])) {
+        thresholds[[1]]
+      } else if ("b" %in% colnames(coefs)) {
+        unname(coefs[i, "b"])
+      } else {
+        0
+      }
       parameters[[id]] <- list(a = as.numeric(a), b = as.numeric(b), c = as.numeric(c))
     }
   }
@@ -400,9 +433,34 @@ calibrate_irt <- function(body, res) {
     res$status <- 400
     return(.failure(body$jobId, "Could not coerce responseMatrix.data", "MatrixError", paste(stderr_lines, collapse = "\n")))
   }
-  if (!is.null(body$itemModels) && is.list(body$itemModels)) {
+  # TU6. Enabled bundles become one integer sum column, fit as GRM.
+  # No bundles leaves the dichotomous matrix and itemtype unchanged.
+  bundle_applied <- list()
+  if (!is.null(body$bundles)) {
+    .ensure_bundle_scoring()
+    collapsed <- .collapse_scoring_bundles(resp_df, body$bundles)
+    resp_df <- collapsed$df
+    bundle_applied <- collapsed$applied
+    if (length(collapsed$warnings)) warnings_acc <- c(warnings_acc, collapsed$warnings)
+    if (ncol(resp_df) < 2L) {
+      res$status <- 400
+      return(.failure(
+        body$jobId,
+        "Scoring bundles left fewer than two columns",
+        "BundleError",
+        paste(collapsed$warnings, collapse = "\n")
+      ))
+    }
+  }
+  bundle_ids <- if (length(bundle_applied)) {
+    vapply(bundle_applied, function(b) .as_char(b$id), character(1))
+  } else {
+    character(0)
+  }
+  if (length(bundle_ids) || (!is.null(body$itemModels) && is.list(body$itemModels))) {
     itemtype <- vapply(colnames(resp_df), function(id) {
-      st <- .as_char(body$itemModels[[id]])
+      if (id %in% bundle_ids) return("graded")
+      st <- if (!is.null(body$itemModels)) .as_char(body$itemModels[[id]]) else ""
       if (!nzchar(st) || is.na(st)) .mirt_itemtype(subtype) else .mirt_itemtype(st)
     }, character(1))
   }
@@ -433,9 +491,10 @@ calibrate_irt <- function(body, res) {
     stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
     fit_try <- try(.run_mirt(FALSE), silent = TRUE)
   }
-  if (inherits(fit_try, "try-error")) {
+  if (inherits(fit_try, "try-error") && !any(itemtype == "graded")) {
     stderr_lines <- c(stderr_lines, paste(as.character(fit_try), collapse = "\n"))
     # Last resort: the call in mirt's own LSAT7 example.
+    # A graded bundle column must not be refit as a default 2PL.
     fit_try <- try(mirt::mirt(resp_df, 1), silent = TRUE)
   }
   if (inherits(fit_try, "try-error")) {
@@ -499,6 +558,11 @@ calibrate_irt <- function(body, res) {
   if (is.null(item_ids)) item_ids <- colnames(resp_df)
 
   parameters <- .parameters_from_mirt_coefs(coefs, subtype)
+  if (length(bundle_ids)) {
+    for (id in bundle_ids) {
+      if (!is.null(parameters[[id]])) parameters[[id]]$model <- "GRM"
+    }
+  }
   standard_errors <- .standard_errors_from_mirt(fit)
   item_fit <- .itemfit_from_mirt(fit)
   person_scores <- .person_scores_from_mirt(fit, body$responseMatrix$personIds)
@@ -589,6 +653,9 @@ calibrate_irt <- function(body, res) {
   if (is.list(criticism$q3Matrix) && length(criticism$q3Matrix$itemIds)) {
     out$q3Matrix <- criticism$q3Matrix
   }
+  # Small summary only. The collapsed matrix stays on the job request path
+  # inside R and is not copied onto the parameter set.
+  if (length(bundle_applied)) out$scoringBundles <- bundle_applied
   out
 }
 

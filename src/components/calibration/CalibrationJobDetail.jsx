@@ -18,7 +18,9 @@ import {
   useProcessCalibrationJob,
   useRetryCalibrationJob,
 } from "@/api/queries/calibrationJobs";
-import { useActivateParameterSet, useEvidenceModel } from "@/api/queries/evidenceModels";
+import { useActivateParameterSet, useEvidenceModel, useUpdateScoringBundles } from "@/api/queries/evidenceModels";
+import { useItems } from "@/api/queries/items";
+import { mergeEnabledBundle } from "@/utils/scoringBundles";
 import ParameterSetDiff from "@/components/evidences/calibration/panels/ParameterSetDiff";
 import { FitGateOverrideForm, FitGateSummary } from "@/components/evidences/calibration/panels/FitGateNotice";
 import CalibrationJobStatusBadge from "./CalibrationJobStatusBadge";
@@ -65,6 +67,11 @@ function JsonBlock({ value, empty }) {
 export default function CalibrationJobDetail({ job, readOnly = false }) {
   const { auth } = useAuth() || {};
   const { data: evidenceModel } = useEvidenceModel(job?.evidenceModelId);
+  const { data: reviewItems } = useItems(
+    { evidenceModelId: job?.evidenceModelId },
+    { enabled: Boolean(job?.evidenceModelId) }
+  );
+  const saveBundles = useUpdateScoringBundles();
   const cancel = useCancelCalibrationJob();
   const retry = useRetryCalibrationJob();
   const process = useProcessCalibrationJob();
@@ -440,7 +447,29 @@ export default function CalibrationJobDetail({ job, readOnly = false }) {
                 empty="No standard errors on this response."
               />
             </div>
-            <ModelCriticismPanel fitStatistics={response.fitStatistics} jobId={job.id} />
+            <ModelCriticismPanel
+              fitStatistics={response.fitStatistics}
+              jobId={job.id}
+              items={Array.isArray(reviewItems) ? reviewItems : []}
+              scoringBundles={evidenceModel?.scoringBundles}
+              onEnableBundle={
+                !readOnly && auth?.role === "admin" && evidenceModel?.id
+                  ? async (candidate) => {
+                      try {
+                        await saveBundles.mutateAsync({
+                          id: evidenceModel.id,
+                          scoringBundles: mergeEnabledBundle(evidenceModel.scoringBundles, candidate),
+                        });
+                        toast.success(
+                          "Bundle scoring is on. Recalibrate so the next fit scores this group as one GRM item."
+                        );
+                      } catch (err) {
+                        toast.error(apiErrorMessage(err, "Could not enable bundle scoring."));
+                      }
+                    }
+                  : undefined
+              }
+            />
             <div>
               <h4 className="mb-1 text-caption font-medium text-muted-foreground">Fit</h4>
               <JsonBlock

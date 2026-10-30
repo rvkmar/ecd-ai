@@ -33,9 +33,14 @@ import {
     Upload,
 } from "lucide-react";
 
-import { useEvidenceModel } from "@/api/queries/evidenceModels";
+import { useEvidenceModel, useUpdateScoringBundles } from "@/api/queries/evidenceModels";
+import { useItems } from "@/api/queries/items";
 import { useCompetencies } from "@/api/queries/competencies";
 import { useTaskModels } from "@/api/queries/taskModels";
+import { useAuth } from "@/auth/AuthProvider";
+import { apiErrorMessage } from "@/api/apiClient";
+import { mergeEnabledBundle } from "@/utils/scoringBundles";
+import toast from "react-hot-toast";
 
 import EvidenceModelLifecyclePanel from "./calibration/panels/EvidenceModelLifecyclePanel";
 import CalibrationImportPanel from "./calibration/panels/CalibrationImportPanel";
@@ -92,6 +97,12 @@ export default function EvidenceModelCalibration({
     // observables. `undefined` while loading is deliberate -- computeReadiness
     // reports the check as pending rather than failed.
     const { data: allTaskModels } = useTaskModels();
+    const { auth } = useAuth() || {};
+    const { data: bundleItems } = useItems(
+        { evidenceModelId: model?.id },
+        { enabled: Boolean(model?.id) }
+    );
+    const saveBundles = useUpdateScoringBundles();
 
     const competency = useMemo(
         () => (allCompetencies || []).find(c => c.id === model?.competencyId) || null,
@@ -414,6 +425,24 @@ export default function EvidenceModelCalibration({
                         evidenceModel={model}
                         statisticalModel={statisticalModel}
                         observables={observables}
+                        items={Array.isArray(bundleItems) ? bundleItems : []}
+                        onEnableBundle={
+                            auth?.role === "admin" && model?.id
+                                ? async (candidate) => {
+                                    try {
+                                        await saveBundles.mutateAsync({
+                                            id: model.id,
+                                            scoringBundles: mergeEnabledBundle(model.scoringBundles, candidate),
+                                        });
+                                        toast.success(
+                                            "Bundle scoring is on. Recalibrate so the next fit scores this group as one GRM item."
+                                        );
+                                    } catch (err) {
+                                        toast.error(apiErrorMessage(err, "Could not enable bundle scoring."));
+                                    }
+                                }
+                                : undefined
+                        }
                     />
                 )}
 

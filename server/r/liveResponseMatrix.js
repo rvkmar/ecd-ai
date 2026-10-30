@@ -37,6 +37,7 @@
 import { createHash } from "node:crypto";
 import { statisticalModelTypesForJobKind } from "../../src/utils/ecdVocabulary.js";
 import { entriesForResponse, itemIsPlacedInQMatrix, textId } from "../../src/utils/qMatrixEntries.js";
+import { calibrationBundlesFromEvidenceModel } from "../../src/utils/scoringBundles.js";
 
 const ITEM_ANALYSIS_MIN_STUDENTS = 10;
 const CONTRACT_MIN_PERSONS = 2;
@@ -713,6 +714,37 @@ export function assessLiveResponseMatrix(db, options = {}) {
       data: qRows.rows.map((row) => row.data),
     };
     request.provenance.qMatrixUsesObservableRows = qRows.rows.some((row) => row.usedObservableRows);
+  }
+
+  // TU6. Dichotomous IRT only. An enabled bundle is sent as a group; R
+  // replaces those columns with one sum and fits GRM. A GRM request is
+  // already polytomous, so bundles are not attached. Absent bundles
+  // leave the matrix as separate items.
+  const dichotomousIrt = family === "irt" && (subtype === "2PL" || subtype === "3PL" || subtype === "Rasch");
+  if (dichotomousIrt) {
+    const bundles = calibrationBundlesFromEvidenceModel(evidenceModel, itemIds);
+    if (bundles.length) {
+      const bundledMembers = bundles.reduce((count, bundle) => count + bundle.itemIds.length, 0);
+      const collapsedColumns = itemIds.length - bundledMembers + bundles.length;
+      if (collapsedColumns < minimumItems) {
+        return fail({
+          code: "TOO_FEW_ITEMS",
+          kind,
+          message: `${label} needs at least ${minimumItems} columns after bundle scoring. This selection collapses to ${collapsedColumns}.`,
+          sampleSize: studentIds.length,
+          studentIds,
+          itemIds,
+        });
+      }
+      request.bundles = bundles;
+      request.provenance.scoringBundles = bundles.map((bundle) => ({
+        id: bundle.id,
+        basis: bundle.basis,
+        sourceId: bundle.sourceId,
+        itemIds: bundle.itemIds,
+        model: "GRM",
+      }));
+    }
   }
 
   if (kind === "item-analysis") {

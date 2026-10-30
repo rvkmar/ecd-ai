@@ -19,6 +19,10 @@ import {
 } from "../../src/utils/qMatrixEntries.js";
 import { canTransition } from "../utils/lifecycleMatrix.js";
 import { logger } from "../utils/logger.js";
+import {
+  normalizeScoringBundles,
+  scoringBundleAuthoringErrors,
+} from "../../src/utils/scoringBundles.js";
 
 const router = express.Router();
 
@@ -1376,6 +1380,34 @@ router.delete("/:id", canAuthor, async (req, res) => {
   saveDB(db);
 
   res.status(204).end();
+});
+
+/* =====================================================
+   TU6. Opt-in scoring bundles.
+   A confirmed model is locked against structural PUT. Bundle scoring is
+   a calibration option, not a change to observables or warrants, so this
+   route may write it on a locked model. Absent or empty clears the field
+   and leaves item-level scoring in place. Activation is not involved.
+===================================================== */
+router.put("/:id/scoring-bundles", canAuthor, async (req, res) => {
+  const db = loadDB();
+  const model = db.evidenceModels?.find((m) => m.id === req.params.id);
+  if (!model) return res.status(404).json({ error: "Model not found." });
+
+  if (!req.body || !Object.prototype.hasOwnProperty.call(req.body, "scoringBundles")) {
+    return res.status(400).json({ error: "scoringBundles is required." });
+  }
+
+  const errors = scoringBundleAuthoringErrors(req.body.scoringBundles, db);
+  if (errors.length) return res.status(400).json({ errors });
+
+  const normalized = normalizeScoringBundles(req.body.scoringBundles);
+  if (normalized.length) model.scoringBundles = normalized;
+  else delete model.scoringBundles;
+  model.updatedAt = new Date().toISOString();
+  saveDB(db);
+
+  res.json({ id: model.id, scoringBundles: model.scoringBundles || [] });
 });
 
 export default router;

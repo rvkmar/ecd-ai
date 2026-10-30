@@ -93,6 +93,7 @@ import { studentModelRecordErrors } from "./studentModelRecord.js";
 import { performanceLevelErrors } from "./performanceLevels.js";
 import { taskSpecErrors } from "./taskSpecReadiness.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
+import { scoringBundleAuthoringErrors } from "./scoringBundles.js";
 
 // Canonical session status spellings -- see src/utils/sessionStatus.js for
 // why "in_progress" (underscore) is the one, not "in-progress".
@@ -444,6 +445,10 @@ export const schema = {
     // Authoring plan for future calibration. Never a substitute for real
     // parameterSets at confirm (drafts must keep parameterSets empty).
     calibrationPlan: 'object',
+    // TU6. Optional. Absent means each item is its own dichotomous likelihood.
+    // An enabled row is one GRM sum score for those items on the next
+    // calibration, and on delivery only after that parameter set is active.
+    scoringBundles: 'array',
     authoringNotes: 'string',
     studentModelCoherenceNotes: 'string',
     // D137. Rows accepted and declined from one confirmed design pattern.
@@ -2711,6 +2716,10 @@ export function validateEntity(collection, obj, db = null, options = {}) {
           }
         }
       }
+    }
+
+    if (obj.scoringBundles !== undefined && obj.scoringBundles !== null) {
+      errors.push(...scoringBundleAuthoringErrors(obj.scoringBundles, db));
     }
 
     // EM-R5: Assembly sufficiency — soft at reviewed (Step 7 warnings);

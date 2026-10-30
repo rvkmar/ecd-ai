@@ -245,6 +245,34 @@ describe("slimParameterSet", () => {
     expect(models[0].parameterSets[1].parameterSetId).toBe("ps-keep");
   });
 
+  it("keeps a slim scoring bundle and drops a matrix nested on it", () => {
+    const slim = {
+      parameterSetId: "ps-bundle",
+      parameters: { bundle_wp: { a: 1, b: [-0.2, 0.4] } },
+      scoringBundles: [{ id: "bundle_wp", itemIds: ["item_a", "item_b"], model: "GRM", maxScore: 2 }],
+    };
+    const untouched = slimParameterSet(slim);
+    expect(untouched.changed).toBe(false);
+    expect(untouched.parameterSet).toBe(slim);
+
+    const fat = {
+      ...slim,
+      scoringBundles: [{
+        id: "bundle_wp",
+        itemIds: ["item_a", "item_b"],
+        model: "GRM",
+        matrix: [[1, 0.4], [0.4, 1]],
+      }],
+    };
+    const peeled = slimParameterSet(fat);
+    expect(peeled.changed).toBe(true);
+    expect(peeled.parameterSet.scoringBundles).toEqual([
+      { id: "bundle_wp", itemIds: ["item_a", "item_b"], model: "GRM" },
+    ]);
+    expect(peeled.stripped.scoringBundles[0].matrix[0][1]).toBe(0.4);
+    expect(peeled.parameterSet.parameters.bundle_wp.b).toEqual([-0.2, 0.4]);
+  });
+
   it("rejects a non-string analysisArtefactId", () => {
     const errors = parameterSetStorageErrors(
       {
