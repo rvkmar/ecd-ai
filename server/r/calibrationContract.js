@@ -35,6 +35,84 @@ export function rPathForJobKind(kind) {
   return KIND_TO_R_PATH[kind] || null;
 }
 
+/**
+ * TU15. DINA/G-DINA parameter-map keys. Twin of diagnostic_parameter_keys
+ * in r-backend/app/modules/contract.R.
+ *
+ * `observableIds`, when present, is parallel to `itemIds`. A column whose
+ * observable id is a non-empty string and unique in that vector is keyed
+ * by the observable. A blank observable, or one shared with another
+ * column, stays on the item id. A key that collides is an error. Absent
+ * `observableIds` means every key is the item id (legacy sets).
+ */
+function diagnosticParameterKeys(itemIds, observableIds) {
+  const items = (Array.isArray(itemIds) ? itemIds : []).map((id) =>
+    id == null ? "" : String(id)
+  );
+  if (observableIds == null) return { keys: items, errors: [] };
+  if (!Array.isArray(observableIds)) {
+    return { keys: null, errors: ["model.observableIds must be an array when present"] };
+  }
+  if (observableIds.length !== items.length) {
+    return { keys: null, errors: ["model.observableIds length must match model.itemIds"] };
+  }
+  const trimmed = [];
+  for (const id of observableIds) {
+    if (id == null || id === "") {
+      trimmed.push("");
+      continue;
+    }
+    if (typeof id !== "string") {
+      return { keys: null, errors: ["model.observableIds entries must be strings"] };
+    }
+    trimmed.push(id.trim());
+  }
+  const counts = new Map();
+  for (const obs of trimmed) {
+    if (!obs) continue;
+    counts.set(obs, (counts.get(obs) || 0) + 1);
+  }
+  const keys = trimmed.map((obs, i) => (obs && counts.get(obs) === 1 ? obs : items[i]));
+  const errors = [];
+  const seen = new Set();
+  for (const key of keys) {
+    if (!key) {
+      errors.push("diagnostic parameter keys must be non-empty");
+      break;
+    }
+    if (seen.has(key)) {
+      errors.push(`diagnostic parameter key '${key}' is not unique`);
+      break;
+    }
+    seen.add(key);
+  }
+  return { keys, errors };
+}
+
+/**
+ * When a dina/gdina request names observableIds, the converged parameter
+ * map must use diagnosticParameterKeys in column order. A request with
+ * no observableIds is not checked here, so an item-keyed set still ingests.
+ */
+export function diagnosticParameterKeyErrors(request, parameters) {
+  const model = request?.model;
+  const family = model?.family;
+  if (family !== "dina" && family !== "gdina") return [];
+  if (model?.observableIds == null) return [];
+  const { keys, errors } = diagnosticParameterKeys(model.itemIds, model.observableIds);
+  if (errors.length) return errors;
+  if (!parameters || typeof parameters !== "object" || Array.isArray(parameters)) {
+    return ["parameters must be keyed by observable id"];
+  }
+  const got = Object.keys(parameters);
+  if (got.length !== keys.length || got.some((key, i) => key !== keys[i])) {
+    return [
+      `parameters must be keyed by observable id in column order (${keys.join(", ")}); got (${got.join(", ")})`,
+    ];
+  }
+  return [];
+}
+
 export function validateCalibrationRequest(body) {
   const errors = [];
   if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -261,6 +339,10 @@ export function validateCalibrationRequest(body) {
         });
       }
     }
+  }
+
+  if (diagnosticFamily && model?.observableIds != null) {
+    errors.push(...diagnosticParameterKeys(model.itemIds, model.observableIds).errors);
   }
 
   return errors;

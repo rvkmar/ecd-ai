@@ -8,8 +8,10 @@
 // qMatrixModels row. The item columns are the items that matrix covers,
 // including items scored under another evidence model, intersected with
 // the items finished sessions actually answered. Observable-keyed entries
-// win over item-only entries, the same rule scoring uses. Slip and guess
-// stay keyed by item id at calibration (R1). Scoring looks up
+// win over item-only entries, the same rule scoring uses. A diagnostic
+// request carries model.observableIds parallel to itemIds (TU15). R keys
+// slip/guess and G-DINA probabilities by an observable id when that id
+// is unique, and by item id when it is blank or shared. Scoring looks up
 // observableId first, then itemId (R9).
 //
 // Item floors are per family. The ADR envelope still requires two items.
@@ -590,7 +592,12 @@ export function assessLiveResponseMatrix(db, options = {}) {
         dropped.push(itemId);
         continue;
       }
-      kept.push({ itemId, data: vector.data, usedObservableRows: vector.usedObservableRows });
+      kept.push({
+        itemId,
+        observableId: observableId || "",
+        data: vector.data,
+        usedObservableRows: vector.usedObservableRows,
+      });
     }
     if (kept.length < minimumItems) {
       const droppedNote = dropped.length ? ` Dropped items with an empty Q-vector: ${dropped.join(", ")}.` : "";
@@ -671,6 +678,10 @@ export function assessLiveResponseMatrix(db, options = {}) {
   const stamp = sourceSessionStamp(contributingSessions);
 
   const model = subtype ? { family, subtype, itemIds } : { family, itemIds };
+  if (qRows) {
+    const observableIds = qRows.rows.map((row) => row.observableId || "");
+    if (observableIds.some((id) => id)) model.observableIds = observableIds;
+  }
   const request = {
     model,
     responseMatrix: { personIds: studentIds, itemIds, data },

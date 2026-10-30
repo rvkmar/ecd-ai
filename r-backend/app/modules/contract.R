@@ -170,7 +170,75 @@ validate_calibration_request <- function(body) {
     }
   }
 
+  if (isTRUE(diagnostic) && !is.null(model) && is.list(model) && !is.null(model$observableIds)) {
+    keyed <- diagnostic_parameter_keys(model$itemIds, model$observableIds)
+    if (length(keyed$errors)) errors <- c(errors, keyed$errors)
+  }
+
   if (length(errors) == 0) NULL else errors
+}
+
+# TU15. DINA/G-DINA parameter-map keys.
+# model$observableIds, when present, is parallel to model$itemIds.
+# A column whose observable id is a non-empty string and unique in that
+# vector is keyed by the observable. A blank observable, or one shared
+# with another column, stays on the item id so a legacy item-keyed set
+# and a shared-observable column still resolve one row each. A key that
+# collides (an observable id equal to another column's item id) is an
+# error. Absent observableIds means every key is the item id.
+diagnostic_parameter_keys <- function(item_ids, observable_ids = NULL) {
+  item_ids <- vapply(as.list(item_ids), .as_char, character(1))
+  item_ids[is.na(item_ids)] <- ""
+  if (is.null(observable_ids)) {
+    return(list(keys = item_ids, errors = character(0)))
+  }
+  if (is.list(observable_ids) && !is.null(names(observable_ids))) {
+    return(list(
+      keys = NULL,
+      errors = "model.observableIds must be an array when present"
+    ))
+  }
+  obs_list <- as.list(observable_ids)
+  if (length(obs_list) != length(item_ids)) {
+    return(list(
+      keys = NULL,
+      errors = "model.observableIds length must match model.itemIds"
+    ))
+  }
+  trimmed <- vapply(obs_list, function(x) {
+    if (is.null(x) || length(x) == 0) return("")
+    if (is.list(x)) return(NA_character_)
+    val <- unlist(x, use.names = FALSE)
+    if (length(val) != 1 || is.na(val)) return("")
+    if (!is.character(val)) return(NA_character_)
+    trimws(val)
+  }, character(1))
+  if (any(is.na(trimmed))) {
+    return(list(
+      keys = NULL,
+      errors = "model.observableIds entries must be strings"
+    ))
+  }
+  present <- trimmed[nzchar(trimmed)]
+  counts <- if (length(present)) table(present) else table(character(0))
+  keys <- character(length(item_ids))
+  for (i in seq_along(item_ids)) {
+    obs <- trimmed[[i]]
+    use_obs <- nzchar(obs) && !is.na(counts[[obs]]) && identical(as.integer(counts[[obs]]), 1L)
+    keys[[i]] <- if (isTRUE(use_obs)) obs else item_ids[[i]]
+  }
+  errors <- character(0)
+  if (any(!nzchar(keys))) {
+    errors <- c(errors, "diagnostic parameter keys must be non-empty")
+  }
+  dups <- unique(keys[duplicated(keys)])
+  dups <- dups[nzchar(dups)]
+  if (length(dups)) {
+    errors <- c(errors, paste0(
+      "diagnostic parameter key '", dups[[1]], "' is not unique"
+    ))
+  }
+  list(keys = keys, errors = errors)
 }
 
 .ids_match <- function(a, b) {
