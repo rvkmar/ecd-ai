@@ -7,7 +7,7 @@ CALIBRATION_CONTRACT_VERSION <- "1.0"
 
 CALIBRATION_MODEL_FAMILIES <- c(
   "irt", "dina", "gdina", "ctt", "dif", "equating", "item-analysis",
-  "test-information", "attribute-profile"
+  "test-information", "attribute-profile", "bn"
 )
 CALIBRATION_IRT_SUBTYPES <- c("2PL", "3PL", "Rasch", "GRM", "GPCM", "PCM")
 
@@ -173,6 +173,17 @@ validate_calibration_request <- function(body) {
   if (isTRUE(diagnostic) && !is.null(model) && is.list(model) && !is.null(model$observableIds)) {
     keyed <- diagnostic_parameter_keys(model$itemIds, model$observableIds)
     if (length(keyed$errors)) errors <- c(errors, keyed$errors)
+  }
+
+  # TU12. The tree check lives in bnCalibrate.R, sourced after this file.
+  # A bn request is refused if that module is not loaded.
+  if (identical(family, "bn")) {
+    if (exists("bn_request_errors", mode = "function", inherits = TRUE)) {
+      extra <- bn_request_errors(body)
+      if (length(extra)) errors <- c(errors, extra)
+    } else {
+      errors <- c(errors, "Bayesian network checks are not loaded")
+    }
   }
 
   if (length(errors) == 0) NULL else errors

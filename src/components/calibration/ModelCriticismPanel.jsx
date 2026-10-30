@@ -73,6 +73,7 @@ export default function ModelCriticismPanel({
   const qval = fit.qValidation;
   const person = fit.personFit;
   const ld = fit.localDependence;
+  const bn = fit.bnFit;
 
   async function loadPersons() {
     if (!jobId) return;
@@ -119,7 +120,49 @@ export default function ModelCriticismPanel({
       <h4 className="text-caption font-medium text-muted-foreground">Model criticism</h4>
       <p className="text-caption text-muted-foreground">
         Summaries only. Per-person flags and the Q3 matrix stay on the calibration job.
+        Bayesian network person posteriors stay on the analysis artefact.
       </p>
+
+      {bn && (
+        <div data-testid="model-criticism-bn" className="space-y-1 text-sm">
+          <div className="font-medium">Bayesian network fit</div>
+          {bn.available === false ? (
+            <p className="text-muted-foreground">{bn.note || "Not available."}</p>
+          ) : (
+            <>
+              <dl className="grid gap-1 sm:grid-cols-3">
+                <div>
+                  <dt className="text-muted-foreground">Log-likelihood</dt>
+                  <dd>{fmt(bn.logLik, 1)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">AIC</dt>
+                  <dd>{fmt(bn.aic, 1)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">BIC</dt>
+                  <dd>{fmt(bn.bic, 1)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Mean |residual|</dt>
+                  <dd>{fmt(bn.meanAbsResidual, 3)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Max |residual|</dt>
+                  <dd>{fmt(bn.maxAbsResidual, 3)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Free parameters</dt>
+                  <dd>{fmt(bn.nParameters, 0)}</dd>
+                </div>
+              </dl>
+              <p className="text-caption text-muted-foreground">
+                AIC and BIC compare candidate sets. The activation gate uses the marginal residuals.
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       {cdm && (
         <div data-testid="model-criticism-cdm" className="space-y-1 text-sm">

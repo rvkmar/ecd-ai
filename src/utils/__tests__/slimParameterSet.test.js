@@ -273,6 +273,32 @@ describe("slimParameterSet", () => {
     expect(peeled.parameterSet.parameters.bundle_wp.b).toEqual([-0.2, 0.4]);
   });
 
+  it("strips BN person posteriors and keeps a slim bundle summary", () => {
+    const input = {
+      parameterSetId: "ps-bn",
+      parameters: { o1: { levels: { not_mastered: 0.2, mastered: 0.8 } } },
+      scoringBundles: [{ id: "bundle_wp", itemIds: ["item_a", "item_b"], model: "GRM", maxScore: 2 }],
+      bnPersonPosteriors: [{ personId: "stud-1", marginals: { smvA: { mastered: 0.8 } } }],
+      fitStatistics: {
+        bnFit: {
+          logLik: -4,
+          aic: 12,
+          bic: 18,
+          meanAbsResidual: 0.01,
+          maxAbsResidual: 0.02,
+          bnPersonPosteriors: [{ personId: "stud-1", marginals: {} }],
+        },
+      },
+    };
+    const { parameterSet, stripped } = slimParameterSet(input);
+    expect(parameterSet.bnPersonPosteriors).toBeUndefined();
+    expect(parameterSet.fitStatistics.bnFit.logLik).toBe(-4);
+    expect(parameterSet.fitStatistics.bnFit.bnPersonPosteriors).toBeUndefined();
+    expect(parameterSet.scoringBundles[0].id).toBe("bundle_wp");
+    expect(JSON.stringify(parameterSet)).not.toMatch(/stud-1/);
+    expect(stripped.bnPersonPosteriors[0].personId).toBe("stud-1");
+  });
+
   it("rejects a non-string analysisArtefactId", () => {
     const errors = parameterSetStorageErrors(
       {

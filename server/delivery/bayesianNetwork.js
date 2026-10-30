@@ -389,6 +389,34 @@ function resolveLatentVariables(evidenceModel, statisticalModel, db, structure) 
   return { star: false, latents, competencyModelId: found.competencyModel.id };
 }
 
+/**
+ * The latent tree a calibration job should send to R.
+ * One latent is a star. The latent id is the Student Model Variable id,
+ * which may differ from structureConfig.latentNodes when a star names
+ * smvId separately. A tree uses the latent node ids, which are SMV ids.
+ */
+export function bayesianCalibrationNetwork(evidenceModel, statisticalModel, db) {
+  const structure = describeStructure(statisticalModel);
+  if (structure.error) return { error: structure.error };
+  const resolved = resolveLatentVariables(evidenceModel, statisticalModel, db, structure);
+  if (resolved.error) return { error: resolved.error };
+
+  const idOf = new Map();
+  if (structure.star) idOf.set(structure.latentNodeId, resolved.latents[0].id);
+  const mapId = (id) => (idOf.has(id) ? idOf.get(id) : id);
+
+  const latents = resolved.latents.map((latent) => ({
+    id: latent.id,
+    states: latent.states.slice(),
+    parentId: structure.parentOf[latent.id] ? mapId(structure.parentOf[latent.id]) : null,
+  }));
+  const observables = structure.observableIds.map((id) => ({
+    id,
+    parentId: mapId(structure.parentOf[id]),
+  }));
+  return { star: structure.star, latents, observables };
+}
+
 function nestedStateTable(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
   const table = {};

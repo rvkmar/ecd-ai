@@ -18,6 +18,7 @@ import {
   suppressArtefactSmallCells,
 } from "../utils/aggregatePrivacy.js";
 import {
+  bnPosteriorBody,
   redactPersonFitRows,
   redactScoreRows,
   rowsToCsv,
@@ -136,6 +137,19 @@ router.get("/:id/scores", canView, async (req, res) => {
     n: rows.length,
     minCellSize: MIN_CELL_SIZE,
   });
+});
+
+router.get("/:id/bn-posteriors", canView, async (req, res) => {
+  const db = loadDB();
+  const row = await getAnalysisArtefactById(db, req.params.id);
+  if (!row) return res.status(404).json({ error: "Analysis artefact not found" });
+  const body = bnPosteriorBody(row.payload?.bnPersonPosteriors, {
+    isAdmin: req.user?.role === "admin",
+    minCellSize: MIN_CELL_SIZE,
+    id: row.id,
+  });
+  if (!body) return res.status(404).json({ error: "No BN posterior sidecar on this artefact." });
+  return res.json(body);
 });
 
 router.get("/:id/person-fit", canView, async (req, res) => {

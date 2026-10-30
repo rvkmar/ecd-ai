@@ -20,6 +20,7 @@ source(mod("reportHtml.R"), local = FALSE)
 source(mod("modelCriticism.R"), local = FALSE)
 source(mod("bundleScoring.R"), local = FALSE)
 source(mod("calibrate.R"), local = FALSE)
+source(mod("bnCalibrate.R"), local = FALSE)
 
 # scoring.R is deliberately NOT sourced. A live /score endpoint would put
 # R on a scoring path. Neutralized in modules/scoring.R.
@@ -112,6 +113,12 @@ api$handle("POST", "/calibrate/test-information", function(req, res) {
 # Calendar alias for the same handler (exit-check name /analyse/test-information).
 api$handle("POST", "/analyse/test-information", function(req, res) {
   calibrate_dispatch(req, res, family = "test-information")
+}, serializer = .json_unboxed)
+
+# TU12. EM for Bayesian-network conditional probability tables.
+# Own module so the IRT dispatch (including TU6 bundles) stays put.
+api$handle("POST", "/calibrate/bn", function(req, res) {
+  calibrate_bn_http(req, res)
 }, serializer = .json_unboxed)
 
 # Legacy path kept as an alias of /calibrate/irt so a leftover client that

@@ -701,6 +701,7 @@ export const CALIBRATION_FILE_KINDS = [
   { value: "ctt-statistics", label: "CTT Statistics", statisticalModelTypes: ["ctt"] },
   { value: "irt-parameters", label: "IRT Parameters", statisticalModelTypes: ["irt", "rasch"] },
   { value: "dina-parameters", label: "DINA/G-DINA Parameters", statisticalModelTypes: ["dina", "gdina"] },
+  { value: "bn-parameters", label: "Bayesian Network CPTs", statisticalModelTypes: ["bayesian_network"] },
 ];
 
 export const CALIBRATION_FILE_KIND_VALUES = CALIBRATION_FILE_KINDS.map((k) => k.value);
@@ -756,13 +757,26 @@ export const CALIBRATION_JOB_KINDS = [
     ingests: "analysisArtefact",
     statisticalModelTypes: ["dina", "gdina"],
   },
+  {
+    value: "bn-parameters",
+    label: "Bayesian Network CPTs",
+    package: "base-R",
+    ingests: "parameterSets",
+    statisticalModelTypes: ["bayesian_network"],
+  },
 ];
 
 export const CALIBRATION_JOB_KIND_VALUES = CALIBRATION_JOB_KINDS.map((k) => k.value);
 
-export const ANALYSIS_ARTEFACT_KIND_VALUES = CALIBRATION_JOB_KINDS.filter(
-  (k) => k.ingests === "analysisArtefact"
-).map((k) => k.value);
+// bn-parameters writes a parameter set. The same kind is also a legal
+// analysis artefact, because the person-level posterior marginals are
+// stored beside that set rather than on it.
+const SIDECAR_ARTEFACT_KINDS = ["bn-parameters"];
+
+export const ANALYSIS_ARTEFACT_KIND_VALUES = [
+  ...CALIBRATION_JOB_KINDS.filter((k) => k.ingests === "analysisArtefact").map((k) => k.value),
+  ...SIDECAR_ARTEFACT_KINDS,
+];
 
 function calibrationJobKind(kind) {
   return CALIBRATION_JOB_KINDS.find((k) => k.value === kind) || null;

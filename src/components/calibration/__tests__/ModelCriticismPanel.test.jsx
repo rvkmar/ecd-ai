@@ -87,6 +87,29 @@ describe("ModelCriticismPanel", () => {
     expect(screen.getByTestId("model-criticism-q3")).toHaveTextContent("|Q3| > 0.20");
   });
 
+  it("shows BN log-likelihood, AIC, and BIC without person rows", () => {
+    render(
+      <ModelCriticismPanel
+        fitStatistics={{
+          bnFit: {
+            logLik: -120.5,
+            aic: 250.2,
+            bic: 280.4,
+            meanAbsResidual: 0.021,
+            maxAbsResidual: 0.04,
+            nParameters: 6,
+          },
+        }}
+      />
+    );
+    const panel = screen.getByTestId("model-criticism-bn");
+    expect(panel).toHaveTextContent("-120.5");
+    expect(panel).toHaveTextContent("250.2");
+    expect(panel).toHaveTextContent("280.4");
+    expect(panel).toHaveTextContent("0.021");
+    expect(panel).toHaveTextContent("AIC and BIC compare candidate sets");
+  });
+
   it("suggests a bundle for flagged items that share a work product", async () => {
     const onEnableBundle = vi.fn();
     const user = userEvent.setup();

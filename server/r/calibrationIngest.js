@@ -202,6 +202,50 @@ export function ingestCalibrationJob(job, db, extras = {}) {
   const sm = em.statisticalModels.find((m) => m.id === job.statisticalModelId);
 
   const parameterSetId = extras.parameterSetId || `ps${Date.now()}`;
+  const bnRows =
+    job.kind === "bn-parameters" && Array.isArray(job.response?.bnPersonPosteriors)
+      ? job.response.bnPersonPosteriors
+      : [];
+  let placedArtefact = null;
+  let analysisArtefactId = extras.analysisArtefactId || null;
+  if (bnRows.length) {
+    analysisArtefactId = analysisArtefactId || `aa${Date.now()}`;
+    const now = new Date().toISOString();
+    const scopeFromRequest = job.request?.scope || {};
+    const artefact = {
+      id: analysisArtefactId,
+      kind: "bn-parameters",
+      jobId: job.id,
+      scope: {
+        evidenceModelId: job.evidenceModelId,
+        taskModelId: extras.taskModelId ?? scopeFromRequest.taskModelId ?? null,
+        cohort: extras.cohort ?? scopeFromRequest.cohortId ?? job.request?.cohort?.id ?? null,
+        tenantId: extras.tenantId ?? scopeFromRequest.tenantId ?? null,
+        districtId: extras.districtId ?? scopeFromRequest.districtId ?? null,
+        schoolId: extras.schoolId ?? scopeFromRequest.schoolId ?? null,
+      },
+      packageVersion: job.response.packageVersion,
+      sampleSize: job.response.sampleSize,
+      computedAt: job.response.calibratedAt,
+      payload: {
+        bnPersonPosteriors: bnRows,
+        statisticalModelId: job.statisticalModelId,
+        converged: job.response.converged,
+        calibratedBy: extras.calibratedBy || job.requestedBy || "r-backend",
+        calibrationMethod: "r-job",
+        notes:
+          "Person-level latent posterior marginals. Conditional probability tables are on the parameter set.",
+      },
+      createdAt: now,
+    };
+    const artefactCheck = validateEntity("analysisArtefacts", artefact, db, { strict: false });
+    if (!artefactCheck.valid) {
+      return { ok: false, error: "Analysis artefact failed validation", details: artefactCheck.errors };
+    }
+    placeAnalysisArtefact(db, artefact);
+    placedArtefact = artefact;
+  }
+
   const parameterSet = slimParameterSet(
     {
       ...parameterSetFromCalibrationResponse(job.response, {
@@ -215,7 +259,7 @@ export function ingestCalibrationJob(job, db, extras = {}) {
     },
     {
       calibrationJobId: job.id,
-      analysisArtefactId: extras.analysisArtefactId,
+      analysisArtefactId,
     }
   ).parameterSet;
 
@@ -234,6 +278,9 @@ export function ingestCalibrationJob(job, db, extras = {}) {
   const storageErrors = parameterSetStorageErrors(parameterSet, sm);
   if (storageErrors.length > 0) {
     sm.parameterSets = sm.parameterSets.filter((p) => p.parameterSetId !== parameterSetId);
+    if (placedArtefact) {
+      db.analysisArtefacts = (db.analysisArtefacts || []).filter((row) => row?.id !== placedArtefact.id);
+    }
     return {
       ok: false,
       error: "Parameter set failed evidence-model validation",
@@ -242,10 +289,15 @@ export function ingestCalibrationJob(job, db, extras = {}) {
   }
 
   job.ingestedParameterSetId = parameterSetId;
+  if (placedArtefact) job.ingestedAnalysisArtefactId = placedArtefact.id;
   em.updatedAt = new Date().toISOString();
   job.updatedAt = em.updatedAt;
 
-  return { ok: true, parameterSet };
+  return {
+    ok: true,
+    parameterSet,
+    analysisArtefact: placedArtefact ? analysisArtefactIngestView(placedArtefact) : undefined,
+  };
 }
 
 /**

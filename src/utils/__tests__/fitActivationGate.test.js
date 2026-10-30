@@ -320,6 +320,67 @@ describe("fit activation gate", () => {
     expect(on.failedChecks.map((check) => check.id)).toEqual(["cdm.m2p"]);
   });
 
+  it("passes a BN set inside the residual defaults and ignores AIC", () => {
+    const gate = evaluateFitActivation({
+      statisticalModel: { id: "sm-bn", type: "bayesian_network" },
+      parameterSet: {
+        fitStatistics: {
+          bnFit: {
+            logLik: -10,
+            aic: 5000,
+            bic: 9000,
+            meanAbsResidual: 0.02,
+            maxAbsResidual: 0.08,
+          },
+        },
+      },
+    });
+    expect(gate.ok).toBe(true);
+    expect(gate.fitGate.status).toBe("pass");
+    expect(gate.fitGate.family).toBe("bn");
+    expect(gate.fitGate.checks.map((check) => check.id)).toEqual([
+      "bn.meanAbsResidual",
+      "bn.maxAbsResidual",
+    ]);
+  });
+
+  it("fails a BN set when a marginal residual is over its threshold", () => {
+    const gate = evaluateFitActivation({
+      statisticalModel: { id: "sm-bn", type: "bayesian_network" },
+      parameterSet: {
+        fitStatistics: { bnFit: { meanAbsResidual: 0.08, maxAbsResidual: 0.2 } },
+      },
+    });
+    expect(gate.ok).toBe(false);
+    expect(gate.failedChecks.map((check) => check.id)).toEqual([
+      "bn.meanAbsResidual",
+      "bn.maxAbsResidual",
+    ]);
+  });
+
+  it("does not evaluate a BN set that has no residual summary", () => {
+    const gate = evaluateFitActivation({
+      statisticalModel: { id: "sm-bn", type: "bayesian_network" },
+      parameterSet: { fitStatistics: { bnFit: { logLik: -4, aic: 12, bic: 20 } } },
+    });
+    expect(gate.ok).toBe(true);
+    expect(gate.fitGate.status).toBe("not_evaluated");
+    expect(gate.fitGate.note).toMatch(/AIC and BIC/);
+  });
+
+  it("uses an authored BN residual maximum ahead of the default", () => {
+    const parameterSet = {
+      fitStatistics: { bnFit: { meanAbsResidual: 0.04, maxAbsResidual: 0.04 } },
+    };
+    const gate = evaluateFitActivation({
+      statisticalModel: { id: "sm-bn", type: "bayesian_network" },
+      calibrationPlan: { fitThresholds: { bnMeanAbsResidualMax: 0.03 } },
+      parameterSet,
+    });
+    expect(gate.ok).toBe(false);
+    expect(gate.failedChecks.map((check) => check.id)).toEqual(["bn.meanAbsResidual"]);
+  });
+
   it("refuses a stored override that has no reason", () => {
     const errors = parameterSetStorageErrors(
       {

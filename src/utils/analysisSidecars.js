@@ -11,6 +11,7 @@ const SIDECAR_KEYS = [
   "iifGrid",
   "personFitRows",
   "q3Matrix",
+  "bnPersonPosteriors",
 ];
 
 export function stripArtefactSidecars(row) {
@@ -35,6 +36,9 @@ export function stripArtefactSidecars(row) {
     (Array.isArray(payload.personFitRows) && payload.personFitRows.length > 0) ||
     Boolean(row.hasPersonFit);
   const hasQ3 = Boolean(payload.q3Matrix) || Boolean(row.hasQ3);
+  const hasBnPosteriors =
+    (Array.isArray(payload.bnPersonPosteriors) && payload.bnPersonPosteriors.length > 0) ||
+    Boolean(row.hasBnPosteriors);
   for (const key of SIDECAR_KEYS) {
     if (key in next) delete next[key];
   }
@@ -47,6 +51,7 @@ export function stripArtefactSidecars(row) {
     hasIif,
     hasPersonFit,
     hasQ3,
+    hasBnPosteriors,
   };
 }
 
@@ -68,10 +73,13 @@ export function stripJobSidecars(job) {
     (Array.isArray(response.personFitRows) && response.personFitRows.length > 0) ||
     Boolean(job.hasPersonFit);
   const hasQ3 = Boolean(response.q3Matrix) || Boolean(job.hasQ3);
+  const hasBnPosteriors =
+    (Array.isArray(response.bnPersonPosteriors) && response.bnPersonPosteriors.length > 0) ||
+    Boolean(job.hasBnPosteriors);
   for (const key of SIDECAR_KEYS) {
     if (key in response) delete response[key];
   }
-  return { ...job, response, hasReport, hasScores, hasPersonFit, hasQ3 };
+  return { ...job, response, hasReport, hasScores, hasPersonFit, hasQ3, hasBnPosteriors };
 }
 
 function csvEscape(value) {
@@ -111,6 +119,35 @@ export function redactPersonFitRows(rows) {
     personId: `row-${i + 1}`,
     personIdRedacted: true,
   }));
+}
+
+function redactBnPosteriorRows(rows) {
+  return (rows || []).map((row, i) => ({
+    marginals: row?.marginals ?? null,
+    personId: `row-${i + 1}`,
+    personIdRedacted: true,
+  }));
+}
+
+export function bnPosteriorBody(rows, { isAdmin, minCellSize, id }) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  if (!isAdmin && rows.length < minCellSize) {
+    return {
+      id,
+      suppressed: true,
+      reason: `n < ${minCellSize}`,
+      n: null,
+      minCellSize,
+    };
+  }
+  const out = isAdmin ? rows : redactBnPosteriorRows(rows);
+  return {
+    id,
+    rows: out,
+    n: out.length,
+    personIdRedacted: !isAdmin,
+    minCellSize,
+  };
 }
 
 export function redactScoreRows(rows) {
