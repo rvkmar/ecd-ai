@@ -545,6 +545,31 @@ describe("calibration window", () => {
     expect(db.evidenceModels[0].statisticalModels[0].parameterSets).toHaveLength(2);
   });
 
+  it("strips report HTML and person scores on recalibrate and keeps the references", async () => {
+    const { app, db } = await buildApp(makeModel());
+    const personScores = { personIds: ["stud-1"], theta: [0.2], se: [0.1] };
+
+    const res = await request(app).post("/api/evidenceModels/em1/recalibrate").send({
+      ...recalPayload,
+      calibrationJobId: "job-77",
+      analysisArtefactId: "aa-77",
+      reportHtml: "<html>secret report</html>",
+      standardErrors: { o1: { a: 0.1 } },
+      fitStatistics: { RMSEA: 0.03, personScores },
+    });
+
+    expect(res.status).toBe(200);
+    const ps = db.evidenceModels[0].statisticalModels[0].parameterSets.at(-1);
+    expect(ps.reportHtml).toBeUndefined();
+    expect(ps.fitStatistics.personScores).toBeUndefined();
+    expect(ps.fitStatistics.RMSEA).toBe(0.03);
+    expect(ps.standardErrors.o1.a).toBe(0.1);
+    expect(ps.parameters.o1.a).toBe(1.1);
+    expect(ps.calibrationJobId).toBe("job-77");
+    expect(ps.analysisArtefactId).toBe("aa-77");
+    expect(JSON.stringify(ps)).not.toMatch(/stud-1/);
+  });
+
   it("allows recalibration while suspended — that is what suspending is for", async () => {
     const { app } = await buildApp(makeModel({ status: "suspended" }));
 

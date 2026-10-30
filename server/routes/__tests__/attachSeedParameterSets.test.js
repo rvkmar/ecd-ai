@@ -90,6 +90,71 @@ describe("POST /api/evidenceModels/:id/attach-seed-parameter-sets", () => {
     expect(saveDB).toHaveBeenCalled();
   });
 
+  it("strips report HTML and person scores when a seed is attached", async () => {
+    const personScores = { personIds: ["stud-seed"], theta: [1], se: [0.2] };
+    const db = {
+      evidenceModels: [
+        {
+          id: "em1",
+          status: "confirmed",
+          locked: true,
+          competencyId: "c1",
+          competencyModelVersion: 1,
+          statisticalModels: [
+            {
+              id: "sm1",
+              type: "irt",
+              subtype: "2pl",
+              active: true,
+              structureConfig: { observableIds: ["o1"] },
+              parameterSets: [],
+              activeParameterSetId: null,
+            },
+          ],
+        },
+      ],
+      competencies: [{ id: "c1", modelId: "cm1" }],
+      competencyModels: [{ id: "cm1", versionNumber: 1 }],
+    };
+    loadDB.mockReturnValue(db);
+
+    const res = await request(makeApp())
+      .post("/api/evidenceModels/em1/attach-seed-parameter-sets")
+      .send({
+        seedParameterSets: [
+          {
+            statisticalModelId: "sm1",
+            parameterSet: {
+              parameterSetId: "ps_pilot_sm1",
+              parameters: { o1: { a: 1.1, b: -0.2 } },
+              standardErrors: { o1: { a: 0.05 } },
+              fitStatistics: { RMSEA: 0.02, personScores },
+              packageVersion: "ecd-pilot-1.0.0",
+              converged: true,
+              sampleSize: 220,
+              calibratedAt: "2026-09-01T00:00:00.000Z",
+              calibrationJobId: "job-seed",
+              reportHtml: "<html>seed report</html>",
+              scores: [{ personId: "stud-seed", theta: 1 }],
+              tifCsv: "theta,information\n",
+            },
+          },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    const ps = db.evidenceModels[0].statisticalModels[0].parameterSets[0];
+    expect(ps.reportHtml).toBeUndefined();
+    expect(ps.scores).toBeUndefined();
+    expect(ps.tifCsv).toBeUndefined();
+    expect(ps.fitStatistics.personScores).toBeUndefined();
+    expect(ps.fitStatistics.RMSEA).toBe(0.02);
+    expect(ps.parameters.o1.a).toBe(1.1);
+    expect(ps.standardErrors.o1.a).toBe(0.05);
+    expect(ps.calibrationJobId).toBe("job-seed");
+    expect(JSON.stringify(ps)).not.toMatch(/stud-seed/);
+  });
+
   it("refuses draft models", async () => {
     loadDB.mockReturnValue({
       evidenceModels: [{ id: "em1", status: "draft", statisticalModels: [], calibrationPlan: { seedParameterSets: [{}] } }],

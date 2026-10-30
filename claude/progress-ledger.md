@@ -683,6 +683,7 @@ Restored D51–D57 notes (each marked “Restored 2026-09-13”):
 | 2026-10-30 | off-calendar | ECD reporting | Session ECD paper document; cumulative student / classroom / curriculum; midrank PR and P10–P90. Live `:6060` walked (stud1 PR 99.2 / 600; teacher P10–P90 20–85; district names omitted). Product `7ca4935`…`0494d90`. **Not D156.** Handoff: `claude/day146ai-offcal-ecd-reporting.md`. |
 | 2026-10-30 | close | — | ECD reporting recording close. Last completed stays D155. Close re-run **2924 passed / 6 skipped**. Build green. Calendar D156 unmarked (search skipped). |
 | 2026-10-30 | off-calendar | TU3 / ~~T1~~ | Score reports quote the evidence claim, show SE or posterior SD, and resolve levels in one module. Unauthored content keeps Advanced / Proficient / Needs Support and Strong / Developing / Needs Support, labelled default cut. Lane A complete. Suite **2995 passed / 13 skipped**. **Not D146.** Handoff: `claude/day146al-offcal-tu3-claim-tied-reports.md`. |
+| 2026-10-30 | off-calendar | evidence parameter sets | Report HTML and person scores leave evidence-model parameter sets. Migration 015 preserves them on analysisArtefacts. Item parameters, SEs, and scalar fit stay. Suite **3013 passed / 13 skipped**. **Not D146.** Handoff: `claude/day146am-offcal-slim-evidence-parameter-sets.md`. |
 
 
 
