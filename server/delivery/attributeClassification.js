@@ -33,8 +33,9 @@
 //    deliberately assign the LESS probable class: at threshold 0.8 a
 //    posterior of 0.7 classifies as nonmaster, and that decision is
 //    correct with probability 0.3, not 0.7. `max()` would be right today
-//    and quietly wrong the day threshold authoring lands. The general
-//    form costs nothing and cannot rot.
+//    and quietly wrong once a threshold other than 0.5 is applied.
+//    TU1 applies authored cuts. The general form is the one that stays
+//    correct.
 //
 // 3. AN EXACT TIE IS A REAL STATE. masteryPrior() in
 //    attributeAccumulation.js returns {p: 0.5} whenever an SMV declares no
@@ -69,13 +70,167 @@
  * The Bayes decision rule under symmetric 0-1 loss, and the standard
  * marginal-MAP reporting rule for DINA/G-DINA attribute profiles.
  *
- * Deliberately NOT authorable per Assembly Model or per SMV yet: that is a
- * schema field + route + wizard surface, i.e. its own unit, and the cadence
- * contract forbids pairing two schema units (ADR 0004 decision 5). Every
- * function here takes the threshold as a parameter so that unit plumbs a
- * value through and adds no mathematics.
+ * TU1 (ADR 0004 amendment): an authored cut replaces this constant.
+ * Precedence is SMV masteryThreshold, then Assembly Model
+ * masteryThreshold, then an evidence-model mastery decisionRule that
+ * defines a probability cut, then this 0.5. Absent all three, every
+ * caller still classifies at 0.5.
  */
 const DEFAULT_MASTERY_THRESHOLD = 0.5;
+
+/**
+ * An authored masteryThreshold is an open cut on the probability scale.
+ * 0 and 1 are refused. Schema validation uses the same interval. A
+ * mastery decisionRule may still state 0 or 1.
+ *
+ * @param {unknown} value
+ * @returns {number|null}
+ */
+function authoredMasteryThreshold(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  if (!(value > 0 && value < 1)) return null;
+  return value;
+}
+
+/**
+ * A decision rule defines a mastery cut only when it is a mastery rule
+ * on the probability scale with direction "above" (omitted direction is
+ * the authoring panel's default, which is above).
+ *
+ * classification is a minimum for the modal state. posterior_threshold
+ * is theta. score_band is a raw score. direction "below" would invert
+ * the MAP comparison, and "within" is not one cut. Those rules are not
+ * applied here; the caller falls through to 0.5.
+ *
+ * Thresholds of 0 and 1 are legal on a confirmed mastery rule (the
+ * extreme-justification band). They are cuts. Values outside [0, 1]
+ * are not a probability cut.
+ *
+ * @param {object|null|undefined} rule
+ * @returns {number|null}
+ */
+function masteryCutFromDecisionRule(rule) {
+  if (!rule || typeof rule !== "object" || Array.isArray(rule)) return null;
+  if (rule.type !== "mastery") return null;
+  const direction = rule.direction == null || rule.direction === "" ? "above" : rule.direction;
+  if (direction !== "above") return null;
+  if (typeof rule.threshold !== "number" || !Number.isFinite(rule.threshold)) return null;
+  if (rule.threshold < 0 || rule.threshold > 1) return null;
+  return rule.threshold;
+}
+
+/**
+ * Resolve the mastery cut for one posterior.
+ *
+ * Precedence: SMV masteryThreshold, Assembly Model masteryThreshold,
+ * decisionRule where it defines a cut, then 0.5. An invalid authored
+ * number is skipped, not applied. With no usable cut, the result is
+ * exactly DEFAULT_MASTERY_THRESHOLD.
+ *
+ * @param {{smv?: object, assemblyModel?: object, decisionRule?: object}|null|undefined} [sources]
+ * @returns {{threshold: number, source: "smv"|"assemblyModel"|"decisionRule"|"default"}}
+ */
+export function resolveDecision(sources) {
+  const smvCut = authoredMasteryThreshold(sources?.smv?.masteryThreshold);
+  if (smvCut != null) return { threshold: smvCut, source: "smv" };
+
+  const assemblyCut = authoredMasteryThreshold(sources?.assemblyModel?.masteryThreshold);
+  if (assemblyCut != null) return { threshold: assemblyCut, source: "assemblyModel" };
+
+  const ruleCut = masteryCutFromDecisionRule(sources?.decisionRule);
+  if (ruleCut != null) return { threshold: ruleCut, source: "decisionRule" };
+
+  return { threshold: DEFAULT_MASTERY_THRESHOLD, source: "default" };
+}
+
+/**
+ * classifyMastery at the cut resolveDecision picked. Same return shape
+ * as classifyMastery, so a report row stays {classification,
+ * expectedClassificationAccuracy, threshold}.
+ *
+ * @param {number} estimate
+ * @param {{smv?: object, assemblyModel?: object, decisionRule?: object}|null|undefined} [sources]
+ */
+export function classifyByRule(estimate, sources) {
+  const { threshold } = resolveDecision(sources);
+  return classifyMastery(estimate, threshold);
+}
+
+function modelById(rows, id) {
+  if (!id) return null;
+  return (rows || []).find((row) => row && row.id === id) || null;
+}
+
+/**
+ * Gather the three cut sources for one posterior. Does not guess when
+ * more than one Assembly Model could apply and the session does not
+ * name one. A hinted assemblyModel (the one assembly progress already
+ * chose) wins.
+ *
+ * @param {object|null|undefined} posterior
+ * @param {object|null|undefined} db
+ * @param {{assemblyModel?: object, session?: object}} [hints]
+ * @returns {{smv?: object, assemblyModel?: object, decisionRule?: object}}
+ */
+export function sourcesForPosterior(posterior, db, hints = {}) {
+  const store = db && typeof db === "object" ? db : null;
+  if (!posterior || typeof posterior !== "object" || !store) return {};
+
+  const smvId = posterior.smvId;
+  let competencyModel = posterior.competencyModelId
+    ? modelById(store.competencyModels, posterior.competencyModelId)
+    : null;
+  if (!competencyModel && smvId) {
+    const matches = (store.competencyModels || []).filter(
+      (model) =>
+        Array.isArray(model?.smVariables) &&
+        model.smVariables.some((smv) => smv && smv.id === smvId)
+    );
+    if (matches.length === 1) competencyModel = matches[0];
+  }
+  const smv =
+    competencyModel && smvId
+      ? (competencyModel.smVariables || []).find((row) => row && row.id === smvId) || null
+      : null;
+
+  let assemblyModel =
+    hints.assemblyModel && typeof hints.assemblyModel === "object" ? hints.assemblyModel : null;
+  if (!assemblyModel) {
+    const session = hints.session;
+    const hintedId =
+      session?.assemblyProgress?.assemblyModelId || session?.stopped?.assemblyModelId || null;
+    assemblyModel = modelById(store.assemblyModels, hintedId);
+    if (!assemblyModel && session?.deliveryModelId) {
+      const delivery = modelById(store.deliveryModels, session.deliveryModelId);
+      assemblyModel = modelById(store.assemblyModels, delivery?.assemblyModelId);
+    }
+  }
+  if (!assemblyModel && competencyModel) {
+    const candidates = (store.assemblyModels || []).filter(
+      (model) => model && model.competencyModelId === competencyModel.id
+    );
+    if (candidates.length === 1) assemblyModel = candidates[0];
+  }
+
+  let decisionRule = null;
+  if (posterior.evidenceModelId) {
+    const evidenceModel = modelById(store.evidenceModels, posterior.evidenceModelId);
+    if (
+      evidenceModel &&
+      evidenceModel.decisionRule &&
+      typeof evidenceModel.decisionRule === "object" &&
+      !Array.isArray(evidenceModel.decisionRule)
+    ) {
+      decisionRule = evidenceModel.decisionRule;
+    }
+  }
+
+  const sources = {};
+  if (smv) sources.smv = smv;
+  if (assemblyModel) sources.assemblyModel = assemblyModel;
+  if (decisionRule) sources.decisionRule = decisionRule;
+  return sources;
+}
 
 /** The only accumulation method whose `estimate` is a mastery probability. */
 const CLASSIFIABLE_METHOD = "attribute-mastery-posterior";
@@ -282,10 +437,13 @@ export function classifyAttributeProfile(posteriors, threshold = DEFAULT_MASTERY
 }
 
 /* evaluateClassificationTarget() is what assemblyProgress.js calls.
-   classifyAttributeProfile() is what the report routes call (D59).
-   Everything above those two is internal decomposition -- exporting it
-   would be the F4/G4 pattern this repo's dead-export guard exists to
-   catch ("exercised by its own tests, invoked from nowhere").
+   classifyAttributeProfile() is the no-context report profile (D59).
+   resolveDecision(), classifyByRule(), and sourcesForPosterior() are
+   the TU1 helpers: assembly progress resolves a cut, and session
+   reports classify through classifyByRule. The arithmetic under those
+   three stays unexported -- exporting it would be the F4/G4 pattern
+   this repo's dead-export guard exists to catch ("exercised by its
+   own tests, invoked from nowhere").
 
    The internals are still worth testing directly: ADR 0004 reasons about
    the decision rule, the accuracy formula and the scale gate separately,

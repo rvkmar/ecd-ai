@@ -194,6 +194,24 @@ export function CompetencyWizardProvider({
     markDirty();
   }
 
+  function updateSmVariableMasteryThreshold(smvId, masteryThreshold) {
+    if (model?.locked) return;
+    setModel((prev) => ({
+      ...prev,
+      smVariables: (prev.smVariables || []).map((s) => {
+        if (s.id !== smvId) return s;
+        const next = { ...s };
+        if (typeof masteryThreshold === "number" && Number.isFinite(masteryThreshold)) {
+          next.masteryThreshold = masteryThreshold;
+        } else {
+          delete next.masteryThreshold;
+        }
+        return next;
+      }),
+    }));
+    markDirty();
+  }
+
   function updateConstructFramework(field, value) {
     if (model?.locked) return;
     setModel((prev) => ({
@@ -729,6 +747,7 @@ export function CompetencyWizardProvider({
     updateConstructFramework,
     patchConstructFramework,
     updateSmVariablePrior,
+    updateSmVariableMasteryThreshold,
 
     addCompetency,
     updateCompetency,

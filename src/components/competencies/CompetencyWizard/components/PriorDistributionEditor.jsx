@@ -67,7 +67,8 @@ function Prompt({ question, hint }) {
 }
 
 export default function PriorDistributionEditor() {
-  const { model, competencies, updateSmVariablePrior } = useCompetencyWizard();
+  const { model, competencies, updateSmVariablePrior, updateSmVariableMasteryThreshold } =
+    useCompetencyWizard();
   const isLocked = model?.locked;
   const smVariables = model?.smVariables || [];
   const competencyById = new Map(competencies.map((c) => [c.id, c]));
@@ -275,6 +276,39 @@ export default function PriorDistributionEditor() {
                   ))}
                 </div>
               </div>
+            )}
+
+            {smv.type === "binary" && (
+              <label className="block text-xs font-medium text-slate-600">
+                Mastery threshold (optional)
+                <input
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  max={1}
+                  disabled={isLocked}
+                  value={smv.masteryThreshold ?? ""}
+                  placeholder="blank uses 0.5"
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") {
+                      updateSmVariableMasteryThreshold(smv.id, null);
+                      return;
+                    }
+                    const n = Number(raw);
+                    updateSmVariableMasteryThreshold(
+                      smv.id,
+                      Number.isFinite(n) ? n : null
+                    );
+                  }}
+                  className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                />
+                <span className="mt-1 block text-[11px] font-normal leading-snug text-slate-500">
+                  Optional cut greater than 0 and less than 1. Overrides the
+                  Assembly Model cut. Blank falls through to that cut, then
+                  to the evidence model mastery rule, then 0.5.
+                </span>
+              </label>
             )}
           </div>
         );

@@ -16,7 +16,14 @@
 // ADR 0004 carries the reasoning.
 
 import { describe, it, expect } from "vitest";
-import { evaluateClassificationTarget, classifyAttributeProfile, __testing__ } from "../attributeClassification.js";
+import {
+  evaluateClassificationTarget,
+  classifyAttributeProfile,
+  classifyByRule,
+  resolveDecision,
+  sourcesForPosterior,
+  __testing__,
+} from "../attributeClassification.js";
 import { __testing__ as accumulationTesting } from "../attributeAccumulation.js";
 
 /* evaluateClassificationTarget and classifyAttributeProfile are the public
@@ -435,5 +442,188 @@ describe("classifyAttributeProfile — D59 report profile", () => {
     expect(classifyAttributeProfile(undefined)).toEqual([]);
     expect(classifyAttributeProfile(null)).toEqual([]);
     expect(classifyAttributeProfile({})).toEqual([]);
+  });
+});
+
+/* ------------------------------------------------------------------
+   TU1 — authored cut precedence
+   SMV masteryThreshold, then Assembly Model masteryThreshold, then a
+   mastery decisionRule that defines a cut, then 0.5.
+------------------------------------------------------------------ */
+
+const MASTERY_RULE = { type: "mastery", threshold: 0.8, direction: "above" };
+
+describe("resolveDecision — precedence and defaults", () => {
+  it("is 0.5 when nothing is authored", () => {
+    expect(resolveDecision()).toEqual({ threshold: 0.5, source: "default" });
+    expect(resolveDecision({})).toEqual({ threshold: 0.5, source: "default" });
+    expect(resolveDecision(null)).toEqual({ threshold: 0.5, source: "default" });
+    expect(classifyByRule(0.83, {})).toEqual(classifyMastery(0.83));
+    expect(classifyByRule(0.17)).toEqual(classifyMastery(0.17));
+  });
+
+  it("prefers the SMV cut, then the Assembly Model cut, then the decision rule", () => {
+    const smv = { masteryThreshold: 0.6 };
+    const assemblyModel = { masteryThreshold: 0.7 };
+    const decisionRule = MASTERY_RULE;
+
+    expect(resolveDecision({ smv, assemblyModel, decisionRule })).toEqual({
+      threshold: 0.6,
+      source: "smv",
+    });
+    expect(resolveDecision({ assemblyModel, decisionRule })).toEqual({
+      threshold: 0.7,
+      source: "assemblyModel",
+    });
+    expect(resolveDecision({ decisionRule })).toEqual({
+      threshold: 0.8,
+      source: "decisionRule",
+    });
+  });
+
+  it("treats an omitted mastery direction as above", () => {
+    expect(resolveDecision({
+      decisionRule: { type: "mastery", threshold: 0.8 },
+    })).toEqual({ threshold: 0.8, source: "decisionRule" });
+  });
+
+  it("accepts a mastery rule cut of 0 or 1", () => {
+    expect(resolveDecision({
+      decisionRule: { type: "mastery", threshold: 0, direction: "above" },
+    }).threshold).toBe(0);
+    expect(resolveDecision({
+      decisionRule: { type: "mastery", threshold: 1, direction: "above" },
+    }).threshold).toBe(1);
+  });
+
+  it("skips an invalid masteryThreshold and uses the next source", () => {
+    expect(resolveDecision({
+      smv: { masteryThreshold: 0 },
+      assemblyModel: { masteryThreshold: 1 },
+      decisionRule: MASTERY_RULE,
+    })).toEqual({ threshold: 0.8, source: "decisionRule" });
+
+    expect(resolveDecision({
+      smv: { masteryThreshold: 1.2 },
+      assemblyModel: { masteryThreshold: 0.66 },
+    })).toEqual({ threshold: 0.66, source: "assemblyModel" });
+  });
+
+  it("ignores non-cuts and falls back to 0.5", () => {
+    const notCuts = [
+      { type: "classification", threshold: 0.4, direction: "above" },
+      { type: "score_band", threshold: 0.4, direction: "above" },
+      { type: "posterior_threshold", threshold: 0.3, direction: "above" },
+      { type: "mastery", threshold: 0.2, direction: "below" },
+      { type: "mastery", threshold: 0.2, direction: "within" },
+      { type: "mastery", threshold: 1.5, direction: "above" },
+      { type: "mastery", threshold: "0.8", direction: "above" },
+      { cutScore: 5 },
+      {},
+      null,
+    ];
+    for (const decisionRule of notCuts) {
+      expect(resolveDecision({
+        smv: { masteryThreshold: "0.6" },
+        assemblyModel: { masteryThreshold: NaN },
+        decisionRule,
+      })).toEqual({ threshold: 0.5, source: "default" });
+    }
+  });
+
+  it("classifies at the authored cut, including an exact tie", () => {
+    const below = classifyByRule(0.7, { decisionRule: MASTERY_RULE });
+    expect(below.classification).toBe("nonmaster");
+    expect(below.threshold).toBe(0.8);
+    expect(below.expectedClassificationAccuracy).toBeCloseTo(0.3, 12);
+    expect(classifyByRule(0.8, { decisionRule: MASTERY_RULE }).classification).toBe("indeterminate");
+    expect(classifyByRule(0.7, { smv: { masteryThreshold: 0.65 } }).classification).toBe("master");
+  });
+});
+
+describe("sourcesForPosterior", () => {
+  const posterior = {
+    smvId: "attrA",
+    competencyModelId: "cm1",
+    evidenceModelId: "em1",
+    method: "attribute-mastery-posterior",
+    estimate: 0.62,
+  };
+
+  function dbWith(overrides = {}) {
+    return {
+      competencyModels: [{
+        id: "cm1",
+        smVariables: [{ id: "attrA", type: "binary", masteryThreshold: 0.9 }],
+      }],
+      assemblyModels: [
+        { id: "am-live", competencyModelId: "cm1", masteryThreshold: 0.7 },
+        { id: "am-draft", competencyModelId: "cm1", masteryThreshold: 0.4 },
+      ],
+      evidenceModels: [{
+        id: "em1",
+        decisionRule: { type: "mastery", threshold: 0.55, direction: "above" },
+      }],
+      deliveryModels: [{ id: "dm1", assemblyModelId: "am-live" }],
+      ...overrides,
+    };
+  }
+
+  it("lets the SMV cut win even when two Assembly Models exist", () => {
+    expect(resolveDecision(sourcesForPosterior(posterior, dbWith()))).toEqual({
+      threshold: 0.9,
+      source: "smv",
+    });
+  });
+
+  it("does not guess an Assembly Model, and uses the decision rule", () => {
+    const db = dbWith({
+      competencyModels: [{ id: "cm1", smVariables: [{ id: "attrA", type: "binary" }] }],
+    });
+    expect(resolveDecision(sourcesForPosterior(posterior, db))).toEqual({
+      threshold: 0.55,
+      source: "decisionRule",
+    });
+  });
+
+  it("uses the Assembly Model the session snapshot names", () => {
+    const db = dbWith({
+      competencyModels: [{ id: "cm1", smVariables: [{ id: "attrA", type: "binary" }] }],
+    });
+    const sources = sourcesForPosterior(posterior, db, {
+      session: { assemblyProgress: { assemblyModelId: "am-draft" } },
+    });
+    expect(resolveDecision(sources)).toEqual({ threshold: 0.4, source: "assemblyModel" });
+  });
+
+  it("uses a cited delivery model when the session has no snapshot", () => {
+    const db = dbWith({
+      competencyModels: [{ id: "cm1", smVariables: [{ id: "attrA", type: "binary" }] }],
+      evidenceModels: [],
+    });
+    const sources = sourcesForPosterior(posterior, db, {
+      session: { deliveryModelId: "dm1" },
+    });
+    expect(resolveDecision(sources)).toEqual({ threshold: 0.7, source: "assemblyModel" });
+  });
+
+  it("prefers a hinted Assembly Model over the session snapshot", () => {
+    const db = dbWith({
+      competencyModels: [{ id: "cm1", smVariables: [{ id: "attrA", type: "binary" }] }],
+    });
+    const sources = sourcesForPosterior(posterior, db, {
+      assemblyModel: { id: "am-hint", masteryThreshold: 0.62 },
+      session: { stopped: { assemblyModelId: "am-draft" } },
+    });
+    expect(resolveDecision(sources).threshold).toBe(0.62);
+  });
+
+  it("uses the single Assembly Model for the competency", () => {
+    const db = dbWith({
+      competencyModels: [{ id: "cm1", smVariables: [{ id: "attrA", type: "binary" }] }],
+      assemblyModels: [{ id: "am-only", competencyModelId: "cm1", masteryThreshold: 0.66 }],
+      evidenceModels: [],
+    });
+    expect(resolveDecision(sourcesForPosterior(posterior, db)).threshold).toBe(0.66);
   });
 });

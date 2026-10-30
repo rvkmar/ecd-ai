@@ -71,28 +71,36 @@ function alignPriorToScale(type, prior, scale) {
  * same id keep their priorDistribution when still type-compatible.
  */
 export function syncSmVariablesFromCompetencies(competencies = [], existingSmVariables = []) {
-  const priorById = new Map(
+  const existingById = new Map(
     (existingSmVariables || [])
       .filter((s) => s?.id)
-      .map((s) => [s.id, s.priorDistribution])
+      .map((s) => [s.id, s])
   );
 
   return (competencies || [])
     .filter((c) => c?.id && c.variableType)
     .map((comp) => {
+      const existing = existingById.get(comp.id);
       const scale = scaleFromCompetency(comp);
       const prior = alignPriorToScale(
         comp.variableType,
-        priorById.get(comp.id),
+        existing?.priorDistribution,
         scale
       );
-      return {
+      const row = {
         id: comp.id,
         label: (comp.name && comp.name.trim()) || `SMV ${comp.id}`,
         type: comp.variableType,
         scale,
         priorDistribution: prior,
       };
+      // Optional mastery cut. Kept across competency edits. Dropped when
+      // the variable is no longer binary, which is the only type this
+      // classifier reads.
+      if (comp.variableType === "binary" && typeof existing?.masteryThreshold === "number") {
+        row.masteryThreshold = existing.masteryThreshold;
+      }
+      return row;
     });
 }
 

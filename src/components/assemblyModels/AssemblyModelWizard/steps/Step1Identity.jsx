@@ -47,6 +47,31 @@ export default function Step1Identity() {
       </div>
 
       <div>
+        <label className="text-sm font-medium text-slate-600">
+          Mastery threshold (optional)
+        </label>
+        <Input
+          type="number"
+          step="0.01"
+          min="0"
+          max="1"
+          className="w-32"
+          disabled={locked}
+          value={draft.masteryThreshold ?? ""}
+          placeholder="blank uses 0.5"
+          onChange={(e) => {
+            const raw = e.target.value;
+            updateField("masteryThreshold", raw === "" ? undefined : Number(raw));
+          }}
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Optional cut greater than 0 and less than 1 for attribute mastery.
+          A Student Model Variable cut overrides this. If both are blank, a
+          mastery decision rule is used, then 0.5.
+        </p>
+      </div>
+
+      <div>
         <label className="text-sm font-medium text-slate-600">Student Model</label>
         <Combobox
           options={competencyModels.map((m) => ({ value: m.id, label: m.name }))}
