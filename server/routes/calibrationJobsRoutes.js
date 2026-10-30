@@ -372,6 +372,13 @@ router.post("/", canAuthor, async (req, res) => {
     });
   }
 
+  if (record.kind === "lltm") {
+    return res.status(400).json({
+      error: "LLTM is estimated from a template family, not the calibration queue.",
+      details: ["POST /api/templates/:id/lltm"],
+    });
+  }
+
   const requestErrors = validateCalibrationRequest(record.request);
   if (requestErrors.length) {
     return res.status(400).json({ error: "Invalid calibration request envelope", details: requestErrors });

@@ -5,6 +5,11 @@
 // without the graph: templateId + tmvAssignment. Binding existence is
 // validateEntity's job when a db snapshot is present.
 //
+// TU19. predictedParameters, when present, is an LLTM difficulty flagged
+// as predicted. It is not a calibrated parameter set.
+
+import { predictedParameterErrors } from "./predictedParameters.js";
+
 // Template-change policy (ADR 0003b): a write to the source template
 // marks existing specs stale. It does not regenerate them.
 
@@ -46,6 +51,10 @@ export function taskSpecErrors(obj = {}, db = null) {
 
   if (obj.stale != null && typeof obj.stale !== "boolean") {
     errors.push("stale must be a boolean.");
+  }
+
+  if (obj.predictedParameters != null) {
+    errors.push(...predictedParameterErrors(obj.predictedParameters));
   }
 
   return errors;

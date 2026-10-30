@@ -29,6 +29,10 @@ vi.mock("@/api/queries/domainAnalyses", () => ({
   useDomainAnalyses: vi.fn(),
 }));
 
+vi.mock("@/api/queries/taskSpecs", () => ({
+  useTaskSpecs: vi.fn(),
+}));
+
 import {
   useTaskModelVariables,
   useCreateTaskModelVariable,
@@ -38,6 +42,7 @@ import {
 import { useTaskModels } from "@/api/queries/taskModels";
 import { useDesignPatterns } from "@/api/queries/designPatterns";
 import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import { useTaskSpecs } from "@/api/queries/taskSpecs";
 import TaskModelVariableBuilder, {
   TaskModelVariableLibraryView,
   consumersForVariable,
@@ -157,6 +162,7 @@ describe("TaskModelVariableBuilder (D117 create)", () => {
     useTaskModels.mockReturnValue({ data: [], isLoading: false, error: null });
     useDesignPatterns.mockReturnValue({ data: [], isLoading: false, error: null });
     useDomainAnalyses.mockReturnValue({ data: [], isLoading: false, error: null });
+    useTaskSpecs.mockReturnValue({ data: [], isLoading: false, error: null });
     useCreateTaskModelVariable.mockReturnValue({
       mutateAsync,
       isPending: false,

@@ -1153,6 +1153,9 @@ export const schema = {
     tmvAssignment: 'array',
     stale: 'boolean',
     generatedAt: 'date',
+    // TU19. Optional LLTM prediction. Absent means no predicted difficulty.
+    // parameterStatus is "predicted". Not a parameter set, and never activated.
+    predictedParameters: 'object',
     districtId: 'string',
     schoolId: 'string',
     createdBy: 'string',

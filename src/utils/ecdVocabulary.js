@@ -764,6 +764,13 @@ export const CALIBRATION_JOB_KINDS = [
     ingests: "parameterSets",
     statisticalModelTypes: ["bayesian_network"],
   },
+  {
+    value: "lltm",
+    label: "LLTM predicted difficulties",
+    package: "eRm",
+    ingests: "analysisArtefact",
+    statisticalModelTypes: ["irt", "rasch"],
+  },
 ];
 
 export const CALIBRATION_JOB_KIND_VALUES = CALIBRATION_JOB_KINDS.map((k) => k.value);

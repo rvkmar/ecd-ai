@@ -19,6 +19,7 @@ source(mod("cttAnalysis.R"), local = FALSE)
 source(mod("reportHtml.R"), local = FALSE)
 source(mod("modelCriticism.R"), local = FALSE)
 source(mod("bundleScoring.R"), local = FALSE)
+source(mod("lltm.R"), local = FALSE)
 source(mod("calibrate.R"), local = FALSE)
 source(mod("bnCalibrate.R"), local = FALSE)
 
@@ -186,4 +187,10 @@ api$handle("POST", "/calibrate/hang", function(req, res) {
     converged = TRUE,
     note = "hang completed (should not reach here under D86 timeout tests)"
   )
+}, serializer = .json_unboxed)
+
+# TU19. LLTM / item covariates. Not part of calibrate_dispatch, so a
+# bundle or BN change in calibrate.R does not have to carry this route.
+api$handle("POST", "/calibrate/lltm", function(req, res) {
+  lltm_dispatch(req, res)
 }, serializer = .json_unboxed)

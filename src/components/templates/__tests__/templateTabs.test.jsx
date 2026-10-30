@@ -12,6 +12,7 @@ import {
   useTaskSpecPreview,
   useGenerateTaskSpecsFromTemplate,
   useDeleteTaskSpecsForTemplate,
+  useEstimateLltm,
 } from "@/api/queries/templates";
 import { useTaskSpecs } from "@/api/queries/taskSpecs";
 import { useCompetencyModels, useCompetencies } from "@/api/queries/competencies";
@@ -43,6 +44,7 @@ vi.mock("@/api/queries/templates", () => ({
   useTaskSpecPreview: vi.fn(),
   useGenerateTaskSpecsFromTemplate: vi.fn(),
   useDeleteTaskSpecsForTemplate: vi.fn(),
+  useEstimateLltm: vi.fn(),
 }));
 vi.mock("@/api/queries/taskSpecs", () => ({
   useTaskSpecs: vi.fn(),
@@ -107,6 +109,7 @@ describe("Template three-tab shell", () => {
     useTaskSpecPreview.mockReturnValue({ data: undefined, isLoading: false, error: null });
     useGenerateTaskSpecsFromTemplate.mockReturnValue(idleMutation());
     useDeleteTaskSpecsForTemplate.mockReturnValue(idleMutation());
+    useEstimateLltm.mockReturnValue(idleMutation());
   });
 
   it("opens on Dashboard and switches to Structure and Manage", async () => {

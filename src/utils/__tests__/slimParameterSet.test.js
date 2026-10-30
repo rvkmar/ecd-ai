@@ -299,6 +299,22 @@ describe("slimParameterSet", () => {
     expect(stripped.bnPersonPosteriors[0].personId).toBe("stud-1");
   });
 
+  it("strips an LLTM design and covariance and keeps a TU6 bundle summary", () => {
+    const set = {
+      parameterSetId: "ps-both",
+      parameters: { item_a: { a: 1, b: 0.2, c: 0 } },
+      scoringBundles: [{ id: "bundle_wp", itemIds: ["item_a", "item_b"], model: "GRM", maxScore: 2 }],
+      lltmDesign: { columnNames: ["bloom=apply"], rows: [[0], [1]] },
+      lltmVcov: [[0.01]],
+    };
+    const result = slimParameterSet(set);
+    expect(result.parameterSet.scoringBundles).toEqual(set.scoringBundles);
+    expect(result.parameterSet.lltmDesign).toBeUndefined();
+    expect(result.parameterSet.lltmVcov).toBeUndefined();
+    expect(result.parameterSet.parameters.item_a.b).toBe(0.2);
+    expect(result.stripped.lltmDesign.rows).toEqual([[0], [1]]);
+  });
+
   it("rejects a non-string analysisArtefactId", () => {
     const errors = parameterSetStorageErrors(
       {

@@ -180,4 +180,44 @@ describe("D153 TaskSpecFamilyPanel", () => {
     await user.click(screen.getByRole("button", { name: "Generate family" }));
     expect(onGenerate).toHaveBeenCalledTimes(1);
   });
+
+  it("shows predicted difficulties and covariate effects, and can ask for a fit", async () => {
+    const user = userEvent.setup({ delay: null });
+    const onEstimate = vi.fn();
+    const predicted = specs.map((spec, index) => ({
+      ...spec,
+      predictedParameters: {
+        parameterStatus: "predicted",
+        origin: "predicted",
+        sourceModel: "eRm::LLTM",
+        normalization: "The reference pattern is fixed at difficulty 0.",
+        b: index === 0 ? 0 : 0.3,
+        bSe: index === 0 ? 0 : 0.08,
+        effects: [
+          {
+            name: "tmv-bloom=apply",
+            role: "level",
+            label: "Cognitive demand: Apply vs Remember",
+            estimate: 0.7,
+            se: 0.05,
+          },
+        ],
+      },
+    }));
+    render(
+      <TaskSpecFamilyPanel
+        specs={predicted}
+        variables={variables}
+        onEstimate={onEstimate}
+        onReplace={vi.fn()}
+        onRetire={vi.fn()}
+      />
+    );
+    expect(screen.getAllByTestId("lltm-predicted-badge").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("lltm-effects")).toHaveTextContent("Apply vs Remember");
+    expect(screen.getByTestId("lltm-effects")).toHaveTextContent("Predicted");
+    expect(screen.getByTestId("lltm-effects")).toHaveTextContent("eRm::LLTM");
+    await user.click(screen.getByTestId("lltm-estimate-button"));
+    expect(onEstimate).toHaveBeenCalledTimes(1);
+  });
 });

@@ -12,6 +12,7 @@ import {
 import { useTaskModels } from "@/api/queries/taskModels";
 import { useDesignPatterns } from "@/api/queries/designPatterns";
 import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
+import { useTaskSpecs } from "@/api/queries/taskSpecs";
 import TaskModelVariableBuilder from "../TaskModelVariableBuilder";
 import { uniqueTaskModelVariableCopyName } from "../taskModelVariableUsage";
 import {
@@ -35,6 +36,9 @@ vi.mock("@/api/queries/designPatterns", () => ({
 }));
 vi.mock("@/api/queries/domainAnalyses", () => ({
   useDomainAnalyses: vi.fn(),
+}));
+vi.mock("@/api/queries/taskSpecs", () => ({
+  useTaskSpecs: vi.fn(),
 }));
 
 function query(data = []) {
@@ -77,6 +81,7 @@ describe("Task Model Variable three-tab shell", () => {
     useTaskModels.mockReturnValue(query(taskModels));
     useDesignPatterns.mockReturnValue(query(designPatterns));
     useDomainAnalyses.mockReturnValue(query([]));
+    useTaskSpecs.mockReturnValue(query([]));
     useCreateTaskModelVariable.mockReturnValue(idleMutation());
     useUpdateTaskModelVariable.mockReturnValue(idleMutation());
     useDeleteTaskModelVariable.mockReturnValue(idleMutation());

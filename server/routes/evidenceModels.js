@@ -82,10 +82,13 @@ function fitActor(req) {
 
 function sendFitGateRefusal(res, gate) {
   const failed = Array.isArray(gate.failedChecks) ? gate.failedChecks : [];
-  return res.status(400).json({
-    error: gate.overrideRejected
+  const error = gate.predicted
+    ? "Predicted parameters cannot be activated. Run a real calibration first. An override does not apply."
+    : gate.overrideRejected
       ? "A fit override requires a non-empty reason."
-      : "Parameter set activation refused: fit thresholds were not met.",
+      : "Parameter set activation refused: fit thresholds were not met.";
+  return res.status(400).json({
+    error,
     details: failed.map((check) => check.message).filter(Boolean),
     fitGate: gate.fitGate,
   });
@@ -861,7 +864,14 @@ router.post("/:id/recalibrate", canAuthor, async (req, res) => {
   const activatedAt = new Date().toISOString();
   const fitGate = evaluateFitActivation({
     statisticalModel: sm,
-    parameterSet: { fitStatistics },
+    parameterSet: {
+      fitStatistics,
+      parameterStatus: req.body.parameterStatus,
+      origin: req.body.origin,
+      estimation: req.body.estimation,
+      predicted: req.body.predicted,
+      calibrationMethod,
+    },
     calibrationPlan: model.calibrationPlan,
     override: readFitOverride(req.body),
     by: fitActor(req),
