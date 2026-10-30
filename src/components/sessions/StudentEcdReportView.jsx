@@ -1,5 +1,6 @@
 import React from "react";
 import EcdSoftwareCredits from "../reports/EcdSoftwareCredits.jsx";
+import { ReportClaims, ReportLevelMeta } from "../reports/ReportLevelBits.jsx";
 import "@fontsource/source-sans-3/400.css";
 import "@fontsource/source-sans-3/600.css";
 import "@fontsource/source-sans-3/700.css";
@@ -153,6 +154,13 @@ function SummaryTable({ rows, empty }) {
             <tr key={row.id} className={row.band ? `band-${row.band}` : undefined}>
               <td>
                 {row.name || row.id}
+                <ReportClaims row={row} className="ecd-muted" />
+                {row.level ? (
+                  <div className="ecd-muted">
+                    {row.level}
+                    <ReportLevelMeta row={row} />
+                  </div>
+                ) : null}
                 <div className="ecd-band-inline"><Band id={row.band} label={row.bandLabel} /></div>
               </td>
               <td className="num">{row.n}</td>
@@ -208,7 +216,11 @@ export default function StudentEcdReportView({ report }) {
           </tr>
           <tr>
             <th>IRT theta</th>
-            <td>{o.theta == null ? "—" : `${fmt(o.theta, 2)} (SE ${fmt(o.thetaSe, 2)})`}</td>
+            <td>
+              {o.theta == null ? "—" : `${fmt(o.theta, 2)} (SE ${fmt(o.thetaSe, 2)})`}
+              {o.level ? ` ${o.level}` : ""}
+              <ReportLevelMeta row={o} />
+            </td>
           </tr>
           <tr>
             <th>Selection</th>

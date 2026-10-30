@@ -94,6 +94,12 @@ describe("buildStudentEcdReport", () => {
     expect(report.competencies[0].name).toBe("Plant part naming");
     expect(report.competencies[0].interpretation).toMatch(/partial command/);
     expect(report.evidence[0].name).toBe("Part naming evidence");
+    expect(report.evidence[0].claimStatement).toBe("The student can name the called-out plant part.");
+    expect(report.competencies[0].claimStatement).toBe("The student can name the called-out plant part.");
+    expect(report.overview.level).toBe("Proficient");
+    expect(report.overview.levelSource).toBe("default");
+    expect(report.overview.levelNote).toBe("default cut");
+    expect(report.overview.thetaSe).toBe(0.707);
     expect(report.tasks[0].name).toBe("Leaf diagram");
     expect(report.taskModels[0].name).toBe("Name the plant part");
     expect(report.items[0].selected).toBe("Leaf");

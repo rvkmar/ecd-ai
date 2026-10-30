@@ -27,6 +27,16 @@ import {
   sessionsForStudent,
   comparisonStudentsFor,
 } from "../delivery/cumulativeEcdReport.js";
+import {
+  accumulateSessionMeasurement,
+  bnSummariesFromAccumulator,
+  createMeasurementAccumulator,
+  historicalIrtBand,
+  historicalProbabilityBand,
+  irtSummaryFromAccumulator,
+  sessionProbabilityReport,
+  sessionThetaReport,
+} from "../delivery/reportLevels.js";
 
 
 const router = express.Router();
@@ -46,9 +56,11 @@ router.use(sanitizeRequestInputs);
 // another examinee's id is 403 (D72). Teacher-report remains staff-only.
 const canViewTeacherReports = authorizeRole(["admin", "district", "teacher"]);
 
-function bnLevel(probability) {
-  return probability > 0.7 ? "Strong" : probability > 0.4 ? "Developing" : "Needs Support";
-}
+const IRT_LEARNER_MESSAGE = {
+  high: "Excellent! You’re ready for challenging problems.",
+  middle: "Great work! You’re showing good understanding.",
+  low: "Don’t worry, this is just a starting point.",
+};
 
 function bnNodeDistribution(session, node) {
   const posterior = session?.studentModel?.smvPosteriors?.[node];
@@ -191,7 +203,7 @@ router.get("/session/:id", async (req, res) => {
     report.constructs.push({
       type: "IRT",
       estimate: theta,
-      level: theta > 1 ? "Advanced" : theta > 0 ? "Proficient" : "Needs Support",
+      ...sessionThetaReport(db, session, theta),
     });
     report.recommendations.push("Assign items near current theta for better precision.");
   }
@@ -203,7 +215,7 @@ router.get("/session/:id", async (req, res) => {
         type: "BayesianNetwork",
         node,
         probability: prob,
-        level: bnLevel(prob),
+        ...sessionProbabilityReport(db, session, node, prob),
         ...(distribution ? { distribution } : {}),
       });
     }
@@ -217,6 +229,15 @@ router.get("/session/:id", async (req, res) => {
       classification: row.classification,
       expectedClassificationAccuracy: row.expectedClassificationAccuracy,
       estimate: row.estimate,
+      ...(row.claimStatement ? { claimStatement: row.claimStatement } : {}),
+      ...(row.claims ? { claims: row.claims } : {}),
+      ...(row.posteriorSd != null ? { posteriorSd: row.posteriorSd } : {}),
+      ...(row.level ? {
+        level: row.level,
+        levelText: row.levelText,
+        levelSource: row.levelSource,
+      } : {}),
+      ...(row.levelNote ? { levelNote: row.levelNote } : {}),
     });
   }
 
@@ -339,20 +360,30 @@ router.get("/session/:id/learner-feedback", async (req, res) => {
   // IRT version
   if (session.selectionStrategy === "IRT" && session.studentModel?.irtTheta !== undefined) {
     const theta = session.studentModel.irtTheta;
-    feedback.summary.level = theta > 1 ? "Advanced" : theta > 0 ? "Proficient" : "Needs Support";
-    feedback.summary.message =
-      theta > 1
-        ? "Excellent! You’re ready for challenging problems."
+    const thetaReport = sessionThetaReport(db, session, theta);
+    Object.assign(feedback.summary, thetaReport);
+    if (thetaReport.levelSource === "default") {
+      feedback.summary.message = theta > 1
+        ? IRT_LEARNER_MESSAGE.high
         : theta > 0
-        ? "Great work! You’re showing good understanding."
-        : "Don’t worry, this is just a starting point.";
-
-    if (theta <= 0) {
-      feedback.focusAreas.push("Core skills practice");
-      feedback.nextSteps.push("Review basic exercises with examples.");
-    } else if (theta > 1) {
-      feedback.strengths.push("Core skills mastered");
-      feedback.nextSteps.push("Try advanced, multi-step problems.");
+          ? IRT_LEARNER_MESSAGE.middle
+          : IRT_LEARNER_MESSAGE.low;
+      if (theta <= 0) {
+        feedback.focusAreas.push("Core skills practice");
+        feedback.nextSteps.push("Review basic exercises with examples.");
+      } else if (theta > 1) {
+        feedback.strengths.push("Core skills mastered");
+        feedback.nextSteps.push("Try advanced, multi-step problems.");
+      }
+    } else {
+      feedback.summary.message = thetaReport.levelText || thetaReport.level;
+      if (thetaReport.levelBand === "high") {
+        feedback.strengths.push(thetaReport.level);
+        feedback.nextSteps.push(thetaReport.levelText || thetaReport.level);
+      } else if (thetaReport.levelBand === "low") {
+        feedback.focusAreas.push(thetaReport.level);
+        feedback.nextSteps.push(thetaReport.levelText || thetaReport.level);
+      }
     }
   }
 
@@ -361,13 +392,20 @@ router.get("/session/:id/learner-feedback", async (req, res) => {
     feedback.bayesianNetwork = {};
     for (const [node, prob] of Object.entries(session.studentModel.bnPosteriors)) {
       const distribution = bnNodeDistribution(session, node);
+      const nodeReport = sessionProbabilityReport(db, session, node, prob);
       feedback.bayesianNetwork[node] = {
         probability: prob,
-        level: bnLevel(prob),
+        ...nodeReport,
         ...(distribution ? { distribution } : {}),
       };
-      if (prob > 0.7) feedback.strengths.push(node);
-      else if (prob < 0.4) feedback.focusAreas.push(node);
+      if (nodeReport.levelSource === "default") {
+        if (prob > 0.7) feedback.strengths.push(node);
+        else if (prob < 0.4) feedback.focusAreas.push(node);
+      } else if (nodeReport.levelBand === "high") {
+        feedback.strengths.push(node);
+      } else if (nodeReport.levelBand === "low") {
+        feedback.focusAreas.push(node);
+      }
     }
     if (feedback.focusAreas.length > 0) {
       feedback.nextSteps.push(`Practice more in: ${feedback.focusAreas.join(", ")}`);
@@ -514,7 +552,7 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, async (req, res
     report.modelSummary.IRT = {
       theta,
       stderr,
-      level: theta > 1 ? "Advanced" : theta > 0 ? "Proficient" : "Needs Support"
+      ...sessionThetaReport(db, session, theta),
     };
 
     report.recommendations.individualLevel.push(
@@ -535,7 +573,7 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, async (req, res
       report.modelSummary.BayesianNetwork[node] = {
         posterior: prob,
         entropy: entropy(prob),
-        level: bnLevel(prob),
+        ...sessionProbabilityReport(db, session, node, prob),
         ...(distribution ? { distribution } : {}),
       };
     }
@@ -553,6 +591,17 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, async (req, res
           expectedClassificationAccuracy: row.expectedClassificationAccuracy,
           estimate: row.estimate,
           masteryThreshold: row.masteryThreshold,
+          ...(row.claimStatement ? { claimStatement: row.claimStatement } : {}),
+          ...(row.claims ? { claims: row.claims } : {}),
+          ...(row.posteriorSd != null ? { posteriorSd: row.posteriorSd } : {}),
+          ...(row.level ? {
+            level: row.level,
+            levelText: row.levelText,
+            levelSource: row.levelSource,
+            levelBand: row.levelBand,
+          } : {}),
+          ...(row.levelNote ? { levelNote: row.levelNote } : {}),
+          ...(row.descriptor ? { descriptor: row.descriptor } : {}),
         },
       ])
     );
@@ -622,8 +671,7 @@ router.get("/teacher/class/:classId", canViewTeacherReports, async (req, res) =>
   // 🔹 Policy lookup map
   const policyMap = Object.fromEntries((db.policies || []).map((p) => [p.id, p]));
 
-  const irtValues = [];
-  const bnNodes = {};
+  const measurement = createMeasurementAccumulator();
   const capturedSummary = [];
   const policyUsage = [];
 
@@ -647,18 +695,7 @@ router.get("/teacher/class/:classId", canViewTeacherReports, async (req, res) =>
       });
     }
 
-    // collect IRT
-    if (session.selectionStrategy === "IRT" && session.studentModel?.irtTheta !== undefined) {
-      irtValues.push(session.studentModel.irtTheta);
-    }
-
-    // collect BN
-    if (session.selectionStrategy === "BayesianNetwork" && session.studentModel?.bnPosteriors) {
-      for (const [node, prob] of Object.entries(session.studentModel.bnPosteriors)) {
-        if (!bnNodes[node]) bnNodes[node] = [];
-        bnNodes[node].push(prob);
-      }
-    }
+    accumulateSessionMeasurement(measurement, db, session);
 
     // collect captured evidence
     for (const tid of taskIdsIncludingDelivered(session)) {
@@ -695,52 +732,29 @@ router.get("/teacher/class/:classId", canViewTeacherReports, async (req, res) =>
     }
   }
 
-  // 🔹 Aggregate IRT
-  let irtSummary = null;
-  if (irtValues.length > 0) {
-    const mean = irtValues.reduce((a, b) => a + b, 0) / irtValues.length;
-    const variance = irtValues.reduce((a, b) => a + (b - mean) ** 2, 0) / irtValues.length;
-    irtSummary = {
-      count: irtValues.length,
-      mean,
-      stddev: Math.sqrt(variance),
-      distribution: {
-        below0: irtValues.filter(v => v < 0).length,
-        between0and1: irtValues.filter(v => v >= 0 && v <= 1).length,
-        above1: irtValues.filter(v => v > 1).length,
-      }
-    };
-  }
-
-  // 🔹 Aggregate BN
-  const bnSummary = {};
-  for (const [node, probs] of Object.entries(bnNodes)) {
-    const mean = probs.reduce((a, b) => a + b, 0) / probs.length;
-    const entropy = (p) => (p <= 0 || p >= 1) ? 0 : -p * Math.log2(p) - (1 - p) * Math.log2(1 - p);
-    bnSummary[node] = {
-      count: probs.length,
-      mean,
-      meanEntropy: probs.map(p => entropy(p)).reduce((a, b) => a + b, 0) / probs.length,
-      level: mean > 0.7 ? "Strong" : mean > 0.4 ? "Developing" : "Needs Support"
-    };
-  }
+  const irtSummary = irtSummaryFromAccumulator(db, measurement);
+  const bnSummary = bnSummariesFromAccumulator(db, measurement);
 
   // 🔹 Recommendations
   const recommendations = [];
-  if (irtSummary) {
-    if (irtSummary.mean < 0) {
-      recommendations.push("Class average ability is below expected level. Provide additional practice.");
-    } else if (irtSummary.mean > 1) {
-      recommendations.push("Class shows advanced proficiency. Introduce more challenging material.");
-    } else {
-      recommendations.push("Class is around average. Continue balanced practice.");
-    }
+  const classIrtBand = irtSummary
+    ? (irtSummary.levelSource === "authored" ? irtSummary.levelBand : historicalIrtBand(irtSummary.mean))
+    : null;
+  if (classIrtBand === "low") {
+    recommendations.push("Class average ability is below expected level. Provide additional practice.");
+  } else if (classIrtBand === "high") {
+    recommendations.push("Class shows advanced proficiency. Introduce more challenging material.");
+  } else if (classIrtBand === "middle") {
+    recommendations.push("Class is around average. Continue balanced practice.");
   }
   for (const [node, summary] of Object.entries(bnSummary)) {
-    if (summary.level === "Needs Support") {
+    const needsFocus = summary.levelSource === "authored"
+      ? summary.levelBand === "low"
+      : summary.level === "Needs Support";
+    if (needsFocus) {
       recommendations.push(`Focus on improving ${node} across the class.`);
     } else if (summary.meanEntropy > 0.8) {
-      recommendations.push(`More data needed for ${node} — assign additional tasks.`);
+      recommendations.push(`More data needed for ${node}. Assign additional tasks.`);
     }
   }
 
@@ -824,8 +838,7 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, async (req, r
     recommendations: []
   };
 
-  const allIrt = [];
-  const bnNodes = {};
+  const districtMeasurement = createMeasurementAccumulator();
   const capturedSummary = [];
   const allPolicyUsage = [];
 
@@ -833,8 +846,7 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, async (req, r
   for (const [classId, stuIds] of Object.entries(classGroups)) {
     const classSessions = db.sessions?.filter(s => stuIds.includes(s.studentId)) || [];
 
-    const irtValues = [];
-    const bnLocal = {};
+    const classMeasurement = createMeasurementAccumulator();
     const classPolicyUsage = [];
 
     for (const session of classSessions) {
@@ -867,21 +879,8 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, async (req, r
         });
       }
 
-      // collect IRT
-      if (session.selectionStrategy === "IRT" && session.studentModel?.irtTheta !== undefined) {
-        irtValues.push(session.studentModel.irtTheta);
-        allIrt.push(session.studentModel.irtTheta);
-      }
-
-      // collect BN
-      if (session.selectionStrategy === "BayesianNetwork" && session.studentModel?.bnPosteriors) {
-        for (const [node, prob] of Object.entries(session.studentModel.bnPosteriors)) {
-          if (!bnLocal[node]) bnLocal[node] = [];
-          if (!bnNodes[node]) bnNodes[node] = [];
-          bnLocal[node].push(prob);
-          bnNodes[node].push(prob);
-        }
-      }
+      accumulateSessionMeasurement(classMeasurement, db, session);
+      accumulateSessionMeasurement(districtMeasurement, db, session);
 
       // collect captured evidence
       for (const tid of taskIdsIncludingDelivered(session)) {
@@ -899,25 +898,8 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, async (req, r
       }
     }
 
-    // summarize IRT for class
-    let irtSummary = null;
-    if (irtValues.length > 0) {
-      const mean = irtValues.reduce((a, b) => a + b, 0) / irtValues.length;
-      const variance = irtValues.reduce((a, b) => a + (b - mean) ** 2, 0) / irtValues.length;
-      irtSummary = { count: irtValues.length, mean, stddev: Math.sqrt(variance) };
-    }
-
-    // summarize BN for class
-    const bnSummary = {};
-    const entropy = (p) => (p <= 0 || p >= 1) ? 0 : -p * Math.log2(p) - (1 - p) * Math.log2(1 - p);
-    for (const [node, probs] of Object.entries(bnLocal)) {
-      const mean = probs.reduce((a, b) => a + b, 0) / probs.length;
-      bnSummary[node] = {
-        count: probs.length,
-        mean,
-        meanEntropy: probs.map(p => entropy(p)).reduce((a, b) => a + b, 0) / probs.length,
-      };
-    }
+    const irtSummary = irtSummaryFromAccumulator(db, classMeasurement);
+    const bnSummary = bnSummariesFromAccumulator(db, classMeasurement);
 
     districtReport.classes[classId] = {
       IRT: suppressIrtSummary(irtSummary),
@@ -927,38 +909,29 @@ router.get("/teacher/district/:districtId", canViewTeacherReports, async (req, r
     };
   }
 
-  // district-wide IRT
-  if (allIrt.length > 0) {
-    const mean = allIrt.reduce((a, b) => a + b, 0) / allIrt.length;
-    const variance = allIrt.reduce((a, b) => a + (b - mean) ** 2, 0) / allIrt.length;
-    districtReport.districtSummary.IRT = suppressIrtSummary({
-      count: allIrt.length,
-      mean,
-      stddev: Math.sqrt(variance),
-    });
-
-    if (mean < 0) {
+  const districtIrt = irtSummaryFromAccumulator(db, districtMeasurement);
+  districtReport.districtSummary.IRT = suppressIrtSummary(districtIrt);
+  if (districtIrt) {
+    const band = districtIrt.levelSource === "authored"
+      ? districtIrt.levelBand
+      : historicalIrtBand(districtIrt.mean);
+    if (band === "low") {
       districtReport.recommendations.push("District average ability is below expected. Consider remedial programs.");
-    } else if (mean > 1) {
+    } else if (band === "high") {
       districtReport.recommendations.push("District shows advanced proficiency. Consider enrichment programs.");
-    } else {
+    } else if (band === "middle") {
       districtReport.recommendations.push("District is around average. Balanced curriculum is appropriate.");
     }
   }
 
-  // district-wide BN
-  const entropy = (p) => (p <= 0 || p >= 1) ? 0 : -p * Math.log2(p) - (1 - p) * Math.log2(1 - p);
-  const bnDistrict = {};
-  for (const [node, probs] of Object.entries(bnNodes)) {
-    const mean = probs.reduce((a, b) => a + b, 0) / probs.length;
-    bnDistrict[node] = {
-      count: probs.length,
-      mean,
-      meanEntropy: probs.map(p => entropy(p)).reduce((a, b) => a + b, 0) / probs.length,
-    };
-    if (mean < 0.4) {
+  const bnDistrict = bnSummariesFromAccumulator(db, districtMeasurement);
+  for (const [node, summary] of Object.entries(bnDistrict)) {
+    const band = summary.levelSource === "authored"
+      ? summary.levelBand
+      : historicalProbabilityBand(summary.mean);
+    if (band === "low") {
       districtReport.recommendations.push(`District needs support in ${node}.`);
-    } else if (mean > 0.7) {
+    } else if (band === "high") {
       districtReport.recommendations.push(`District shows strong performance in ${node}.`);
     }
   }

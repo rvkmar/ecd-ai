@@ -13,6 +13,9 @@ const report = {
     se: 0.5,
     theta: 0.4,
     thetaSe: 0.707,
+    level: "Proficient",
+    levelSource: "default",
+    levelNote: "default cut",
     selectionStrategy: "IRT",
   },
   interpretation: {
@@ -48,6 +51,7 @@ const report = {
     band: "developing",
     bandLabel: "Developing",
     interpretation: "Part naming evidence: partial command (50% on 2 items).",
+    claimStatement: "The student can name the called-out plant part.",
   }],
   tasks: [],
   taskModels: [],
@@ -82,6 +86,8 @@ describe("StudentEcdReportView", () => {
     expect(screen.getAllByText("Part naming evidence").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/partial command/).length).toBeGreaterThan(0);
     expect(screen.getByText("Leaf on the diagram")).toBeInTheDocument();
+    expect(screen.getByText(/Claim: The student can name the called-out plant part/)).toBeInTheDocument();
+    expect(screen.getByTestId("report-level-source")).toHaveTextContent("default cut");
     expect(screen.getByText("Where to focus")).toBeInTheDocument();
     expect(screen.getByLabelText(/Mean score by competency/)).toBeInTheDocument();
     expect(screen.getByLabelText(/across completed occasions/)).toBeInTheDocument();

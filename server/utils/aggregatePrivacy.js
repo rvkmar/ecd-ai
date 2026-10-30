@@ -51,6 +51,13 @@ export function suppressCount(n, min = MIN_CELL_SIZE) {
  * @param {object | null} irt
  * @param {number} [min]
  */
+function keptClaims(summary) {
+  const kept = {};
+  if (summary?.claimStatement) kept.claimStatement = summary.claimStatement;
+  if (Array.isArray(summary?.claims) && summary.claims.length) kept.claims = summary.claims;
+  return kept;
+}
+
 export function suppressIrtSummary(irt, min = MIN_CELL_SIZE) {
   if (!irt) return null;
   const { suppressed } = suppressCount(irt.count, min);
@@ -62,6 +69,12 @@ export function suppressIrtSummary(irt, min = MIN_CELL_SIZE) {
       mean: null,
       stddev: null,
       distribution: null,
+      standardError: null,
+      level: null,
+      levelText: null,
+      levelSource: null,
+      levelNote: null,
+      ...keptClaims(irt),
     };
   }
   const dist = irt.distribution || {};
@@ -93,6 +106,11 @@ export function suppressBnSummary(bnSummary, min = MIN_CELL_SIZE) {
         mean: null,
         meanEntropy: null,
         level: null,
+        levelText: null,
+        levelSource: null,
+        levelNote: null,
+        posteriorSd: null,
+        ...keptClaims(summary),
       };
     } else {
       out[node] = { ...summary, suppressed: false };

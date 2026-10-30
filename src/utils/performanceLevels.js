@@ -1,7 +1,7 @@
 // TU2 (T15). Optional performance-level descriptors on a competency.
 //
-// Absent or empty performanceLevels means no standard is set. Callers,
-// including reports until TU3, keep their current behaviour.
+// Absent or empty performanceLevels means no standard is set.
+// Reports then use the labelled default cuts in server/delivery/reportLevels.js.
 //
 // Each cut is the lowest score that reaches that level. Cuts are strictly
 // ascending from the lowest level to the highest. performanceLevelScale
