@@ -15,6 +15,7 @@ const JOB_TIMEOUT_MS_BY_KIND = {
   "item-analysis": 10 * 60 * 1000,
   "test-information": 10 * 60 * 1000,
   "attribute-profile-summary": 5 * 60 * 1000,
+  "bn-parameters": DEFAULT_JOB_TIMEOUT_MS,
 };
 
 /**

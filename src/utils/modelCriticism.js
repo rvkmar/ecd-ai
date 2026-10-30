@@ -3,7 +3,7 @@
 // are sidecars (personFitRows, q3Matrix) and must not be stored on a
 // parameter set. Missing keys are valid: that is today's behaviour.
 
-const BULKY_FIT_KEYS = ["personFitRows", "q3Matrix", "persons", "q3"];
+const BULKY_FIT_KEYS = ["personFitRows", "q3Matrix", "persons", "q3", "bnPersonPosteriors"];
 
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -32,6 +32,13 @@ export function fitStatisticsForParameterSet(fitStatistics) {
     delete ld.values;
     delete ld.q3Matrix;
     next.localDependence = ld;
+  }
+  if (isObject(next.bnFit)) {
+    const bn = { ...next.bnFit };
+    delete bn.persons;
+    delete bn.personIds;
+    delete bn.bnPersonPosteriors;
+    next.bnFit = bn;
   }
   return next;
 }
@@ -238,6 +245,12 @@ export function bulkyFitStatisticsErrors(fitStatistics) {
       errors.push("fitStatistics.localDependence must not carry the Q3 matrix");
     }
   }
+  if (isObject(fitStatistics.bnFit)) {
+    const bn = fitStatistics.bnFit;
+    if (bn.persons || bn.personIds || bn.bnPersonPosteriors) {
+      errors.push("fitStatistics.bnFit must not carry per-person posteriors");
+    }
+  }
   return errors;
 }
 
@@ -292,6 +305,75 @@ function validateQ3Matrix(matrix, errors) {
   });
 }
 
+function validateBnFit(bn, errors) {
+  if (bn == null) return;
+  const prefix = "fitStatistics.bnFit";
+  if (!isObject(bn)) {
+    push(errors, `${prefix} should be object`);
+    return;
+  }
+  if (bn.persons || bn.personIds || bn.bnPersonPosteriors) {
+    push(errors, `${prefix} must not carry per-person posteriors`);
+  }
+  if (bn.available === false) {
+    if (bn.note != null && typeof bn.note !== "string") {
+      push(errors, `${prefix}.note should be a string`);
+    }
+    return;
+  }
+  for (const key of [
+    "logLik",
+    "aic",
+    "bic",
+    "nParameters",
+    "nPersons",
+    "nObservations",
+    "iterations",
+    "meanAbsResidual",
+    "maxAbsResidual",
+    "pseudoCount",
+  ]) {
+    validateNumber(errors, bn[key], `${prefix}.${key}`, { allowNull: true });
+  }
+  if (bn.residuals == null) return;
+  if (!Array.isArray(bn.residuals)) {
+    push(errors, `${prefix}.residuals should be an array`);
+    return;
+  }
+  bn.residuals.forEach((row, i) => {
+    if (!isObject(row)) {
+      push(errors, `${prefix}.residuals[${i}] should be object`);
+      return;
+    }
+    if (typeof row.id !== "string" || !row.id) {
+      push(errors, `${prefix}.residuals[${i}].id is required`);
+    }
+    for (const key of ["observed", "expected", "absResidual"]) {
+      validateNumber(errors, row[key], `${prefix}.residuals[${i}].${key}`, { allowNull: true });
+    }
+  });
+}
+
+function validateBnPersonPosteriors(rows, errors) {
+  if (rows == null) return;
+  if (!Array.isArray(rows)) {
+    push(errors, "bnPersonPosteriors should be an array");
+    return;
+  }
+  rows.forEach((row, i) => {
+    if (!isObject(row)) {
+      push(errors, `bnPersonPosteriors[${i}] should be object`);
+      return;
+    }
+    if (typeof row.personId !== "string" || !row.personId) {
+      push(errors, `bnPersonPosteriors[${i}].personId is required`);
+    }
+    if (!isObject(row.marginals)) {
+      push(errors, `bnPersonPosteriors[${i}].marginals should be object`);
+    }
+  });
+}
+
 export function modelCriticismResponseErrors(body) {
   const errors = [];
   if (!body || typeof body !== "object") return errors;
@@ -303,9 +385,11 @@ export function modelCriticismResponseErrors(body) {
     validateQValidation(fit.qValidation, errors);
     validatePersonFitSummary(fit.personFit, errors, "fitStatistics.personFit");
     validateLocalDependence(fit.localDependence, errors, "fitStatistics.localDependence");
+    validateBnFit(fit.bnFit, errors);
   }
   validatePersonFitRows(body.personFitRows, errors);
   validateQ3Matrix(body.q3Matrix, errors);
+  validateBnPersonPosteriors(body.bnPersonPosteriors, errors);
   return errors;
 }
 
@@ -315,6 +399,7 @@ export function hasModelCriticism(fitStatistics) {
     fitStatistics.cdmFit ||
       fitStatistics.qValidation ||
       fitStatistics.personFit ||
-      fitStatistics.localDependence
+      fitStatistics.localDependence ||
+      fitStatistics.bnFit
   );
 }

@@ -20,7 +20,7 @@ const SIDECAR_KEYS = [
 // (personFit, localDependence, cdmFit, qValidation) are not in this list.
 // TU5. fitGate (the activation decision, failed checks, and any override
 // reason) is a record on the parameter set, not a sidecar. It stays.
-const CRITICISM_SIDECAR_KEYS = ["personFitRows", "q3Matrix"];
+const CRITICISM_SIDECAR_KEYS = ["personFitRows", "q3Matrix", "bnPersonPosteriors"];
 
 const TOP_LEVEL_KEYS = [
   ...SIDECAR_KEYS,
@@ -42,6 +42,7 @@ const DIAGNOSTIC_KEYS = new Set([
 const NESTED_SUMMARY_DROPS = {
   personFit: ["rows", "persons", "personIds"],
   localDependence: ["matrix", "values", "q3Matrix"],
+  bnFit: ["persons", "personIds", "bnPersonPosteriors"],
 };
 
 function present(value) {

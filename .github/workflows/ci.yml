@@ -131,6 +131,9 @@ jobs:
       - name: R bundle GRM tests
         run: docker exec -e ECD_REQUIRE_MODEL_CRITICISM_PACKAGES=1 r-backend Rscript /home/app/tests/test-bundle-grm.R
 
+      - name: R Bayesian network EM tests
+        run: docker exec r-backend Rscript /home/app/tests/test-bn-calibration.R
+
       - name: D88 perturbation predicates (always-run)
         run: npx vitest run server/r/__tests__/benchmarkPerturbation.test.js
 

@@ -8,6 +8,7 @@ import {
   fitStatisticsForParameterSet,
   modelCriticismResponseErrors,
 } from "../../src/utils/modelCriticism.js";
+import { bnNetworkErrors } from "./bnNetwork.js";
 import {
   calibrationBundleRequestErrors,
   scoringBundlesForParameterSet,
@@ -25,6 +26,7 @@ const CALIBRATION_MODEL_FAMILIES = [
   "item-analysis",
   "test-information",
   "attribute-profile",
+  "bn",
 ];
 const CALIBRATION_IRT_SUBTYPES = ["2PL", "3PL", "Rasch", "GRM", "GPCM", "PCM"];
 
@@ -36,6 +38,7 @@ const KIND_TO_R_PATH = {
   equating: "/calibrate/equating",
   "item-analysis": "/calibrate/item-analysis",
   "test-information": "/calibrate/test-information",
+  "bn-parameters": "/calibrate/bn",
   // attribute-profile-summary is Node-only (D79); no R path on purpose.
 };
 
@@ -351,6 +354,10 @@ export function validateCalibrationRequest(body) {
 
   if (diagnosticFamily && model?.observableIds != null) {
     errors.push(...diagnosticParameterKeys(model.itemIds, model.observableIds).errors);
+  }
+
+  if (model?.family === "bn") {
+    errors.push(...bnNetworkErrors(model));
   }
 
   return errors;

@@ -9,7 +9,9 @@
 // including items scored under another evidence model, intersected with
 // the items finished sessions actually answered. Observable-keyed entries
 // win over item-only entries, the same rule scoring uses. A diagnostic
-// request carries model.observableIds parallel to itemIds (TU15). R keys
+// request carries model.observableIds parallel to itemIds (TU15). A
+// Bayesian network request uses those observable ids as the columns and
+// sends the latent tree from the statistical model (TU12). R keys
 // slip/guess and G-DINA probabilities by an observable id when that id
 // is unique, and by item id when it is blank or shared. Scoring looks up
 // observableId first, then itemId (R9).
@@ -37,6 +39,7 @@
 import { createHash } from "node:crypto";
 import { statisticalModelTypesForJobKind } from "../../src/utils/ecdVocabulary.js";
 import { entriesForResponse, itemIsPlacedInQMatrix, textId } from "../../src/utils/qMatrixEntries.js";
+import { bayesianCalibrationNetwork } from "../delivery/bayesianNetwork.js";
 import { calibrationBundlesFromEvidenceModel } from "../../src/utils/scoringBundles.js";
 
 const ITEM_ANALYSIS_MIN_STUDENTS = 10;
@@ -54,6 +57,7 @@ const CALIBRATION_MIN_ITEMS = Object.freeze({
   gdina: 3,
   ctt: 2,
   "item-analysis": 2,
+  bn: 2,
 });
 
 function minimumItemsForRequest(family, subtype) {
@@ -61,6 +65,7 @@ function minimumItemsForRequest(family, subtype) {
   if (family === "ctt") return CALIBRATION_MIN_ITEMS.ctt;
   if (family === "dina") return CALIBRATION_MIN_ITEMS.dina;
   if (family === "gdina") return CALIBRATION_MIN_ITEMS.gdina;
+  if (family === "bn") return CALIBRATION_MIN_ITEMS.bn;
   if (family === "irt") {
     return CALIBRATION_MIN_ITEMS[subtype] || CALIBRATION_MIN_ITEMS["2PL"];
   }
@@ -77,6 +82,7 @@ const LIVE_KINDS = new Set([
   "dina-parameters",
   "ctt-statistics",
   "item-analysis",
+  "bn-parameters",
 ]);
 
 function isClosedSession(session) {
@@ -186,6 +192,7 @@ function familyLabel(family) {
   if (family === "ctt") return "CTT calibration";
   if (family === "dina") return "DINA calibration";
   if (family === "gdina") return "G-DINA calibration";
+  if (family === "bn") return "Bayesian network calibration";
   return "IRT calibration";
 }
 
@@ -355,6 +362,144 @@ function qVectorForItem({ entries, itemId, observableId, evidenceModelId, attrib
   };
 }
 
+function buildBnLiveRequest({
+  db,
+  evidenceModel,
+  statisticalModel,
+  evidenceModelId,
+  statisticalModelId,
+  kind,
+  rows,
+  filtered,
+  minSampleSize,
+}) {
+  const network = bayesianCalibrationNetwork(evidenceModel, statisticalModel, db);
+  if (network.error) {
+    return fail({ code: "BN_STRUCTURE", kind, message: network.error });
+  }
+  const observableIds = network.observables.map((node) => node.id);
+  if (observableIds.length < 2) {
+    return fail({
+      code: "TOO_FEW_ITEMS",
+      kind,
+      message: `Bayesian network calibration needs at least 2 observables. This model has ${observableIds.length}.`,
+      itemIds: observableIds,
+    });
+  }
+
+  const known = new Set(observableIds);
+  const byCell = new Map();
+  for (const row of rows) {
+    if (!isScored(row.activated)) continue;
+    const named = textId(row.observableId);
+    const itemId = textId(row.itemId);
+    const column = named && known.has(named) ? named : itemId && known.has(itemId) ? itemId : "";
+    if (!column) continue;
+    const key = `${row.studentId}\0${column}`;
+    const prev = byCell.get(key);
+    if (!prev || String(row.timestamp) >= String(prev.timestamp)) {
+      byCell.set(key, { ...row, column });
+    }
+  }
+
+  const seen = new Set([...byCell.values()].map((row) => row.column));
+  if (seen.size === 0) {
+    return fail({
+      code: "NO_RESPONSES",
+      kind,
+      message: filtered
+        ? "No completed session responses match this Bayesian network's observables and the item, session, or date filters."
+        : "No completed session responses cite this Bayesian network's observables.",
+    });
+  }
+  const missing = observableIds.filter((id) => !seen.has(id));
+  if (missing.length) {
+    return fail({
+      code: "MISSING_OBSERVABLE",
+      kind,
+      message: `Bayesian network calibration needs a scored response for every observable. Missing: ${missing.join(", ")}.`,
+      itemIds: [...seen],
+    });
+  }
+
+  const studentIds = [...new Set([...byCell.values()].map((row) => row.studentId))].sort((a, b) =>
+    a.localeCompare(b)
+  );
+  const minimumPersons = personMinimum(kind, minSampleSize);
+  if (studentIds.length < minimumPersons) {
+    return fail({
+      code: "SAMPLE_TOO_SMALL",
+      kind,
+      message: `Bayesian network calibration needs at least ${minimumPersons} students with a scored response. This selection has ${studentIds.length}.`,
+      sampleSize: studentIds.length,
+      studentIds,
+      itemIds: observableIds,
+    });
+  }
+
+  const data = studentIds.map((studentId) =>
+    observableIds.map((observableId) => {
+      const cell = byCell.get(`${studentId}\0${observableId}`);
+      if (!cell) return null;
+      return cell.activated === true ? 1 : 0;
+    })
+  );
+  let missingCellCount = 0;
+  for (const row of data) {
+    for (const cell of row) {
+      if (cell == null) missingCellCount += 1;
+    }
+  }
+  const contributingSessions = [];
+  for (const row of byCell.values()) {
+    if (row.sessionId) contributingSessions.push(row.sessionId);
+  }
+  const stamp = sourceSessionStamp(contributingSessions);
+  const request = {
+    model: {
+      family: "bn",
+      itemIds: observableIds,
+      network: {
+        latents: network.latents,
+        observables: network.observables,
+      },
+    },
+    responseMatrix: { personIds: studentIds, itemIds: observableIds, data },
+    options: { seed: LIVE_CALIBRATION_SEED },
+    provenance: {
+      source: "completed-sessions",
+      responseSource: "sessions",
+      evidenceModelId,
+      statisticalModelId: statisticalModelId || null,
+      kind,
+      family: "bn",
+      sampleSize: studentIds.length,
+      studentIds,
+      missingCellCount,
+      missingResponses: "null",
+      qMatrixId: null,
+      ...stamp,
+    },
+  };
+
+  return {
+    ok: true,
+    code: null,
+    message: null,
+    sampleSize: studentIds.length,
+    studentIds,
+    itemIds: observableIds,
+    sessionIds: stamp.sourceSessionIds || [],
+    sourceSessionIds: stamp.sourceSessionIds,
+    sourceSessionCount: stamp.sourceSessionCount,
+    sourceSessionIdsHash: stamp.sourceSessionIdsHash,
+    qMatrixId: null,
+    kind,
+    missingCellCount,
+    request,
+  };
+}
+
 /**
  * Build the ADR 0002 request for one live calibration family.
  *
@@ -383,7 +528,7 @@ export function assessLiveResponseMatrix(db, options = {}) {
     return fail({
       code: "KIND_NOT_LIVE",
       kind,
-      message: `Live session matrices are defined for irt-parameters, dina-parameters, ctt-statistics, and item-analysis. Kind '${kind}' still needs a named fixture.`,
+      message: `Live session matrices are defined for irt-parameters, dina-parameters, ctt-statistics, item-analysis, and bn-parameters. Kind '${kind}' still needs a named fixture.`,
     });
   }
 
@@ -439,7 +584,7 @@ export function assessLiveResponseMatrix(db, options = {}) {
   else if (kind === "irt-parameters") {
     family = "irt";
     subtype = irtContractSubtype(statisticalModel);
-  }
+  } else if (kind === "bn-parameters") family = "bn";
 
   const diagnostic = family === "dina" || family === "gdina";
   let qMatrix = null;
@@ -541,6 +686,20 @@ export function assessLiveResponseMatrix(db, options = {}) {
         "Every completed response for this evidence model has activated null, so there is no scored answer to analyse.",
       sampleSize: citedStudents.length,
       studentIds: citedStudents,
+    });
+  }
+
+  if (family === "bn") {
+    return buildBnLiveRequest({
+      db,
+      evidenceModel,
+      statisticalModel,
+      evidenceModelId,
+      statisticalModelId,
+      kind,
+      rows,
+      filtered,
+      minSampleSize: options.minSampleSize,
     });
   }
 

@@ -211,6 +211,14 @@ export const LIVE_CALIBRATION_JOBS = [
     description:
       "DINA or G-DINA uses the Q-matrix on the statistical model. Observable rows take precedence over item rows. Slip and guess stay on the item. sim10GDINA stays a published fixture.",
   },
+  {
+    kind: "bn-parameters",
+    label: "Bayesian network CPTs",
+    buttonLabel: "Enqueue live BN calibration",
+    statisticalModelTypes: ["bayesian_network"],
+    description:
+      "Conditional probability tables are estimated by EM from scored responses on finished sessions. Columns are the Bayesian network's observables. A missing answer stays missing. The latent tree is the one authored on the statistical model.",
+  },
 ];
 
 export function liveCalibrationJob(kind) {

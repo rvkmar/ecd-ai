@@ -40,7 +40,7 @@ import {
 } from "../utils/aggregatePrivacy.js";
 import { adoptReportTemplate, applySnapshotToRequest } from "../../src/utils/psychometricReportTemplate.js";
 import { ensureReportCreditsHtml } from "../../src/utils/softwareCredits.js";
-import { redactPersonFitRows, stripJobSidecars } from "../../src/utils/analysisSidecars.js";
+import { bnPosteriorBody, redactPersonFitRows, stripJobSidecars } from "../../src/utils/analysisSidecars.js";
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -132,6 +132,24 @@ router.get("/:id/person-fit", canView, async (req, res) => {
   const row = await getCalibrationJobById(db, req.params.id);
   if (!row) return res.status(404).json({ error: "Calibration job not found" });
   return sendPersonFit(res, row, req.user?.role === "admin");
+});
+
+// ------------------------------
+// GET /api/calibrationJobs/:id/bn-posteriors
+// Person-level latent marginals. List/detail omit them. The copy that
+// ingest keeps is the analysis artefact. Admin sees ids.
+// ------------------------------
+router.get("/:id/bn-posteriors", canView, async (req, res) => {
+  const db = loadDB();
+  const row = await getCalibrationJobById(db, req.params.id);
+  if (!row) return res.status(404).json({ error: "Calibration job not found" });
+  const body = bnPosteriorBody(row.response?.bnPersonPosteriors, {
+    isAdmin: req.user?.role === "admin",
+    minCellSize: MIN_CELL_SIZE,
+    id: row.id,
+  });
+  if (!body) return res.status(404).json({ error: "No BN posterior sidecar on this job." });
+  return res.json(body);
 });
 
 // ------------------------------

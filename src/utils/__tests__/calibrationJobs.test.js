@@ -84,7 +84,7 @@ function serverEnqueueOk(job, world) {
 }
 
 describe("calibration job vocabulary and status machine", () => {
-  it("declares the three parameter kinds plus the five analysis kinds", () => {
+  it("declares the parameter kinds plus the analysis kinds", () => {
     expect(CALIBRATION_JOB_KIND_VALUES).toEqual(
       expect.arrayContaining([
         "irt-parameters",
@@ -95,9 +95,10 @@ describe("calibration job vocabulary and status machine", () => {
         "item-analysis",
         "test-information",
         "attribute-profile-summary",
+        "bn-parameters",
       ])
     );
-    expect(CALIBRATION_JOB_KIND_VALUES).toHaveLength(8);
+    expect(CALIBRATION_JOB_KIND_VALUES).toHaveLength(9);
   });
 
   it("declares the job states, including not-converged", () => {

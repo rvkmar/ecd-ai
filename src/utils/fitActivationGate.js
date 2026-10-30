@@ -31,6 +31,16 @@
 //                               expected in the tail, so 0.05 leaves room.
 //   maxAbsQ3             0.2    IRT only. Yen's |Q3| flag, the same cut
 //                               TU4 uses when it counts flagged pairs.
+//   bnMeanAbsResidualMax 0.05  BN only. Mean |observed proportion minus
+//                               model marginal| across observables. The
+//                               same 0.05 scale as SRMSR: a typical item
+//                               is off by at most five points.
+//   bnMaxAbsResidualMax  0.10  BN only. No single observable's marginal
+//                               is off by more than ten points.
+//
+// AIC and BIC are stored on a BN fit for comparison across candidate
+// sets. They have no absolute pass line, so the gate does not apply them.
+// A BN set with no residual summary is not_evaluated.
 //
 // Optional, off unless the plan sets it:
 //
@@ -45,6 +55,8 @@ export const DEFAULT_FIT_THRESHOLDS = Object.freeze({
   misfitItemShareMax: 0.1,
   personMisfitShareMax: 0.05,
   maxAbsQ3: 0.2,
+  bnMeanAbsResidualMax: 0.05,
+  bnMaxAbsResidualMax: 0.1,
 });
 
 export const FIT_THRESHOLD_KEYS = Object.freeze([
@@ -55,6 +67,8 @@ export const FIT_THRESHOLD_KEYS = Object.freeze([
   "personMisfitShareMax",
   "maxAbsQ3",
   "m2PValueMin",
+  "bnMeanAbsResidualMax",
+  "bnMaxAbsResidualMax",
 ]);
 
 const FIT_GATE_STATUSES = new Set(["pass", "override", "not_evaluated"]);
@@ -89,8 +103,10 @@ export function fitFamily(statisticalModel, parameterSet) {
   const type = String(statisticalModel?.type || "").toLowerCase();
   if (type === "dina" || type === "gdina") return "cdm";
   if (type === "irt") return "irt";
+  if (type === "bayesian_network" || type === "bn") return "bn";
   const fit = parameterSet?.fitStatistics;
   if (isPlainObject(fit)) {
+    if (fit.bnFit) return "bn";
     if (fit.cdmFit || fit.qValidation) return "cdm";
     if (fit.itemFit || fit.personFit || fit.localDependence || fit.global) return "irt";
   }
@@ -387,9 +403,34 @@ function cdmChecks(fit, thresholds) {
   return checks;
 }
 
+function bnChecks(fit, thresholds) {
+  const bn = isPlainObject(fit?.bnFit) && !unavailable(fit.bnFit) ? fit.bnFit : null;
+  return [
+    maxCheck({
+      id: "bn.meanAbsResidual",
+      label: "Mean absolute marginal residual",
+      statistic: finite(bn?.meanAbsResidual),
+      threshold: thresholds.bnMeanAbsResidualMax,
+      noun: "Mean absolute marginal residual",
+      missingMessage:
+        "The mean absolute marginal residual is not on this parameter set, so this check was not applied. AIC and BIC are recorded for comparison and are not activation thresholds.",
+    }),
+    maxCheck({
+      id: "bn.maxAbsResidual",
+      label: "Maximum absolute marginal residual",
+      statistic: finite(bn?.maxAbsResidual),
+      threshold: thresholds.bnMaxAbsResidualMax,
+      noun: "Maximum absolute marginal residual",
+      missingMessage:
+        "The maximum absolute marginal residual is not on this parameter set, so this check was not applied.",
+    }),
+  ];
+}
+
 function checksFor(family, parameterSet, thresholds) {
   if (family === "irt") return irtChecks(parameterSet?.fitStatistics, thresholds);
   if (family === "cdm") return cdmChecks(parameterSet?.fitStatistics, thresholds);
+  if (family === "bn") return bnChecks(parameterSet?.fitStatistics, thresholds);
   return [];
 }
 
@@ -455,7 +496,9 @@ export function evaluateFitActivation({
     family === "other"
       ? "This statistical model family has no activation fit checks."
       : status === "not_evaluated"
-        ? "No fit statistics were available for this family, so the gate was not applied."
+        ? family === "bn"
+          ? "No BN residual summary was available, so the gate was not applied. AIC and BIC are not activation thresholds."
+          : "No fit statistics were available for this family, so the gate was not applied."
         : null;
 
   const explicit = Boolean(override?.explicit);
