@@ -11,6 +11,7 @@ import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { attachEvidenceSessions } from "../sessions/sessionRepository.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { applyParameterSetActivation } from "../../src/utils/parameterSetStatus.js";
+import { slimParameterSet, slimStatisticalModels } from "../../src/utils/slimParameterSet.js";
 import {
   qMatrixCitesObservableOnModel,
   qMatrixEntriesCitingEvidenceModel,
@@ -358,7 +359,9 @@ export function createEvidenceModelRecord(payload = {}, db, idSuffix = "", optio
   // Resolve structureConfig.qMatrixName → qMatrixId when a unique Q-matrix
   // exists (Force→DINA bulk path). If the Q-matrix is not uploaded yet,
   // keep qMatrixName and omit qMatrixId so draft dina models remain valid.
-  const statisticalModels = bindQMatrixReferences(payload.statisticalModels || [], db);
+  const statisticalModels = slimStatisticalModels(
+    bindQMatrixReferences(payload.statisticalModels || [], db)
+  );
 
   const preserve = options.preserveLifecycle === true;
   const newModel = {
@@ -521,6 +524,9 @@ router.put("/:id", canAuthor, async (req, res) => {
     locked: false,
     updatedAt: new Date().toISOString()
   };
+  if (Array.isArray(updated.statisticalModels)) {
+    updated.statisticalModels = slimStatisticalModels(updated.statisticalModels);
+  }
 
   if (Array.isArray(req.body?.observables)) {
     const nextIds = new Set(
@@ -829,19 +835,29 @@ router.post("/:id/recalibrate", canAuthor, async (req, res) => {
     return res.status(400).json({ error: "calibrationMethod is required." });
   }
 
-  const newParamSet = {
-    parameterSetId: parameterSetId || genId("ps"),
-    parameters,
-    calibratedAt: calibratedAt || new Date().toISOString(),
-    calibratedBy: calibratedBy || req.body.calibratedBy || "system",
-    calibrationMethod: calibrationMethod.trim(),
-    sampleSize,
-    notes: notes || "",
-    packageVersion: packageVersion.trim(),
-    converged: true,
-  };
-  if (fitStatistics !== undefined) newParamSet.fitStatistics = fitStatistics;
-  if (standardErrors !== undefined) newParamSet.standardErrors = standardErrors;
+  const newParamSet = slimParameterSet(
+    {
+      parameterSetId: parameterSetId || genId("ps"),
+      parameters,
+      calibratedAt: calibratedAt || new Date().toISOString(),
+      calibratedBy: calibratedBy || req.body.calibratedBy || "system",
+      calibrationMethod: calibrationMethod.trim(),
+      sampleSize,
+      notes: notes || "",
+      packageVersion: packageVersion.trim(),
+      converged: true,
+      ...(fitStatistics !== undefined ? { fitStatistics } : {}),
+      ...(standardErrors !== undefined ? { standardErrors } : {}),
+      ...(typeof req.body.reportHtml === "string" ? { reportHtml: req.body.reportHtml } : {}),
+      ...(req.body.scores !== undefined ? { scores: req.body.scores } : {}),
+      ...(req.body.calibrationJobId ? { calibrationJobId: req.body.calibrationJobId } : {}),
+      ...(req.body.analysisArtefactId ? { analysisArtefactId: req.body.analysisArtefactId } : {}),
+    },
+    {
+      calibrationJobId: req.body.calibrationJobId,
+      analysisArtefactId: req.body.analysisArtefactId,
+    }
+  ).parameterSet;
 
   sm.parameterSets = sm.parameterSets || [];
   sm.parameterSets.push(newParamSet);
@@ -898,19 +914,25 @@ router.post("/:id/attach-seed-parameter-sets", canAuthor, async (req, res) => {
         error: `Invalid statisticalModelId '${statisticalModelId}'.`,
       });
     }
-    const ps = {
-      ...parameterSet,
-      parameterSetId: parameterSet.parameterSetId || genId("ps"),
-      calibratedAt: parameterSet.calibratedAt || new Date().toISOString(),
-      packageVersion: parameterSet.packageVersion || "ecd-pilot-1.0.0",
-      converged: parameterSet.converged !== false,
-      sampleSize: parameterSet.sampleSize || 1,
-      // Mark as seed so operators / activate gate can distinguish pilot
-      // bridges from R-job ingest (samples README: draft bridge, not
-      // Accumulation-ready measurement).
-      calibrationMethod:
-        parameterSet.calibrationMethod || "seed-parameter-set",
-    };
+    const ps = slimParameterSet(
+      {
+        ...parameterSet,
+        parameterSetId: parameterSet.parameterSetId || genId("ps"),
+        calibratedAt: parameterSet.calibratedAt || new Date().toISOString(),
+        packageVersion: parameterSet.packageVersion || "ecd-pilot-1.0.0",
+        converged: parameterSet.converged !== false,
+        sampleSize: parameterSet.sampleSize || 1,
+        // Mark as seed so operators / activate gate can distinguish pilot
+        // bridges from R-job ingest (samples README: draft bridge, not
+        // Accumulation-ready measurement).
+        calibrationMethod:
+          parameterSet.calibrationMethod || "seed-parameter-set",
+      },
+      {
+        calibrationJobId: parameterSet.calibrationJobId,
+        analysisArtefactId: parameterSet.analysisArtefactId,
+      }
+    ).parameterSet;
     sm.parameterSets = sm.parameterSets || [];
     const existingIdx = sm.parameterSets.findIndex(
       (p) => p.parameterSetId === ps.parameterSetId

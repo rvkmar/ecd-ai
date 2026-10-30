@@ -380,6 +380,10 @@ export const schema = {
         // D62: the job that produced this set. Provenance that cannot be
         // traced back to its run is not provenance.
         calibrationJobId: 'string',
+        // Report HTML and person scores live on that job, or on an
+        // analysis artefact. This id is the pointer. The blobs do not
+        // live on the parameter set.
+        analysisArtefactId: 'string',
         // Live-session runs record where the matrix came from. Fixture and
         // caller-supplied runs leave these unset. Slip and guess stay on
         // the item; qMatrixId is the authored matrix that was sent to R.

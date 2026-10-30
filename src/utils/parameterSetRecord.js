@@ -72,6 +72,9 @@ export function parameterSetStorageErrors(parameterSet, statisticalModel) {
   if (ps.sourceSessionIdsHash != null && typeof ps.sourceSessionIdsHash !== "string") {
     errors.push(`Parameter set ${psTag} on model ${smId} has invalid sourceSessionIdsHash: should be string.`);
   }
+  if (ps.analysisArtefactId != null && ps.analysisArtefactId !== "" && typeof ps.analysisArtefactId !== "string") {
+    errors.push(`Parameter set ${psTag} on model ${smId} has invalid analysisArtefactId: should be string.`);
+  }
   if (ps.status != null && ps.status !== "" && !isParameterSetStatus(ps.status)) {
     errors.push(
       `Parameter set ${psTag} on model ${smId} has invalid status '${ps.status}'. Use 'candidate' or 'active'.`

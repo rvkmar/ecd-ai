@@ -354,6 +354,66 @@ describe("ingest refuses non-converged", () => {
     expect(dbState.current.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBeUndefined();
   });
 
+  it("keeps report HTML and person scores off the parameter set", async () => {
+    const app = await jobsApp();
+    const personScores = {
+      method: "EAP",
+      personIds: ["stud-1", "stud-2"],
+      theta: [0.2, -0.1],
+      se: [0.3, 0.4],
+    };
+    const reportHtml = `<html>${"r".repeat(2000)}</html>`;
+    dbState.current.calibrationJobs = [
+      {
+        id: "job_fat",
+        kind: "irt-parameters",
+        status: "succeeded",
+        evidenceModelId: "em1",
+        statisticalModelId: "sm1",
+        requestedBy: "admin1",
+        requestedAt: "2026-11-20T09:00:00Z",
+        startedAt: "2026-11-20T09:00:01Z",
+        finishedAt: "2026-11-20T09:03:11Z",
+        request: validRequest(),
+        response: {
+          contractVersion: "1.0",
+          jobId: "job_fat",
+          converged: true,
+          packageVersion: "mirt 1.41",
+          sampleSize: 4,
+          calibratedAt: "2026-11-20T09:03:11Z",
+          parameters: { item_a: { a: 1.1, b: -0.2, c: 0 } },
+          standardErrors: { item_a: { a: 0.1, b: 0.05 } },
+          fitStatistics: { global: { RMSEA: 0.04 }, itemFit: { item_a: { S_X2: 1.2 } }, personScores },
+          reportHtml,
+        },
+        error: null,
+        attempts: 1,
+        maxAttempts: 3,
+        ingestedParameterSetId: null,
+      },
+    ];
+
+    const res = await request(app)
+      .post("/api/calibrationJobs/job_fat/ingest")
+      .set("Authorization", `Bearer ${tokenFor("admin")}`);
+    expect(res.status).toBe(200);
+    const ps = dbState.current.evidenceModels[0].statisticalModels[0].parameterSets[0];
+    expect(ps.reportHtml).toBeUndefined();
+    expect(ps.fitStatistics.personScores).toBeUndefined();
+    expect(ps.fitStatistics.global.RMSEA).toBe(0.04);
+    expect(ps.fitStatistics.itemFit.item_a.S_X2).toBe(1.2);
+    expect(ps.parameters.item_a.a).toBe(1.1);
+    expect(ps.standardErrors.item_a.a).toBe(0.1);
+    expect(ps.calibrationJobId).toBe("job_fat");
+    expect(JSON.stringify(ps)).not.toMatch(/stud-1/);
+    expect(dbState.current.calibrationJobs[0].response.reportHtml).toBe(reportHtml);
+    expect(dbState.current.calibrationJobs[0].response.fitStatistics.personScores.personIds).toEqual([
+      "stud-1",
+      "stud-2",
+    ]);
+  });
+
   it("copies live session ids and the Q-matrix id onto the parameter set", async () => {
     const app = await jobsApp();
     dbState.current.calibrationJobs = [

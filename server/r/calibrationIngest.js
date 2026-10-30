@@ -18,6 +18,7 @@ import {
   parameterSetFromCalibrationResponse,
   validateCalibrationResponse,
 } from "./calibrationContract.js";
+import { slimParameterSet } from "../../src/utils/slimParameterSet.js";
 
 function sessionProvenanceFromJob(job) {
   const prov = job?.request?.provenance;
@@ -191,16 +192,22 @@ export function ingestCalibrationJob(job, db, extras = {}) {
   const sm = em.statisticalModels.find((m) => m.id === job.statisticalModelId);
 
   const parameterSetId = extras.parameterSetId || `ps${Date.now()}`;
-  const parameterSet = {
-    ...parameterSetFromCalibrationResponse(job.response, {
-      parameterSetId,
-      calibrationKind: job.kind,
+  const parameterSet = slimParameterSet(
+    {
+      ...parameterSetFromCalibrationResponse(job.response, {
+        parameterSetId,
+        calibrationKind: job.kind,
+        calibrationJobId: job.id,
+        calibratedBy: extras.calibratedBy || job.requestedBy || "r-backend",
+        calibrationMethod: "r-job",
+      }),
+      ...sessionProvenanceFromJob(job),
+    },
+    {
       calibrationJobId: job.id,
-      calibratedBy: extras.calibratedBy || job.requestedBy || "r-backend",
-      calibrationMethod: "r-job",
-    }),
-    ...sessionProvenanceFromJob(job),
-  };
+      analysisArtefactId: extras.analysisArtefactId,
+    }
+  ).parameterSet;
 
   sm.parameterSets = sm.parameterSets || [];
   markParameterSetCandidate(parameterSet);
