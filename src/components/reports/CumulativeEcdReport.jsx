@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useId, useState } from "react";
 import { useAuth } from "@/auth/AuthProvider";
 import { apiFetch, apiErrorMessage } from "@/api/apiClient";
 import CumulativeEcdReportView, { titlesFor } from "./CumulativeEcdReportView.jsx";
@@ -6,14 +6,16 @@ import "../sessions/StudentEcdReport.css";
 
 export default function CumulativeEcdReport({ kind = "student" }) {
   const { auth } = useAuth() || {};
+  const [open, setOpen] = useState(false);
   const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [districtId, setDistrictId] = useState("");
   const copy = titlesFor(kind);
+  const panelId = useId();
 
   useEffect(() => {
-    if (!auth) return;
+    if (!auth || !open) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -44,12 +46,12 @@ export default function CumulativeEcdReport({ kind = "student" }) {
     return () => {
       cancelled = true;
     };
-  }, [auth, kind, districtId]);
+  }, [auth?.token, auth?.role, kind, districtId, open]);
 
   return (
     <div className="ecd-sheet p-4">
       <div className="ecd-toolbar ecd-no-print">
-        {kind === "district" && auth?.role === "admin" && (
+        {open && kind === "district" && auth?.role === "admin" && (
           <label className="ecd-filter">
             District
             <input
@@ -59,18 +61,36 @@ export default function CumulativeEcdReport({ kind = "student" }) {
             />
           </label>
         )}
-        <button type="button" onClick={() => window.print()}>Print report</button>
+        <button
+          type="button"
+          className="ecd-toggle"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? "Hide cumulative report" : "Show cumulative report"}
+        </button>
+        {open ? (
+          <button type="button" onClick={() => window.print()}>
+            Print report
+          </button>
+        ) : null}
       </div>
-      <div className={`ecd-paper ${kind === "student" ? "" : "wide"}`}>
+      <div id={panelId} className={`ecd-paper ${kind === "student" ? "" : "wide"}`}>
         <h2 className="ecd-title">{copy.title}</h2>
         <p className="ecd-sub">{copy.sub}</p>
-        {loading && <p className="ecd-note">Loading cumulative report…</p>}
-        {error && (
+        {!open && (
+          <p className="ecd-note">
+            The report stays hidden until you show it. Opening it reads every closed session in this scope.
+          </p>
+        )}
+        {open && loading && <p className="ecd-note">Loading cumulative report…</p>}
+        {open && error && (
           <p className="ecd-error" role="alert">
             {error}
           </p>
         )}
-        {!loading && !error && <CumulativeEcdReportView report={report} />}
+        {open && !loading && !error && <CumulativeEcdReportView report={report} />}
       </div>
     </div>
   );

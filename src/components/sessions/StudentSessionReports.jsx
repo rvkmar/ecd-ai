@@ -76,7 +76,7 @@ export default function StudentSessionReports() {
       <div>
         <h2 className="text-xl font-semibold text-slate-900">Session reports</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Open a report for any session you have submitted. The cumulative report above pools those sessions.
+          Open a report for any session you have submitted. Show the cumulative report above to pool those sessions.
         </p>
       </div>
 

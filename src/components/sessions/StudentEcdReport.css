@@ -38,6 +38,10 @@
   margin-bottom: 1rem;
 }
 
+.ecd-toolbar .ecd-toggle {
+  margin-right: auto;
+}
+
 .ecd-toolbar button {
   appearance: none;
   border: 1px solid var(--ecd-rule);
