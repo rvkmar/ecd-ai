@@ -30,11 +30,13 @@ Report wording. The hardcoded Advanced / Proficient / Needs Support cuts in `ser
 ```
 npx vitest run src/utils/__tests__/performanceLevels.test.js
                src/components/competencies/CompetencyWizard/steps/__tests__/performanceLevelsStep.test.jsx
-  21 passed
+  21 passed (before the rebase onto TU1)
 
 NODE_OPTIONS=--max-old-space-size=4096 npx vitest run
-  2945 passed | 13 skipped (2958). 346 files. 73.52s.
+  2979 passed | 13 skipped (2992). 347 files. 71.86s.
 ```
+
+Rebased onto main `7e6acc3` (TU1). Both the mastery-cut changes and these performance levels stayed.
 
 There is no lint script and no ESLint config. `npm test` runs the repo guards that stand in for that. Those guards are in the full run above.
 
