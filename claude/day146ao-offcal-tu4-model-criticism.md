@@ -45,8 +45,10 @@ Revert this change. New calibrations stop writing the criticism fields. Existing
 
 ```
 NODE_OPTIONS=--max-old-space-size=4096 npx vitest run
-  3027 passed | 13 skipped (3040). 355 files.
+  3049 passed | 3 skipped (3052). 356 files.
 ```
+
+Rebased onto main `db4d46e` (TU15). The suite includes the TU15 observable-key tests.
 
 There is no lint script and no ESLint config. Node on this machine is v22.23.4. `package.json` asks for `>=24`. The suite passed on 22.
 
@@ -57,11 +59,9 @@ docker exec -e ECD_REQUIRE_MODEL_CRITICISM_PACKAGES=1 r-backend Rscript /home/ap
   LSAT7 fixture criticism ok
   sim10GDINA fixture criticism ok
   R model criticism tests passed
-
-R_BACKEND_URL=http://127.0.0.1:4000 npx vitest run --fileParallelism false
-  benchmarkPerturbation, lsat7, sim10gdina, ctt, dif, equating, item-analysis, test-information
-  81 passed.
 ```
+
+Re-run after the rebase onto `db4d46e`, including the check that a Qval suggestion item id follows a unique observable id.
 
 ## Calendar
 
