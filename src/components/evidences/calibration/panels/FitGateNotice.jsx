@@ -14,6 +14,15 @@ export function FitGateSummary({ fitGate, alreadyActive = false }) {
     );
   }
 
+  if (fitGate?.status === "predicted") {
+    return (
+      <p className="text-xs text-amber-900" data-testid="fit-gate-summary">
+        {fitGate.note ||
+          "These parameters are predicted. They are not calibrated, and an override does not activate them."}
+      </p>
+    );
+  }
+
   if (fitGate?.status === "not_evaluated") {
     return (
       <p className="text-xs text-slate-500" data-testid="fit-gate-summary">

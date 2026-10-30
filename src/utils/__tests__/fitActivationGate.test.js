@@ -381,6 +381,73 @@ describe("fit activation gate", () => {
     expect(gate.failedChecks.map((check) => check.id)).toEqual(["bn.meanAbsResidual"]);
   });
 
+  it("refuses a predicted set even when fit is missing, fit would pass, or an override is offered", () => {
+    const predicted = {
+      parameterSetId: "ps-pred",
+      parameterStatus: "predicted",
+      origin: "predicted",
+      sourceModel: "eRm::LLTM",
+      converged: true,
+      packageVersion: "eRm 1.0.4",
+      sampleSize: 400,
+    };
+    const missing = evaluateFitActivation({
+      statisticalModel: irtModel,
+      parameterSet: predicted,
+      override: { explicit: true, reason: "Use the prediction operationally" },
+      by: "ada",
+      at: "2026-10-30T12:00:00.000Z",
+    });
+    expect(missing.ok).toBe(false);
+    expect(missing.predicted).toBe(true);
+    expect(missing.fitGate.status).toBe("predicted");
+    expect(missing.fitGate.status).not.toBe("not_evaluated");
+
+    const passing = evaluateFitActivation({
+      statisticalModel: irtModel,
+      parameterSet: { ...predicted, fitStatistics: passingIrtFit },
+      override: { explicit: true, reason: "Use the prediction operationally" },
+    });
+    expect(passing.ok).toBe(false);
+    expect(passing.fitGate.status).toBe("predicted");
+
+    const already = evaluateFitActivation({
+      alreadyActive: true,
+      statisticalModel: irtModel,
+      parameterSet: predicted,
+    });
+    expect(already.ok).toBe(false);
+    expect(already.grandfathered).toBe(false);
+  });
+
+  it("still treats a real set with no fit statistics as not evaluated", () => {
+    const gate = evaluateFitActivation({
+      statisticalModel: irtModel,
+      parameterSet: { parameterSetId: "ps-old", converged: true },
+    });
+    expect(gate.ok).toBe(true);
+    expect(gate.fitGate.status).toBe("not_evaluated");
+  });
+
+  it("refuses a predicted BN set before the residual checks", () => {
+    const gate = evaluateFitActivation({
+      alreadyActive: true,
+      statisticalModel: { id: "sm-bn", type: "bayesian_network" },
+      parameterSet: {
+        parameterStatus: "predicted",
+        origin: "predicted",
+        fitStatistics: {
+          bnFit: { meanAbsResidual: 0.01, maxAbsResidual: 0.02, aic: 10, bic: 12 },
+        },
+      },
+      override: { explicit: true, reason: "Use the prediction" },
+    });
+    expect(gate.ok).toBe(false);
+    expect(gate.fitGate.status).toBe("predicted");
+    expect(gate.fitGate.family).toBe("bn");
+    expect(gate.grandfathered).toBe(false);
+  });
+
   it("refuses a stored override that has no reason", () => {
     const errors = parameterSetStorageErrors(
       {

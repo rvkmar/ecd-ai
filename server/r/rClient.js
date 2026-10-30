@@ -123,3 +123,31 @@ export async function postCalibration(kind, request, options = {}) {
 
   return result;
 }
+
+/**
+ * POST an arbitrary path on the R service. LLTM uses this so it does not
+ * go through the calibration-queue kind map.
+ */
+export async function postRPath(path, body, options = {}) {
+  const timeoutMs = options.timeoutMs || 120_000;
+  const result = await rFetch(path, {
+    method: "POST",
+    body,
+    timeoutMs,
+  });
+  if (result.error?.rClass === "Timeout" && options.killOnTimeout !== false) {
+    const kill = await killRBackend({
+      reason: "job-timeout",
+      kind: options.kind || "lltm",
+      jobId: body?.jobId,
+      killer: options.killer,
+    });
+    result.error.rKilled = kill.ok;
+    result.error.killMethod = kill.method;
+    result.error.message =
+      `${result.error.message}; R process kill ${kill.ok ? "succeeded" : "failed"}` +
+      ` via ${kill.method}`;
+    result.error.stderr = [result.error.stderr, kill.detail].filter(Boolean).join("\n");
+  }
+  return result;
+}

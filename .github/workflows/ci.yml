@@ -128,6 +128,9 @@ jobs:
       - name: R model-criticism tests on the fixtures
         run: docker exec -e ECD_REQUIRE_MODEL_CRITICISM_PACKAGES=1 r-backend Rscript /home/app/tests/test-model-criticism.R
 
+      - name: R LLTM covariate recovery
+        run: docker exec -e ECD_REQUIRE_LLTM_PACKAGES=1 r-backend Rscript /home/app/tests/test-lltm.R
+
       - name: R bundle GRM tests
         run: docker exec -e ECD_REQUIRE_MODEL_CRITICISM_PACKAGES=1 r-backend Rscript /home/app/tests/test-bundle-grm.R
 

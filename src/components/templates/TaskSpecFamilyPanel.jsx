@@ -13,8 +13,9 @@ import {
   assignmentsFromSpecs,
   taskSpecFamilyMatrix,
 } from "@/utils/taskSpecFamilyMatrix";
+import { LltmEffectsList, predictedDifficultyCell } from "./LltmEffectsList";
 
-function FamilyMatrixTable({ matrix, testId }) {
+function FamilyMatrixTable({ matrix, testId, trailing = null }) {
   if (!matrix || matrix.size === 0) return null;
   const showIndex = matrix.columns.length === 0;
   return (
@@ -34,6 +35,9 @@ function FamilyMatrixTable({ matrix, testId }) {
                 </th>
               ))
             )}
+            {trailing ? (
+              <th className="py-1 pr-2 font-medium text-slate-600">{trailing.header}</th>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -48,6 +52,9 @@ function FamilyMatrixTable({ matrix, testId }) {
                   </td>
                 ))
               )}
+              {trailing ? (
+                <td className="py-1 pr-2">{trailing.cells[row.index]}</td>
+              ) : null}
             </tr>
           ))}
         </tbody>
@@ -72,8 +79,10 @@ export default function TaskSpecFamilyPanel({
   onGenerate,
   onReplace,
   onRetire,
+  onEstimate,
   generatePending = false,
   retirePending = false,
+  estimatePending = false,
 }) {
   const [pending, setPending] = useState(null);
 
@@ -92,6 +101,14 @@ export default function TaskSpecFamilyPanel({
     [specs, variables]
   );
 
+  const prediction = specs.find((spec) => spec?.predictedParameters?.parameterStatus === "predicted")
+    ?.predictedParameters;
+  const predictedColumn = prediction
+    ? {
+        header: "Predicted difficulty",
+        cells: specs.map((spec) => predictedDifficultyCell(spec)),
+      }
+    : null;
   const staleCount = specs.filter((spec) => spec?.stale).length;
   const hasFamily = specs.length > 0;
   const previewErrorText = previewError
@@ -147,7 +164,15 @@ export default function TaskSpecFamilyPanel({
           <FamilyMatrixTable
             matrix={generatedMatrix}
             testId="task-spec-family-table"
+            trailing={predictedColumn}
           />
+          {prediction ? (
+            <LltmEffectsList
+              effects={prediction.effects || []}
+              sourceModel={prediction.sourceModel}
+              normalization={prediction.normalization}
+            />
+          ) : null}
         </>
       ) : (
         previewMatrix && (
@@ -183,6 +208,17 @@ export default function TaskSpecFamilyPanel({
             onClick={() => setPending("replace")}
           >
             Replace family
+          </Button>
+        )}
+        {hasFamily && onEstimate && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={generatePending || retirePending || estimatePending}
+            data-testid="lltm-estimate-button"
+            onClick={() => onEstimate()}
+          >
+            {estimatePending ? "Estimating…" : "Estimate predicted difficulties"}
           </Button>
         )}
         {hasFamily && onRetire && (

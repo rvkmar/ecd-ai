@@ -257,4 +257,54 @@ describe("POST /api/evidenceModels/:id/recalibrate fit gate", () => {
     expect(added.fitGate.status).toBe("pass");
     expect(added.fitGate.override).toBeNull();
   });
+
+  it("does not activate a predicted recalibration when fit statistics are absent", async () => {
+    const { app, db, saveDB } = await buildApp(makeModel());
+
+    const res = await request(app).post("/api/evidenceModels/em1/recalibrate").send({
+      statisticalModelId: "sm1",
+      parameters: { o1: { a: 1, b: 0.4 } },
+      calibrationMethod: "lltm-predicted",
+      parameterStatus: "predicted",
+      origin: "predicted",
+      sampleSize: 400,
+      packageVersion: "eRm 1.0.4",
+      converged: true,
+      fitOverride: { reason: "The covariate model looks fine" },
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Predicted parameters cannot be activated/);
+    expect(res.body.fitGate.status).toBe("predicted");
+    expect(res.body.fitGate.status).not.toBe("not_evaluated");
+    expect(db.evidenceModels[0].statisticalModels[0].parameterSets).toHaveLength(1);
+    expect(db.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe("ps1");
+    expect(saveDB).not.toHaveBeenCalled();
+  });
+});
+
+describe("predicted parameter sets are not eligible for activation", () => {
+  it("refuses a converged predicted set that would otherwise pass the fit gate", async () => {
+    const model = makeModel();
+    model.statisticalModels[0].parameterSets.push({
+      ...parameterSet("ps-pred", passingIrtFit),
+      parameterStatus: "predicted",
+      origin: "predicted",
+      sourceModel: "eRm::LLTM",
+    });
+    const { app, db, saveDB } = await buildApp(model);
+
+    const res = await request(app)
+      .post("/api/evidenceModels/em1/activate-parameter-set")
+      .send({
+        statisticalModelId: "sm1",
+        parameterSetId: "ps-pred",
+        fitOverride: { reason: "Ship the prediction" },
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.fitGate.status).toBe("predicted");
+    expect(db.evidenceModels[0].statisticalModels[0].activeParameterSetId).toBe("ps1");
+    expect(saveDB).not.toHaveBeenCalled();
+  });
 });

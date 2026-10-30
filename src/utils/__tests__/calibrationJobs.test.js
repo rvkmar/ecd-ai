@@ -96,9 +96,10 @@ describe("calibration job vocabulary and status machine", () => {
         "test-information",
         "attribute-profile-summary",
         "bn-parameters",
+        "lltm",
       ])
     );
-    expect(CALIBRATION_JOB_KIND_VALUES).toHaveLength(9);
+    expect(CALIBRATION_JOB_KIND_VALUES).toHaveLength(10);
   });
 
   it("declares the job states, including not-converged", () => {

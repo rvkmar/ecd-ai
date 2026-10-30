@@ -38,6 +38,7 @@ import {
   useTaskSpecPreview,
   useGenerateTaskSpecsFromTemplate,
   useDeleteTaskSpecsForTemplate,
+  useEstimateLltm,
 } from "@/api/queries/templates";
 import { useTaskSpecs } from "@/api/queries/taskSpecs";
 import TaskSpecFamilyPanel from "./TaskSpecFamilyPanel";
@@ -191,6 +192,8 @@ export function TemplateLibraryView({
   onGenerateFamily = null,
   onReplaceFamily = null,
   onRetireFamily = null,
+  onEstimateLltm = null,
+  estimatePending = false,
   onDismiss = null,
   initialForm = null,
 }) {
@@ -672,8 +675,10 @@ export function TemplateLibraryView({
                 onGenerate={onGenerateFamily}
                 onReplace={onReplaceFamily}
                 onRetire={onRetireFamily}
+                onEstimate={onEstimateLltm}
                 generatePending={generatePending}
                 retirePending={retirePending}
+                estimatePending={estimatePending}
               />
             )}
 
@@ -812,6 +817,7 @@ function TemplateManage() {
   const updateTmMut = useUpdateTaskModel();
   const generateMut = useGenerateTaskSpecsFromTemplate();
   const retireMut = useDeleteTaskSpecsForTemplate();
+  const estimateMut = useEstimateLltm();
 
   const focused = templates.find((row) => row.id === focusId);
   const previewQuery = useTaskSpecPreview(
@@ -900,6 +906,20 @@ function TemplateManage() {
         deletePending={deleteMut.isPending}
         generatePending={generateMut.isPending}
         retirePending={retireMut.isPending}
+        estimatePending={estimateMut.isPending}
+        onEstimateLltm={async () => {
+          try {
+            const result = await estimateMut.mutateAsync(focusId);
+            const count = result?.predicted?.length ?? 0;
+            toast.success(
+              `Predicted difficulties for ${count} task spec${count === 1 ? "" : "s"}. They are not activated.`
+            );
+            return result;
+          } catch (err) {
+            toast.error(apiErrorMessage(err, "Could not estimate predicted difficulties"));
+            throw err;
+          }
+        }}
         familyPreview={previewQuery.data || null}
         familyPreviewPending={previewQuery.isLoading}
         familyPreviewError={previewQuery.error || null}

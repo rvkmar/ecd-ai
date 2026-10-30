@@ -30,6 +30,9 @@ import {
   useDeleteTaskModelVariable,
 } from "@/api/queries/taskModelVariables";
 import { useTaskModels } from "@/api/queries/taskModels";
+import { useTaskSpecs } from "@/api/queries/taskSpecs";
+import { covariateEffectsForVariable } from "@/utils/predictedParameters";
+import { LltmEffectsList } from "@/components/templates/LltmEffectsList";
 import { useDesignPatterns } from "@/api/queries/designPatterns";
 import { useDomainAnalyses } from "@/api/queries/domainAnalyses";
 import { domainEntryChoices } from "@/utils/domainAnalysisEntries";
@@ -228,6 +231,7 @@ export function TaskModelVariableLibraryView({
   taskModels = [],
   designPatterns = [],
   domainAnalyses = [],
+  taskSpecs = [],
   onCreate,
   onUpdate,
   createPending = false,
@@ -262,6 +266,10 @@ export function TaskModelVariableLibraryView({
   const editing = useMemo(
     () => (editingId ? variables.find((row) => row.id === editingId) : null),
     [editingId, variables]
+  );
+  const covariateEffects = useMemo(
+    () => (editingId ? covariateEffectsForVariable(taskSpecs, editingId) : []),
+    [editingId, taskSpecs]
   );
 
   const usesValueSet = form.type === "categorical" && !!form.valueSet;
@@ -356,6 +364,15 @@ export function TaskModelVariableLibraryView({
             </p>
             <p className="mt-1">Saving is checked against the Task Models that use this variable.</p>
           </div>
+        )}
+
+        {covariateEffects.length > 0 && (
+          <LltmEffectsList
+            testId="tmv-covariate-effects"
+            effects={covariateEffects}
+            sourceModel={covariateEffects[0]?.sourceModel}
+            normalization={covariateEffects[0]?.normalization}
+          />
         )}
 
         <div className="grid gap-3 md:grid-cols-2">
@@ -531,6 +548,7 @@ function TaskModelVariableManage() {
   const { data: taskModels = [] } = useTaskModels();
   const { data: designPatterns = [] } = useDesignPatterns();
   const { data: domainAnalyses = [] } = useDomainAnalyses();
+  const { data: taskSpecs = [] } = useTaskSpecs();
   const createMut = useCreateTaskModelVariable();
   const updateMut = useUpdateTaskModelVariable();
   const deleteMut = useDeleteTaskModelVariable();
@@ -622,6 +640,7 @@ function TaskModelVariableManage() {
         taskModels={taskModels}
         designPatterns={designPatterns}
         domainAnalyses={domainAnalyses}
+        taskSpecs={taskSpecs}
         focusId={screen === "edit" ? focusId : null}
         initialForm={screen === "create" ? seedForm : null}
         onDismiss={backToList}

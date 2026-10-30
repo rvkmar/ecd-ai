@@ -22,6 +22,7 @@ import {
   planTaskSpecFamily,
   retireTaskSpecFamily,
 } from "../services/generateTaskSpecFamily.js";
+import { seedLltmForTemplate } from "../services/lltmSeed.js";
 
 const router = express.Router();
 
@@ -203,6 +204,33 @@ router.post("/:id/generate-task-specs", canAuthor, (req, res) => {
   }
   saveDB(db);
   res.status(201).json({ specs: result.specs, count: result.count });
+});
+
+router.post("/:id/lltm", canAuthor, async (req, res) => {
+  const db = loadDB();
+  const supplied = req.body?.responseMatrix;
+  const result = await seedLltmForTemplate(db, req.params.id, {
+    responseMatrix: supplied && typeof supplied === "object" ? supplied : undefined,
+    requestedBy: req.user?.username || req.user?.id || null,
+  });
+  if (!result.ok) {
+    return res.status(result.status || 400).json({
+      error: result.error,
+      details: result.details,
+      unpredicted: result.unpredicted,
+    });
+  }
+  saveDB(db);
+  res.status(201).json({
+    jobId: result.jobId,
+    analysisArtefactId: result.analysisArtefactId,
+    sourceModel: result.sourceModel,
+    normalization: result.normalization,
+    effects: result.effects,
+    predicted: result.predicted,
+    unpredicted: result.unpredicted,
+    parameterStatus: "predicted",
+  });
 });
 
 router.delete("/:id/task-specs", canDelete, (req, res) => {

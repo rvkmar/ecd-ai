@@ -22,9 +22,15 @@ const SIDECAR_KEYS = [
 // reason) is a record on the parameter set, not a sidecar. It stays.
 const CRITICISM_SIDECAR_KEYS = ["personFitRows", "q3Matrix", "bnPersonPosteriors"];
 
+// TU19. An LLTM design and its covariance belong on the analysis
+// artefact. A short effects list is not in this set. TU6's bundle
+// summary stays; this list only names the heavy covariate payloads.
+const LLTM_SIDECAR_KEYS = ["lltmDesign", "lltmVcov", "covariateCovariance"];
+
 const TOP_LEVEL_KEYS = [
   ...SIDECAR_KEYS,
   ...CRITICISM_SIDECAR_KEYS,
+  ...LLTM_SIDECAR_KEYS,
   "personScores",
   "responseMatrix",
   "optionMatrix",

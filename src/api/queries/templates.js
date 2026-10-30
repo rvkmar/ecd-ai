@@ -111,6 +111,20 @@ export function useGenerateTaskSpecsFromTemplate() {
   });
 }
 
+export function useEstimateLltm() {
+  const { auth } = useAuth() || {};
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) =>
+      apiFetch(`/api/templates/${id}/lltm`, { method: "POST" }, auth),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: templatesKey });
+      queryClient.invalidateQueries({ queryKey: templateKey(id) });
+      queryClient.invalidateQueries({ queryKey: taskSpecsKey });
+    },
+  });
+}
+
 export function useDeleteTaskSpecsForTemplate() {
   const { auth } = useAuth() || {};
   const queryClient = useQueryClient();

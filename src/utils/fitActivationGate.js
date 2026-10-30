@@ -10,6 +10,11 @@
 // these summaries existed. A failing check refuses activation unless the
 // request carries fitOverride with a non-empty reason.
 //
+// TU19. A set flagged predicted (LLTM covariate predictions) is not
+// calibrated. Missing fit statistics do not become "not_evaluated", and
+// an override does not activate it. A real calibration is a later set
+// without that flag.
+//
 // An already-active set is grandfathered: calling activate on it again
 // does not re-check fit and does not turn it off. There is no migration.
 //
@@ -47,6 +52,8 @@
 //   m2PValueMin                 CDM only. M2 p-value must be at least this.
 //                               Left off by default because the chi-square
 //                               p-value rejects good large samples.
+
+import { isPredictedParameterSet } from "./predictedParameters.js";
 
 export const DEFAULT_FIT_THRESHOLDS = Object.freeze({
   itemFitPValueMin: 0.05,
@@ -475,6 +482,31 @@ export function evaluateFitActivation({
   at = new Date().toISOString(),
 } = {}) {
   const family = fitFamily(statisticalModel, parameterSet);
+  if (isPredictedParameterSet(parameterSet)) {
+    const check = {
+      id: "predicted.parameters",
+      label: "Predicted parameters",
+      status: "fail",
+      message:
+        "These parameters are predicted from Task Model Variable covariates. They are not a calibrated parameter set, so they cannot be activated. A later calibration can replace them. An override does not apply.",
+    };
+    return {
+      ok: false,
+      grandfathered: false,
+      overrideRejected: false,
+      predicted: true,
+      failedChecks: [check],
+      fitGate: {
+        status: "predicted",
+        family,
+        evaluatedAt: at,
+        checks: [check],
+        failedChecks: [check],
+        override: null,
+        note: "Predicted parameters are not treated as calibrated. Missing fit statistics do not let them through.",
+      },
+    };
+  }
   if (alreadyActive) {
     return {
       ok: true,
