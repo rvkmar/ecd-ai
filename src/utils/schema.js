@@ -825,6 +825,11 @@ export const schema = {
     // until a stopping rule actually fires; finishing by hand does not invent
     // one.
     stopped: 'object',
+    // TU9: per-task presentation clock. Absent on older sessions.
+    // Shape: { tasks: { [taskId]: { presentedAt, clientPresentedAt,
+    // presentedAtSource, accruedMs, open } } }. Response rows carry
+    // presentedAt and timeOnItemMs. See server/delivery/responseTiming.js.
+    responseTiming: 'object',
     // Student Session Wizard phase clock (Draft → Review → Completed → Submit).
     // Shape: { draft|review|completed|submitted: { startedAt, endedAt, durationMs } }.
     wizardPhaseTimings: 'object',

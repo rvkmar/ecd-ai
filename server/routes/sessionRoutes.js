@@ -89,6 +89,15 @@ import {
 } from "../../src/utils/resolveAccommodations.js";
 import { activePackageFor } from "../compositeLibrary/activePackage.js";
 import { recordItemUsage } from "../utils/itemExposure.js";
+import {
+  classifyRapidGuess,
+  configuredMinimumMs,
+  noteItemPresentation,
+  peerTimesForItem,
+  rapidGuessThresholdMs,
+  taskResponseTiming,
+  timingFieldsForSubmit,
+} from "../delivery/responseTiming.js";
 // D49b: `import { log2 } from "mathjs"` stood here and was NEVER CALLED --
 // entropy() below has always used the native Math.log2. It was mathjs's only
 // reference anywhere in src/ or server/, so the whole dependency was dead
@@ -183,6 +192,59 @@ function beginDeliveryClock(session, now = new Date()) {
     session.status = SESSION_STATUS.IN_PROGRESS;
   }
   return started;
+}
+
+function readClientTiming(body) {
+  const timing = body?.timing;
+  if (!timing || typeof timing !== "object" || Array.isArray(timing)) return {};
+  return {
+    clientPresentedAt: timing.clientPresentedAt,
+    visibleMs: timing.visibleMs,
+    hiddenMs: timing.hiddenMs,
+  };
+}
+
+// Timing never fails a scored submit. A bad peer read still records the
+// visit against the floor threshold.
+async function attachResponseTiming(db, session, { taskId, item, task, timing, now = new Date() }) {
+  const itemId = item?.id || null;
+  const taskModel = task?.taskModelId
+    ? (db.taskModels || []).find((row) => row && row.id === task.taskModelId)
+    : null;
+  let peerTimesMs = [];
+  if (itemId) {
+    try {
+      const sessions = await querySessions(db, { unscoped: true });
+      peerTimesMs = peerTimesForItem(sessions, itemId, session?.id);
+    } catch (err) {
+      logger.info("session.submit.timing_peers_skipped", {
+        sessionId: session?.id,
+        taskId,
+        message: err?.message,
+      });
+    }
+  }
+  try {
+    const minimumMs = configuredMinimumMs(item, taskModel);
+    const threshold = rapidGuessThresholdMs({ peerTimesMs, minimumMs });
+    const fields = timingFieldsForSubmit(session, {
+      taskId,
+      clientPresentedAt: timing?.clientPresentedAt,
+      visibleMs: timing?.visibleMs,
+      hiddenMs: timing?.hiddenMs,
+      now,
+      priorResponses: session?.responses,
+    });
+    if (!fields) return null;
+    return { ...fields, ...classifyRapidGuess(fields.timeOnItemMs, threshold) };
+  } catch (err) {
+    logger.info("session.submit.timing_skipped", {
+      sessionId: session?.id,
+      taskId,
+      message: err?.message,
+    });
+    return null;
+  }
 }
 
 /**
@@ -570,6 +632,59 @@ router.get("/:id", async (req, res) => {
 });
 
 // ------------------------------
+// POST /api/sessions/:id/present
+// ------------------------------
+// Server clock for "this task is on screen". The player calls it when the
+// task is shown, including a revisit. Idempotent while that visit is still
+// open. leaving closes the previous task and keeps its visible time.
+router.post("/:id/present", async (req, res) => {
+  const db = loadDB();
+  const loaded = await getSessionById(db, req.params.id);
+  const session = loaded && !loaded.isCompleted ? loaded : null;
+  if (!session) return res.status(404).json({ error: "Session not found or already completed" });
+  if (rejectUnassignedStudent(req, res, session, db)) return;
+  if (["submitted", "reviewed", "completed"].includes(session.status)) {
+    return res.status(409).json({ error: "Session is closed.", code: "session_closed" });
+  }
+  if (session.stopped && typeof session.stopped === "object" && !Array.isArray(session.stopped)) {
+    return res.status(409).json({
+      error: "Session has already met a stopping rule.",
+      code: "stopped",
+    });
+  }
+
+  const taskId = req.body?.taskId;
+  if (!taskIsInSessionDelivery(session, db, taskId)) {
+    return res.status(400).json({ error: `Task ${taskId} not part of this session` });
+  }
+
+  const now = new Date();
+  const noted = noteItemPresentation(session, {
+    taskId,
+    clientPresentedAt: req.body?.clientPresentedAt,
+    leaving: req.body?.leaving,
+    now,
+  });
+  if (!noted.ok) return res.status(400).json({ error: noted.error });
+
+  session.updatedAt = now.toISOString();
+  const { valid, errors } = validateEntity("sessions", session, db);
+  if (!valid) return res.status(400).json({ error: "Schema validation failed", details: errors });
+
+  await replaceStoredSession(db, session);
+  saveDB(db);
+  const timing = taskResponseTiming(session, taskId, now);
+  return res.json({
+    taskId: noted.taskId,
+    presentedAt: timing?.presentedAt || noted.presentedAt,
+    clientPresentedAt: timing?.clientPresentedAt || noted.clientPresentedAt,
+    presentedAtSource: timing?.presentedAtSource || noted.presentedAtSource,
+    accruedMs: timing?.accruedMs ?? 0,
+    openPresentedAt: timing?.openPresentedAt || null,
+  });
+});
+
+// ------------------------------
 // POST /api/sessions/:id/submit
 // ------------------------------
 // body: { taskId, questionId?, itemId?, rawAnswer, observationId?, scoredValue?, evidenceId?, rubricLevel? }
@@ -800,6 +915,13 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     }
 
     const scoredAt = new Date().toISOString();
+    const timingFields = await attachResponseTiming(db, session, {
+      taskId,
+      item,
+      task,
+      timing: readClientTiming(req.body),
+      now: new Date(scoredAt),
+    });
     const responses = identifications.map((identified) => {
       const row = {
         taskId,
@@ -822,6 +944,7 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
         rationale: identified.rationale,
         evaluationStatus: identified.evaluationStatus ?? EVALUATION_STATUS.COMPLETE,
         timestamp: scoredAt,
+        ...(timingFields || {}),
       };
       if (identified.warning) row.warning = identified.warning;
       if (identified.evaluationStatus === EVALUATION_STATUS.PENDING_HUMAN) {
@@ -1008,6 +1131,14 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
   }
 
   // 🔹 Save response in session
+  const legacyScoredAt = new Date();
+  const legacyTiming = await attachResponseTiming(db, session, {
+    taskId,
+    item: null,
+    task,
+    timing: readClientTiming(req.body),
+    now: legacyScoredAt,
+  });
   const response = {
     taskId,
     questionId: questionId || null,
@@ -1016,7 +1147,8 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     scoredValue: scoredValue !== undefined ? scoredValue : null,
     evidenceId: evidenceId || null,
     rubricLevel: rubricLevel || null,
-    timestamp: new Date().toISOString(),
+    timestamp: legacyScoredAt.toISOString(),
+    ...(legacyTiming || {}),
   };
 
   beginDeliveryClock(session);

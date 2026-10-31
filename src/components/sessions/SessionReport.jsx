@@ -16,6 +16,37 @@ function formatProbability(value) {
   return `${Math.round(value * 1000) / 10}%`;
 }
 
+function formatTimeOnItem(ms) {
+  if (typeof ms !== "number" || !Number.isFinite(ms) || ms < 0) return "Unknown";
+  const seconds = Math.round(ms / 100) / 10;
+  return `${seconds} s`;
+}
+
+function responseTimingText(row) {
+  if (row?.rapidGuessStatus !== "rapid" && row?.rapidGuessStatus !== "engaged") {
+    return "Timing unknown.";
+  }
+  const label = row.rapidGuessStatus === "rapid" ? "Rapid guess." : "Not a rapid guess.";
+  const clock = row.presentedAtSource === "client"
+    ? " (client clock)"
+    : row.presentedAtSource === "server"
+      ? " (server clock)"
+      : "";
+  return `Time ${formatTimeOnItem(row.timeOnItemMs)}${clock}. ${label}`;
+}
+
+function rapidGuessRateText(summary) {
+  if (!summary) return "Rapid-guess rate: unknown.";
+  const rate = typeof summary.rapidGuessRate === "number" && Number.isFinite(summary.rapidGuessRate)
+    ? `${Math.round(summary.rapidGuessRate * 1000) / 10}%`
+    : "unknown";
+  const timed = summary.timedResponseCount || 0;
+  const rapid = summary.rapidGuessCount || 0;
+  const unknown = summary.unknownResponseCount || 0;
+  const unknownNote = unknown > 0 ? ` ${unknown} without timing.` : "";
+  return `Rapid-guess rate: ${rate} (${rapid} of ${timed} timed responses).${unknownNote}`;
+}
+
 function BnPosteriorList({ nodes }) {
   const entries = Object.entries(nodes || {}).filter(([, row]) => row && typeof row === "object");
   if (entries.length === 0) return null;
@@ -329,6 +360,16 @@ export default function SessionReport({ sessionId, onClose }) {
             </div>
           )}
 
+          <div data-testid="teacher-response-timing">
+            <h4 className="font-semibold">Response timing</h4>
+            <p className="text-gray-700" data-testid="rapid-guess-rate">
+              {rapidGuessRateText(teacherReport.responseTiming)}
+            </p>
+            {teacherReport.responseTiming?.ruleSummary && (
+              <p className="text-xs text-gray-500">{teacherReport.responseTiming.ruleSummary}</p>
+            )}
+          </div>
+
           <div>
             <h4 className="font-semibold">Responses</h4>
             <ul className="list-disc ml-5 text-sm">
@@ -337,6 +378,9 @@ export default function SessionReport({ sessionId, onClose }) {
                   Activity {r.taskId}: {r.rawAnswer || r.rubricLevel || r.scoredValue || "-"}{" "}
                   <span className="text-gray-500 text-xs">
                     [C: {r.competencyId || "?"}, E: {r.evidenceId || "?"}]
+                  </span>
+                  <span className="text-gray-600" data-testid="response-timing">
+                    {" "}{responseTimingText(r)}
                   </span>
                 </li>
               ))}
