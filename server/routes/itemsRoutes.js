@@ -58,6 +58,7 @@ import { SESSION_STATUS } from "../../src/utils/sessionStatus.js";
 import { logger } from "../utils/logger.js";
 import { rebuildPackageForTaskModel } from "../compositeLibrary/activation.js";
 import { syncTaskModelItemMappings } from "../services/syncTaskModelItemMappings.js";
+import { normalizeItemFeedback } from "../../src/utils/itemFeedback.js";
 
 const router = express.Router();
 
@@ -361,6 +362,7 @@ export function createItemRecord(payload = {}, db, creatorId = "system", options
   }
 
   const preserve = options.preserveLifecycle === true;
+  const authoredFeedback = normalizeItemFeedback(payload.feedback);
   const newItem = {
     id: options.assignedId || genId(),
     // Optional display name used by Q-matrix bulk remapping (itemName).
@@ -388,6 +390,7 @@ export function createItemRecord(payload = {}, db, creatorId = "system", options
       maxScore: 1,
       evidenceActivationMap: [],
     },
+    ...(authoredFeedback ? { feedback: authoredFeedback } : {}),
 
     learningDomain: payload.learningDomain || "cognitive",
     cognitiveDemand: payload.cognitiveDemand || {},
@@ -559,6 +562,9 @@ router.put("/:id", canAuthor, (req, res) => {
   const STRUCTURAL_FIELDS = ["taskModelVersion", "evidenceModelId", "evidenceModelVersion"];
 
   const sanitized = { ...req.body };
+  if (Object.prototype.hasOwnProperty.call(sanitized, "feedback")) {
+    sanitized.feedback = normalizeItemFeedback(sanitized.feedback);
+  }
   // Derived fields are never accepted from a client.
   STRUCTURAL_FIELDS.forEach((f) => delete sanitized[f]);
   // Neither is lifecycle state: that is PATCH /:id/lifecycle's job.

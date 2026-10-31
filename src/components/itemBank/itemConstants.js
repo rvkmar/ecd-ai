@@ -51,6 +51,7 @@ import {
 // silently drift from theirs.
 import { dinaParametersAreUsable } from "../../../server/delivery/attributeAccumulation.js";
 import { intendedDifficultyPlacement } from "@/utils/intendedDifficulty";
+import { itemFeedbackErrors, normalizeItemFeedback } from "@/utils/itemFeedback";
 
 export {
   INTERACTION_TYPES,
@@ -174,6 +175,7 @@ export const LOCKED_ITEM_STATUSES = [
 
 export function buildInitialItemDraft(record = null) {
   const r = record || {};
+  const feedback = normalizeItemFeedback(r.feedback);
 
   return {
     ...(r.id ? { id: r.id } : {}),
@@ -212,6 +214,8 @@ export function buildInitialItemDraft(record = null) {
         r.scoring?.evidenceActivationMap
       ),
     },
+
+    ...(feedback ? { feedback } : {}),
 
     learningDomain: r.learningDomain || "cognitive",
     cognitiveDemand: r.cognitiveDemand || {},
@@ -933,6 +937,10 @@ export function itemCompatibilityNotes(item = {}, ctx = {}) {
   );
   if (difficultyPlacement.applicable && !difficultyPlacement.ok) {
     push("blocking", difficultyPlacement.message);
+  }
+
+  for (const message of itemFeedbackErrors(item)) {
+    push("blocking", message);
   }
 
   return notes;

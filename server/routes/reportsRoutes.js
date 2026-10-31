@@ -19,6 +19,7 @@ import {
 import { resolveStudentIdentity } from "../../src/utils/studentModelRecord.js";
 import { queryStudentModelRecords } from "../studentModelRecords/studentModelRecordRepository.js";
 import { buildStudentEcdReport } from "../delivery/studentEcdReport.js";
+import { visibleItemFeedback } from "../delivery/itemFeedback.js";
 import {
   buildStudentCumulativeReport,
   buildTeacherCumulativeReport,
@@ -424,6 +425,9 @@ router.get("/session/:id/learner-feedback", async (req, res) => {
     const mastered = measurement.attributeProfile.filter((r) => r.classification === "master").length;
     feedback.summary.level = `${mastered} of ${measurement.attributeProfile.length} attributes classified as mastered`;
   }
+
+  const itemFeedback = visibleItemFeedback(session, req.user);
+  if (itemFeedback.length > 0) feedback.itemFeedback = itemFeedback;
 
   const student = personForStudentId(db, session.studentId);
   feedback.ecdReport = buildStudentEcdReport(db, session, {

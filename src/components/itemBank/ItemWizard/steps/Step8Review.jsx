@@ -39,6 +39,7 @@ import {
   scoringLabel,
   versionLabel,
 } from "../../itemConstants";
+import { itemFeedbackSummary } from "@/utils/itemFeedback";
 
 function Row({ label, value, mono = false }) {
   return (
@@ -280,6 +281,7 @@ export default function Step8Review() {
                 : "—"
             }
           />
+          <Row label="Learner feedback" value={itemFeedbackSummary(item.feedback)} />
           <Row
             label="Stimulus"
             value={`${item.stimulus?.layout || "single"} · ${

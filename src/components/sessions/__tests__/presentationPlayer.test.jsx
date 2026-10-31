@@ -328,6 +328,35 @@ describe("feedback", () => {
     expect(presentationHides.feedbackTiming).toBe("none");
     expect(screen.queryByTestId("item-response-feedback")).toBeNull();
   });
+
+  it("shows authored item feedback when timing allows it and hides the scoring rationale", () => {
+    const authored = {
+      taskId: "t1",
+      rationale: "Check the denominator.",
+      rawAnswer: "opt_b",
+      feedback: { text: "Look at the denominator.", rule: "byScore", key: "0" },
+    };
+    const { rerender } = render(
+      <ItemResponseFeedback response={authored} timing="immediate" phase="draft" />
+    );
+    const panel = screen.getByTestId("item-response-feedback");
+    expect(panel).toHaveTextContent("Look at the denominator.");
+    expect(panel).not.toHaveTextContent("Check the denominator.");
+    expect(panel).toHaveAttribute("data-feedback-rule", "byScore");
+
+    rerender(<ItemResponseFeedback response={authored} timing="none" phase="draft" />);
+    expect(screen.queryByTestId("item-response-feedback")).toBeNull();
+
+    rerender(<ItemResponseFeedback response={authored} timing="delayed_end" phase="draft" />);
+    expect(screen.queryByTestId("item-response-feedback")).toBeNull();
+
+    rerender(
+      <ItemResponseFeedback response={authored} timing="delayed_end" phase="review" />
+    );
+    expect(screen.getByTestId("item-response-feedback")).toHaveTextContent(
+      "Look at the denominator."
+    );
+  });
 });
 
 function installPlayerFetch({ session, next, task, taskModel }) {

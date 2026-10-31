@@ -20,6 +20,11 @@ export default function ItemResponseFeedback({
       className="rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-slate-800"
       data-testid="item-response-feedback"
       data-feedback-timing={timing}
+      data-feedback-rule={
+        response?.feedback && typeof response.feedback.rule === "string"
+          ? response.feedback.rule
+          : undefined
+      }
       role="status"
     >
       <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-800">

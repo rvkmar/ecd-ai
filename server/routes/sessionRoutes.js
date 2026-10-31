@@ -29,6 +29,7 @@ import {
 } from "../../src/utils/sessionPlay.js";
 import { applyWizardTimingToSession } from "../../src/utils/sessionWizardTiming.js";
 import { identifyEvidence, identificationsFrom, rescoreStoredItemResponses } from "../delivery/evidenceIdentification.js";
+import { stampItemFeedback } from "../delivery/itemFeedback.js";
 import {
   completeHumanEvaluation,
   pendingHumanRatingsFromSession,
@@ -818,6 +819,7 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
       }
       return row;
     });
+    for (const row of responses) stampItemFeedback(item, row);
     const response = responses[0];
 
     logger.info("session.submit.scored", {
@@ -1083,6 +1085,11 @@ router.post("/:id/human-rating", staffRater, async (req, res) => {
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
+
+  const ratedItem = completed.itemId
+    ? (db.items || []).find((row) => row && row.id === completed.itemId)
+    : null;
+  if (ratedItem) stampItemFeedback(ratedItem, completed);
 
   session.responses[index] = completed;
   session.updatedAt = new Date().toISOString();
