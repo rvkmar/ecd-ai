@@ -276,6 +276,75 @@ describe("POST /:id/present and submit timing", () => {
     expect(bare.body.responses[0]).not.toHaveProperty("rapidGuess");
   });
 
+  it("keeps authored item feedback beside the timing fields", async () => {
+    const db = makeDb({
+      items: [{ ...item, feedback: { general: "Check the equal parts." } }],
+    });
+    const res = await request(buildApp(db)).post("/api/sessions/s1/submit").send({
+      taskId: "t1",
+      itemId: "item1",
+      rawAnswer: "opt_a",
+      timing: { clientPresentedAt: T0, visibleMs: 4500 },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.responses[0]).toMatchObject({
+      presentedAt: T0,
+      presentedAtSource: "client",
+      timeOnItemMs: 4500,
+      rapidGuess: false,
+      feedback: { text: "Check the equal parts.", rule: "general", key: null },
+    });
+  });
+
+  it("records visible time on an accommodated session without scaling it again", async () => {
+    const db = makeDb({
+      sessions: [makeSession({
+        deliveryAdministration: {
+          timeLimitMinutes: 30,
+          timeMultiplier: 1,
+          accommodationTimeMultiplier: 2,
+          extraTimeMinutes: 10,
+          accommodations: {
+            extraTimeMinutes: 10,
+            timeMultiplier: 2,
+            fontScale: 1.25,
+            highContrast: true,
+            readAloud: true,
+          },
+          taskTimeLimits: { t1: 120 },
+          reviewAllowed: true,
+          attempts: 2,
+        },
+      })],
+    });
+    const app = buildApp(db);
+    const presented = await request(app).post("/api/sessions/s1/present").send({
+      taskId: "t1",
+      clientPresentedAt: T0,
+    });
+    expect(presented.status).toBe(200);
+    expect(presented.body.presentedAt).toBe(T0);
+
+    vi.setSystemTime(new Date("2026-10-31T12:00:08.000Z"));
+    const res = await request(app).post("/api/sessions/s1/submit").send({
+      taskId: "t1",
+      itemId: "item1",
+      rawAnswer: "opt_a",
+      timing: { clientPresentedAt: T0, visibleMs: 8000, hiddenMs: 0 },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.responses[0]).toMatchObject({
+      presentedAt: T0,
+      presentedAtSource: "server",
+      timeOnItemMs: 8000,
+      timeOnItemSource: "server",
+      rapidGuess: false,
+    });
+    expect(res.body.responses[0].timeOnItemMs).not.toBe(16000);
+    expect(db.sessions[0].deliveryAdministration.accommodationTimeMultiplier).toBe(2);
+    expect(db.sessions[0].deliveryAdministration.taskTimeLimits.t1).toBe(120);
+  });
+
   it("uses 10% of the item median, or a configured per-item minimum", async () => {
     const peers = [1, 2, 3, 4, 5].map((n) => ({
       id: `peer-${n}`,
