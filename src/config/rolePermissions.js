@@ -70,6 +70,7 @@ export const rolePermissions = {
     ],
     canEdit: [
       "questions",
+      "students",
       "competencyModels",
       "evidenceModels",
       "taskModels",
@@ -151,6 +152,8 @@ export const rolePermissions = {
       "sessions",
       "reports",
       "teacherReports",
+      // Roster view. Accommodation edits stay inside the caller's district.
+      "students",
       // Read-only: a Q-matrix, assembly model, presentation model, and
       // template are system-level measurement/delivery decisions, not
       // local authoring. District users need to SEE the spec their
@@ -166,6 +169,7 @@ export const rolePermissions = {
       "announcements",
     ],
     canEdit: [
+      "students",           // accommodations for students in this district
       "tasks",              // can create local tasks
       "taskModels",         // can clone and modify published task models
       "taskModelVariables", // shared design features those models consume
@@ -198,8 +202,12 @@ export const rolePermissions = {
       "teacherReports",
       "studentModelRecords",
       "announcements",
+      // Roster view. Accommodation edits stay inside the caller's school
+      // or class when that claim is set.
+      "students",
     ],
     canEdit: [
+      "students",
       "tasks",
       "sessions"
     ],

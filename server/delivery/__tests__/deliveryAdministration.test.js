@@ -62,6 +62,18 @@ describe("computeEffectiveDeadline", () => {
     });
     expect(result.durationMs).toBe(10 * MINUTE);
   });
+
+  it("applies the student multiplier and extra minutes on top of the presentation factor", () => {
+    const result = computeEffectiveDeadline({
+      clockStartedAt: "2026-10-28T12:00:00.000Z",
+      timeLimitMinutes: 20,
+      timeMultiplier: 2,
+      accommodationTimeMultiplier: 1.5,
+      extraTimeMinutes: 5,
+    });
+    expect(result.durationMs).toBe(65 * MINUTE);
+    expect(result.effectiveDeadline).toBe("2026-10-28T13:05:00.000Z");
+  });
 });
 
 describe("stampDeliveryAdministration", () => {
@@ -114,6 +126,36 @@ describe("stampDeliveryAdministration", () => {
   it("returns null when nothing was saved", () => {
     expect(stampDeliveryAdministration({ administration: {} })).toBeNull();
     expect(stampDeliveryAdministration({ administration: null, presentations: [] })).toBeNull();
+  });
+
+  it("stores student timing on the session limit and on task limits", () => {
+    const stamp = stampDeliveryAdministration({
+      administration: { timeLimitMinutes: 20 },
+      presentations: [{ source: "override", id: "pm", timeMultiplier: 2, allowReview: true }],
+      extraTimeMinutes: 5,
+      accommodationTimeMultiplier: 1.5,
+      accommodations: { extraTimeMinutes: 5, timeMultiplier: 1.5, readAloud: true },
+      taskLimits: [
+        { taskId: "t1", timeLimitSeconds: 60 },
+        { taskId: "t2", timeLimitSeconds: 0 },
+      ],
+    });
+    expect(stamp.timeMultiplier).toBe(2);
+    expect(stamp.accommodationTimeMultiplier).toBe(1.5);
+    expect(stamp.extraTimeMinutes).toBe(5);
+    expect(stamp.accommodations.readAloud).toBe(true);
+    expect(stamp.taskTimeLimits).toEqual({ t1: 390 });
+    const open = computeEffectiveDeadline(stamp);
+    expect(open.durationMs).toBe(65 * MINUTE);
+  });
+
+  it("keeps a read-aloud profile off the delivery clock", () => {
+    const stamp = stampDeliveryAdministration({
+      accommodations: { readAloud: true, fontScale: 1.4 },
+    });
+    expect(stamp.timeLimitMinutes).toBeUndefined();
+    expect(stamp.accommodations).toEqual({ readAloud: true, fontScale: 1.4 });
+    expect(deliveryTimingView({ deliveryAdministration: stamp })).toBeNull();
   });
 
   it("passes schema validation and rejects a bad feedback mode", () => {

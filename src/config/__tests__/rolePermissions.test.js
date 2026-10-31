@@ -48,6 +48,13 @@ describe("existing roles are unaffected by the student addition", () => {
 
   it("teacher can create/edit sessions and tasks but not delete them", () => {
     expect(can("teacher", "create", "sessions")).toBe(true);
+    expect(can("admin", "edit", "students")).toBe(true);
+    expect(can("district", "view", "students")).toBe(true);
+    expect(can("district", "edit", "students")).toBe(true);
+    expect(can("teacher", "view", "students")).toBe(true);
+    expect(can("teacher", "edit", "students")).toBe(true);
+    expect(can("student", "view", "students")).toBe(false);
+    expect(can("student", "edit", "students")).toBe(false);
     expect(can("teacher", "edit", "tasks")).toBe(true);
     expect(can("teacher", "delete", "tasks")).toBe(false);
   });

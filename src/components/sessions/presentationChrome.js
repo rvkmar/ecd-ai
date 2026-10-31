@@ -16,6 +16,7 @@ import {
   PRESENTATION_ITEM_ORDER_VALUES,
   PRESENTATION_NAVIGATION_VALUES,
 } from "../../utils/ecdVocabulary.js";
+import { resolveAccommodations } from "../../utils/resolveAccommodations.js";
 
 function oneOf(value, allowed) {
   return allowed.includes(value) ? value : null;
@@ -41,22 +42,39 @@ function clampTimeMultiplier(value) {
  *   itemOrder: string|null,
  *   grouping: string|null,
  *   navigation: string|null,
+ *   readAloud: boolean,
+ *   highContrast: boolean,
  *   rootClassName: string,
  *   rootStyle: { fontSize?: string },
  *   dataAttrs: Record<string, string>,
  * }}
+ *
+ * `accommodations` is the student profile, or omitted so an overlay that
+ * already carries `presentation.accommodations` is used. Absent means the
+ * presentation model alone. The student font scale is the larger of the
+ * two. High contrast and read-aloud turn on when either source asks.
+ * The time multiplier stays the presentation factor. The session deadline
+ * already includes the student factor.
  */
-export function presentationChrome(presentation) {
+export function presentationChrome(presentation, accommodations) {
   const hasOverlay = Boolean(presentation && presentation.presentationModelId);
   const a11y = presentation?.accessibility || {};
   const cd = presentation?.conditionalDisplay || {};
   const layout = presentation?.layout || {};
+  const fromOverlay = resolveAccommodations(presentation?.accommodations);
+  const fromArg = resolveAccommodations(
+    accommodations !== undefined ? accommodations : null
+  );
+  const accFont = Math.max(fromOverlay.fontScale, fromArg.fontScale);
+  const accContrast = fromOverlay.highContrast || fromArg.highContrast;
+  const accReadAloud = fromOverlay.readAloud || fromArg.readAloud;
 
   const profile = typeof a11y.profile === "string" && a11y.profile ? a11y.profile : "default";
-  const fontScale =
+  const overlayFont =
     typeof a11y.fontScale === "number" && a11y.fontScale >= 1 && a11y.fontScale <= 2
       ? a11y.fontScale
       : 1;
+  const fontScale = Math.max(overlayFont, accFont);
   // Top-level timeMultiplier is the resolver field (R2 reads the same
   // number). accessibility.timeMultiplier is the authored source.
   const timeMultiplier =
@@ -83,12 +101,15 @@ export function presentationChrome(presentation) {
     ? oneOf(layout.navigation, PRESENTATION_NAVIGATION_VALUES)
     : null;
 
+  const highContrast = (hasOverlay && profile === "high_contrast") || accContrast;
   const classes = ["presentation-chrome"];
   if (hasOverlay) {
     classes.push(`presentation-profile-${profile}`);
-    if (profile === "large_text" || fontScale > 1) classes.push("presentation-large-text");
-    if (profile === "high_contrast") classes.push("presentation-high-contrast");
   }
+  if ((hasOverlay && profile === "large_text") || fontScale > 1) {
+    classes.push("presentation-large-text");
+  }
+  if (highContrast) classes.push("presentation-high-contrast");
 
   const rootStyle = fontScale !== 1 ? { fontSize: `${fontScale}rem` } : {};
 
@@ -97,6 +118,8 @@ export function presentationChrome(presentation) {
     presentationModelId: presentation?.presentationModelId || null,
     profile,
     fontScale,
+    highContrast,
+    readAloud: accReadAloud,
     timeMultiplier,
     showProgress,
     allowSkip,
@@ -118,6 +141,8 @@ export function presentationChrome(presentation) {
       "data-presentation-grouping": grouping || "",
       "data-presentation-navigation": navigation || "",
       "data-presentation-time-multiplier": String(timeMultiplier),
+      "data-presentation-high-contrast": highContrast ? "true" : "false",
+      "data-read-aloud": accReadAloud ? "true" : "false",
     },
   };
 }

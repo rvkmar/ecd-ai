@@ -6,11 +6,17 @@
 // behaviour: no delivery deadline, the historical attempt rule, review not
 // gated, and full payloads for every role.
 //
-// The effective deadline is one formula. R3 passes extra minutes through
-// extraTimeMinutes (default 0). This module also multiplies the saved limit
-// by the presentation timeMultiplier stamped at create.
+// The effective deadline is one formula. The presentation timeMultiplier
+// and a student accommodation multiplier both scale the saved limit.
+// extraTimeMinutes (default 0) is added after that product. Absent student
+// accommodations leave the presentation factor alone. Task limits use the
+// same helper with the student factor only (TU10 reads taskTimeLimits).
 
 import { PRESENTATION_FEEDBACK_TIMING_VALUES } from "../../src/utils/ecdVocabulary.js";
+import {
+  accommodationFieldErrors,
+  applyAccommodationTiming,
+} from "../../src/utils/resolveAccommodations.js";
 
 const MINUTE_MS = 60 * 1000;
 
@@ -57,16 +63,14 @@ function pausedMilliseconds(value) {
 /**
  * Effective deadline for a delivery time limit.
  *
- * durationMs = timeLimitMinutes * timeMultiplier * 60000
+ * durationMs = timeLimitMinutes * timeMultiplier * accommodationTimeMultiplier * 60000
  *   + extraTimeMinutes * 60000
  * effectiveDeadline = clockStartedAt + durationMs + pausedMs
  *
- * extraTimeMinutes defaults to 0 so a later accommodation can add minutes
- * without a second formula. timeMultiplier defaults to 1.
- *
- * The presentation factor is timeMultiplier, not extra time. Passing
- * presentationTimeMultiplier(overlay) here applies it once. Passing
- * factor - 1 as extraTimeMinutes as well would count that factor twice.
+ * extraTimeMinutes defaults to 0. timeMultiplier and
+ * accommodationTimeMultiplier default to 1. The presentation factor is
+ * timeMultiplier. The student factor is accommodationTimeMultiplier.
+ * Passing either factor again as extra minutes would count it twice.
  * The stored session.endTime is this deadline. The player reads endTime
  * and does not multiply again.
  *
@@ -77,16 +81,22 @@ export function computeEffectiveDeadline({
   clockStartedAt = null,
   timeLimitMinutes = null,
   timeMultiplier = 1,
+  accommodationTimeMultiplier = 1,
   extraTimeMinutes = 0,
   pausedMs = 0,
 } = {}) {
-  if (!finiteNumber(timeLimitMinutes) || timeLimitMinutes <= 0) {
+  const applied = applyAccommodationTiming({
+    timeLimitMinutes,
+    presentationMultiplier: timeMultiplier,
+    accommodations: {
+      extraTimeMinutes,
+      timeMultiplier: accommodationTimeMultiplier,
+    },
+  });
+  if (applied.durationMs == null) {
     return { durationMs: null, effectiveDeadline: null };
   }
-  const durationMs = Math.round(
-    timeLimitMinutes * clampTimeMultiplier(timeMultiplier) * MINUTE_MS +
-      extraMinutes(extraTimeMinutes) * MINUTE_MS
-  );
+  const durationMs = applied.durationMs;
   if (typeof clockStartedAt !== "string" || clockStartedAt === "") {
     return { durationMs, effectiveDeadline: null };
   }
@@ -111,11 +121,22 @@ function refreshEffectiveDeadline(admin) {
  * presentations: { source: "override"|"task", id, timeMultiplier, allowReview }[]
  * An override, when present, is the only presentation input. Otherwise the
  * largest timeMultiplier wins, and allowReview false on any task model wins.
+ *
+ * accommodations is the stored student profile (or null).
+ * accommodationTimeMultiplier and extraTimeMinutes are that profile's
+ * timing fields. taskLimits is [{ taskId, timeLimitSeconds }] from the
+ * task model. Adjusted task seconds are stored as taskTimeLimits.
+ * TU10 should use taskTimeLimits when the key is present. Those seconds
+ * already include the student factor. Applying the factor again would
+ * count it twice. A missing key means the raw timingConstraint stands.
  */
 export function stampDeliveryAdministration({
   administration = null,
   presentations = [],
   extraTimeMinutes = 0,
+  accommodationTimeMultiplier = 1,
+  accommodations = null,
+  taskLimits = [],
 } = {}) {
   const admin = administration && typeof administration === "object" && !Array.isArray(administration)
     ? administration
@@ -143,10 +164,36 @@ export function stampDeliveryAdministration({
     : null;
 
   const reviewConstrained = deliveryReview !== null || presentationAllowReview === false;
-  if (!timeLimitMinutes && !attempts && !feedbackMode && !reviewConstrained) return null;
+  const studentFactor = clampTimeMultiplier(accommodationTimeMultiplier);
+  const studentExtra = extraMinutes(extraTimeMinutes);
+  const taskTimeLimits = {};
+  if (studentFactor !== 1 || studentExtra > 0) {
+    for (const row of taskLimits || []) {
+      if (!row?.taskId) continue;
+      const applied = applyAccommodationTiming({
+        timeLimitSeconds: row.timeLimitSeconds,
+        accommodations: {
+          extraTimeMinutes: studentExtra,
+          timeMultiplier: studentFactor,
+        },
+      });
+      if (applied.adjusted && applied.seconds != null) {
+        taskTimeLimits[row.taskId] = applied.seconds;
+      }
+    }
+  }
+  const hasTaskLimits = Object.keys(taskTimeLimits).length > 0;
+  const hasProfile =
+    accommodations &&
+    typeof accommodations === "object" &&
+    !Array.isArray(accommodations) &&
+    Object.keys(accommodations).length > 0;
+  if (!timeLimitMinutes && !attempts && !feedbackMode && !reviewConstrained && !hasTaskLimits && !hasProfile) {
+    return null;
+  }
 
   const stamp = {
-    extraTimeMinutes: extraMinutes(extraTimeMinutes),
+    extraTimeMinutes: studentExtra,
     pausedMs: 0,
     timeMultiplier,
     presentationModelId: override?.id || null,
@@ -155,6 +202,9 @@ export function stampDeliveryAdministration({
     pauseStartedAt: null,
     effectiveDeadline: null,
   };
+  if (studentFactor !== 1) stamp.accommodationTimeMultiplier = studentFactor;
+  if (hasProfile) stamp.accommodations = accommodations;
+  if (hasTaskLimits) stamp.taskTimeLimits = taskTimeLimits;
   if (timeLimitMinutes) stamp.timeLimitMinutes = timeLimitMinutes;
   if (attempts) stamp.attempts = attempts;
   if (deliveryReview !== null) stamp.allowedReview = deliveryReview;
@@ -253,6 +303,12 @@ function remainingMs(session, now = new Date()) {
 export function deliveryTimingView(session, now = new Date()) {
   const admin = session?.deliveryAdministration;
   if (!admin || typeof admin !== "object" || Array.isArray(admin)) return null;
+  const hasClock = finiteNumber(admin.timeLimitMinutes) && admin.timeLimitMinutes > 0;
+  const hasAttempts = Number.isInteger(admin.attempts);
+  const hasFeedback = Boolean(admin.feedbackMode);
+  const hasReview = typeof admin.reviewAllowed === "boolean";
+  // A profile-only stamp (read-aloud, font, contrast) is not a clock.
+  if (!hasClock && !hasAttempts && !hasFeedback && !hasReview) return null;
   return {
     timeLimitMinutes: finiteNumber(admin.timeLimitMinutes) ? admin.timeLimitMinutes : null,
     timeMultiplier: clampTimeMultiplier(admin.timeMultiplier),
@@ -465,6 +521,30 @@ export function deliveryAdministrationErrors(admin) {
   }
   if (admin.extraTimeMinutes != null && (!finiteNumber(admin.extraTimeMinutes) || admin.extraTimeMinutes < 0)) {
     errors.push("deliveryAdministration.extraTimeMinutes must be a non-negative number when present.");
+  }
+  if (
+    admin.accommodationTimeMultiplier != null &&
+    (!finiteNumber(admin.accommodationTimeMultiplier) ||
+      admin.accommodationTimeMultiplier < 1 ||
+      admin.accommodationTimeMultiplier > 3)
+  ) {
+    errors.push("deliveryAdministration.accommodationTimeMultiplier must be a number in [1, 3] when present.");
+  }
+  if (admin.accommodations != null) {
+    for (const message of accommodationFieldErrors(admin.accommodations)) {
+      errors.push(`deliveryAdministration.${message}`);
+    }
+  }
+  if (admin.taskTimeLimits != null) {
+    if (typeof admin.taskTimeLimits !== "object" || Array.isArray(admin.taskTimeLimits)) {
+      errors.push("deliveryAdministration.taskTimeLimits must be an object when present.");
+    } else {
+      for (const [taskId, seconds] of Object.entries(admin.taskTimeLimits)) {
+        if (!finiteNumber(seconds) || seconds <= 0) {
+          errors.push(`deliveryAdministration.taskTimeLimits.${taskId} must be a positive number.`);
+        }
+      }
+    }
   }
   if (admin.pausedMs != null && (!finiteNumber(admin.pausedMs) || admin.pausedMs < 0)) {
     errors.push("deliveryAdministration.pausedMs must be a non-negative number when present.");

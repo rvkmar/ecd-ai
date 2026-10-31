@@ -1,4 +1,6 @@
 import ItemPresenter, { canPresentItem } from "./ItemPresenter";
+import ReadAloudButton from "./ReadAloudButton";
+import { questionReadAloudParts } from "./readAloudText";
 import ItemResponseFeedback from "./ItemResponseFeedback";
 import PresentationItemFrame from "./PresentationItemFrame";
 import {
@@ -1132,6 +1134,7 @@ export default function SessionPlayer({
                 </form>
               ) : question ? (
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  <ReadAloudButton {...questionReadAloudParts(question)} enabled={chrome.readAloud} />
                   <div className="text-sm font-medium text-slate-900">
                     {question.stem || question.prompt || question.id}
                   </div>
@@ -1529,6 +1532,7 @@ export default function SessionPlayer({
               )}
                 
                 <div className="font-medium">Question</div>
+                <ReadAloudButton {...questionReadAloudParts(question)} enabled={chrome.readAloud} />
                 <div className="mt-1 text-gray-800">{question.stem}</div>
               </div>
 

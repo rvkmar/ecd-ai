@@ -49,7 +49,10 @@ export function effectiveFeedbackTiming(presentationTiming, serverTiming) {
 }
 
 export function presentationPlayerPolicy(presentation, session) {
-  const chrome = presentationChrome(presentation);
+  const chrome = presentationChrome(
+    presentation,
+    session?.deliveryAdministration?.accommodations
+  );
   const ceiling = serverDeliveryCeiling(session);
   const serverClosedReview = ceiling.allowedReview === false;
   const allowReview = serverClosedReview ? false : chrome.allowReview;

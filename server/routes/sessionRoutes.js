@@ -81,6 +81,12 @@ import {
   presentSession,
   stampDeliveryAdministration,
 } from "../delivery/deliveryAdministration.js";
+import {
+  findStudentRecord,
+  resolveAccommodations,
+  taskTimeLimitInputs,
+  withStudentAccommodations,
+} from "../../src/utils/resolveAccommodations.js";
 import { activePackageFor } from "../compositeLibrary/activePackage.js";
 import { recordItemUsage } from "../utils/itemExposure.js";
 // D49b: `import { log2 } from "mathjs"` stood here and was NEVER CALLED --
@@ -228,16 +234,24 @@ function presentationInputsForSession(db, deliveryModel, taskIds) {
 }
 
 function stampSessionAdministration(db, session, deliveryModel, taskIds) {
-  if (!deliveryModel) return;
   let contentDb = db;
   try {
     contentDb = readRawDB() || db;
   } catch {
     contentDb = db;
   }
+  const student = findStudentRecord(contentDb, session?.studentId);
+  const resolved = resolveAccommodations(student);
+  if (!deliveryModel && !resolved.active) return;
   const stamped = stampDeliveryAdministration({
-    administration: deliveryModel.administration,
-    presentations: presentationInputsForSession(contentDb, deliveryModel, taskIds),
+    administration: deliveryModel?.administration,
+    presentations: deliveryModel
+      ? presentationInputsForSession(contentDb, deliveryModel, taskIds)
+      : [],
+    extraTimeMinutes: resolved.extraTimeMinutes,
+    accommodationTimeMultiplier: resolved.timeMultiplier,
+    accommodations: resolved.profile,
+    taskLimits: taskTimeLimitInputs(contentDb, taskIds),
   });
   if (!stamped) return;
   session.deliveryAdministration = stamped;
@@ -245,7 +259,7 @@ function stampSessionAdministration(db, session, deliveryModel, taskIds) {
   if (typeof stamped.reviewAllowed === "boolean") ceiling.allowedReview = stamped.reviewAllowed;
   if (stamped.feedbackMode) ceiling.feedbackMode = stamped.feedbackMode;
   if (Object.keys(ceiling).length) session.administration = ceiling;
-  // Fold the presentation factor in once, from the create timestamp.
+  // Fold presentation and student timing in once, from the create timestamp.
   // endTime is that deadline. The player reads endTime and does not scale it.
   if (stamped.timeLimitMinutes) {
     stamped.clockStartedAt = session.startedAt;
@@ -408,10 +422,10 @@ router.post("/", async (req, res) => {
       now,
     });
 
-    if (boundDeliveryModelId) {
-      const cited = (db.deliveryModels || []).find((row) => row && row.id === boundDeliveryModelId);
-      stampSessionAdministration(db, newSession, cited, taskIds);
-    }
+    const cited = boundDeliveryModelId
+      ? (db.deliveryModels || []).find((row) => row && row.id === boundDeliveryModelId) || null
+      : null;
+    stampSessionAdministration(db, newSession, cited, taskIds);
 
     const { valid, errors } = validateEntity("sessions", newSession, db);
     if (!valid) {
@@ -1276,14 +1290,15 @@ function attachPresentationOverlay(decision, session, _db) {
     taskModelVersion: taskModelVersion ?? pkg?.taskModelVersion ?? null,
   });
 
-  if (!resolved.ok) return null;
-  return {
+  const student = findStudentRecord(contentDb, session?.studentId);
+  if (!resolved.ok) return withStudentAccommodations(null, student);
+  return withStudentAccommodations({
     presentationModelId: resolved.presentationModelId,
     ...resolved.overlay,
     // Same number R2 multiplies into the session deadline. Stamped here so
     // the player can show the factor next to the server clock.
     timeMultiplier: presentationTimeMultiplier(resolved.overlay),
-  };
+  }, student);
 }
 
 // ------------------------------
