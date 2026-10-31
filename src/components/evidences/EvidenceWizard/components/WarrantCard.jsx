@@ -140,6 +140,8 @@ function WarrantCard({
 
         warrantRule: "",
 
+        backing: "",
+
         backingEvidence: "",
 
         limitationClause: "",
@@ -161,7 +163,9 @@ function WarrantCard({
 
             warrantRule: warrant?.warrantRule || "",
 
-            backingEvidence: warrant?.backingEvidence || "",
+            backing: warrant?.backing || warrant?.backingEvidence || "",
+
+            backingEvidence: warrant?.backingEvidence || warrant?.backing || "",
 
             limitationClause: warrant?.limitationClause || "",
 
@@ -272,6 +276,11 @@ function WarrantCard({
 
         };
 
+        if (field === "backing" || field === "backingEvidence") {
+            updated.backing = value;
+            updated.backingEvidence = value;
+        }
+
 
         setBuffer(updated);
 
@@ -292,7 +301,8 @@ function WarrantCard({
             cognitiveAttribute: patch.cognitiveAttribute ?? buffer.cognitiveAttribute,
             performanceCondition: patch.performanceCondition ?? buffer.performanceCondition,
             warrantRule: patch.warrantRule ?? buffer.warrantRule,
-            backingEvidence: patch.backingEvidence ?? buffer.backingEvidence,
+            backing: patch.backing ?? patch.backingEvidence ?? buffer.backing,
+            backingEvidence: patch.backingEvidence ?? patch.backing ?? buffer.backingEvidence,
             limitationClause: patch.limitationClause ?? buffer.limitationClause,
             reasoningStatement: patch.reasoningStatement ?? buffer.reasoningStatement
         };

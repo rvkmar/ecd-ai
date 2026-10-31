@@ -74,6 +74,7 @@ import {
   REPORT_TEMPLATE_SKIN_VALUES,
 } from "./psychometricReportTemplate.js";
 import { ADDITIONAL_KSA_RELATIONSHIP_VALUES } from "./additionalKsaAdvisory.js";
+import { evidenceArgumentIssues } from "./evidenceArgument.js";
 import { ksaStudentModelLinkErrors } from "./ksaStudentModelLink.js";
 import {
   domainAnalysisEntryIdErrors,
@@ -339,7 +340,18 @@ export const schema = {
       reasoningStatement: 'string',
       cognitiveAttribute: 'string',
       performanceCondition: 'string',
-      limitationClause: 'string'
+      limitationClause: 'string',
+      // TU16. Canonical Toulmin backing. WarrantBuilder still writes
+      // backingEvidence; persistWarrantBacking copies one onto the other.
+      backing: 'string',
+      backingEvidence: 'string',
+    }],
+    // TU16. Optional. Each row names an alternative explanation, an optional
+    // additional KSA, and the observable or task model variable that addresses it.
+    alternativeExplanations: [{
+      text: 'string',
+      additionalKsaRef: 'string',
+      addressedBy: 'string',
     }],
     observables: [{
       id: 'string',
@@ -2221,6 +2233,7 @@ export function validateEntity(collection, obj, db = null, options = {}) {
   const rules = schema[collection];
   if (!rules) return { valid: false, errors: ["Unknown collection"] };
   const errors = [];
+  const warnings = [];
 
   // `strict` gates structural-COMPLETENESS checks only (e.g. "binary
   // competency must have exactly 2 states", "continuous scale must define
@@ -2387,6 +2400,14 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       }
       warrantIds.add(w.id);
     }
+
+    // TU16. Drafts skip the presence rules. Reviewed and later require
+    // backing, and a complete alternative explanation when one is present.
+    // An already-reviewed row that never stored these fields warns instead,
+    // so a read or an unchanged save stays valid.
+    const argument = evidenceArgumentIssues(obj, db);
+    errors.push(...argument.errors);
+    warnings.push(...argument.warnings);
 
     if (strict && (!Array.isArray(obj.observables) || obj.observables.length === 0)) {
       errors.push("At least one observable is required.");
@@ -7335,6 +7356,8 @@ export function validateEntity(collection, obj, db = null, options = {}) {
     }
   }
 
-  return { valid: errors.length === 0, errors };
+  const result = { valid: errors.length === 0, errors };
+  if (warnings.length) result.warnings = warnings;
+  return result;
 }
 

@@ -10,6 +10,7 @@ import { sanitizeRequestInputs } from "../utils/requestValidation.js";
 import { loadDB, saveDB } from "../../src/utils/db-server.js";
 import { attachEvidenceSessions } from "../sessions/sessionRepository.js";
 import { validateEntity } from "../../src/utils/schema.js";
+import { persistWarrantBacking } from "../../src/utils/evidenceArgument.js";
 import { applyParameterSetActivation } from "../../src/utils/parameterSetStatus.js";
 import { slimParameterSet, slimStatisticalModels } from "../../src/utils/slimParameterSet.js";
 import { evaluateFitActivation, readFitOverride } from "../../src/utils/fitActivationGate.js";
@@ -377,7 +378,7 @@ export function createEvidenceModelRecord(payload = {}, db, idSuffix = "", optio
   // *different* competency than the model itself, so default any warrant
   // that doesn't specify its own competencyId to the model's, same as the
   // wizard's own "Add Warrant" button already does for UI-created warrants.
-  const warrants = (payload.warrants || []).map(w => ({
+  const warrants = (payload.warrants || []).map(w => persistWarrantBacking({
     ...w,
     competencyId: w.competencyId || competencyId
   }));
@@ -403,6 +404,9 @@ export function createEvidenceModelRecord(payload = {}, db, idSuffix = "", optio
     competencyModelVersion: competencyModel.versionNumber,
     claimStatement: payload.claimStatement || "",
     warrants,
+    ...(Array.isArray(payload.alternativeExplanations)
+      ? { alternativeExplanations: payload.alternativeExplanations }
+      : {}),
     observables,
     evidenceRules,
     statisticalModels,
@@ -552,6 +556,9 @@ router.put("/:id", canAuthor, async (req, res) => {
   };
   if (Array.isArray(updated.statisticalModels)) {
     updated.statisticalModels = slimStatisticalModels(updated.statisticalModels);
+  }
+  if (Array.isArray(updated.warrants)) {
+    updated.warrants = updated.warrants.map(persistWarrantBacking);
   }
 
   if (Array.isArray(req.body?.observables)) {

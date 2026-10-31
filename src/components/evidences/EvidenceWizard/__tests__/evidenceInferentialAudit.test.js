@@ -17,6 +17,7 @@ function completeModel(overrides = {}) {
         cognitiveAttribute: "Concept Differentiation",
         performanceCondition: "Given an interacting-pair diagram.",
         limitationClause: "Does not prove net-force composition.",
+        backing: "Third-law studies and the Grade 10 force curriculum.",
       },
     ],
     observables: [

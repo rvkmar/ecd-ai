@@ -9,7 +9,7 @@
 // • Cleaner warrant grouping
 // • Health monitoring integration
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 
 import {
     AlertCircle,
@@ -22,9 +22,13 @@ import {
 } from "lucide-react";
 
 import { useEvidenceWizardContext } from "../EvidenceWizardContext";
+import { useDesignPatterns } from "@/api/queries/designPatterns";
+import { useTaskModelVariables } from "@/api/queries/taskModelVariables";
+import { evidenceArgumentIssues } from "@/utils/evidenceArgument";
 
 import WarrantBuilder from "../components/WarrantBuilder";
 import WarrantCard from "../components/WarrantCard";
+import AlternativeExplanationsEditor from "../components/AlternativeExplanationsEditor";
 
 import EvidenceDiagnosticsPanel from "../components/EvidenceDiagnosticsPanel";
 import EvidenceHeatmap from "../components/EvidenceHeatmap";
@@ -56,6 +60,8 @@ import { CSS } from "@dnd-kit/utilities";
 
 const badgeBase =
     "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide";
+
+const EMPTY_LIST = [];
 
 /* =====================================================
    Sortable Warrant Card
@@ -112,6 +118,18 @@ export default function Step3Warrants({ onValidityChange, locked }) {
         competencies,
         competencyModels
     } = useEvidenceWizardContext();
+
+    const { data: designPatternData } = useDesignPatterns({ retry: false });
+    const { data: taskModelVariableData } = useTaskModelVariables({ retry: false });
+    const designPatterns = designPatternData || EMPTY_LIST;
+    const taskModelVariables = taskModelVariableData || EMPTY_LIST;
+
+    // The model as it was when this step first saw an id. Grandfathering
+    // compares against that stored row, not against edits in this sitting.
+    const storedArgumentModel = useRef(null);
+    if (storedArgumentModel.current == null && draftModel?.id) {
+        storedArgumentModel.current = draftModel;
+    }
 
 
     /* =====================================================
@@ -279,6 +297,15 @@ export default function Step3Warrants({ onValidityChange, locked }) {
 
     }, [warrants, activeCompetency, scopedCompetencies, diagnostics]);
 
+    const argumentIssues = useMemo(() => {
+        const stored = storedArgumentModel.current;
+        return evidenceArgumentIssues(draftModel || {}, {
+            evidenceModels: stored ? [stored] : [],
+            designPatterns,
+            taskModelVariables,
+        });
+    }, [draftModel, designPatterns, taskModelVariables]);
+
 
     /* =====================================================
        Validation
@@ -338,6 +365,10 @@ export default function Step3Warrants({ onValidityChange, locked }) {
 
         });
 
+        argumentIssues.errors.forEach((message, index) => {
+            newErrors[`argument-${index}`] = message;
+        });
+
 
         setErrors(newErrors);
 
@@ -347,7 +378,7 @@ export default function Step3Warrants({ onValidityChange, locked }) {
             onValidityChange(Object.keys(newErrors).length === 0);
 
 
-    }, [warrants, onValidityChange]);
+    }, [warrants, onValidityChange, argumentIssues]);
 
 
     /* =====================================================
@@ -736,6 +767,15 @@ export default function Step3Warrants({ onValidityChange, locked }) {
                     </DndContext>
                 </div>
             </div>
+
+            <AlternativeExplanationsEditor
+                locked={locked}
+                patterns={designPatterns}
+                taskModelVariables={taskModelVariables}
+                errors={argumentIssues.errors}
+                warnings={argumentIssues.warnings}
+            />
+
             {/* Diagnostics */}
 
             <EvidenceDiagnosticsPanel
