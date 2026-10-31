@@ -50,7 +50,7 @@ Revert this change. Older responses have no timing fields. Responses that alread
 
 ```
 NODE_OPTIONS=--max-old-space-size=4096 npx vitest run
-  3157 passed | 13 skipped (3170). 374 files.
+  3192 passed | 13 skipped (3205). 379 files.
 ```
 
 Rebased onto main `7466af4` (TU7). The suite includes the TU8 feedback tests, the TU7 accommodation tests, a submit that stores `response.feedback` and the timing fields on the same row, and a present plus submit on a session whose deadline and task limit already include the accommodation factor.
