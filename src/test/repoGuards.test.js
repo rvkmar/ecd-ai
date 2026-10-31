@@ -113,6 +113,9 @@ describe("every write route declares a role gate", () => {
     // a role-list one; see sessionRoutes.js's header comment.
     "sessionRoutes.js:POST:/",
     "sessionRoutes.js:POST:/:id/submit",
+    // TU9: the examinee stamps when a task is on screen. Same ownership
+    // check as submit. A role list would block the student.
+    "sessionRoutes.js:POST:/:id/present",
     "sessionRoutes.js:POST:/:id/play",
     "sessionRoutes.js:POST:/:id/pause",
     "sessionRoutes.js:POST:/:id/resume",

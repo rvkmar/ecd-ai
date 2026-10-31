@@ -29,6 +29,11 @@ import {
   comparisonStudentsFor,
 } from "../delivery/cumulativeEcdReport.js";
 import {
+  RESPONSE_TIMING_RULE,
+  rapidGuessSummary,
+  timingForReport,
+} from "../delivery/responseTiming.js";
+import {
   accumulateSessionMeasurement,
   bnSummariesFromAccumulator,
   createMeasurementAccumulator,
@@ -536,8 +541,17 @@ router.get("/session/:id/teacher-report", canViewTeacherReports, async (req, res
         taskModelId: task?.taskModelId || null,
         competencyId,
         evidenceId,
+        ...timingForReport(r),
       };
     }),
+    responseTiming: {
+      ...rapidGuessSummary(session.responses),
+      ruleId: RESPONSE_TIMING_RULE.id,
+      floorMs: RESPONSE_TIMING_RULE.floorMs,
+      capMs: RESPONSE_TIMING_RULE.capMs,
+      medianFraction: RESPONSE_TIMING_RULE.medianFraction,
+      ruleSummary: RESPONSE_TIMING_RULE.summary,
+    },
     recommendations: {
       groupLevel: [],
       individualLevel: []

@@ -21,6 +21,7 @@ import {
   isSessionClosedForStudent,
 } from "../../utils/sessionPlay";
 import { inferWizardPhase } from "../../utils/sessionWizardTiming";
+import { createItemResponseTimer } from "./itemResponseTiming";
 import { measurementStopHeading, measurementStopDetails } from "./measurementStop";
 import { assemblyProgressLine } from "../../utils/assemblyConstraints";
 import SessionReport from "./SessionReport";
@@ -115,6 +116,13 @@ export default function SessionPlayer({
   const [feedbackHold, setFeedbackHold] = useState(false);
   const sessionBootstrappedRef = useRef(false);
   const wizardPhaseHydratedRef = useRef(false);
+  const itemTimingRef = useRef(null);
+  if (itemTimingRef.current == null) itemTimingRef.current = createItemResponseTimer();
+  const timingGateRef = useRef({ closed: false, paused: false });
+  timingGateRef.current = {
+    closed: session ? isSessionClosedForStudent(session) : false,
+    paused: session?.status === SESSION_STATUS.PAUSED,
+  };
 
   const getPolicyName = (policyId) => {
     if (!policyId) return null;
@@ -310,6 +318,56 @@ export default function SessionPlayer({
     setTextAnswer("");
     setSelectedRubricLevel(null);
   }, [session]);
+
+  // TU9: tell the server the task is on screen, and keep a client clock
+  // that drops tab-hidden time. A failed present still lets submit send
+  // the client timestamp. Staff review does not start an examinee clock.
+  useEffect(() => {
+    if (!currentTaskId || isTeacher) return undefined;
+    if (timingGateRef.current.closed || timingGateRef.current.paused) return undefined;
+    const timer = itemTimingRef.current;
+    const leaving = timer.taskId && timer.taskId !== currentTaskId ? timer.snapshot() : null;
+    const started = timer.start(currentTaskId);
+    let cancelled = false;
+    (async () => {
+      try {
+        await apiFetch(
+          `/api/sessions/${sessionIdRef.current}/present`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              taskId: currentTaskId,
+              clientPresentedAt: started?.clientPresentedAt,
+              ...(leaving?.taskId
+                ? {
+                    leaving: {
+                      taskId: leaving.taskId,
+                      hiddenMs: leaving.hiddenMs,
+                      visibleMs: leaving.visibleMs,
+                      clientPresentedAt: leaving.clientPresentedAt,
+                    },
+                  }
+                : {}),
+            }),
+          },
+          auth
+        );
+      } catch {
+        if (!cancelled) {
+          /* Submit still carries the client clock. */
+        }
+      }
+    })();
+    function onVisibility() {
+      timer.setHidden(document.visibilityState === "hidden");
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    onVisibility();
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [currentTaskId, isTeacher, auth]);
 
 
   // ----- when session or its tasks change, compute deadline and start countdown -----
@@ -695,6 +753,16 @@ export default function SessionPlayer({
     await loadNextTask();
   }
 
+  function clientTimingPayload() {
+    const snap = itemTimingRef.current?.snapshot?.();
+    if (!snap?.taskId || snap.taskId !== currentTaskId || !snap.clientPresentedAt) return null;
+    return {
+      clientPresentedAt: snap.clientPresentedAt,
+      visibleMs: snap.visibleMs,
+      hiddenMs: snap.hiddenMs,
+    };
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     // Teachers review only — never submit examinee responses.
@@ -716,6 +784,8 @@ export default function SessionPlayer({
         itemId: deliveredItem.id,
         rawAnswer: itemResponse ?? null,
       };
+      const timing = clientTimingPayload();
+      if (timing) itemPayload.timing = timing;
 
       try {
         const updatedSession = await apiFetch(
@@ -742,6 +812,8 @@ export default function SessionPlayer({
     const payload = {
       taskId: currentTaskId,
     };
+    const legacyTiming = clientTimingPayload();
+    if (legacyTiming) payload.timing = legacyTiming;
 
     if (question?.id) payload.questionId = question.id;
 
