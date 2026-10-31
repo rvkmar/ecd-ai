@@ -44,7 +44,9 @@ refuses to start without one ≥32 chars, see `server/config/jwt.js`), `DB_MODE`
 `docker-compose.yml` defines `node` + `mongo` + `nginx` + `r-backend` (mongo not published to the host — add a
 port mapping in a local `docker-compose.override.yml` for GUI inspection). `r-backend` pulls
 `rvkmar/r-backend:latest` and bind-mounts `./r-backend/app`; do not `docker compose build r-backend`
-as the default path (see AIG/R section below).
+as the default path (see AIG/R section below). The rebuild recipe in `r-backend/Dockerfile`
+installs eRm 1.0.10, bnlearn, and gRain. Push that image as `rvkmar/r-backend:v2.7` and `latest`.
+Until that push, CI still pulls the published image and the LLTM job takes the mirt path.
 
 ## Architecture
 

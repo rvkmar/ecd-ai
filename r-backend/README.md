@@ -26,18 +26,56 @@ override wins. The compose **service** name stays `r-backend`
 
 ## Optional: overlay Dockerfile
 
-`Dockerfile` is `FROM rvkmar/r-backend:latest` plus `COPY app /home/app`.
-Use it only when you want a derived image that bakes current app sources:
+`Dockerfile` is `FROM rvkmar/r-backend:latest`, then a CRAN install of
+the packages v2.6 does not ship, then `COPY app /home/app`.
+
+v2.6 (`latest` until the commands below are pushed) has mirt, GDINA,
+TAM, difR, equate, plink, plumber, jsonlite, ggplot2, and svglite. It
+does not have eRm. A copy of eRm installed by hand inside a running
+container disappears when that container is recreated.
+
+`install-cran-delta.R` pins **eRm 1.0.10** with `remotes::install_version`
+and installs current **bnlearn** and **gRain**. Dependencies are
+Depends, Imports, and LinkingTo only. Suggests stay off, so the build
+does not pull Bioconductor `Rgraphviz`. Existing packages are not
+upgraded. The install is its own image layer, before `COPY app`, so
+editing plumber sources does not reinstall CRAN packages.
+
+`/health` reports `eRm`, `bnlearn`, and `gRain` the same way it reports
+mirt and TAM: a version string when the package loads, JSON null when
+it does not. On a v2.6 container with this repo's app mounted, those
+three are null. CI (`lsat7-pipeline`) pulls the published image and
+bind-mounts the app. `test-lltm.R` therefore keeps the mirt path until
+v2.7 is `latest`. After that push the same CI step runs `eRm::LLTM`
+as the default and still runs the mirt path. The D88 Hub package gate
+does not require eRm, bnlearn, or gRain, so the job stays green before
+the push.
+
+Build and push from a machine that can reach Docker Hub. Pull first so
+`FROM rvkmar/r-backend:latest` is the published v2.6 image, not an
+older local tag.
 
 ```bash
-# after uncommenting build: in docker-compose.yml
-docker compose build r-backend
-# or
-docker build -t ecd-r-backend:local ./r-backend
+docker pull rvkmar/r-backend:latest
+docker build -t rvkmar/r-backend:v2.7 -t rvkmar/r-backend:latest ./r-backend
+docker push rvkmar/r-backend:v2.7
+docker push rvkmar/r-backend:latest
+```
+
+Then recreate the compose service so it picks up the new image. Do not
+use `docker compose build r-backend` as the everyday path. That
+rebuilds only if `build:` is uncommented in `docker-compose.yml`.
+
+```bash
+docker compose pull r-backend
+docker compose up -d r-backend
 ```
 
 `install-packages.R` is leftover from the D61 Posit/rocker from-scratch
-install. It is not required for compose up.
+install. It is not required for compose up. It sources
+`install-cran-delta.R` so a from-scratch rebuild gets the same three
+packages. The dated Posit snapshot in that file does not contain
+eRm 1.0.10.
 
 ## LSAT7 fixture (D64)
 

@@ -13,6 +13,9 @@ Imports:
     difR,
     equate,
     plink,
+    eRm,
+    bnlearn,
+    gRain,
     ggplot2,
     svglite
 Encoding: UTF-8

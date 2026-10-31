@@ -75,7 +75,10 @@ services:
   # Default path: pull rvkmar/r-backend:latest (R packages already installed).
   # Bind-mount repo app so D61+ plumber routes win over the image copy.
   # Do not `docker compose build r-backend` unless you want a derived overlay
-  # (see r-backend/Dockerfile). No container_name here so a local override
+  # (see r-backend/Dockerfile). After the v2.7 push, latest includes
+  # eRm 1.0.10, bnlearn, and gRain. Until that push, latest is the v2.6
+  # set and a hand-installed eRm is lost when the container is recreated.
+  # No container_name here so a local override
   # that sets `container_name: r-backend` wins; hostname is the service name.
   r-backend:
     image: rvkmar/r-backend:latest

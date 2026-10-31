@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Notes
 
+- r-backend image recipe installs eRm 1.0.10, bnlearn, and gRain from
+  CRAN. `/health` reports those versions (null when the package is not
+  installed). Compose still pulls `rvkmar/r-backend:latest`. CI keeps
+  the mirt LLTM path until that tag is rebuilt and pushed as
+  `rvkmar/r-backend:v2.7` and `latest`. Handoff:
+  `claude/day146at-offcal-r-backend-erm.md`.
+
 - Wave 4 recorded remaining through-D153 leftovers as design limits
   (mastery cut ADR 0004; inferred Assembly Model `AMBIGUOUS`; item-keyed
   DINA calibration; Settings `curricularPolicies` while Step 3 still
