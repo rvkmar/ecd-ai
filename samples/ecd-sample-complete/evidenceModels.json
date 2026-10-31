@@ -18,7 +18,8 @@
         "cognitiveAttribute": "Plant-part naming",
         "reasoningStatement": "Selecting the name of the called-out part is evidence about naming proficiency. A student higher on that trait is more likely to select the name.",
         "performanceCondition": "A flowering-plant diagram with one part called out, and four part names.",
-        "limitationClause": "Does not show that the student can state the part's function."
+        "limitationClause": "Does not show that the student can state the part's function.",
+        "backing": "Plant-part naming research and the Grade 10 diagram curriculum."
       }
     ],
     "observables": [
@@ -126,7 +127,8 @@
         "cognitiveAttribute": "Part function",
         "reasoningStatement": "Choosing the job of a named part requires linking that structure to the work it does, and telling that job apart from where the part sits.",
         "performanceCondition": "The part is named in the stem. The options are functions, or a mix of functions and locations.",
-        "limitationClause": "Does not show that the student can find the part on an unlabelled diagram."
+        "limitationClause": "Does not show that the student can find the part on an unlabelled diagram.",
+        "backing": "Structure-function studies of school biology and the named-part curriculum."
       }
     ],
     "observables": [
@@ -271,7 +273,8 @@
         "cognitiveAttribute": "Fraction equivalence",
         "reasoningStatement": "Selecting 1/2 as equivalent to 2/4, or 2/3 as the lowest terms of 4/6, requires seeing that both names are the same amount.",
         "performanceCondition": "A stem fraction and four options. One option is equivalent, or is the lowest-terms name.",
-        "limitationClause": "Does not show fluency with fraction arithmetic."
+        "limitationClause": "Does not show fluency with fraction arithmetic.",
+        "backing": "Rational-number equivalence research and the Grade 10 fraction curriculum."
       }
     ],
     "observables": [

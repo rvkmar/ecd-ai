@@ -244,6 +244,10 @@ export default function WarrantBuilder({
 
             warrantRule: builder.rule,
 
+            // Schema field is `backing`. The card and older saves still
+            // read `backingEvidence`. Write both so a save does not drop it.
+            backing: builder.backing,
+
             backingEvidence: builder.backing,
 
             // Canonical field name for the Toulmin rebuttal is
