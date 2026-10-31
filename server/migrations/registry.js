@@ -16,6 +16,7 @@ import auditLogToMongo from "./migrations/012-auditlog-to-mongo.js";
 import calibrationDataToMongo from "./migrations/013-calibration-data-to-mongo.js";
 import studentModelRecordsToMongo from "./migrations/014-student-model-records-to-mongo.js";
 import slimEvidenceParameterSets from "./migrations/015-slim-evidence-model-parameter-sets.js";
+import validityEvidence from "./migrations/016-validity-evidence.js";
 
 export const MIGRATION_REGISTRY = [
   normalizeSessionStatus,
@@ -33,6 +34,7 @@ export const MIGRATION_REGISTRY = [
   calibrationDataToMongo,
   studentModelRecordsToMongo,
   slimEvidenceParameterSets,
+  validityEvidence,
 ];
 
 export function migrationRegistryIds() {

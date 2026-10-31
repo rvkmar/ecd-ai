@@ -46,6 +46,7 @@ import assemblyModelsRoutes from "../assemblyModelsRoutes.js";
 import presentationModelsRoutes from "../presentationModelsRoutes.js";
 import compositeLibraryRoutes from "../compositeLibraryRoutes.js";
 import announcementsRoutes from "../announcementsRoutes.js";
+import validityEvidenceRoutes from "../validityEvidenceRoutes.js";
 import auditLogRoutes from "../auditLogRoutes.js";
 import opsRoutes from "../opsRoutes.js";
 
@@ -75,6 +76,7 @@ const PROTECTED_ROUTERS = [
   { name: "presentationModelsRoutes", path: "/api/presentationModels", router: presentationModelsRoutes },
   { name: "compositeLibraryRoutes", path: "/api/compositeLibrary", router: compositeLibraryRoutes },
   { name: "announcementsRoutes", path: "/api/announcements", router: announcementsRoutes },
+  { name: "validityEvidenceRoutes", path: "/api/validityEvidence", router: validityEvidenceRoutes },
   { name: "auditLogRoutes", path: "/api/auditLog", router: auditLogRoutes },
   { name: "opsRoutes", path: "/api/ops", router: opsRoutes },
 ];

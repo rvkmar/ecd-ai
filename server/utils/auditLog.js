@@ -113,6 +113,27 @@ function pushTraitDiagnosticProceed(entries, collection, prev, row, before, afte
   );
 }
 
+function validityEvidenceAuditSnapshot(row) {
+  if (!row || typeof row !== "object") return null;
+  return {
+    type: row.type ?? null,
+    summary: row.summary ?? null,
+    body: row.body ?? null,
+    source: row.source ?? null,
+    evidenceModelId: row.evidenceModelId ?? null,
+    analysisArtefactId: row.analysisArtefactId ?? null,
+    calibrationJobId: row.calibrationJobId ?? null,
+    parameterSetId: row.parameterSetId ?? null,
+    author: row.author ?? null,
+    districtId: row.districtId ?? null,
+    schoolId: row.schoolId ?? null,
+    warrantIds: Array.isArray(row.warrantIds) ? row.warrantIds : [],
+    alternativeExplanationIndexes: Array.isArray(row.alternativeExplanationIndexes)
+      ? row.alternativeExplanationIndexes
+      : [],
+  };
+}
+
 function indexById(rows) {
   const map = new Map();
   for (const row of rows || []) {
@@ -324,6 +345,62 @@ function collectSaveAudits(before, after) {
     }
   }
 
+  // TU17. Validity evidence is not on the status machine. Create, update,
+  // and delete are still part of the argument trail.
+  {
+    const prevMap = indexById(before?.validityEvidence);
+    const nextRows = after.validityEvidence || [];
+    const nextIds = new Set();
+    for (const row of nextRows) {
+      if (!row?.id) continue;
+      nextIds.add(String(row.id));
+      const prev = prevMap.get(String(row.id));
+      const snap = validityEvidenceAuditSnapshot(row);
+      if (!prev) {
+        entries.push(
+          buildAuditEntry({
+            action: "validity_evidence.create",
+            entity: { collection: "validityEvidence", id: row.id, version: null },
+            detail: {
+              evidenceModelId: snap.evidenceModelId,
+              type: snap.type,
+              source: snap.source,
+              analysisArtefactId: snap.analysisArtefactId,
+            },
+          })
+        );
+        continue;
+      }
+      if (JSON.stringify(validityEvidenceAuditSnapshot(prev)) !== JSON.stringify(snap)) {
+        entries.push(
+          buildAuditEntry({
+            action: "validity_evidence.update",
+            entity: { collection: "validityEvidence", id: row.id, version: null },
+            detail: {
+              evidenceModelId: snap.evidenceModelId,
+              type: snap.type,
+              source: snap.source,
+            },
+          })
+        );
+      }
+    }
+    for (const [id, prev] of prevMap) {
+      if (nextIds.has(id)) continue;
+      const snap = validityEvidenceAuditSnapshot(prev);
+      entries.push(
+        buildAuditEntry({
+          action: "validity_evidence.delete",
+          entity: { collection: "validityEvidence", id, version: null },
+          detail: {
+            evidenceModelId: snap?.evidenceModelId ?? null,
+            type: snap?.type ?? null,
+          },
+        })
+      );
+    }
+  }
+
   return entries;
 }
 
@@ -486,6 +563,11 @@ export function auditBaseline(db) {
         }
       : row
   );
+  out.validityEvidence = rowsOf("validityEvidence").map((row) => {
+    const snap = validityEvidenceAuditSnapshot(row);
+    if (!snap) return row;
+    return { id: row.id, ...snap };
+  });
   out.sessions = rowsOf("sessions").map((session) => {
     if (!session || typeof session !== "object") return session;
     return {

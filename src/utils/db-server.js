@@ -22,6 +22,7 @@ import {
 import { calibrationJobsUseExternalStore } from "../../server/calibrationJobs/calibrationJobBackend.js";
 import { analysisArtefactsUseExternalStore } from "../../server/analysisArtefacts/analysisArtefactBackend.js";
 import { studentModelRecordsUseExternalStore } from "../../server/studentModelRecords/studentModelRecordBackend.js";
+import { validityEvidenceUseExternalStore } from "../../server/validityEvidence/validityEvidenceBackend.js";
 
 function dbFilePath() {
   return process.env.ECD_DB_FILE || path.join(process.cwd(), "db.json");
@@ -155,6 +156,7 @@ function defaultDB() {
     calibrationJobs: [],
     analysisArtefacts: [],
     announcements: [],
+    validityEvidence: [],
     auditLog: [],
   };
 }
@@ -307,6 +309,14 @@ function omitAnalysisArtefacts(obj) {
   return copy;
 }
 
+function omitValidityEvidence(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
+  if (!Object.prototype.hasOwnProperty.call(obj, "validityEvidence")) return obj;
+  const copy = { ...obj };
+  delete copy.validityEvidence;
+  return copy;
+}
+
 function omitStudentModelRecords(obj) {
   if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
   if (!Object.prototype.hasOwnProperty.call(obj, "studentModelRecords")) return obj;
@@ -322,6 +332,7 @@ function omitExternalCollections(obj) {
   if (calibrationJobsUseExternalStore()) next = omitCalibrationJobs(next);
   if (analysisArtefactsUseExternalStore()) next = omitAnalysisArtefacts(next);
   if (studentModelRecordsUseExternalStore()) next = omitStudentModelRecords(next);
+  if (validityEvidenceUseExternalStore()) next = omitValidityEvidence(next);
   return next;
 }
 
@@ -417,6 +428,7 @@ export async function saveDB(db, options = {}) {
   const externalJobs = calibrationJobsUseExternalStore();
   const externalArtefacts = analysisArtefactsUseExternalStore();
   const externalStudentModels = studentModelRecordsUseExternalStore();
+  const externalValidityEvidence = validityEvidenceUseExternalStore();
   // External collections stay in their own stores. The audit diff must
   // not treat a hydrated array as the file's collection, or a job
   // already recorded on the store would be logged again.
@@ -437,6 +449,10 @@ export async function saveDB(db, options = {}) {
   if (externalStudentModels) {
     auditPrev = omitStudentModelRecords(auditPrev);
     auditNext = omitStudentModelRecords(auditNext);
+  }
+  if (externalValidityEvidence) {
+    auditPrev = omitValidityEvidence(auditPrev);
+    auditNext = omitValidityEvidence(auditNext);
   }
   toWrite = applySaveAudits(auditPrev, auditNext, options);
   // When merge produced a new object, mirror auditLog onto the caller's

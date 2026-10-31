@@ -10,6 +10,7 @@ import {
 import { useCompetencies, useCompetencyModels } from "@/api/queries/competencies";
 import { openActionLabel } from "@/utils/modelActionLabel";
 import LifecycleStatusBadge from "../ui/LifecycleStatusBadge";
+import ValidityEvidencePanel from "./calibration/panels/ValidityEvidencePanel";
 
 export default function EvidenceModelList({
     onEdit,
@@ -269,6 +270,8 @@ export default function EvidenceModelList({
                                         <strong>Statistical Models:</strong>{" "}
                                         {m.statisticalModels?.length || 0}
                                     </div>
+
+                                    <ValidityEvidencePanel evidenceModel={m} />
 
                                     <div className="flex gap-3 pt-3">
 

@@ -20,6 +20,13 @@ import {
   validateCalibrationResponse,
 } from "./calibrationContract.js";
 import { slimParameterSet } from "../../src/utils/slimParameterSet.js";
+import { validityEvidenceUseExternalStore } from "../validityEvidence/validityEvidenceBackend.js";
+import {
+  linkTu4FitEvidence,
+  tu4LinkInputFromArtefact,
+  tu4LinkInputFromParameterSet,
+} from "../validityEvidence/linkTu4Fit.js";
+import { ensureTu4Link } from "../validityEvidence/validityEvidenceRepository.js";
 
 function sessionProvenanceFromJob(job) {
   const prov = job?.request?.provenance;
@@ -192,6 +199,9 @@ export function ingestCalibrationJob(job, db, extras = {}) {
     }
 
     placeAnalysisArtefact(db, artefact);
+    if (!validityEvidenceUseExternalStore()) {
+      linkTu4FitEvidence(db, tu4LinkInputFromArtefact(artefact));
+    }
 
     job.ingestedAnalysisArtefactId = analysisArtefactId;
     job.updatedAt = new Date().toISOString();
@@ -290,6 +300,17 @@ export function ingestCalibrationJob(job, db, extras = {}) {
 
   job.ingestedParameterSetId = parameterSetId;
   if (placedArtefact) job.ingestedAnalysisArtefactId = placedArtefact.id;
+  if (!validityEvidenceUseExternalStore()) {
+    linkTu4FitEvidence(
+      db,
+      tu4LinkInputFromParameterSet(em.id, parameterSet, {
+        author: parameterSet.calibratedBy,
+        districtId: placedArtefact?.scope?.districtId ?? null,
+        schoolId: placedArtefact?.scope?.schoolId ?? null,
+      })
+    );
+    if (placedArtefact) linkTu4FitEvidence(db, tu4LinkInputFromArtefact(placedArtefact));
+  }
   em.updatedAt = new Date().toISOString();
   job.updatedAt = em.updatedAt;
 
@@ -305,7 +326,19 @@ export function ingestCalibrationJob(job, db, extras = {}) {
  * The JSON harness leaves both on `db` for saveDB. Call after a
  * successful ingestCalibrationJob, before saveDB.
  */
-export async function commitCalibrationIngest(db, { job, artefact } = {}) {
+export async function commitCalibrationIngest(db, { job, artefact, parameterSet, evidenceModelId } = {}) {
   if (artefact) await persistAnalysisArtefact(db, artefact);
   if (job) await saveCalibrationJob(db, job);
+  const modelId = evidenceModelId || job?.evidenceModelId || artefact?.scope?.evidenceModelId || null;
+  if (parameterSet && modelId) {
+    await ensureTu4Link(
+      db,
+      tu4LinkInputFromParameterSet(modelId, parameterSet, {
+        author: parameterSet.calibratedBy,
+        districtId: artefact?.scope?.districtId ?? job?.request?.scope?.districtId ?? null,
+        schoolId: artefact?.scope?.schoolId ?? job?.request?.scope?.schoolId ?? null,
+      })
+    );
+  }
+  if (artefact) await ensureTu4Link(db, tu4LinkInputFromArtefact(artefact));
 }

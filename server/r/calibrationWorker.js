@@ -22,6 +22,9 @@ import {
 } from "../delivery/attributeProfileCohortSummary.js";
 import { runWithAudit } from "../utils/auditContext.js";
 import { calibrationJobsUseExternalStore } from "../calibrationJobs/calibrationJobBackend.js";
+import { validityEvidenceUseExternalStore } from "../validityEvidence/validityEvidenceBackend.js";
+import { ensureTu4Link } from "../validityEvidence/validityEvidenceRepository.js";
+import { tu4LinkInputFromJob } from "../validityEvidence/linkTu4Fit.js";
 import {
   claimQueuedCalibrationJob,
   finishRunningCalibrationJob,
@@ -252,7 +255,11 @@ export async function processJobById(
   const patch = outcomePatch(result, nowIso());
   const updated = await finishRunningCalibrationJob(after, jobId, patch);
   if (!updated) return { ok: false, error: "Calibration job disappeared while running." };
+  if (patch.status === "succeeded") {
+    await ensureTu4Link(after, tu4LinkInputFromJob(updated));
+  }
   if (!calibrationJobsUseExternalStore()) saveDB(after);
+  else if (!validityEvidenceUseExternalStore()) await saveDB(after);
   return { ok: patch.status === "succeeded", job: updated };
 }
 
