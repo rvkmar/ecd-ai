@@ -14,6 +14,7 @@ export const TENANT_SCOPED_COLLECTIONS = Object.freeze([
   "announcements",
   "analysisArtefacts",
   "calibrationJobs",
+  "validityEvidence",
 ]);
 
 export function isTenantScopedCollection(name) {
@@ -68,6 +69,8 @@ function rowDistrictId(collection, row, db) {
           ? String(row.scope.districtId)
           : null;
     case "announcements":
+      return row.districtId ? String(row.districtId) : null;
+    case "validityEvidence":
       return row.districtId ? String(row.districtId) : null;
     case "tasks":
       return row.districtId ? String(row.districtId) : null;
@@ -146,6 +149,18 @@ export function rowVisible(collection, row, ctx, db) {
   // stay hidden. Foreign districtId still fails the match below.
   if (collection === "announcements" && !rowDistrict) {
     return row.authorRole === "admin";
+  }
+
+  // Validity evidence with no district is part of the shared argument
+  // for a global evidence model. A district claim still hides foreign rows.
+  if (collection === "validityEvidence") {
+    if (!rowDistrict && !rowSchool) return true;
+    if (ctx.viewScope === "school" && ctx.schoolId && rowSchool) {
+      return rowSchool === String(ctx.schoolId);
+    }
+    if (!ctx.districtId) return false;
+    if (!rowDistrict) return false;
+    return rowDistrict === String(ctx.districtId);
   }
 
   if (collection === "sessions" && !rowDistrict) return false;

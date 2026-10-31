@@ -24,6 +24,8 @@ import {
   normalizeScoringBundles,
   scoringBundleAuthoringErrors,
 } from "../../src/utils/scoringBundles.js";
+import { ensureTu4Link } from "../validityEvidence/validityEvidenceRepository.js";
+import { tu4LinkInputFromParameterSet } from "../validityEvidence/linkTu4Fit.js";
 
 const router = express.Router();
 
@@ -913,6 +915,14 @@ router.post("/:id/recalibrate", canAuthor, async (req, res) => {
 
   sm.parameterSets = sm.parameterSets || [];
   sm.parameterSets.push(newParamSet);
+  await ensureTu4Link(
+    db,
+    tu4LinkInputFromParameterSet(model.id, newParamSet, {
+      author: req.user?.username || newParamSet.calibratedBy,
+      districtId: req.user?.districtId || null,
+      schoolId: req.user?.schoolId || null,
+    })
+  );
   model.updatedAt = activatedAt;
   applyParameterSetActivation(sm, newParamSet.parameterSetId, {
     activatedBy: fitActor(req) || newParamSet.calibratedBy,
@@ -1001,6 +1011,18 @@ router.post("/:id/attach-seed-parameter-sets", canAuthor, async (req, res) => {
   }
 
   model.updatedAt = new Date().toISOString();
+  for (const row of attached) {
+    const sm = model.statisticalModels.find((m) => m.id === row.statisticalModelId);
+    const ps = sm?.parameterSets?.find((p) => p.parameterSetId === row.parameterSetId);
+    await ensureTu4Link(
+      db,
+      tu4LinkInputFromParameterSet(model.id, ps, {
+        author: req.user?.username,
+        districtId: req.user?.districtId || null,
+        schoolId: req.user?.schoolId || null,
+      })
+    );
+  }
   saveDB(db);
   res.json({ message: "Seed parameter sets attached.", attached });
 });

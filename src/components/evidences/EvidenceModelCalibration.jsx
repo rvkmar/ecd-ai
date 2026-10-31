@@ -30,6 +30,7 @@ import {
     Layers,
     Lock,
     Scale,
+    ShieldCheck,
     Upload,
 } from "lucide-react";
 
@@ -48,6 +49,7 @@ import ParameterSetRegistry from "./calibration/panels/ParameterSetRegistry";
 import InferenceSandbox from "./calibration/panels/InferenceSandbox";
 import DecisionRulePanel from "./calibration/panels/DecisionRulePanel";
 import OperationalActivationPanel from "./calibration/panels/OperationalActivationPanel";
+import ValidityEvidencePanel from "./calibration/panels/ValidityEvidencePanel";
 
 import {
     computeReadiness,
@@ -62,6 +64,7 @@ const TABS = [
     { id: "parameters", label: "Parameter Sets", icon: Layers },
     { id: "inference", label: "Inference", icon: FlaskConical },
     { id: "decision", label: "Decision & Activation", icon: Scale },
+    { id: "validity", label: "Validity", icon: ShieldCheck },
 ];
 
 // Of the six stored statuses, these four have something to show here.
@@ -452,6 +455,10 @@ export default function EvidenceModelCalibration({
                         observables={observables}
                         competency={competency}
                     />
+                )}
+
+                {tab === "validity" && (
+                    <ValidityEvidencePanel evidenceModel={model} />
                 )}
 
                 {tab === "decision" && (

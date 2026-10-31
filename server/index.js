@@ -49,6 +49,7 @@ import assemblyModelsRoutes from "./routes/assemblyModelsRoutes.js";
 import presentationModelsRoutes from "./routes/presentationModelsRoutes.js";
 import compositeLibraryRoutes from "./routes/compositeLibraryRoutes.js";
 import announcementsRoutes from "./routes/announcementsRoutes.js";
+import validityEvidenceRoutes from "./routes/validityEvidenceRoutes.js";
 import tenancyRoutes from "./routes/tenancyRoutes.js";
 import { authenticateToken, authorizeRole } from "./utils/authMiddleware.js";
 import { beginTenancyRequest } from "./utils/tenancyContext.js";
@@ -149,6 +150,7 @@ app.use("/api/assemblyModels", assemblyModelsRoutes);
 app.use("/api/presentationModels", presentationModelsRoutes);
 app.use("/api/compositeLibrary", compositeLibraryRoutes);
 app.use("/api/announcements", announcementsRoutes);
+app.use("/api/validityEvidence", validityEvidenceRoutes);
 app.use("/api/tenancy", tenancyRoutes);
 // One zip for every ECD collection. Admin only; see dataZipRoutes.js.
 app.use("/api/data/zip", dataZipRoutes);

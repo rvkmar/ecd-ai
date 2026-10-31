@@ -67,6 +67,8 @@ export const rolePermissions = {
       // Runtime scoring record. Read-only. Written when a session finishes.
       "studentModelRecords",
       "announcements",
+      // TU17. Empirical validity evidence. Admin writes every tenant.
+      "validityEvidence",
     ],
     canEdit: [
       "questions",
@@ -97,6 +99,7 @@ export const rolePermissions = {
       "deliveryModels",
       "calibrationJobs",
       "psychometricReportTemplates",
+      "validityEvidence",
     ],
     canApprove: ["questions", "items"], // promote from review → confirmed
     canDelete: [
@@ -124,13 +127,14 @@ export const rolePermissions = {
       "calibrationJobs",
       "psychometricReportTemplates",
       "announcements",
+      "validityEvidence",
     ],
     // "students" was declared in canView but never in canCreate/canDelete
     // on any role, while studentsRoutes.js accepted any authenticated
     // caller -- the RBAC sweep found this the same way it found items/
     // student being absent before. Admin-only until a real enrollment
     // workflow exists for district/teacher.
-    canCreate: ["students", "calibrationJobs", "psychometricReportTemplates", "announcements"],
+    canCreate: ["students", "calibrationJobs", "psychometricReportTemplates", "announcements", "validityEvidence"],
   },
 
   district: {
@@ -167,9 +171,11 @@ export const rolePermissions = {
       "psychometricReportTemplates",
       "studentModelRecords",
       "announcements",
+      "validityEvidence",
     ],
     canEdit: [
       "students",           // accommodations for students in this district
+      "validityEvidence",   // studies in this district
       "tasks",              // can create local tasks
       "taskModels",         // can clone and modify published task models
       "taskModelVariables", // shared design features those models consume
@@ -178,8 +184,8 @@ export const rolePermissions = {
       "items"               // authors and governs bank items
     ],
     canApprove: ["questions", "items"],
-    canDelete: ["tasks", "announcements"],      // local tasks + own announcements
-    canCreate: ["announcements"],
+    canDelete: ["tasks", "announcements", "validityEvidence"],
+    canCreate: ["announcements", "validityEvidence"],
     restrictions: {
       viewScope: "district",   // limits view to district data
       editableModels: "cloned", // can only edit cloned models
@@ -202,6 +208,7 @@ export const rolePermissions = {
       "teacherReports",
       "studentModelRecords",
       "announcements",
+      "validityEvidence",
       // Roster view. Accommodation edits stay inside the caller's school
       // or class when that claim is set.
       "students",

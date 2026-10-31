@@ -32,6 +32,7 @@ import { evaluateAssemblySufficiency } from "./assemblySufficiency.js";
 import { parameterSetStorageErrors } from "./parameterSetRecord.js";
 import { FIT_THRESHOLD_KEYS } from "./fitActivationGate.js";
 import { assemblyConstraintErrors } from "./assemblyConstraints.js";
+import { validityEvidenceErrors } from "./validityEvidence.js";
 
 // The shared ECD response vocabulary. Imported rather than restated so the
 // item rules below and the Item Wizard read the SAME compatibility map --
@@ -860,6 +861,30 @@ export const schema = {
     schoolId: 'string',
     visibility: 'string',
     audienceRoles: 'array',
+    createdAt: 'date',
+    updatedAt: 'date',
+  },
+
+  // TU17. Empirical validity evidence for one evidence model.
+  // type is response-process, internal-structure, relations, or
+  // consequences. warrantIds and alternativeExplanationIndexes are
+  // optional links into that model. analysisArtefactId, when set, is
+  // unique: one row per analysis artefact.
+  validityEvidence: {
+    id: 'string',
+    evidenceModelId: 'string',
+    type: 'string',
+    summary: 'string',
+    body: 'string',
+    source: 'string',
+    author: 'string',
+    warrantIds: 'array',
+    alternativeExplanationIndexes: 'array',
+    analysisArtefactId: 'string',
+    calibrationJobId: 'string',
+    parameterSetId: 'string',
+    districtId: 'string',
+    schoolId: 'string',
     createdAt: 'date',
     updatedAt: 'date',
   },
@@ -7311,6 +7336,10 @@ export function validateEntity(collection, obj, db = null, options = {}) {
      coherent item) lives here. There is NO CAF status machine:
      tasks are runtime instances, not governed models.
   ===================================================== */
+
+  if (collection === "validityEvidence") {
+    errors.push(...validityEvidenceErrors(obj, db));
+  }
 
   if (collection === "tasks") {
     if (!obj.taskModelId) {

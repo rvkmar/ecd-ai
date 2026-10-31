@@ -494,7 +494,12 @@ router.post("/:id/ingest", canAuthor, async (req, res) => {
   const artefact = result.analysisArtefact
     ? (db.analysisArtefacts || []).find((row) => row && row.id === result.analysisArtefact.id)
     : null;
-  await commitCalibrationIngest(db, { job, artefact });
+  await commitCalibrationIngest(db, {
+    job,
+    artefact,
+    parameterSet: result.parameterSet || null,
+    evidenceModelId: job.evidenceModelId,
+  });
   await saveDB(db);
   res.json({
     job,

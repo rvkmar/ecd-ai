@@ -8,6 +8,7 @@ import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { useEvidenceWizardContext } from "../EvidenceWizardContext";
 import { evaluateAssemblySufficiency } from "../../../../utils/assemblySufficiency";
 import InferentialTraceGraph from "../components/InferentialTraceGraph";
+import ValidityEvidencePanel from "../../calibration/panels/ValidityEvidencePanel";
 import {
   computeEvidenceInferentialAudit,
   DEFAULT_DIF,
@@ -460,6 +461,8 @@ export default function Step7InferentialAudit({ db, onValidityChange }) {
       </div>
 
       <InferentialTraceGraph draftModel={draftModel} />
+
+      <ValidityEvidencePanel evidenceModel={draftModel} />
 
       {!isValid && (
         <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3.5 text-sm text-red-700">

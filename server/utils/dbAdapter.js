@@ -15,8 +15,16 @@ import {
   assertTenancyAllowsScopedAccess,
   TENANT_SCOPED_COLLECTIONS,
 } from "./tenancyScope.js";
-import { recordAuditEvent } from "../../src/utils/db-server.js";
+import { recordAuditEvent, readRawDB, saveDB } from "../../src/utils/db-server.js";
 import { getAuditActor } from "./auditContext.js";
+import { validityEvidenceUseExternalStore } from "../validityEvidence/validityEvidenceBackend.js";
+import {
+  queryValidityEvidence,
+  getValidityEvidenceById,
+  insertValidityEvidence,
+  updateValidityEvidence,
+  removeValidityEvidence,
+} from "../validityEvidence/validityEvidenceRepository.js";
 
 // ADR 0006 list must stay live (repoGuards); sessions need peer resolution.
 if (!TENANT_SCOPED_COLLECTIONS.includes("sessions")) {
@@ -232,8 +240,17 @@ async function assertWriteAllowed(collection, row, peerRows) {
 // ------------------------------
 // CRUD adapter
 // ------------------------------
+async function validityEvidenceDb() {
+  if (validityEvidenceUseExternalStore()) return { validityEvidence: [] };
+  return readRawDB();
+}
+
 export const dbAdapter = {
   async list(collection) {
+    if (collection === "validityEvidence") {
+      const db = await validityEvidenceDb();
+      return queryValidityEvidence(db, {});
+    }
     if (DB_MODE === "json") {
       const db = loadJSON();
       return await applyListFilter(collection, db[collection] || []);
@@ -246,6 +263,10 @@ export const dbAdapter = {
   },
 
   async get(collection, id) {
+    if (collection === "validityEvidence") {
+      const db = await validityEvidenceDb();
+      return getValidityEvidenceById(db, id);
+    }
     if (DB_MODE === "json") {
       const db = loadJSON();
       const rows = db[collection] || [];
@@ -260,6 +281,12 @@ export const dbAdapter = {
   },
 
   async insert(collection, obj) {
+    if (collection === "validityEvidence") {
+      const db = await validityEvidenceDb();
+      const saved = await insertValidityEvidence(db, obj);
+      if (!validityEvidenceUseExternalStore()) await saveDB(db);
+      return saved;
+    }
     // Users are intentionally absent from schema.js (auth records, not ECD
     // entities). createUserRecord / TN seed still go through this helper.
     if (collection !== "users") {
@@ -359,6 +386,15 @@ export const dbAdapter = {
   },
 
   async update(collection, id, updates) {
+    if (collection === "validityEvidence") {
+      const db = await validityEvidenceDb();
+      const existing = await getValidityEvidenceById(db, id);
+      if (!existing) throw new Error("Not found");
+      const next = { ...existing, ...updates, id: existing.id, updatedAt: new Date().toISOString() };
+      const saved = await updateValidityEvidence(db, id, next);
+      if (!validityEvidenceUseExternalStore()) await saveDB(db);
+      return saved;
+    }
     updates.updatedAt = new Date().toISOString();
 
     if (DB_MODE === "json") {
@@ -388,6 +424,13 @@ export const dbAdapter = {
   },
 
   async remove(collection, id) {
+    if (collection === "validityEvidence") {
+      const db = await validityEvidenceDb();
+      const removed = await removeValidityEvidence(db, id);
+      if (!removed) throw new Error("Not found");
+      if (!validityEvidenceUseExternalStore()) await saveDB(db);
+      return true;
+    }
     if (DB_MODE === "json") {
       const db = loadJSON();
       const rows = db[collection] || [];
