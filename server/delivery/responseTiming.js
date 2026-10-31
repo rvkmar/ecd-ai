@@ -22,7 +22,9 @@
 //   taskModel.taskStructure.timingConstraint.minimumResponseMs
 // The 10 s cap bounds the percentage. An authored minimum above 10 s is
 // kept. This module does not enforce timingConstraint.timeLimitSeconds
-// or maxAttempts. TU10 reads taskResponseTiming and the response fields.
+// or maxAttempts. TU10 reads taskResponseTiming and the response fields
+// from server/delivery/taskConstraints.js. The limit uses the open visit's
+// wall time. Rapid-guess timeOnItemMs still drops tab-hidden time.
 //
 // A response with no finite timeOnItemMs is not a rapid guess. The teacher
 // report renders that as unknown, including a stored rapidGuess flag with

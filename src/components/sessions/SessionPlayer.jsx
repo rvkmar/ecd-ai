@@ -22,6 +22,14 @@ import {
 } from "../../utils/sessionPlay";
 import { inferWizardPhase } from "../../utils/sessionWizardTiming";
 import { createItemResponseTimer } from "./itemResponseTiming";
+import TaskTimeCountdown from "./TaskTimeCountdown";
+import {
+  attemptsUsedForTask,
+  effectiveTaskTimeLimit,
+  storedMsForOpenVisit,
+  taskModelAttemptCap,
+  taskRevisionOpen,
+} from "../../utils/taskConstraints";
 import { measurementStopHeading, measurementStopDetails } from "./measurementStop";
 import { assemblyProgressLine } from "../../utils/assemblyConstraints";
 import SessionReport from "./SessionReport";
@@ -95,6 +103,13 @@ export default function SessionPlayer({
   // deadline / countdown UI
   const [deadline, setDeadline] = useState(null); // Date object or null
   const [countdownMs, setCountdownMs] = useState(null); // ms remaining or null
+  const [taskClock, setTaskClock] = useState(null);
+  const [taskExpired, setTaskExpired] = useState(false);
+  const [allowExpiredSave, setAllowExpiredSave] = useState(false);
+  const [constraintMessage, setConstraintMessage] = useState(null);
+  const [attemptsLocked, setAttemptsLocked] = useState(false);
+  const expiryOnceRef = useRef(false);
+  const expireSubmitRef = useRef(() => {});
 
   // Banners / messages / locks
   const [showResumedBanner, setShowResumedBanner] = useState(false);
@@ -323,6 +338,15 @@ export default function SessionPlayer({
   // that drops tab-hidden time. A failed present still lets submit send
   // the client timestamp. Staff review does not start an examinee clock.
   useEffect(() => {
+    setTaskExpired(false);
+    setAllowExpiredSave(false);
+    setConstraintMessage(null);
+    setAttemptsLocked(false);
+    expiryOnceRef.current = false;
+    setTaskClock(null);
+  }, [currentTaskId]);
+
+  useEffect(() => {
     if (!currentTaskId || isTeacher) return undefined;
     if (timingGateRef.current.closed || timingGateRef.current.paused) return undefined;
     const timer = itemTimingRef.current;
@@ -331,7 +355,7 @@ export default function SessionPlayer({
     let cancelled = false;
     (async () => {
       try {
-        await apiFetch(
+        const presented = await apiFetch(
           `/api/sessions/${sessionIdRef.current}/present`,
           {
             method: "POST",
@@ -352,6 +376,13 @@ export default function SessionPlayer({
           },
           auth
         );
+        if (!cancelled && presented?.openPresentedAt && presented.taskId === currentTaskId) {
+          setTaskClock({
+            taskId: presented.taskId,
+            openPresentedAt: presented.openPresentedAt,
+            accruedMs: typeof presented.accruedMs === "number" ? presented.accruedMs : 0,
+          });
+        }
       } catch {
         if (!cancelled) {
           /* Submit still carries the client clock. */
@@ -740,6 +771,48 @@ export default function SessionPlayer({
   async function advanceAfterResponse(updatedSession) {
     const stored =
       (updatedSession?.responses || []).find((r) => r.taskId === currentTaskId) || null;
+    const cap = taskModelAttemptCap(taskModel);
+    const used = attemptsUsedForTask(updatedSession, currentTaskId);
+    if (stored?.timedOut !== true) {
+      setTaskExpired(false);
+      setAllowExpiredSave(false);
+    }
+    if (stored?.timedOut !== true && cap != null && used > 0 && used < cap) {
+      setFeedbackHold(false);
+      setConstraintMessage(null);
+      expiryOnceRef.current = false;
+      notify(`Answer saved. Attempt ${used} of ${cap}. You can change it and save again.`);
+      try {
+        const timer = itemTimingRef.current;
+        const started = timer?.start?.(currentTaskId);
+        const presented = await apiFetch(
+          `/api/sessions/${sessionIdRef.current}/present`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              taskId: currentTaskId,
+              ...(started?.clientPresentedAt
+                ? { clientPresentedAt: started.clientPresentedAt }
+                : {}),
+            }),
+          },
+          auth
+        );
+        if (presented?.openPresentedAt) {
+          setTaskClock({
+            taskId: presented.taskId || currentTaskId,
+            openPresentedAt: presented.openPresentedAt,
+            accruedMs: typeof presented.accruedMs === "number" ? presented.accruedMs : 0,
+          });
+        }
+      } catch {
+        /* The next save still carries the client clock. */
+      }
+      return;
+    }
+    if (stored?.timedOut === true) {
+      notify("Time is up. Your answer was saved.");
+    }
     if (shouldHoldForImmediateFeedback(policy.feedbackTiming, stored)) {
       setFeedbackHold(true);
       return;
@@ -763,11 +836,42 @@ export default function SessionPlayer({
     };
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  function reportSubmitError(err, fromExpiry) {
+    const code = err?.body?.code;
+    const message = apiErrorMessage(err, err.message || "Submission failed");
+    if (code === "task_attempts_exhausted" || code === "attempts_exhausted") {
+      setAttemptsLocked(true);
+      setConstraintMessage(message);
+      notify(message, "error");
+      return;
+    }
+    if (code === "task_timed_out") {
+      setTaskExpired(true);
+      setAllowExpiredSave(false);
+      setConstraintMessage(message);
+      notify(message, "error");
+      return;
+    }
+    if (fromExpiry) {
+      expiryOnceRef.current = false;
+      setAllowExpiredSave(true);
+      notify(message, "error");
+      return;
+    }
+    console.error(err);
+    if (deliveredItem) notify(message, "error");
+    else alert("Submission failed: " + message);
+  }
+
+  async function handleSubmit(eventOrReason) {
+    const fromExpiry = eventOrReason === "expired";
+    if (eventOrReason && typeof eventOrReason.preventDefault === "function") {
+      eventOrReason.preventDefault();
+    }
     // Teachers review only — never submit examinee responses.
     if (isTeacher) return;
     if (!currentTaskId) return;
+    if (attemptsLocked) return;
     setSubmitting(true);
 
     // D47: THE ITEM PATH. Sends the raw response and nothing else.
@@ -799,10 +903,7 @@ export default function SessionPlayer({
         setSession(updatedSession);
         await advanceAfterResponse(updatedSession);
       } catch (err) {
-        // Match the legacy branch's failure reporting, but through the
-        // toast system D43 made accessible rather than a blocking alert().
-        console.error("Item submit failed", err);
-        notify(apiErrorMessage(err, err.message || "Submission failed"), "error");
+        reportSubmitError(err, fromExpiry);
       } finally {
         setSubmitting(false);
       }
@@ -869,8 +970,7 @@ export default function SessionPlayer({
       setSession(updatedSession);
       await advanceAfterResponse(updatedSession);
     } catch (err) {
-      console.error(err);
-      alert("Submission failed: " + apiErrorMessage(err, err.message));
+      reportSubmitError(err, fromExpiry);
     } finally {
       setSubmitting(false);
     }
@@ -1044,11 +1144,31 @@ export default function SessionPlayer({
   const canEnterReview =
     !sessionClosed &&
     (allAnswered || noMoreTasks || !!measurementStop || !!session?.stopped);
+  const revisionOpen = taskRevisionOpen(session, currentTaskId, taskModel);
   const answerReadOnly =
     sessionClosed ||
     wizardPhase !== WIZARD_PHASE.DRAFT ||
-    answeredIds.has(currentTaskId) ||
-    session?.status === SESSION_STATUS.PAUSED;
+    session?.status === SESSION_STATUS.PAUSED ||
+    attemptsLocked ||
+    (answeredIds.has(currentTaskId) && !revisionOpen);
+  const inputsLocked = answerReadOnly || taskExpired;
+  const taskLimit = effectiveTaskTimeLimit(session, currentTaskId, taskModel);
+  const attemptCap = taskModelAttemptCap(taskModel);
+  const attemptUsed = attemptsUsedForTask(session, currentTaskId);
+  const attemptLabel =
+    attemptCap == null
+      ? null
+      : attemptUsed >= attemptCap
+        ? `Attempt ${attemptUsed} of ${attemptCap}`
+        : `Attempt ${attemptUsed + (answerReadOnly ? 0 : 1)} of ${attemptCap}`;
+  const taskStoredMs = storedMsForOpenVisit(session, currentTaskId, taskClock?.openPresentedAt);
+  expireSubmitRef.current = () => {
+    if (expiryOnceRef.current || isTeacher || !currentTaskId || attemptsLocked || answerReadOnly) return;
+    expiryOnceRef.current = true;
+    setTaskExpired(true);
+    setAllowExpiredSave(false);
+    handleSubmit("expired");
+  };
   // Staff Review/View never edits examinee answers or submits the session.
   const staffReadOnly = isTeacher;
 
@@ -1165,6 +1285,45 @@ export default function SessionPlayer({
                 )}
               </div>
 
+              {attemptLabel && (
+                <p className="text-sm text-slate-600" data-testid="task-attempt-count">
+                  {attemptLabel}
+                </p>
+              )}
+              <TaskTimeCountdown
+                limitMs={taskLimit?.limitMs}
+                openPresentedAt={
+                  taskClock?.taskId === currentTaskId ? taskClock.openPresentedAt : null
+                }
+                accruedMs={taskClock?.accruedMs || 0}
+                storedMs={taskStoredMs}
+                active={!answerReadOnly && !taskExpired}
+                onExpire={() => expireSubmitRef.current()}
+              />
+              {taskExpired && !currentResponse?.timedOut && (
+                <p
+                  className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                  data-testid="task-time-expired"
+                  role="status"
+                >
+                  Time is up for this question. Your current answer is being submitted.
+                </p>
+              )}
+              {constraintMessage && (
+                <p
+                  className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                  data-testid="task-constraint-message"
+                  role="alert"
+                >
+                  {constraintMessage}
+                </p>
+              )}
+              {currentResponse?.timedOut && (
+                <p className="text-sm text-amber-800" data-testid="task-timed-out-note" role="status">
+                  This answer was saved when the time limit ended.
+                </p>
+              )}
+
               <PresentationItemFrame
                 grouping={policy.grouping}
                 sharedText={
@@ -1191,13 +1350,13 @@ export default function SessionPlayer({
                     item={deliveredItem}
                     value={itemResponse}
                     onChange={setItemResponse}
-                    disabled={answerReadOnly || submitting}
+                    disabled={inputsLocked || submitting}
                     presentation={presentation}
                   />
-                  {!answerReadOnly && (
+                  {(!answerReadOnly || allowExpiredSave) && !attemptsLocked && (
                     <button
                       type="submit"
-                      disabled={submitting || !canPresentItem(deliveredItem)}
+                      disabled={submitting || (taskExpired && !allowExpiredSave) || !canPresentItem(deliveredItem)}
                       className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
                     >
                       {submitting ? "Saving…" : "Save answer"}
@@ -1225,7 +1384,7 @@ export default function SessionPlayer({
                               name={`q-${question.id}`}
                               checked={selectedOptionId === oid}
                               onChange={() => setSelectedOptionId(oid)}
-                              disabled={answerReadOnly || submitting}
+                              disabled={inputsLocked || submitting}
                             />
                             {label}
                           </label>
@@ -1239,7 +1398,7 @@ export default function SessionPlayer({
                       placeholder="Enter rubric level or comment"
                       value={textAnswer}
                       onChange={(e) => setTextAnswer(e.target.value)}
-                      disabled={answerReadOnly || submitting}
+                      disabled={inputsLocked || submitting}
                     />
                   )}
                   {["constructed", "open"].includes(question.type) && (
@@ -1248,7 +1407,7 @@ export default function SessionPlayer({
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                       value={textAnswer}
                       onChange={(e) => setTextAnswer(e.target.value)}
-                      disabled={answerReadOnly || submitting}
+                      disabled={inputsLocked || submitting}
                     />
                   )}
                   {!question.type && (
@@ -1256,13 +1415,13 @@ export default function SessionPlayer({
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                       value={textAnswer}
                       onChange={(e) => setTextAnswer(e.target.value)}
-                      disabled={answerReadOnly || submitting}
+                      disabled={inputsLocked || submitting}
                     />
                   )}
-                  {!answerReadOnly && (
+                  {(!answerReadOnly || allowExpiredSave) && !attemptsLocked && (
                     <button
                       type="submit"
-                      disabled={submitting}
+                      disabled={submitting || (taskExpired && !allowExpiredSave)}
                       className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
                     >
                       {submitting ? "Saving…" : "Save answer"}

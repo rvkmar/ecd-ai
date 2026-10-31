@@ -195,8 +195,10 @@ export function findStudentRecord(db, studentId) {
 }
 
 /**
- * Raw task-model limits for the tasks on a session. TU10 enforces them.
- * This only reads timingConstraint.timeLimitSeconds.
+ * Raw task-model limits for the tasks on a session.
+ * TU10 enforces deliveryAdministration.taskTimeLimits when that key is a
+ * positive number, and otherwise this raw timingConstraint.timeLimitSeconds.
+ * This function only reads the raw seconds so the stamp can be built.
  */
 export function taskTimeLimitInputs(db, taskIds) {
   const rows = [];

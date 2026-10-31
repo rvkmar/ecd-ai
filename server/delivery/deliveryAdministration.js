@@ -126,7 +126,7 @@ function refreshEffectiveDeadline(admin) {
  * accommodationTimeMultiplier and extraTimeMinutes are that profile's
  * timing fields. taskLimits is [{ taskId, timeLimitSeconds }] from the
  * task model. Adjusted task seconds are stored as taskTimeLimits.
- * TU10 should use taskTimeLimits when the key is present. Those seconds
+ * TU10 uses taskTimeLimits when the key is present. Those seconds
  * already include the student factor. Applying the factor again would
  * count it twice. A missing key means the raw timingConstraint stands.
  */
@@ -349,39 +349,58 @@ function existingResponse(session, taskId) {
 }
 
 /**
- * attempts is the maximum number of scored submits for one task.
- * A further submit replaces that task's response rows. One submit can
- * store several rows when one work product yields several observables
- * (R4); they share the attempt number. Accumulation then sees one
- * answer per observable, not per click.
+ * attempts is the maximum number of scored submits for one task from the
+ * delivery stamp. A further submit replaces that task's response rows.
+ * One submit can store several rows when one work product yields several
+ * observables (R4); they share the attempt number. Accumulation then sees
+ * one answer per observable, not per click.
  *
- * reviewAllowed false blocks that replacement. The cap still applies when
- * review is allowed. When review is off, a second submit is refused even
- * if attempts remain: changing an earlier answer is the review rule.
- * No stamp returns action "legacy". The item path keeps its historical
- * 409. The legacy question path still appends.
+ * options.taskMaxAttempts is the Task Model resourceConstraints.maxAttempts
+ * (TU10). Only an integer of at least 1 counts. It is a per-task budget
+ * for this session. A retry under that budget replaces the stored rows
+ * even when review is off. The delivery cap still applies, and the smaller
+ * cap wins. When the task cap is absent, reviewAllowed false still blocks
+ * a change, and no stamp still returns action "legacy". The item path
+ * keeps its historical 409 for that legacy action. The question path
+ * still appends.
  */
-export function evaluateAttempt(session, taskId) {
+export function evaluateAttempt(session, taskId, options = {}) {
   const admin = session?.deliveryAdministration;
   const existing = existingResponse(session, taskId);
   const cap = admin && Number.isInteger(admin.attempts) && admin.attempts >= 1 ? admin.attempts : null;
   const reviewIsSet = admin && typeof admin.reviewAllowed === "boolean";
+  const rawTaskMax = options?.taskMaxAttempts;
+  const taskMax = Number.isInteger(rawTaskMax) && rawTaskMax >= 1 ? rawTaskMax : null;
 
   if (!existing) {
     return {
       ok: true,
       action: "append",
-      nextAttempt: cap != null || reviewIsSet ? 1 : undefined,
+      nextAttempt: cap != null || reviewIsSet || taskMax != null ? 1 : undefined,
     };
   }
 
   const used = Number.isInteger(existing.attempt) && existing.attempt >= 1 ? existing.attempt : 1;
 
-  if (!cap && !reviewIsSet) {
+  if (taskMax != null && used >= taskMax) {
+    const noun = taskMax === 1 ? "attempt" : "attempts";
+    return {
+      ok: false,
+      status: 409,
+      code: "task_attempts_exhausted",
+      error: `Task ${taskId} allows ${taskMax} ${noun}. No further answers are accepted.`,
+      attemptsUsed: used,
+      maxAttempts: taskMax,
+    };
+  }
+
+  const taskRetry = taskMax != null && used < taskMax;
+
+  if (!cap && !reviewIsSet && !taskRetry) {
     return { ok: true, action: "legacy" };
   }
 
-  if (reviewIsSet && admin.reviewAllowed === false) {
+  if (reviewIsSet && admin.reviewAllowed === false && !taskRetry) {
     return {
       ok: false,
       status: 409,
