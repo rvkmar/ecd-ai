@@ -211,6 +211,22 @@ export default function SessionReport({ sessionId, onClose }) {
           <ReportClaims row={learnerFeedback.summary} className="text-sm text-gray-700" />
           <p className="text-gray-700">{learnerFeedback.summary?.message}</p>
 
+          {learnerFeedback.itemFeedback?.length > 0 && (
+            <div data-testid="learner-item-feedback">
+              <h4 className="font-semibold">Item feedback</h4>
+              <ul className="list-disc ml-5">
+                {learnerFeedback.itemFeedback.map((row, i) => (
+                  <li
+                    key={`${row.itemId || "item"}-${row.taskId || i}-${i}`}
+                    data-feedback-rule={row.rule || ""}
+                  >
+                    {row.text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {learnerFeedback.assemblyProgress?.assemblyModelId && (
             <p className="text-gray-700">
               Assembly progress: {assemblyProgressLine(learnerFeedback.assemblyProgress)}

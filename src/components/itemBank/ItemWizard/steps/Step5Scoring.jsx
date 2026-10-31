@@ -22,10 +22,11 @@ import { useItemWizard } from "../ItemWizardContext";
 import ScoringMethodSelector from "../components/scoring/ScoringMethodSelector";
 import EvidenceActivationEditor from "../components/scoring/EvidenceActivationEditor";
 import ScoringSummaryPanel from "../components/scoring/ScoringSummaryPanel";
+import LearnerFeedbackEditor from "../components/scoring/LearnerFeedbackEditor";
 import { activationMapIssues } from "../../itemConstants";
 
 export default function Step5Scoring() {
-  const { item, ctx, replaceObject, canEdit, chainLoading } = useItemWizard();
+  const { item, ctx, replaceObject, updateField, canEdit, chainLoading } = useItemWizard();
 
   const scoring = item.scoring || {
     method: "",
@@ -141,6 +142,16 @@ export default function Step5Scoring() {
           </div>
         </div>
       )}
+
+      <LearnerFeedbackEditor
+        item={item}
+        canEdit={canEdit}
+        onChange={(next) => {
+          if (!canEdit) return;
+          if (next && typeof next === "object") replaceObject("feedback", next);
+          else updateField("feedback", null);
+        }}
+      />
 
       <ScoringSummaryPanel
         scoring={scoring}

@@ -118,8 +118,15 @@ export function orderTaskIds(taskIds, itemOrder, seed) {
  */
 export function responseFeedbackLines(response) {
   if (!response || typeof response !== "object") return [];
-  const lines = [];
   const feedback = response.feedback;
+  if (feedback && typeof feedback === "object" && !Array.isArray(feedback)) {
+    // Authored task feedback replaces the scoring fallbacks. Absent text
+    // keeps the previous lines (message, correct, rationale, score).
+    if (typeof feedback.text === "string" && feedback.text.trim()) {
+      return [feedback.text.trim()];
+    }
+  }
+  const lines = [];
   if (feedback && typeof feedback === "object" && !Array.isArray(feedback)) {
     if (typeof feedback.message === "string" && feedback.message.trim()) {
       lines.push(feedback.message.trim());

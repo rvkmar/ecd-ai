@@ -91,6 +91,7 @@ import { jointPriorErrors, jointPriorPartnerLimitErrors } from "./jointPrior.js"
 import { deliveryModelBindingErrors } from "./deliveryModelReadiness.js";
 import { studentModelRecordErrors } from "./studentModelRecord.js";
 import { performanceLevelErrors } from "./performanceLevels.js";
+import { itemFeedbackErrors } from "./itemFeedback.js";
 import { taskSpecErrors } from "./taskSpecReadiness.js";
 import { CALIBRATION_JOB_STATUS } from "../../server/utils/lifecycleMatrix.js";
 import { scoringBundleAuthoringErrors } from "./scoringBundles.js";
@@ -148,6 +149,18 @@ export const schema = {
         strengthOverride: 'number',     // optional override (1–5)
         rationale: 'string'
       }]
+    },
+
+    /* ---------------------------------------------
+      4b LEARNER FEEDBACK (OPTIONAL, TU8)
+      Task-level text returned by response processing. byOption is keyed
+      by option id. byScore is keyed by a score or an inclusive range.
+      general is the fallback. Absent means today's player messages.
+    --------------------------------------------- */
+    feedback: {
+      byOption: 'object',
+      byScore: 'object',
+      general: 'string'
     },
 
     /* ---------------------------------------------
@@ -4425,6 +4438,10 @@ export function validateEntity(collection, obj, db = null, options = {}) {
          obj.scoring.maxScore <= 0)) {
       errors.push("scoring.maxScore must be a positive number.");
     }
+
+    // TU8: optional learner feedback. Absent is valid. Present values
+    // must be option ids, scores or ranges, and non-empty text.
+    errors.push(...itemFeedbackErrors(obj));
 
     // Day 22 (vocabulary consolidation): cognitiveDemand.bloomLevel/
     // reasoningType were declared as bare 'string' with no enum check at

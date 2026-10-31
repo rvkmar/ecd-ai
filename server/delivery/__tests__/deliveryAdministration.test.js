@@ -217,7 +217,14 @@ describe("feedback redaction", () => {
     studentModel: { irtTheta: 1.2 },
     assemblyProgress: { assemblyModelId: "am", delivered: 1 },
     deliveryAdministration: { feedbackMode: "none", attempts: 1 },
-    responses: [{ taskId: "t1", rawAnswer: "opt_a", activated: true, rationale: "Correct.", scoredValue: 1 }],
+    responses: [{
+      taskId: "t1",
+      rawAnswer: "opt_a",
+      activated: true,
+      rationale: "Correct.",
+      scoredValue: 1,
+      feedback: { text: "Check the units.", rule: "byOption", key: "opt_a" },
+    }],
   };
   const student = { role: "student", username: "stud1" };
   const teacher = { role: "teacher", username: "teach1" };
@@ -228,6 +235,7 @@ describe("feedback redaction", () => {
     expect(view.responses[0].activated).toBeUndefined();
     expect(view.responses[0].rationale).toBeUndefined();
     expect(view.responses[0].scoredValue).toBeUndefined();
+    expect(view.responses[0].feedback).toBeUndefined();
     expect(view.studentModel).toBeUndefined();
     expect(view.assemblyProgress).toBeUndefined();
     expect(view.deliveryTiming.feedbackMode).toBe("none");
@@ -236,6 +244,7 @@ describe("feedback redaction", () => {
 
     const staff = presentSession(session, teacher);
     expect(staff.responses[0].activated).toBe(true);
+    expect(staff.responses[0].feedback.text).toBe("Check the units.");
     expect(staff.studentModel.irtTheta).toBe(1.2);
   });
 
@@ -245,16 +254,19 @@ describe("feedback redaction", () => {
       student
     );
     expect(immediate.responses[0].activated).toBe(true);
+    expect(immediate.responses[0].feedback.text).toBe("Check the units.");
     const delayed = presentSession(
       { ...session, deliveryAdministration: { feedbackMode: "delayed_end" } },
       student
     );
     expect(delayed.responses[0].activated).toBeUndefined();
+    expect(delayed.responses[0].feedback).toBeUndefined();
     const released = presentSession(
       { ...session, status: "submitted", isCompleted: true, deliveryAdministration: { feedbackMode: "delayed_end" } },
       student
     );
     expect(released.responses[0].activated).toBe(true);
+    expect(released.responses[0].feedback.text).toBe("Check the units.");
     const unstamped = { id: "plain", responses: [{ activated: true }] };
     expect(presentSession(unstamped, student)).toBe(unstamped);
   });

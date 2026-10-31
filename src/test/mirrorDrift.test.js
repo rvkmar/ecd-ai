@@ -163,6 +163,18 @@ describe("mirror: itemCompatibilityNotes() <-> schema.js items block", () => {
     expect(notes.some((n) => n.severity === "blocking")).toBe(true);
   });
 
+  it("agree that learner feedback keyed by an unknown option is a problem", () => {
+    const em = makeEvidenceModel();
+    const item = makeItem({
+      feedback: { byOption: { opt_missing: "Try the other choice." } },
+    });
+    const db = makeDB({ item, evidenceModel: em });
+    const { errors } = validateEntity("items", item, db);
+    const notes = itemCompatibilityNotes(item, contextFor(item, em));
+    expect(errors.some((e) => /items\.feedback\.byOption/.test(e))).toBe(true);
+    expect(notes.some((n) => /items\.feedback\.byOption/.test(n.message))).toBe(true);
+  });
+
   it("agree that a non-activating rule on a 'supports'-only observable is a problem", () => {
     const em = makeEvidenceModel();
     const item = makeItem({

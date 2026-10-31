@@ -21,6 +21,7 @@ const RESPONSE_FEEDBACK_KEYS = [
   "direction",
   "strength",
   "rationale",
+  "feedback",
   "scoredValue",
   "provisionalActivated",
   "provisionalStrength",
