@@ -1,10 +1,13 @@
 # modules/health.R
 # GET /health reports exact running package versions (ADR 0002 provenance).
-# Versions are read from the session, never hardcoded.
+# Versions are read from the session, never hardcoded. A package that is
+# not installed is JSON null, the same as every other entry.
+# eRm, bnlearn, and gRain are null on rvkmar/r-backend before v2.7.
 
 HEALTH_PACKAGES <- c(
-  "mirt", "GDINA", "TAM", "difR", "equate", "plink", "plumber", "jsonlite",
-  "ggplot2", "svglite"
+  "mirt", "GDINA", "TAM", "difR", "equate", "plink",
+  "eRm", "bnlearn", "gRain",
+  "plumber", "jsonlite", "ggplot2", "svglite"
 )
 
 # jsonlite is a declared runtime package (see Dockerfile /health). Used

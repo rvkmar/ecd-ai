@@ -260,6 +260,9 @@ export function checkRBackendBenchmarkPackages(healthJson) {
   }
   const packages = healthJson?.packages || {};
   const required = ["mirt", "GDINA", "TAM", "difR", "plink"];
+  // eRm, bnlearn, and gRain are on /health once the repo app is mounted.
+  // They are null on published latest until v2.7 is pushed. Missing them
+  // must not fail this gate. test-lltm.R covers eRm after that push.
   // ggplot2/svglite power HTML reports. Missing them must not fail the
   // Hub gate until rvkmar/r-backend is rebuilt; live HTML tests skip.
   for (const name of required) {

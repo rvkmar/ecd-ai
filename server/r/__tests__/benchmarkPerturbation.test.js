@@ -6,6 +6,9 @@
 // estimates pass; this proves the acceptance predicates are not inert.
 
 import { describe, it, expect } from "vitest";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   LSAT7_ITEM_IDS,
   PLANTED_DIF_ITEM,
@@ -276,6 +279,23 @@ describe("D88 Hub R package gate", () => {
     expect(r.ok, r.failures.join("; ")).toBe(true);
   });
 
+  it("stays green when eRm, bnlearn, and gRain are absent (pre-v2.7 image)", () => {
+    const r = checkRBackendBenchmarkPackages({
+      status: "healthy",
+      packages: {
+        mirt: "1.48",
+        GDINA: "2.13.2",
+        TAM: "4.3.25",
+        difR: "6.1.0",
+        plink: "1.5.1",
+        eRm: null,
+        bnlearn: null,
+        gRain: null,
+      },
+    });
+    expect(r.ok, r.failures.join("; ")).toBe(true);
+  });
+
   it("fails loudly when plink is missing from the Hub image", () => {
     const r = checkRBackendBenchmarkPackages({
       status: "healthy",
@@ -289,5 +309,31 @@ describe("D88 Hub R package gate", () => {
     });
     expect(r.ok).toBe(false);
     expect(r.failures.join(" ")).toMatch(/plink/);
+  });
+});
+
+describe("/health package list", () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+
+  it("names eRm, bnlearn, and gRain next to mirt, GDINA, and TAM", () => {
+    const health = fs.readFileSync(
+      path.join(root, "r-backend/app/modules/health.R"),
+      "utf8"
+    );
+    const block = health.match(/HEALTH_PACKAGES\s*<-\s*c\(([\s\S]*?)\)/);
+    expect(block).toBeTruthy();
+    for (const name of ["mirt", "GDINA", "TAM", "difR", "equate", "plink", "eRm", "bnlearn", "gRain", "plumber", "jsonlite"]) {
+      expect(block[1]).toContain(`"${name}"`);
+    }
+  });
+
+  it("pins eRm 1.0.10 in the image recipe and installs bnlearn and gRain from CRAN", () => {
+    const recipe = fs.readFileSync(path.join(root, "r-backend/install-cran-delta.R"), "utf8");
+    expect(recipe).toMatch(/version\s*=\s*"1\.0\.10"/);
+    expect(recipe).toContain('"bnlearn"');
+    expect(recipe).toContain('"gRain"');
+    expect(recipe).toContain("cloud.r-project.org");
+    const dockerfile = fs.readFileSync(path.join(root, "r-backend/Dockerfile"), "utf8");
+    expect(dockerfile).toContain("install-cran-delta.R");
   });
 });

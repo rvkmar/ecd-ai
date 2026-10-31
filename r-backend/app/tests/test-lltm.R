@@ -49,10 +49,15 @@ contrast <- projected$fitted[2] - projected$fitted[1]
 has_erm <- requireNamespace("eRm", quietly = TRUE)
 has_mirt <- requireNamespace("mirt", quietly = TRUE)
 require_engine <- identical(Sys.getenv("ECD_REQUIRE_LLTM_PACKAGES", unset = ""), "1")
-# CI's r-backend image has mirt and not eRm. The flag means that mirt path
-# must run. eRm is optional and is not required on the image.
+# CI pulls rvkmar/r-backend:latest. That tag is the v2.6 set (mirt, no
+# eRm) until v2.7 is pushed. The flag means the mirt path must run.
+# After that push, eRm is present and the default fit is eRm::LLTM.
+# The mirt path below still runs either way.
 if (require_engine && !has_mirt) {
-  stop("LLTM recovery in CI needs mirt (eRm is not required)", call. = FALSE)
+  stop("LLTM recovery in CI needs mirt", call. = FALSE)
+}
+if (require_engine && !has_erm) {
+  message("eRm is not on this image; mirt path only, until rvkmar/r-backend:v2.7 is pushed")
 }
 if (!has_erm && !has_mirt) {
   message("LLTM recovery skipped: neither eRm nor mirt is installed")
@@ -107,7 +112,8 @@ check_recovery <- function(fitted, label) {
   message("LLTM recovery passed (", label, ", ", fitted$sourceModel, ")")
 }
 
-# Default engine: eRm when installed, otherwise mirt. CI has only mirt.
+# Default engine: eRm when installed, otherwise mirt.
+# Published latest has only mirt until v2.7 is pushed.
 fitted <- fit_lltm_matrix(X, W, item_ids, column_names)
 if (has_erm) {
   .stop_if(fitted$sourceModel != "eRm::LLTM", "eRm is installed, so the default fit should be the joint LLTM")
@@ -120,8 +126,8 @@ if (!has_erm && has_mirt) {
 }
 check_recovery(fitted, "default")
 
-# The published image has mirt and not eRm. Run that path even when eRm
-# is also installed, so a name with '=' cannot regress unnoticed.
+# Run the mirt path even when eRm is installed, so a name with '='
+# cannot regress unnoticed. Before v2.7 this is also the default.
 if (has_mirt) {
   mirt_fit <- fit_lltm_matrix(X, W, item_ids, column_names, engine = "mirt")
   .stop_if(

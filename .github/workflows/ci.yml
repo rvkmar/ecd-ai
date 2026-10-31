@@ -128,6 +128,11 @@ jobs:
       - name: R model-criticism tests on the fixtures
         run: docker exec -e ECD_REQUIRE_MODEL_CRITICISM_PACKAGES=1 r-backend Rscript /home/app/tests/test-model-criticism.R
 
+      # Pulls the published image, not a build of r-backend/Dockerfile.
+      # Until rvkmar/r-backend:v2.7 is pushed as latest, this image has
+      # mirt and not eRm, so test-lltm.R takes the mirt path. After that
+      # push the same step runs eRm::LLTM as the default and still runs
+      # the mirt path. Do not require eRm here before the push.
       - name: R LLTM covariate recovery
         run: docker exec -e ECD_REQUIRE_LLTM_PACKAGES=1 r-backend Rscript /home/app/tests/test-lltm.R
 
