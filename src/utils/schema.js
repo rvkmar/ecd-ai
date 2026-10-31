@@ -26,6 +26,7 @@ import { intendedDifficultyPlacement } from "./intendedDifficulty.js";
 // unable to disagree.
 import { dinaParametersAreUsable } from "../../server/delivery/attributeAccumulation.js";
 import { deliveryAdministrationErrors } from "../../server/delivery/deliveryAdministration.js";
+import { accommodationFieldErrors } from "./resolveAccommodations.js";
 import { bayesianNetworkAuthoringErrors } from "../../server/delivery/bayesianNetwork.js";
 import { evaluateAssemblySufficiency } from "./assemblySufficiency.js";
 import { parameterSetStorageErrors } from "./parameterSetRecord.js";
@@ -733,6 +734,9 @@ export const schema = {
   students: {
     id: 'string',
     name: 'string',
+    // Optional per-examinee delivery. Absent means the session is unchanged.
+    // Shape: { extraTimeMinutes, timeMultiplier, fontScale, highContrast, readAloud }.
+    accommodations: 'object',
     createdAt: 'date',
     updatedAt: 'date',
   },
@@ -2319,6 +2323,10 @@ export function validateEntity(collection, obj, db = null, options = {}) {
       const d = new Date(val);
       if (isNaN(d.getTime())) errors.push(`${key} should be date`);
     }
+  }
+
+  if (collection === "students" && obj.accommodations != null) {
+    errors.push(...accommodationFieldErrors(obj.accommodations));
   }
 
   /* =====================================================

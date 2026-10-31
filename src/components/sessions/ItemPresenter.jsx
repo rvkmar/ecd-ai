@@ -25,6 +25,8 @@
 import React from "react";
 import { presentationChrome } from "./presentationChrome.js";
 import { stimulusBlockText } from "@/utils/stimulusText";
+import ReadAloudButton from "./ReadAloudButton.jsx";
+import { itemReadAloudParts } from "./readAloudText.js";
 
 // The raw answer shapes below are what sessionRoutes.js's /submit wraps
 // into a work product:
@@ -78,6 +80,7 @@ export default function ItemPresenter({
   if (!item) return null;
 
   const chrome = presentationChrome(presentation);
+  const spoken = itemReadAloudParts(item);
   const type = item.interaction?.type;
   const components = Array.isArray(item.interaction?.responseComponents)
     ? item.interaction.responseComponents
@@ -218,6 +221,7 @@ export default function ItemPresenter({
       data-testid="item-presenter"
       {...chrome.dataAttrs}
     >
+      <ReadAloudButton stem={spoken.stem} options={spoken.options} enabled={chrome.readAloud} />
       <StimulusBlocks stimulus={item.stimulus} />
       {renderInteraction()}
     </div>

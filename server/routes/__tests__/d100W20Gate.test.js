@@ -84,6 +84,7 @@ vi.mock("../../../src/utils/db-server.js", () => ({
   readRawDB: vi.fn(() => fixture),
   saveDB: vi.fn(),
   finishSession: vi.fn(),
+  recordAuditEvent: vi.fn(),
 }));
 
 vi.mock("../../utils/dbAdapter.js", () => ({

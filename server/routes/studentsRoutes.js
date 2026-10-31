@@ -2,10 +2,16 @@
 import express from "express";
 import { authenticateToken, authorizeRole } from "../utils/authMiddleware.js";
 import { sanitizeRequestInputs } from "../utils/requestValidation.js";
-import { loadDB, saveDB } from "../../src/utils/db-server.js";
+import { loadDB, recordAuditEvent, saveDB } from "../../src/utils/db-server.js";
 import { validateEntity } from "../../src/utils/schema.js";
 import { buildAssignableRoster } from "../../src/utils/sessionPlay.js";
 import { dbAdapter } from "../utils/dbAdapter.js";
+import { accommodationsForStorage } from "../../src/utils/resolveAccommodations.js";
+import {
+  staffActorForAccess,
+  staffMayAccessStudent,
+  studentMayViewOwnAccommodations,
+} from "../utils/studentAccommodationAccess.js";
 
 const router = express.Router();
 
@@ -21,6 +27,22 @@ router.use(sanitizeRequestInputs);
 // the conservative default until a real district/teacher enrollment
 // workflow is designed; see the matching addition to rolePermissions.js.
 const canAuthor = authorizeRole(["admin"]);
+const canEditAccommodations = authorizeRole(["admin", "district", "teacher"]);
+
+function findStudent(db, id) {
+  const want = String(id);
+  return (db.students || []).find(
+    (row) => row && (String(row.id) === want || String(row.username || "") === want)
+  );
+}
+
+function accommodationPayload(body) {
+  if (body == null) return null;
+  if (Object.prototype.hasOwnProperty.call(body, "accommodations")) {
+    return body.accommodations == null ? null : body.accommodations;
+  }
+  return body;
+}
 
 // GET /api/students
 router.get("/", (req, res) => {
@@ -85,6 +107,64 @@ router.post("/", canAuthor, (req, res) => {
   res.status(201).json(newStudent);
 });
 
+
+// GET /api/students/:id/accommodations
+// Staff in the student's district, school, or class. The student may read
+// their own row. Anyone else gets the same 404 as a missing id.
+router.get("/:id/accommodations", (req, res) => {
+  const db = loadDB();
+  const student = findStudent(db, req.params.id);
+  if (!student) return res.status(404).json({ error: "Student not found" });
+  const actor = staffActorForAccess(req.user, db);
+  const allowed =
+    staffMayAccessStudent(actor, student) ||
+    studentMayViewOwnAccommodations(req.user, student);
+  if (!allowed) return res.status(404).json({ error: "Student not found" });
+  res.json({
+    id: student.id,
+    accommodations: student.accommodations || null,
+  });
+});
+
+// PUT /api/students/:id/accommodations
+// Body is the profile, or { accommodations }. Empty object or null clears
+// it. A repeat of the stored profile does not write an audit row.
+router.put("/:id/accommodations", canEditAccommodations, async (req, res) => {
+  const db = loadDB();
+  const student = findStudent(db, req.params.id);
+  if (!student) return res.status(404).json({ error: "Student not found" });
+  const actor = staffActorForAccess(req.user, db);
+  if (!staffMayAccessStudent(actor, student)) {
+    return res.status(404).json({ error: "Student not found" });
+  }
+
+  const parsed = accommodationsForStorage(accommodationPayload(req.body));
+  if (!parsed.ok) {
+    return res.status(400).json({ error: "Schema validation failed", details: parsed.errors });
+  }
+
+  const before = student.accommodations ? structuredClone(student.accommodations) : null;
+  const after = parsed.value;
+  if (JSON.stringify(before) === JSON.stringify(after)) {
+    return res.json({ id: student.id, accommodations: after });
+  }
+
+  if (after) student.accommodations = after;
+  else delete student.accommodations;
+  student.updatedAt = new Date().toISOString();
+
+  const { valid, errors } = validateEntity("students", student, db);
+  if (!valid) return res.status(400).json({ error: "Schema validation failed", details: errors });
+
+  await saveDB(db);
+  await recordAuditEvent({
+    action: "student.accommodations.update",
+    entity: { collection: "students", id: student.id, version: null },
+    detail: { before, after },
+  });
+
+  res.json({ id: student.id, accommodations: after });
+});
 
 // DELETE /api/students/:id
 router.delete("/:id", canAuthor, (req, res) => {

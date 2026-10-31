@@ -244,6 +244,57 @@ describe("POST /api/sessions stamps administration", () => {
     expect(plain.body.endTime).toBeUndefined();
     expect(plain.body.deliveryTiming).toBeUndefined();
   });
+
+  it("merges student accommodations into the session deadline and task limits", async () => {
+    const db = {
+      sessions: [],
+      students: [{
+        id: "stu-acc",
+        name: "Ada",
+        accommodations: {
+          extraTimeMinutes: 5,
+          timeMultiplier: 1.5,
+          fontScale: 1.4,
+          highContrast: true,
+          readAloud: true,
+        },
+      }],
+      users: [],
+      tasks: [{ id: "t1", taskModelId: "tm1" }],
+      taskModels: [{
+        id: "tm1",
+        versionNumber: 1,
+        taskStructure: { timingConstraint: { timeLimitSeconds: 60 } },
+      }],
+      policies: [{ id: "p-fixed", type: "fixed" }],
+      presentationModels: [{
+        id: "pm1",
+        locked: true,
+        status: "confirmed",
+        taskModelId: "tm1",
+        taskModelVersion: 1,
+        accessibility: { timeMultiplier: 2 },
+      }],
+      deliveryModels: [{
+        id: "dm1",
+        policyId: "p-fixed",
+        presentationModelId: "pm1",
+        administration: { timeLimitMinutes: 20 },
+      }],
+    };
+    const app = appFor(db);
+    const res = await request(app)
+      .post("/api/sessions")
+      .send({ taskIds: ["t1"], studentId: "stu-acc", deliveryModelId: "dm1" });
+    expect(res.status).toBe(201);
+    const admin = res.body.deliveryAdministration;
+    expect(admin.timeMultiplier).toBe(2);
+    expect(admin.accommodationTimeMultiplier).toBe(1.5);
+    expect(admin.extraTimeMinutes).toBe(5);
+    expect(admin.taskTimeLimits).toEqual({ t1: 390 });
+    expect(admin.accommodations).toMatchObject({ readAloud: true, fontScale: 1.4, highContrast: true });
+    expect(Date.parse(res.body.endTime) - Date.parse(res.body.startedAt)).toBe(65 * 60 * 1000);
+  });
 });
 
 describe("time limit", () => {

@@ -16,6 +16,7 @@ vi.mock("../../utils/authMiddleware.js", () => ({
 vi.mock("../../../src/utils/db-server.js", () => ({
   loadDB: vi.fn(),
   saveDB: vi.fn(),
+  recordAuditEvent: vi.fn(),
 }));
 
 vi.mock("../../utils/dbAdapter.js", () => ({
