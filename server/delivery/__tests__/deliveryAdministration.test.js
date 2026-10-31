@@ -249,6 +249,60 @@ describe("pause and attempts", () => {
     expect(spent.code).toBe("attempts_exhausted");
     expect(spent.error).toMatch(/all 2 attempts/);
   });
+
+  it("counts a task maxAttempts budget and then refuses, without a delivery stamp", () => {
+    const session = { responses: [] };
+    expect(evaluateAttempt(session, "t1", { taskMaxAttempts: 2 })).toMatchObject({
+      ok: true,
+      action: "append",
+      nextAttempt: 1,
+    });
+    session.responses = [{ taskId: "t1", attempt: 1 }];
+    expect(evaluateAttempt(session, "t1", { taskMaxAttempts: 2 })).toMatchObject({
+      ok: true,
+      action: "replace",
+      nextAttempt: 2,
+    });
+    session.responses[0].attempt = 2;
+    const refused = evaluateAttempt(session, "t1", { taskMaxAttempts: 2 });
+    expect(refused).toMatchObject({
+      ok: false,
+      status: 409,
+      code: "task_attempts_exhausted",
+      maxAttempts: 2,
+      attemptsUsed: 2,
+    });
+    expect(refused.error).toMatch(/allows 2 attempts/);
+    expect(refused.error).toMatch(/No further answers are accepted/);
+  });
+
+  it("ignores a missing or non-positive task cap", () => {
+    const session = { responses: [{ taskId: "t1" }] };
+    expect(evaluateAttempt(session, "t1", {}).action).toBe("legacy");
+    expect(evaluateAttempt(session, "t1", { taskMaxAttempts: null }).action).toBe("legacy");
+    expect(evaluateAttempt(session, "t1", { taskMaxAttempts: 0 }).action).toBe("legacy");
+    expect(evaluateAttempt(session, "t1").action).toBe("legacy");
+  });
+
+  it("allows a task retry when review is off, and still honors the smaller delivery cap", () => {
+    const open = {
+      responses: [{ taskId: "t1", attempt: 1 }],
+      deliveryAdministration: { reviewAllowed: false, attempts: 3 },
+    };
+    expect(evaluateAttempt(open, "t1", { taskMaxAttempts: 2 })).toMatchObject({
+      ok: true,
+      action: "replace",
+      nextAttempt: 2,
+    });
+
+    const spentDelivery = {
+      responses: [{ taskId: "t1", attempt: 2 }],
+      deliveryAdministration: { reviewAllowed: true, attempts: 2 },
+    };
+    expect(evaluateAttempt(spentDelivery, "t1", { taskMaxAttempts: 5 }).code).toBe(
+      "attempts_exhausted"
+    );
+  });
 });
 
 describe("feedback redaction", () => {

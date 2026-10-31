@@ -98,6 +98,8 @@ import {
   taskResponseTiming,
   timingFieldsForSubmit,
 } from "../delivery/responseTiming.js";
+import { applyTaskTimeout, decideTaskSubmit } from "../delivery/taskConstraints.js";
+import { taskModelAttemptCap } from "../../src/utils/taskConstraints.js";
 // D49b: `import { log2 } from "mathjs"` stood here and was NEVER CALLED --
 // entropy() below has always used the native Math.log2. It was mathjs's only
 // reference anywhere in src/ or server/, so the whole dependency was dead
@@ -202,6 +204,49 @@ function readClientTiming(body) {
     visibleMs: timing.visibleMs,
     hiddenMs: timing.hiddenMs,
   };
+}
+
+function taskModelForTask(db, taskId) {
+  const task = (db?.tasks || []).find((row) => row && row.id === taskId) || null;
+  const taskModel = task?.taskModelId
+    ? (db?.taskModels || []).find((row) => row && row.id === task.taskModelId) || null
+    : null;
+  return taskModel;
+}
+
+// Time limit first, then the attempt cap. A refusal is the HTTP body.
+// A late first answer is not a refusal: timeDecision.timedOut is set and
+// the caller flags the scored rows. No limit and no task cap leave the
+// historical attempt decision unchanged.
+function taskConstraintGate(db, session, taskId, now) {
+  const taskModel = taskModelForTask(db, taskId);
+  const timeDecision = decideTaskSubmit({ session, taskId, taskModel, now });
+  if (timeDecision.refuse) {
+    return {
+      refusal: {
+        status: timeDecision.status,
+        body: { error: timeDecision.error, code: timeDecision.code },
+      },
+      timeDecision,
+      attempt: null,
+    };
+  }
+  const attempt = evaluateAttempt(session, taskId, {
+    taskMaxAttempts: taskModelAttemptCap(taskModel),
+  });
+  if (!attempt.ok) {
+    const body = { error: attempt.error, code: attempt.code };
+    if (attempt.code === "task_attempts_exhausted") {
+      body.maxAttempts = attempt.maxAttempts;
+      body.attemptsUsed = attempt.attemptsUsed;
+    }
+    return {
+      refusal: { status: attempt.status, body },
+      timeDecision,
+      attempt,
+    };
+  }
+  return { refusal: null, timeDecision, attempt };
 }
 
 // Timing never fails a scored submit. A bad peer read still records the
@@ -785,10 +830,15 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     // A stamped delivery administration can allow a later attempt when
     // review is on and the attempt cap is not used up. That replaces the
     // stored response. With no stamp, the refusal below is unchanged.
-    const decision = evaluateAttempt(session, taskId);
-    if (!decision.ok) {
-      return res.status(decision.status).json({ error: decision.error, code: decision.code });
+    // TU10: a Task Model maxAttempts budget can also allow a replacement.
+    // A task time limit can refuse a late change, or flag the first late
+    // answer. Both sit on the same rows as TU8 feedback and TU9 timing.
+    const now = new Date();
+    const gate = taskConstraintGate(db, session, taskId, now);
+    if (gate.refusal) {
+      return res.status(gate.refusal.status).json(gate.refusal.body);
     }
+    const decision = gate.attempt;
     if (decision.action === "legacy") {
       return res.status(409).json({ error: `Task ${taskId} already has a recorded response for this session.` });
     }
@@ -914,13 +964,13 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
       }
     }
 
-    const scoredAt = new Date().toISOString();
+    const scoredAt = now.toISOString();
     const timingFields = await attachResponseTiming(db, session, {
       taskId,
       item,
       task,
       timing: readClientTiming(req.body),
-      now: new Date(scoredAt),
+      now,
     });
     const responses = identifications.map((identified) => {
       const row = {
@@ -956,7 +1006,10 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
       }
       return row;
     });
-    for (const row of responses) stampItemFeedback(item, row);
+    for (const row of responses) {
+      stampItemFeedback(item, row);
+      applyTaskTimeout(row, gate.timeDecision);
+    }
     const response = responses[0];
 
     logger.info("session.submit.scored", {
@@ -1123,21 +1176,23 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     }
   }
 
-  // Same attempt and review decision as the item path. With no stamp,
-  // action "legacy" still appends, which is what this path did before.
-  const legacyDecision = evaluateAttempt(session, taskId);
-  if (!legacyDecision.ok) {
-    return res.status(legacyDecision.status).json({ error: legacyDecision.error, code: legacyDecision.code });
+  // Same attempt and review decision as the item path. With no stamp
+  // and no task cap, action "legacy" still appends, which is what this
+  // path did before. A task time limit uses the same gate.
+  const legacyNow = new Date();
+  const legacyGate = taskConstraintGate(db, session, taskId, legacyNow);
+  if (legacyGate.refusal) {
+    return res.status(legacyGate.refusal.status).json(legacyGate.refusal.body);
   }
+  const legacyDecision = legacyGate.attempt;
 
   // 🔹 Save response in session
-  const legacyScoredAt = new Date();
   const legacyTiming = await attachResponseTiming(db, session, {
     taskId,
     item: null,
     task,
     timing: readClientTiming(req.body),
-    now: legacyScoredAt,
+    now: legacyNow,
   });
   const response = {
     taskId,
@@ -1147,9 +1202,10 @@ router.post("/:id/submit", submitRateLimiter, async (req, res) => {
     scoredValue: scoredValue !== undefined ? scoredValue : null,
     evidenceId: evidenceId || null,
     rubricLevel: rubricLevel || null,
-    timestamp: legacyScoredAt.toISOString(),
+    timestamp: legacyNow.toISOString(),
     ...(legacyTiming || {}),
   };
+  applyTaskTimeout(response, legacyGate.timeDecision);
 
   beginDeliveryClock(session);
   const legacyPlaced = placeAttempt(session, taskId, response, legacyDecision);
@@ -1357,7 +1413,9 @@ router.get("/:id/next-task", async (req, res) => {
   // already has a response. An unanswered task is action "append" and is
   // unchanged. With no stamp, evaluateAttempt does not refuse.
   if (decision.taskId) {
-    const revisit = evaluateAttempt(session, decision.taskId);
+    const revisit = evaluateAttempt(session, decision.taskId, {
+      taskMaxAttempts: taskModelAttemptCap(taskModelForTask(db, decision.taskId)),
+    });
     if (!revisit.ok) {
       return res.status(revisit.status).json({
         error: revisit.error,
